@@ -4,9 +4,9 @@
 # TODO: kwargs for sorting eigenvalues?
 
 docs_eig_note = """
-Note that `eig` and its variants do not assume additional structure on the input,
+Note that [`eig_full`](@ref) and its variants do not assume additional structure on the input,
 and therefore will always return complex eigenvalues and eigenvectors. For the real
-eigenvalue decomposition of symmetric or hermitian operators, see [`eigh`](@ref).
+eigenvalue decomposition of symmetric or hermitian operators, see [`eigh_full`](@ref).
 """
 
 # TODO: do we need "full"?
@@ -28,7 +28,7 @@ and the diagonal matrix `D` contains the associated eigenvalues.
 !!! note
     $(docs_eig_note)
 
-See also [`eig_vals(!)`](@ref eig_vals) and [`eig_trunc(!)`](@ref).
+See also [`eig_vals(!)`](@ref eig_vals) and [`eig_trunc(!)`](@ref eig_trunc).
 """
 @functiondef eig_full
 

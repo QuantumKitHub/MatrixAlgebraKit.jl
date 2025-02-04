@@ -4,9 +4,9 @@
 # TODO: kwargs for sorting eigenvalues?
 
 docs_eigh_note = """
-Note that `eigh` and its variants assume additional structure on the input,
+Note that [`eigh_full`](@ref) and its variants assume additional structure on the input,
 and therefore will retain the `eltype` of the input for the eigenvalues and eigenvectors.
-For generic eigenvalue decompositions, see [`eig`](@ref).
+For generic eigenvalue decompositions, see [`eig_full`](@ref).
 """
 
 # TODO: do we need "full"?
@@ -28,7 +28,7 @@ and the real diagonal matrix `D` contains the associated eigenvalues.
 !!! note
     $(docs_eigh_note)
 
-See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref).
+See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref eigh_trunc).
 """
 @functiondef eigh_full
 
