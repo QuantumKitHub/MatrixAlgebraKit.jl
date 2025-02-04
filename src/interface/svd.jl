@@ -15,8 +15,8 @@ Compute the full singular value decomposition (SVD) of the rectangular matrix `A
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `USVᴴ` as output.
 
-See also [`svd_compact(!)`](@ref svd_compact), [`svd_vals(!)`](@ref svd_vals),
-[`svd_trunc(!)`](@ref svd_trunc) and [`svd_null(!)`](@ref svd_null).
+See also [`svd_compact(!)`](@ref svd_compact), [`svd_vals(!)`](@ref svd_vals) and
+[`svd_trunc(!)`](@ref svd_trunc).
 """
 @functiondef svd_full
 
@@ -36,8 +36,8 @@ is a square diagonal matrix of size `(k, k)`, with `k = min(m, n)`.
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `USVᴴ` as output.
 
-See also [`svd_full(!)`](@ref svd_full), [`svd_vals(!)`](@ref svd_vals),
-[`svd_trunc(!)`](@ref svd_trunc) and [`svd_null(!)`](@ref svd_null).
+See also [`svd_full(!)`](@ref svd_full), [`svd_vals(!)`](@ref svd_vals) and
+[`svd_trunc(!)`](@ref svd_trunc).
 """
 @functiondef svd_compact
 
@@ -59,8 +59,8 @@ square diagonal matrix of size `(k, k)`, with `k` is set by the truncation strat
     as it may not always be possible to use the provided `USVᴴ` as output.
 
 
-See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact),
-[`svd_vals(!)`](@ref svd_vals) and [`svd_null(!)`](@ref svd_null).
+See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) and
+[`svd_vals(!)`](@ref svd_vals).
 """
 @functiondef svd_trunc
 
@@ -91,8 +91,8 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact),
 Compute the vector of singular values of `A`, such that for an M×N matrix `A`,
 `S` is a vector of size `K = min(M, N)`, the number of kept singular values.
 
-See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact),
-[`svd_trunc(!)`](@ref svd_trunc) and [`svd_null(!)`](@ref svd_null).
+See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) and
+[`svd_trunc(!)`](@ref svd_trunc).
 """
 @functiondef svd_vals
 

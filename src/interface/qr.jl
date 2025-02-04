@@ -15,7 +15,7 @@ upper triangular matrix with the same size as `A`.
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `QR` as output.
 
-See also [`qr_compact(!)`](@ref qr_compact) and [`qr_null(!)`](@ref qr_null).
+See also [`qr_compact(!)`](@ref qr_compact).
 """
 @functiondef qr_full
 
@@ -39,7 +39,7 @@ is upper triangular.
     The compact QR decomposition is equivalent to the full QR decomposition when `m >= n`.
     Some algorithms may require `m >= n`.
 
-See also [`qr_full(!)`](@ref qr_full) and [`qr_null(!)`](@ref qr_null).
+See also [`qr_full(!)`](@ref qr_full).
 """
 @functiondef qr_compact
 
