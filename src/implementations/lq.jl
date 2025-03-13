@@ -119,7 +119,7 @@ function _lapack_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
     if positive # already fix Q even if we do not need R
         @inbounds for j in 1:n
             @simd for i in 1:minmn
-                s = safesign(A[i, i])
+                s = sign_safe(A[i, i])
                 Q[i, j] *= s
             end
         end
@@ -129,7 +129,7 @@ function _lapack_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
         L̃ = tril!(view(A, axes(L)...))
         if positive
             @inbounds for j in 1:minmn
-                s = conj(safesign(L̃[j, j]))
+                s = conj(sign_safe(L̃[j, j]))
                 @simd for i in j:m
                     L̃[i, j] = L̃[i, j] * s
                 end

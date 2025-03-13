@@ -1,5 +1,7 @@
 function eig_full_pullback!(ΔA::AbstractMatrix, DV, ΔDV;
-                            tol::Real=default_pullback_gaugetol(DV[1]))
+                            tol::Real=default_pullback_gaugetol(DV[1]),
+                            degeneracy_atol::Real=tol,
+                            gauge_atol::Real=tol)
 
     # Basic size checks and determination
     Dmat, V = DV
@@ -11,12 +13,12 @@ function eig_full_pullback!(ΔA::AbstractMatrix, DV, ΔDV;
     if !iszerotangent(ΔV)
         VdΔV = V' * ΔV
 
-        mask = abs.(transpose(D) .- D) .< tol
+        mask = abs.(transpose(D) .- D) .< degeneracy_atol
         Δgauge = norm(view(VdΔV, mask), Inf)
-        Δgauge < tol ||
+        Δgauge < gauge_atol ||
             @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-        VdΔV .*= conj.(safe_inv.(transpose(D) .- D, tol))
+        VdΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
 
         if !iszerotangent(ΔDmat)
             diagview(VdΔV) .+= diagview(ΔDmat)

@@ -1,126 +1,90 @@
 """
-    svd_compact_pullback!(ΔA, USVᴴ, ΔUSVᴴ; tol::Real=default_pullback_gaugetol(S))
+    svd_compact_pullback!(ΔA, USVᴴ, ΔUSVᴴ;
+                            tol::Real=default_pullback_gaugetol(S),
+                            rank_atol::Real = tol,
+                            degeneracy_atol::Real = tol,
+                            gauge_atol::Real = tol)
 
 Adds the pullback from the SVD of `A` to `ΔA` given the output USVᴴ of `svd_compact`
-or `svd_full` and the cotangent `ΔUSVᴴ`. Here, `ΔUSVᴴ` can correspond to the cotangent
-an `svd_trunc` call, where `ΔU`, `ΔS` and `ΔVᴴ` have size `(m, p)`, `(p, p)` and `(p, n)`
-respectively.
+or `svd_full` and the cotangent `ΔUSVᴴ` of `svd_compact`, `svd_full` or `svd_trunc`.
+
+In particular, it is assumed that `A ≈ U * S * Vᴴ`, or thus, that no singular values
+with magnitude less than `rank_atol` are missing from `S`.
+For the cotangents, an arbitrary number of singular vectors or singular values can
+be missing, i.e. `ΔU` and `ΔVᴴ` can have sizes `(m, pU)` and `(pV, n)` respectively,
+whereas `diagview(ΔS)` can have length `pS`.
+
+A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
+anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j`
+for which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
 function svd_compact_pullback!(ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ;
-                               tol::Real=default_pullback_gaugetol(USVᴴ[2]))
+                               tol::Real=default_pullback_gaugetol(USVᴴ[2]),
+                               rank_atol::Real=tol,
+                               degeneracy_atol::Real=tol,
+                               gauge_atol::Real=tol)
+
+    # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ
-    S = diagview(Smat)
-    ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    # Basic size checks and determination
     m, n = size(U, 1), size(Vᴴ, 2)
-    size(U, 2) == size(Vᴴ, 1) == length(S) == min(m, n) || throw(DimensionMismatch())
-    p = -1
+    minmn = min(m, n)
+    S = diagview(Smat)
+    length(S) == minmn || throw(DimensionMismatch())
+    r = findlast(>=(rank_atol), S) # rank
+    Ur = view(U, :, 1:r)
+    Vᴴr = view(Vᴴ, 1:r, :)
+    Sr = view(S, 1:r)
+
+    # Extract and check the cotangents
+    ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
+    UΔU = fill!(similar(U, (r, r)), 0)
+    VΔV = fill!(similar(Vᴴ, (r, r)), 0)
     if !iszerotangent(ΔU)
         m == size(ΔU, 1) || throw(DimensionMismatch())
-        p = size(ΔU, 2)
+        pU = size(ΔU, 2)
+        pU > r && throw(DimensionMismatch())
+        UΔUp = view(UΔU, :, 1:pU)
+        mul!(UΔUp, Ur', ΔU)
+        ΔU -= Ur * UΔUp
     end
     if !iszerotangent(ΔVᴴ)
         n == size(ΔVᴴ, 2) || throw(DimensionMismatch())
-        if p == -1
-            p = size(ΔVᴴ, 1)
-        else
-            p == size(ΔVᴴ, 1) || throw(DimensionMismatch())
-        end
+        pV = size(ΔVᴴ, 1)
+        pV > r && throw(DimensionMismatch())
+        VΔVp = view(VΔV, :, 1:pV)
+        mul!(VΔVp, Vᴴr, ΔVᴴ')
+        ΔVᴴ = ΔVᴴ - VΔVp' * Vᴴr
     end
-    if !iszerotangent(ΔSmat)
-        ΔS = diagview(ΔSmat)
-        if p == -1
-            p = length(ΔS)
-        else
-            p == length(ΔS) || throw(DimensionMismatch())
-        end
-    end
-    Up = view(U, :, 1:p)
-    Vp = view(Vᴴ, 1:p, :)'
-    Sp = view(S, 1:p)
 
-    # rank
-    r = findlast(>=(tol), S)
-
-    # compute antihermitian part of projection of ΔU and ΔV onto U and V
-    # also already subtract this projection from ΔU and ΔV
-    if !iszerotangent(ΔU)
-        UΔU = Up' * ΔU
-        aUΔU = rmul!(UΔU - UΔU', 1 / 2)
-        if m > p
-            ΔU -= Up * UΔU
-        end
-    else
-        aUΔU = fill!(similar(U, (p, p)), 0)
-    end
-    if !iszerotangent(ΔVᴴ)
-        VΔV = Vp' * ΔVᴴ'
-        aVΔV = rmul!(VΔV - VΔV', 1 / 2)
-        if n > p
-            ΔVᴴ -= VΔV' * Vp'
-        end
-    else
-        aVΔV = fill!(similar(Vᴴ, (p, p)), 0)
-    end
+    # Project onto antihermitian part; hermitian part outside of Grassmann tangent space
+    aUΔU = rmul!(UΔU - UΔU', 1 / 2)
+    aVΔV = rmul!(VΔV - VΔV', 1 / 2)
 
     # check whether cotangents arise from gauge-invariance objective function
-    mask = abs.(Sp' .- Sp) .< tol
+    mask = abs.(Sr' .- Sr) .< degeneracy_atol
     Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
-    if p > r
-        rprange = (r + 1):p
-        Δgauge = max(Δgauge, norm(view(aUΔU, rprange, rprange), Inf))
-        Δgauge = max(Δgauge, norm(view(aVΔV, rprange, rprange), Inf))
-    end
-    Δgauge < tol ||
+    Δgauge < gauge_atol ||
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-    UdΔAV = (aUΔU .+ aVΔV) .* safe_inv.(Sp' .- Sp, tol) .+
-            (aUΔU .- aVΔV) .* safe_inv.(Sp' .+ Sp, tol)
+    UdΔAV = (aUΔU .+ aVΔV) .* inv_safe.(Sr' .- Sr, degeneracy_atol) .+
+            (aUΔU .- aVΔV) .* inv_safe.(Sr' .+ Sr, degeneracy_atol)
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
-        diagview(UdΔAV) .+= real.(ΔS)
+        pS = length(ΔS)
+        view(diagview(UdΔAV), 1:pS) .+= real.(ΔS)
     end
-    ΔA = mul!(ΔA, Up, UdΔAV * Vp', 1, 1) # add the contribution to ΔA
+    ΔA = mul!(ΔA, Ur, UdΔAV * Vᴴr, 1, 1) # add the contribution to ΔA
 
-    if r > p # contribution from truncation
-        Ur = view(U, :, (p + 1):r)
-        Vr = view(Vᴴ, (p + 1):r, :)'
-        Sr = view(S, (p + 1):r)
-
-        if !iszerotangent(ΔU)
-            UrΔU = Ur' * ΔU
-            if m > r
-                ΔU -= Ur * UrΔU # subtract this part from ΔU
-            end
-        else
-            UrΔU = fill!(similar(U, (r - p, p)), 0)
-        end
-        if !iszerotangent(ΔVᴴ)
-            VrΔV = Vr' * ΔVᴴ'
-            if n > r
-                ΔVᴴ -= VrΔV' * Vr' # subtract this part from ΔV
-            end
-        else
-            VrΔV = fill!(similar(Vᴴ, (r - p, p)), 0)
-        end
-
-        X = (1 // 2) .* ((UrΔU .+ VrΔV) .* safe_inv.(Sp' .- Sr, tol) .+
-                         (UrΔU .- VrΔV) .* safe_inv.(Sp' .+ Sr, tol))
-        Y = (1 // 2) .* ((UrΔU .+ VrΔV) .* safe_inv.(Sp' .- Sr, tol) .-
-                         (UrΔU .- VrΔV) .* safe_inv.(Sp' .+ Sr, tol))
-
-        # ΔA += Ur * X * Vp' + Up * Y' * Vr'
-        ΔA = mul!(ΔA, Ur, X * Vp', 1, 1)
-        ΔA = mul!(ΔA, Up * Y', Vr', 1, 1)
+    # Add the remaining contributions
+    if m > r && !iszerotangent(ΔU) # remaining ΔU is already orthogonal to Ur
+        Sp = view(S, 1:pU)
+        Vᴴp = view(Vᴴ, 1:pU, :)
+        ΔA = mul!(ΔA, ΔU ./ Sp', Vᴴp, 1, 1)
     end
-
-    if m > max(r, p) && !iszerotangent(ΔU) # remaining ΔU is already orthogonal to U[:,1:max(p,r)]
-        # ΔA += (ΔU .* safe_inv.(Sp', tol)) * Vp'
-        ΔA = mul!(ΔA, ΔU .* safe_inv.(Sp', tol), Vp', 1, 1)
-    end
-    if n > max(r, p) && !iszerotangent(ΔVᴴ) # remaining ΔV is already orthogonal to V[:,1:max(p,r)]
-        # ΔA += U * (safe_inv.(Sp, tol) .* ΔVᴴ)
-        ΔA = mul!(ΔA, Up, safe_inv.(Sp, tol) .* ΔVᴴ, 1, 1)
+    if n > r && !iszerotangent(ΔVᴴ) # remaining ΔV is already orthogonal to Vᴴr
+        Sp = view(S, 1:pV)
+        Up = view(U, :, 1:pV)
+        ΔA = mul!(ΔA, Up, Sp .\ ΔVᴴ, 1, 1)
     end
     return ΔA
 end

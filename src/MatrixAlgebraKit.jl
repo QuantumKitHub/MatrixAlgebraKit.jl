@@ -5,7 +5,8 @@ using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!
 using LinearAlgebra: isposdef, ishermitian
 using LinearAlgebra: Diagonal, diag, diagind
-using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!, tril!
+using LinearAlgebra: UpperTriangular, LowerTriangular
+using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!, tril!, rdiv!
 
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
@@ -55,5 +56,10 @@ include("implementations/eigh.jl")
 include("implementations/schur.jl")
 include("implementations/polar.jl")
 include("implementations/orthnull.jl")
+
+include("pullbacks/qr.jl")
+include("pullbacks/eig.jl")
+include("pullbacks/eigh.jl")
+include("pullbacks/svd.jl")
 
 end
