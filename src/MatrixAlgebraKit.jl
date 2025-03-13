@@ -6,7 +6,7 @@ using LinearAlgebra: mul!, rmul!, lmul!
 using LinearAlgebra: isposdef, ishermitian
 using LinearAlgebra: Diagonal, diag, diagind
 using LinearAlgebra: UpperTriangular, LowerTriangular
-using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!, tril!, rdiv!
+using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!, tril!, rdiv!, ldiv!
 
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
@@ -23,9 +23,10 @@ export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
 
-export LAPACK_HouseholderQR, LAPACK_Simple, LAPACK_Expert, LAPACK_QRIteration,
-       LAPACK_Bisection, LAPACK_DivideAndConquer,
-       LAPACK_MultipleRelativelyRobustRepresentations, LAPACK_Jacobi
+export LAPACK_HouseholderQR, LAPACK_HouseholderLQ,
+       LAPACK_Simple, LAPACK_Expert,
+       LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
+       LAPACK_DivideAndConquer, LAPACK_Jacobi
 export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered
 
 include("common/defaults.jl")
@@ -58,6 +59,7 @@ include("implementations/polar.jl")
 include("implementations/orthnull.jl")
 
 include("pullbacks/qr.jl")
+include("pullbacks/lq.jl")
 include("pullbacks/eig.jl")
 include("pullbacks/eigh.jl")
 include("pullbacks/svd.jl")

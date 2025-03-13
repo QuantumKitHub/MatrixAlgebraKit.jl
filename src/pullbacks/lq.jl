@@ -16,7 +16,7 @@ of `Q` are well-defined, and also the adjoint variables `ΔL` and `ΔQ` should h
 values only in the first `r` columns and rows respectively. If nonzero values in the
 remaining columns or rows exceed `gauge_atol`, a warning will be printed.
 """
-function lq_compact_pullback!(ΔA::AbstractMatrix, LQ, ΔQ;
+function lq_compact_pullback!(ΔA::AbstractMatrix, LQ, ΔLQ;
                               tol::Real=default_pullback_gaugetol(LQ[1]),
                               rank_atol::Real=tol,
                               gauge_atol::Real=tol)
@@ -28,13 +28,13 @@ function lq_compact_pullback!(ΔA::AbstractMatrix, LQ, ΔQ;
     Ld = diagview(L)
     p = findlast(>=(rank_atol) ∘ abs, Ld)
 
-    ΔQ, ΔR = ΔQR
+    ΔL, ΔQ = ΔLQ
 
-    Q1 = view(Q, :, 1:p)
-    Q2 = view(Q, :, (p + 1):size(Q, 2))
-    R11 = view(R, 1:p, 1:p)
-    ΔA1 = view(ΔA, :, 1:p)
-    ΔA2 = view(ΔA, :, (p + 1):n)
+    Q1 = view(Q, 1:p, :)
+    Q2 = view(Q, (p + 1):size(Q, 1), :)
+    L11 = view(L, 1:p, 1:p)
+    ΔA1 = view(ΔA, 1:p, :)
+    ΔA2 = view(ΔA, (p + 1):m, :)
 
     if minmn > p # case where A is rank-deficient
         Δgauge = abs(zero(eltype(Q)))
@@ -43,23 +43,24 @@ function lq_compact_pullback!(ΔA::AbstractMatrix, LQ, ΔQ;
             # change upon small variations, and all of the remaining
             # columns of ΔQ should be zero for a gauge-invariant
             # cost function
-            ΔQ2 = view(ΔQ, :, (p + 1):size(Q, 2))
+            ΔQ2 = view(ΔQ, (p + 1):size(Q, 1), :)
             Δgauge = max(Δgauge, norm(ΔQ2, Inf))
         end
-        if !iszerotangent(ΔR)
-            ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):n)
-            Δgauge = max(Δgauge, norm(ΔR22, Inf))
+        if !iszerotangent(ΔL)
+            ΔL22 = view(ΔL, (p + 1):m, (p + 1):minmn)
+            Δgauge = max(Δgauge, norm(ΔL22, Inf))
         end
         Δgauge < gauge_atol ||
-            @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+            @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     end
 
-    ΔQ̃ = zero!(similar(Q, (size(Q, 1), p)))
+    ΔQ̃ = zero!(similar(Q, (p, n)))
     if !iszerotangent(ΔQ)
-        copy!(ΔQ̃, view(ΔQ, :, 1:p))
-        if p < size(Q, 2)
-            Q2 = view(Q, :, (p + 1):size(Q, 2))
-            ΔQ2 = view(ΔQ, :, (p + 1):size(Q, 2))
+        ΔQ1 = view(ΔQ, 1:p, :)
+        copy!(ΔQ̃, ΔQ1)
+        if p < size(Q, 1)
+            Q2 = view(Q, (p + 1):size(Q, 1), :)
+            ΔQ2 = view(ΔQ, (p + 1):size(Q, 1), :)
             # in the case where A is full rank, but there are more columns in Q than in A
             # (the case of `qr_full`), there is gauge-invariant information in the
             # projection of ΔQ2 onto the column space of Q1, by virtue of Q being a unitary
@@ -67,36 +68,36 @@ function lq_compact_pullback!(ΔA::AbstractMatrix, LQ, ΔQ;
             # case, Q is expected to rotate smoothly (we might even be able to predict) also
             # how the full Q2 will change, but this we omit for now, and we consider
             # Q2' * ΔQ2 as a gauge dependent quantity.
-            Q1dΔQ2 = Q1' * ΔQ2
-            Δgauge = norm(mul!(copy(ΔQ2), Q1, Q1dΔQ2, -1, 1), Inf)
+            ΔQ2Q1d = ΔQ2 * Q1'
+            Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1d, Q1, -1, 1), Inf)
             Δgauge < tol ||
                 @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-            ΔQ̃ = mul!(ΔQ̃, Q2, Q1dΔQ2', -1, 1)
+            ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1d', Q2, -1, 1)
         end
     end
-    if !iszerotangent(ΔR) && n > p
-        R12 = view(R, 1:p, (p + 1):n)
-        ΔR12 = view(ΔR, 1:p, (p + 1):n)
-        ΔQ̃ = mul!(ΔQ̃, Q1, ΔR12 * R12', -1, 1)
+    if !iszerotangent(ΔL) && n > p
+        L21 = view(L, (p + 1):m, 1:p)
+        ΔL21 = view(ΔL, (p + 1):m, 1:p)
+        ΔQ̃ = mul!(ΔQ̃, L21' * ΔL21, Q1, -1, 1)
         # Adding ΔA2 contribution
-        ΔA2 = mul!(ΔA2, Q1, ΔR12, 1, 1)
+        ΔA2 = mul!(ΔA2, ΔL21, Q1, 1, 1)
     end
 
     # construct M
-    M = zero!(similar(R, (p, p)))
-    if !iszerotangent(ΔR)
-        ΔR11 = view(ΔR, 1:p, 1:p)
-        M = mul!(M, ΔR11, R11', 1, 1)
+    M = zero!(similar(L, (p, p)))
+    if !iszerotangent(ΔL)
+        ΔL11 = view(ΔL, 1:p, 1:p)
+        M = mul!(M, L11', ΔL11, 1, 1)
     end
-    M = mul!(M, Q1', ΔQ̃, -1, 1)
-    view(M, lowertriangularind(M)) .= conj.(view(M, uppertriangularind(M)))
+    M = mul!(M, ΔQ̃, Q1', -1, 1)
+    view(M, uppertriangularind(M)) .= conj.(view(M, lowertriangularind(M)))
     if eltype(M) <: Complex
         Md = diagview(M)
         Md .= real.(Md)
     end
-    rdiv!(M, UpperTriangular(R11)')
-    rdiv!(ΔQ̃, UpperTriangular(R11)')
-    ΔA1 = mul!(ΔA1, Q1, M, +1, 1)
+    ldiv!(LowerTriangular(L11)', M)
+    ldiv!(LowerTriangular(L11)', ΔQ̃)
+    ΔA1 = mul!(ΔA1, M, Q1, +1, 1)
     ΔA1 .+= ΔQ̃
     return ΔA
 end

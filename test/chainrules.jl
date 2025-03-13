@@ -29,7 +29,9 @@ end
 precision(::Type{<:Union{Float32,Complex{Float32}}}) = sqrt(eps(Float32))
 precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
 
-for f in (:qr_compact, :qr_full, :eig_full, :eigh_full, :svd_compact, :svd_trunc)
+for f in
+    (:qr_compact, :qr_full, :lq_compact, :lq_full, :eig_full, :eigh_full, :svd_compact,
+     :svd_trunc)
     copy_f = Symbol(:copy_, f)
     f! = Symbol(f, '!')
     @eval begin
@@ -99,6 +101,56 @@ end
         config = Zygote.ZygoteRuleConfig()
         test_rrule(config, qr_compact, A;
                    fkwargs=(; positive=true), output_tangent=(ΔQ, ΔR),
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+    end
+end
+
+@timedtestset "LQ AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
+    rng = StableRNG(12345)
+    m = 19
+    @testset "size ($m, $n)" for n in (m, 23) #(17, m, 23)
+        # lq_compact
+        atol = rtol = m * n * precision(T)
+        A = randn(rng, T, m, n)
+        minmn = min(m, n)
+        ΔL = randn(rng, T, m, minmn)
+        ΔQ = randn(rng, T, minmn, n)
+        alg = LAPACK_HouseholderLQ(; positive=true)
+        test_rrule(copy_lq_compact, A, alg ⊢ NoTangent(); output_tangent=(ΔL, ΔQ),
+                   atol=atol, rtol=rtol)
+        config = Zygote.ZygoteRuleConfig()
+        test_rrule(config, lq_compact, A;
+                   fkwargs=(; positive=true), output_tangent=(ΔL, ΔQ),
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        # # lq_full
+        L, Q = copy_lq_full(A, alg)
+        Q1 = view(Q, 1:minmn, 1:n)
+        ΔQ = randn(rng, T, n, n)
+        ΔQ2 = view(ΔQ, (minmn + 1):n, 1:n)
+        mul!(ΔQ2, ΔQ2 * Q1', Q1)
+        ΔL = randn(rng, T, m, n)
+        test_rrule(copy_lq_full, A, alg ⊢ NoTangent(); output_tangent=(ΔL, ΔQ),
+                   atol=atol, rtol=rtol)
+        config = Zygote.ZygoteRuleConfig()
+        test_rrule(config, lq_full, A;
+                   fkwargs=(; positive=true), output_tangent=(ΔL, ΔQ),
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        # rank-deficient A
+        r = minmn - 5
+        A = randn(rng, T, m, r) * randn(rng, T, r, n)
+        L, Q = lq_compact(A, alg)
+        ΔL = randn(rng, T, m, minmn)
+        ΔQ = randn(rng, T, minmn, n)
+        Q1 = view(Q, 1:r, 1:n)
+        Q2 = view(Q, (r + 1):minmn, 1:n)
+        ΔQ2 = view(ΔQ, (r + 1):minmn, 1:n)
+        ΔQ2 .= 0
+        view(ΔL, :, (r + 1):minmn) .= 0
+        test_rrule(copy_lq_compact, A, alg ⊢ NoTangent(); output_tangent=(ΔL, ΔQ),
+                   atol=atol, rtol=rtol)
+        config = Zygote.ZygoteRuleConfig()
+        test_rrule(config, lq_compact, A;
+                   fkwargs=(; positive=true), output_tangent=(ΔL, ΔQ),
                    atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
     end
 end

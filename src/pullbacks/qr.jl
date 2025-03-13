@@ -54,7 +54,7 @@ function qr_compact_pullback!(ΔA::AbstractMatrix, QR, ΔQR;
             @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     end
 
-    ΔQ̃ = zero!(similar(Q, (size(Q, 1), p)))
+    ΔQ̃ = zero!(similar(Q, (m, p)))
     if !iszerotangent(ΔQ)
         copy!(ΔQ̃, view(ΔQ, :, 1:p))
         if p < size(Q, 2)

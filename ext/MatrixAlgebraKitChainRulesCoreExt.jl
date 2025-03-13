@@ -32,6 +32,25 @@ for qr_f in (:qr_compact, :qr_full)
     end
 end
 
+for lq_f in (:lq_compact, :lq_full)
+    lq_f! = Symbol(lq_f, '!')
+    @eval begin
+        function ChainRulesCore.rrule(::typeof($lq_f!), A::AbstractMatrix, LQ, alg)
+            Ac = copy_input($lq_f, A)
+            LQ = $(lq_f!)(Ac, LQ, alg)
+            function lq_pullback(ΔLQ)
+                ΔA = zero(A)
+                MatrixAlgebraKit.lq_compact_pullback!(ΔA, LQ, unthunk.(ΔLQ))
+                return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+            end
+            function lq_pullback(::Tuple{ZeroTangent,ZeroTangent}) # is this extra definition useful?
+                return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+            end
+            return LQ, lq_pullback
+        end
+    end
+end
+
 for eig in (:eig, :eigh)
     eig_f = Symbol(eig, "_full")
     eig_f! = Symbol(eig_f, "!")
