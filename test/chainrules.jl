@@ -30,8 +30,8 @@ precision(::Type{<:Union{Float32,Complex{Float32}}}) = sqrt(eps(Float32))
 precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
 
 for f in
-    (:qr_compact, :qr_full, :lq_compact, :lq_full, :eig_full, :eigh_full, :svd_compact,
-     :svd_trunc)
+    (:qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
+     :eig_full, :eigh_full, :svd_compact, :svd_trunc)
     copy_f = Symbol(:copy_, f)
     f! = Symbol(f, '!')
     @eval begin
@@ -62,15 +62,29 @@ end
         atol = rtol = m * n * precision(T)
         A = randn(rng, T, m, n)
         minmn = min(m, n)
+        alg = LAPACK_HouseholderQR(; positive=true)
+        Q, R = copy_qr_compact(A, alg)
         ΔQ = randn(rng, T, m, minmn)
         ΔR = randn(rng, T, minmn, n)
         ΔR2 = UpperTriangular(randn(rng, T, minmn, minmn))
-        alg = LAPACK_HouseholderQR(; positive=true)
-        test_rrule(copy_qr_compact, A, alg ⊢ NoTangent(); output_tangent=(ΔQ, ΔR),
+        ΔN = Q * randn(rng, T, minmn, max(0, m - minmn))
+        test_rrule(copy_qr_compact, A, alg ⊢ NoTangent();
+                   output_tangent=(ΔQ, ΔR),
+                   atol=atol, rtol=rtol)
+        test_rrule(copy_qr_null, A, alg ⊢ NoTangent(); output_tangent=ΔN,
                    atol=atol, rtol=rtol)
         config = Zygote.ZygoteRuleConfig()
         test_rrule(config, qr_compact, A;
                    fkwargs=(; positive=true), output_tangent=(ΔQ, ΔR),
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        test_rrule(config, first ∘ qr_compact, A;
+                   fkwargs=(; positive=true), output_tangent=ΔQ,
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        test_rrule(config, last ∘ qr_compact, A;
+                   fkwargs=(; positive=true), output_tangent=ΔR,
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        test_rrule(config, qr_null, A;
+                   fkwargs=(; positive=true), output_tangent=ΔN,
                    atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
         # qr_full
         Q, R = copy_qr_full(A, alg)
@@ -85,6 +99,12 @@ end
         test_rrule(config, qr_full, A;
                    fkwargs=(; positive=true), output_tangent=(ΔQ, ΔR),
                    atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        if m > n
+            _, null_pb = Zygote.pullback(qr_null, A, alg)
+            @test_logs (:warn,) null_pb(randn(rng, T, m, max(0, m - minmn)))
+            _, full_pb = Zygote.pullback(qr_full, A, alg)
+            @test_logs (:warn,) full_pb((randn(rng, T, m, m), randn(rng, T, m, n)))
+        end
         # rank-deficient A
         r = minmn - 5
         A = randn(rng, T, m, r) * randn(rng, T, r, n)
@@ -113,16 +133,29 @@ end
         atol = rtol = m * n * precision(T)
         A = randn(rng, T, m, n)
         minmn = min(m, n)
+        alg = LAPACK_HouseholderLQ(; positive=true)
+        L, Q = copy_lq_compact(A, alg)
         ΔL = randn(rng, T, m, minmn)
         ΔQ = randn(rng, T, minmn, n)
-        alg = LAPACK_HouseholderLQ(; positive=true)
+        ΔNᴴ = randn(rng, T, max(0, n - minmn), minmn) * Q
         test_rrule(copy_lq_compact, A, alg ⊢ NoTangent(); output_tangent=(ΔL, ΔQ),
+                   atol=atol, rtol=rtol)
+        test_rrule(copy_lq_null, A, alg ⊢ NoTangent(); output_tangent=ΔNᴴ,
                    atol=atol, rtol=rtol)
         config = Zygote.ZygoteRuleConfig()
         test_rrule(config, lq_compact, A;
                    fkwargs=(; positive=true), output_tangent=(ΔL, ΔQ),
                    atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
-        # # lq_full
+        test_rrule(config, first ∘ lq_compact, A;
+                   fkwargs=(; positive=true), output_tangent=ΔL,
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        test_rrule(config, last ∘ lq_compact, A;
+                   fkwargs=(; positive=true), output_tangent=ΔQ,
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        test_rrule(config, lq_null, A;
+                   fkwargs=(; positive=true), output_tangent=ΔNᴴ,
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        # lq_full
         L, Q = copy_lq_full(A, alg)
         Q1 = view(Q, 1:minmn, 1:n)
         ΔQ = randn(rng, T, n, n)
@@ -135,6 +168,12 @@ end
         test_rrule(config, lq_full, A;
                    fkwargs=(; positive=true), output_tangent=(ΔL, ΔQ),
                    atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        if m < n
+            Nᴴ, null_pb = Zygote.pullback(lq_null, A, alg)
+            @test_logs (:warn,) null_pb(randn(rng, T, max(0, n - minmn), n))
+            _, full_pb = Zygote.pullback(lq_full, A, alg)
+            @test_logs (:warn,) full_pb((randn(rng, T, m, n), randn(rng, T, n, n)))
+        end
         # rank-deficient A
         r = minmn - 5
         A = randn(rng, T, m, r) * randn(rng, T, r, n)

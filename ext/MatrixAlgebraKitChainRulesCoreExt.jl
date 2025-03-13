@@ -1,7 +1,7 @@
 module MatrixAlgebraKitChainRulesCoreExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: copy_input, TruncatedAlgorithm
+using MatrixAlgebraKit: copy_input, TruncatedAlgorithm, zero!
 using ChainRulesCore
 using LinearAlgebra
 
@@ -31,6 +31,25 @@ for qr_f in (:qr_compact, :qr_full)
         end
     end
 end
+function ChainRulesCore.rrule(::typeof(qr_null!), A::AbstractMatrix, N, alg)
+    Ac = copy_input(qr_full, A)
+    QR = MatrixAlgebraKit.initialize_output(qr_full!, A, alg)
+    Q, R = qr_full!(Ac, QR, alg)
+    N = copy!(N, view(Q, 1:size(A, 1), (size(A, 2) + 1):size(A, 1)))
+    function qr_null_pullback(ΔN)
+        ΔA = zero(A)
+        (m, n) = size(A)
+        minmn = min(m, n)
+        ΔQ = zero!(similar(A, (m, m)))
+        view(ΔQ, 1:m, (minmn + 1):m) .= unthunk.(ΔN)
+        MatrixAlgebraKit.qr_compact_pullback!(ΔA, (Q, R), (ΔQ, ZeroTangent()))
+        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+    end
+    function qr_null_pullback(::ZeroTangent) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return N, qr_null_pullback
+end
 
 for lq_f in (:lq_compact, :lq_full)
     lq_f! = Symbol(lq_f, '!')
@@ -49,6 +68,25 @@ for lq_f in (:lq_compact, :lq_full)
             return LQ, lq_pullback
         end
     end
+end
+function ChainRulesCore.rrule(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, alg)
+    Ac = copy_input(lq_full, A)
+    LQ = MatrixAlgebraKit.initialize_output(lq_full!, A, alg)
+    L, Q = lq_full!(Ac, LQ, alg)
+    Nᴴ = copy!(Nᴴ, view(Q, (size(A, 1) + 1):size(A, 2), 1:size(A, 2)))
+    function lq_null_pullback(ΔNᴴ)
+        ΔA = zero(A)
+        (m, n) = size(A)
+        minmn = min(m, n)
+        ΔQ = zero!(similar(A, (n, n)))
+        view(ΔQ, (minmn + 1):n, 1:n) .= unthunk.(ΔNᴴ)
+        MatrixAlgebraKit.lq_compact_pullback!(ΔA, (L, Q), (ZeroTangent(), ΔQ))
+        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+    end
+    function qr_null_pullback(::ZeroTangent) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return Nᴴ, lq_null_pullback
 end
 
 for eig in (:eig, :eigh)
