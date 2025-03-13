@@ -88,6 +88,6 @@ for f in (:qr_full, :qr_compact, :qr_null)
 end
 
 # Default to LAPACK 
-function default_qr_algorithm(A::StridedMatrix{<:BlasFloat}; positive=true, kwargs...)
-    return LAPACK_HouseholderQR(; positive=positive, kwargs...)
+function default_qr_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
+    return LAPACK_HouseholderQR(; kwargs...)
 end

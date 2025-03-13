@@ -84,7 +84,7 @@ function qr_null!(A::AbstractMatrix, N, alg::LAPACK_HouseholderQR)
 end
 
 function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-                     positive=true,
+                     positive=false,
                      pivoted=false,
                      blocksize=((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A)))
     m, n = size(A)

@@ -84,7 +84,7 @@ function lq_null!(A::AbstractMatrix, Nᴴ, alg::LAPACK_HouseholderLQ)
 end
 
 function _lapack_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
-                     positive=true,
+                     positive=false,
                      pivoted=false,
                      blocksize=((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A)))
     m, n = size(A)

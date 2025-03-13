@@ -10,7 +10,7 @@
 # QR, LQ, QL, RQ Decomposition
 # ----------------------------
 """
-    LAPACK_HoudeholderQR(; blocksize, positive = true, pivoted = false)
+    LAPACK_HoudeholderQR(; blocksize, positive = false, pivoted = false)
 
 Algorithm type to denote the standard LAPACK algorithm for computing the QR decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
@@ -22,7 +22,7 @@ elements of `R` are non-negative.
 @algdef LAPACK_HouseholderQR
 
 """
-    LAPACK_HoudeholderLQ(; blocksize, positive = true)
+    LAPACK_HoudeholderLQ(; blocksize, positive = false)
 
 Algorithm type to denote the standard LAPACK algorithm for computing the LQ decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using

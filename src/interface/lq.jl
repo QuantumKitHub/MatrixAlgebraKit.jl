@@ -88,6 +88,6 @@ for f in (:lq_full, :lq_compact, :lq_null)
 end
 
 # Default to LAPACK 
-function default_lq_algorithm(A::StridedMatrix{<:BlasFloat}; positive=true, kwargs...)
-    return LAPACK_HouseholderLQ(; positive=positive, kwargs...)
+function default_lq_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
+    return LAPACK_HouseholderLQ(; kwargs...)
 end
