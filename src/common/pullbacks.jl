@@ -7,3 +7,5 @@ pullback definitions in term of it, we will be able to hook into different AD
 ecosystems
 """
 function iszerotangent end
+
+iszerotangent(::Any) = false

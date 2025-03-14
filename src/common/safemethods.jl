@@ -2,13 +2,13 @@
 
 # Sign
 """
-    safesign(s::Number)
+    sign_safe(s::Number)
 
 Compute the sign of a number `s`, but return `+1` if `s` is zero so that the result is
 always a number with modulus 1, i.e. an element of the unitary group U(1).
 """
-safesign(s::Real) = ifelse(s < zero(s), -one(s), +one(s))
-safesign(s::Complex) = ifelse(iszero(s), one(s), s / abs(s))
+sign_safe(s::Real) = ifelse(s < zero(s), -one(s), +one(s))
+sign_safe(s::Complex) = ifelse(iszero(s), one(s), s / abs(s))
 
 # Inverse
 

@@ -122,7 +122,7 @@ function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
 
     if positive # already fix Q even if we do not need R
         @inbounds for j in 1:minmn
-            s = safesign(A[j, j])
+            s = sign_safe(A[j, j])
             @simd for i in 1:m
                 Q[i, j] *= s
             end
@@ -134,7 +134,7 @@ function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         if positive
             @inbounds for j in n:-1:1
                 @simd for i in 1:min(minmn, j)
-                    R̃[i, j] = R̃[i, j] * conj(safesign(R̃[i, i]))
+                    R̃[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
                 end
             end
         end
