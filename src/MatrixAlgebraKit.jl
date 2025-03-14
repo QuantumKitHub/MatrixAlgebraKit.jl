@@ -3,6 +3,7 @@ module MatrixAlgebraKit
 using LinearAlgebra: LinearAlgebra
 using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!
+using LinearAlgebra: sylvester
 using LinearAlgebra: isposdef, ishermitian
 using LinearAlgebra: Diagonal, diag, diagind
 using LinearAlgebra: UpperTriangular, LowerTriangular
@@ -63,5 +64,6 @@ include("pullbacks/lq.jl")
 include("pullbacks/eig.jl")
 include("pullbacks/eigh.jl")
 include("pullbacks/svd.jl")
+include("pullbacks/polar.jl")
 
 end

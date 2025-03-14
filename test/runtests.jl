@@ -12,25 +12,25 @@ using MatrixAlgebraKit: diagview
     include("qr.jl")
     include("lq.jl")
 end
-@testset "Singular Value Decomposition" verbose = true begin
+@testset "Singular Value Decomposition" begin
     include("svd.jl")
 end
-@testset "Hermitian Eigenvalue Decomposition" verbose = true begin
+@testset "Hermitian Eigenvalue Decomposition" begin
     include("eigh.jl")
 end
-@testset "General Eigenvalue Decomposition" verbose = true begin
+@testset "General Eigenvalue Decomposition" begin
     include("eig.jl")
 end
-@testset "Schur Decomposition" verbose = true begin
+@testset "Schur Decomposition" begin
     include("schur.jl")
 end
-@testset "Polar Decomposition" verbose = true begin
+@testset "Polar Decomposition" begin
     include("polar.jl")
 end
-@testset "Image and Null Space" verbose = true begin
+@testset "Image and Null Space" begin
     include("orthnull.jl")
 end
-@testset "ChainRules" verbose = true begin
+@testset "ChainRules" begin
     include("chainrules.jl")
 end
 

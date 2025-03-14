@@ -5,6 +5,9 @@ using MatrixAlgebraKit: copy_input, TruncatedAlgorithm, zero!
 using ChainRulesCore
 using LinearAlgebra
 
+# TODO: Decide on an interface to pass on the kwargs for the pullback functions
+# from the primal function calls
+
 MatrixAlgebraKit.iszerotangent(::AbstractZero) = true
 
 function ChainRulesCore.rrule(::typeof(copy_input), f, A::AbstractMatrix)
@@ -143,6 +146,34 @@ function ChainRulesCore.rrule(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ,
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return MatrixAlgebraKit.truncate!(svd_trunc!, USVᴴ, alg.trunc), svd_trunc_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(left_polar!), A::AbstractMatrix, WP, alg)
+    Ac = copy_input(left_polar, A)
+    WP = left_polar!(Ac, WP, alg)
+    function left_polar_pullback(ΔWP)
+        ΔA = zero(A)
+        MatrixAlgebraKit.left_polar_pullback!(ΔA, WP, unthunk.(ΔWP))
+        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+    end
+    function left_polar_pullback(::Tuple{ZeroTangent,ZeroTangent}) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return WP, left_polar_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(right_polar!), A::AbstractMatrix, PWᴴ, alg)
+    Ac = copy_input(left_polar, A)
+    PWᴴ = right_polar!(Ac, PWᴴ, alg)
+    function right_polar_pullback(ΔPWᴴ)
+        ΔA = zero(A)
+        MatrixAlgebraKit.right_polar_pullback!(ΔA, PWᴴ, unthunk.(ΔPWᴴ))
+        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+    end
+    function right_polar_pullback(::Tuple{ZeroTangent,ZeroTangent}) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return PWᴴ, right_polar_pullback
 end
 
 end

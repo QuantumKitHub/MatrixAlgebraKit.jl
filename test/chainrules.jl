@@ -1,5 +1,5 @@
 using ChainRulesCore, ChainRulesTestUtils, Zygote
-using MatrixAlgebraKit: diagview, TruncatedAlgorithm
+using MatrixAlgebraKit: diagview, TruncatedAlgorithm, PolarViaSVD
 using LinearAlgebra: UpperTriangular, Diagonal, Hermitian
 
 function remove_svdgauge_depence!(ΔU, ΔVᴴ, U, S, Vᴴ;
@@ -31,7 +31,7 @@ precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
 
 for f in
     (:qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
-     :eig_full, :eigh_full, :svd_compact, :svd_trunc)
+     :eig_full, :eigh_full, :svd_compact, :svd_trunc, :left_polar, :right_polar)
     copy_f = Symbol(:copy_, f)
     f! = Symbol(f, '!')
     @eval begin
@@ -293,5 +293,26 @@ end
         test_rrule(config, svd_trunc, A; fkwargs=(; trunc=trunctol(S[1, 1] / 2)),
                    output_tangent=(ΔU[:, 1:r], ΔS[1:r, 1:r], ΔVᴴ[1:r, :]),
                    atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+    end
+end
+
+@timedtestset "Polar AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
+    rng = StableRNG(12345)
+    m = 19
+    @testset "size ($m, $n)" for n in (17, m, 23)
+        atol = rtol = m * n * precision(T)
+        A = randn(rng, T, m, n)
+        for alg in PolarViaSVD.((LAPACK_QRIteration(), LAPACK_DivideAndConquer()))
+            m >= n &&
+                test_rrule(copy_left_polar, A, alg ⊢ NoTangent(); atol=atol, rtol=rtol)
+            m <= n &&
+                test_rrule(copy_right_polar, A, alg ⊢ NoTangent(); atol=atol, rtol=rtol)
+        end
+        # Zygote part
+        config = Zygote.ZygoteRuleConfig()
+        m >= n && test_rrule(config, left_polar, A;
+                             atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        m <= n && test_rrule(config, right_polar, A;
+                             atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
     end
 end
