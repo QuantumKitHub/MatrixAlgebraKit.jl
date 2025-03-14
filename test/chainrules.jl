@@ -128,7 +128,7 @@ end
 @timedtestset "LQ AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
     rng = StableRNG(12345)
     m = 19
-    @testset "size ($m, $n)" for n in (m, 23) #(17, m, 23)
+    @testset "size ($m, $n)" for n in (17, m, 23)
         # lq_compact
         atol = rtol = m * n * precision(T)
         A = randn(rng, T, m, n)
@@ -314,5 +314,38 @@ end
                              atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
         m <= n && test_rrule(config, right_polar, A;
                              atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+    end
+end
+
+@timedtestset "Orth en null with eltype $T" for T in (Float64, ComplexF64, Float32)
+    rng = StableRNG(12345)
+    m = 19
+    @testset "size ($m, $n)" for n in (17, m, 23)
+        atol = rtol = m * n * precision(T)
+        A = randn(rng, T, m, n)
+        config = Zygote.ZygoteRuleConfig()
+        test_rrule(config, left_orth, A;
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        test_rrule(config, left_orth, A; fkwargs=(; kind=:qrpos),
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        m >= n &&
+            test_rrule(config, left_orth, A; fkwargs=(; kind=:polar),
+                       atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+
+        ΔN = left_orth(A; kind=:qrpos)[1] * randn(rng, T, min(m, n), m - min(m, n))
+        test_rrule(config, left_null, A; fkwargs=(; kind=:qrpos), output_tangent=ΔN,
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+
+        test_rrule(config, right_orth, A;
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        test_rrule(config, right_orth, A; fkwargs=(; kind=:lqpos),
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+        m <= n &&
+            test_rrule(config, right_orth, A; fkwargs=(; kind=:polar),
+                       atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+
+        ΔNᴴ = randn(rng, T, n - min(m, n), min(m, n)) * right_orth(A; kind=:lqpos)[2]
+        test_rrule(config, right_null, A; fkwargs=(; kind=:lqpos), output_tangent=ΔNᴴ,
+                   atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
     end
 end

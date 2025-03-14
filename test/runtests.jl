@@ -8,7 +8,7 @@ using JET
 using LinearAlgebra: LinearAlgebra, diag, Diagonal, I, isposdef, diagind, mul!
 using MatrixAlgebraKit: diagview
 
-@testset "QR / LQ Decomposition" verbose = true begin
+@testset "QR / LQ Decomposition" begin
     include("qr.jl")
     include("lq.jl")
 end
@@ -30,7 +30,7 @@ end
 @testset "Image and Null Space" begin
     include("orthnull.jl")
 end
-@testset "ChainRules" begin
+@testset "ChainRules" verbose = true begin
     include("chainrules.jl")
 end
 
