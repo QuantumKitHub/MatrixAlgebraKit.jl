@@ -75,7 +75,7 @@ function lq_compact_pullback!(ΔA::AbstractMatrix, LQ, ΔLQ;
             ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1d', Q2, -1, 1)
         end
     end
-    if !iszerotangent(ΔL) && n > p
+    if !iszerotangent(ΔL) && m > p
         L21 = view(L, (p + 1):m, 1:p)
         ΔL21 = view(ΔL, (p + 1):m, 1:p)
         ΔQ̃ = mul!(ΔQ̃, L21' * ΔL21, Q1, -1, 1)
