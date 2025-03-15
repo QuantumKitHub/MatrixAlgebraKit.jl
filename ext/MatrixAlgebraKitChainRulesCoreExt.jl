@@ -86,7 +86,7 @@ function ChainRulesCore.rrule(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, alg)
         MatrixAlgebraKit.lq_compact_pullback!(ΔA, (L, Q), (ZeroTangent(), ΔQ))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function qr_null_pullback(::ZeroTangent) # is this extra definition useful?
+    function lq_null_pullback(::ZeroTangent) # is this extra definition useful?
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return Nᴴ, lq_null_pullback
