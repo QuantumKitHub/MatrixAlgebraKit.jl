@@ -216,6 +216,10 @@ end
                atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
     test_rrule(config, eig_full, A; output_tangent=(ΔD2, ΔV),
                atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+    test_rrule(config, first ∘ eig_full, A; output_tangent=ΔD,
+               atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+    test_rrule(config, last ∘ eig_full, A; output_tangent=ΔV,
+               atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
 end
 
 @timedtestset "EIGH AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
@@ -243,6 +247,10 @@ end
     test_rrule(config, eigh_full ∘ Matrix ∘ Hermitian, A; output_tangent=(ΔD, ΔV),
                atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
     test_rrule(config, eigh_full ∘ Matrix ∘ Hermitian, A; output_tangent=(ΔD2, ΔV),
+               atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+    test_rrule(config, first ∘ eigh_full ∘ Matrix ∘ Hermitian, A; output_tangent=ΔD,
+               atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
+    test_rrule(config, last ∘ eigh_full ∘ Matrix ∘ Hermitian, A; output_tangent=ΔV,
                atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
 end
 
