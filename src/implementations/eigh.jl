@@ -10,19 +10,20 @@ copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
 
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV)
     m, n = size(A)
-    m == n || throw(ArgumentError("Eigenvalue decompsition requires square input matrix"))
+    m == n || throw(DimensionMismatch("square input matrix expected"))
     D, V = DV
-    (V isa AbstractMatrix && eltype(V) == eltype(A) && size(V) == (m, m)) ||
-        throw(ArgumentError("`eigh_full!` requires square V matrix with same size and `eltype` as A"))
-    (D isa Diagonal && eltype(D) == real(eltype(A)) && size(D) == (m, m)) ||
-        throw(ArgumentError("`eigh_full!` requires Diagonal matrix D with same size as A with a real `eltype`"))
+    @assert D isa Diagonal && V isa AbstractMatrix
+    @check_size(D, (m, m))
+    @check_scalar(D, A, real)
+    @check_size(V, (m, m))
+    @check_scalar(V, A)
     return nothing
 end
 function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D)
     m, n = size(A)
-    m == n || throw(ArgumentError("Eigenvalue decompsition requires square input matrix"))
-    (size(D) == (n,) && eltype(D) == real(eltype(A))) ||
-        throw(ArgumentError("Eigenvalue vector `D` must have length equal to size(A, 1) with a real `eltype`"))
+    @assert D isa AbstractVector
+    @check_size(D, (n,))
+    @check_scalar(D, A, real)
     return nothing
 end
 

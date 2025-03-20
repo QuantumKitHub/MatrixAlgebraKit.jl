@@ -11,31 +11,34 @@ copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
 function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ)
     m, n = size(A)
     U, S, Vᴴ = USVᴴ
-    (U isa AbstractMatrix && eltype(U) == eltype(A) && size(U) == (m, m)) ||
-        throw(ArgumentError("`svd_full!` requires square U matrix with equal number of rows and same `eltype` as A"))
-    (Vᴴ isa AbstractMatrix && eltype(Vᴴ) == eltype(A) && size(Vᴴ) == (n, n)) ||
-        throw(ArgumentError("`svd_full!` requires square Vᴴ matrix with equal number of columns and same `eltype` as A"))
-    (S isa AbstractMatrix && eltype(S) == real(eltype(A)) && size(S) == (m, n)) ||
-        throw(ArgumentError("`svd_full!` requires a matrix S of the same size as A with a real `eltype`"))
+    @assert U isa AbstractMatrix && S isa AbstractMatrix && Vᴴ isa AbstractMatrix
+    @check_size(U, (m, m))
+    @check_scalar(U, A)
+    @check_size(S, (m, n))
+    @check_scalar(S, A, real)
+    @check_size(Vᴴ, (n, n))
+    @check_scalar(Vᴴ, A)
     return nothing
 end
 function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ)
     m, n = size(A)
     minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
-    (U isa AbstractMatrix && eltype(U) == eltype(A) && size(U) == (m, minmn)) ||
-        throw(ArgumentError("`svd_full!` requires square U matrix with equal number of rows and same `eltype` as A"))
-    (Vᴴ isa AbstractMatrix && eltype(Vᴴ) == eltype(A) && size(Vᴴ) == (minmn, n)) ||
-        throw(ArgumentError("`svd_full!` requires square Vᴴ matrix with equal number of columns and same `eltype` as A"))
-    (S isa Diagonal && eltype(S) == real(eltype(A)) && size(S) == (minmn, minmn)) ||
-        throw(ArgumentError("`svd_compact!` requires Diagonal matrix S with number of rows equal to min(size(A)...) with a real `eltype`"))
+    @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
+    @check_size(U, (m, minmn))
+    @check_scalar(U, A)
+    @check_size(S, (minmn, minmn))
+    @check_scalar(S, A, real)
+    @check_size(Vᴴ, (minmn, n))
+    @check_scalar(Vᴴ, A)
     return nothing
 end
 function check_input(::typeof(svd_vals!), A::AbstractMatrix, S)
     m, n = size(A)
     minmn = min(m, n)
-    (S isa AbstractVector && eltype(S) == real(eltype(A)) && size(S) == (minmn,)) ||
-        throw(ArgumentError("`svd_vals!` requires vector S of length min(size(A)...) with a real `eltype`"))
+    @assert S isa AbstractVector
+    @check_size(S, (minmn,))
+    @check_scalar(S, A, real)
     return nothing
 end
 
