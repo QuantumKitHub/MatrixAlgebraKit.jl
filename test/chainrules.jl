@@ -325,7 +325,7 @@ end
     end
 end
 
-@timedtestset "Orth en null with eltype $T" for T in (Float64, ComplexF64, Float32)
+@timedtestset "Orth and null with eltype $T" for T in (Float64, ComplexF64, Float32)
     rng = StableRNG(12345)
     m = 19
     @testset "size ($m, $n)" for n in (17, m, 23)
