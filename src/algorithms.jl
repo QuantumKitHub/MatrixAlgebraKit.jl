@@ -144,6 +144,12 @@ macro functiondef(f)
                end)
 end
 
+"""
+    @check_scalar(x, y, [op], [eltype])
+
+Check if `eltype(x) == op(eltype(y))` and throw an error if not.
+By default `op = identity` and `eltype = eltype'.
+"""
 macro check_scalar(x, y, op=:identity, eltype=:eltype)
     error_message = "Unexpected scalar type: "
     error_message *= string(eltype) * "(" * string(x) * ")"
@@ -156,6 +162,13 @@ macro check_scalar(x, y, op=:identity, eltype=:eltype)
                    $eltype($x) == $op($eltype($y)) || throw(ArgumentError($error_message))
                end)
 end
+
+"""
+    @check_size(x, sz, [size])
+
+Check if `size(x) == sz` and throw an error if not.
+By default, `size = size`.
+"""
 macro check_size(x, sz, size=:size)
     msgstart = string(size) * "(" * string(x) * ") = "
     err = gensym()
