@@ -13,30 +13,30 @@ end
 function check_input(::typeof(qr_full!), A::AbstractMatrix, QR)
     m, n = size(A)
     Q, R = QR
-    (Q isa AbstractMatrix && eltype(Q) == eltype(A) && size(Q) == (m, m)) ||
-        throw(DimensionMismatch("Full unitary matrix Q must be square with equal number of rows as A"))
-    (R isa AbstractMatrix && eltype(R) == eltype(A) && (isempty(R) || size(R) == (m, n))) ||
-        throw(DimensionMismatch("Upper triangular matrix R must have size equal to A"))
+    @assert Q isa AbstractMatrix && R isa AbstractMatrix
+    @check_size(Q, (m, m))
+    @check_scalar(Q, A)
+    isempty(R) || @check_size(R, (m, n))
+    @check_scalar(R, A)
     return nothing
 end
 function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR)
     m, n = size(A)
-    if n <= m
-        Q, R = QR
-        (Q isa AbstractMatrix && eltype(Q) == eltype(A) && size(Q) == (m, n)) ||
-            throw(DimensionMismatch("Isometric Q must have size equal to A"))
-        (R isa AbstractMatrix && eltype(R) == eltype(A) &&
-         (isempty(R) || size(R) == (n, n))) ||
-            throw(DimensionMismatch("Upper triangular matrix R must be square with equal number of columns as A"))
-    else
-        check_input(qr_full!, A, QR)
-    end
+    minmn = min(m, n)
+    Q, R = QR
+    @assert Q isa AbstractMatrix && R isa AbstractMatrix
+    @check_size(Q, (m, minmn))
+    @check_scalar(Q, A)
+    isempty(R) || @check_size(R, (minmn, n))
+    @check_scalar(R, A)
+    return nothing
 end
 function check_input(::typeof(qr_null!), A::AbstractMatrix, N)
     m, n = size(A)
     minmn = min(m, n)
-    (N isa AbstractMatrix && eltype(N) == eltype(A) && size(N) == (m, m - minmn)) ||
-        throw(DimensionMismatch("Matrix N must have a the same eltype as A and a size such that [A N] is square"))
+    @assert N isa AbstractMatrix
+    @check_size(N, (m, m - minmn))
+    @check_scalar(N, A)
     return nothing
 end
 

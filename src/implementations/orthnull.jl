@@ -9,37 +9,43 @@ function check_input(::typeof(left_orth!), A::AbstractMatrix, VC)
     m, n = size(A)
     minmn = min(m, n)
     V, C = VC
-    (V isa AbstractMatrix && eltype(V) == eltype(A) && size(V) == (m, minmn)) ||
-        throw(DimensionMismatch("Isometric V must have the same eltype as A, the same number of rows and min(m, n) columns"))
-    (C isa AbstractMatrix && eltype(C) == eltype(A) &&
-     (isempty(C) || size(C) == (minmn, n))) ||
-        throw(DimensionMismatch("Corestriction C must have the same eltype as A, the same number of columns and min(m, n) rows"))
+    @assert V isa AbstractMatrix && C isa AbstractMatrix
+    @check_size(V, (m, minmn))
+    @check_scalar(V, A)
+    if !isempty(C)
+        @check_size(C, (minmn, n))
+        @check_scalar(C, A)
+    end
     return nothing
 end
 function check_input(::typeof(right_orth!), A::AbstractMatrix, CVᴴ)
     m, n = size(A)
     minmn = min(m, n)
     C, Vᴴ = CVᴴ
-    (Vᴴ isa AbstractMatrix && eltype(Vᴴ) == eltype(A) && size(Vᴴ) == (minmn, n)) ||
-        throw(DimensionMismatch("Adjoint isometric matrix Vᴴ must have the same eltype as A, the same number of columns and min(m, n) rows"))
-    (C isa AbstractMatrix && eltype(C) == eltype(A) &&
-     (isempty(C) || size(C) == (m, minmn))) ||
-        throw(DimensionMismatch("Corestriction C must have the same eltype as A, the same number of rows and min(m, n) columns"))
+    @assert C isa AbstractMatrix && Vᴴ isa AbstractMatrix
+    if !isempty(C)
+        @check_size(C, (m, minmn))
+        @check_scalar(C, A)
+    end
+    @check_size(Vᴴ, (minmn, n))
+    @check_scalar(Vᴴ, A)
     return nothing
 end
 
 function check_input(::typeof(left_null!), A::AbstractMatrix, N)
     m, n = size(A)
     minmn = min(m, n)
-    (N isa AbstractMatrix && eltype(N) == eltype(A) && size(N) == (m, m - minmn)) ||
-        throw(DimensionMismatch("Isometric matrix   must have the same eltype as A, the same number of rows and m - min(m, n) columns"))
+    @assert N isa AbstractMatrix
+    @check_size(N, (m, m - minmn))
+    @check_scalar(N, A)
     return nothing
 end
 function check_input(::typeof(right_null!), A::AbstractMatrix, Nᴴ)
     m, n = size(A)
     minmn = min(m, n)
-    (Nᴴ isa AbstractMatrix && eltype(Nᴴ) == eltype(A) && size(Nᴴ) == (n - minmn, n)) ||
-        throw(DimensionMismatch("Adjoint isometric matrix Nᴴ must have the same eltype as A, the same number of columns and n - min(m, n) rows"))
+    @assert Nᴴ isa AbstractMatrix
+    @check_size(Nᴴ, (n - minmn, n))
+    @check_scalar(Nᴴ, A)
     return nothing
 end
 

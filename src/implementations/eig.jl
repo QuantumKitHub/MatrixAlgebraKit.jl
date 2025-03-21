@@ -10,21 +10,21 @@ copy_input(::typeof(eig_trunc), A) = copy_input(eig_full, A)
 
 function check_input(::typeof(eig_full!), A::AbstractMatrix, DV)
     m, n = size(A)
-    m == n || throw(ArgumentError("Eigenvalue decomposition requires square input matrix"))
+    m == n || throw(DimensionMismatch("square input matrix expected"))
     D, V = DV
-    Tc = complex(eltype(A))
-    (V isa AbstractMatrix && eltype(V) == Tc && size(V) == (m, m)) ||
-        throw(ArgumentError("`eig_full!` requires square matrix V with same size as A and complex `eltype`"))
-    (D isa Diagonal && eltype(D) == Tc && size(D) == (m, m)) ||
-        throw(ArgumentError("`eig_full!` requires Diagonal matrix D with same size as A and complex `eltype`"))
+    @assert D isa Diagonal && V isa AbstractMatrix
+    @check_size(D, (m, m))
+    @check_scalar(D, A, complex)
+    @check_size(V, (m, m))
+    @check_scalar(V, A, complex)
     return nothing
 end
 function check_input(::typeof(eig_vals!), A::AbstractMatrix, D)
     m, n = size(A)
-    m == n || throw(ArgumentError("Eigenvalue decomposition requires square input matrix"))
-    Tc = complex(eltype(A))
-    size(D) == (n,) && eltype(D) == Tc ||
-        throw(ArgumentError("Eigenvalue vector `D` must have length equal to size(A, 1) and complex `eltype`"))
+    m == n || throw(DimensionMismatch("square input matrix expected"))
+    @assert D isa AbstractVector
+    @check_size(D, (n,))
+    @check_scalar(D, A, complex)
     return nothing
 end
 

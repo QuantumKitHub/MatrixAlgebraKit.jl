@@ -6,21 +6,23 @@ copy_input(::typeof(schur_vals), A::AbstractMatrix) = copy_input(eig_vals, A)
 # check input
 function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv)
     m, n = size(A)
-    m == n || throw(ArgumentError("Schur decompsition requires square input matrix"))
+    m == n || throw(DimensionMismatch("square input matrix expected"))
     T, Z, vals = TZv
-    (Z isa AbstractMatrix && eltype(Z) == eltype(A) && size(Z) == (m, m)) ||
-        throw(ArgumentError("`schur_full!` requires square Z matrix with same size and `eltype` as A"))
-    (T isa AbstractMatrix && eltype(T) == eltype(A) && size(T) == (m, m)) ||
-        throw(ArgumentError("`schur_full!` requires square T matrix with same size and `eltype` as A"))
-    size(vals) == (n,) && eltype(vals) == complex(eltype(A)) ||
-        throw(ArgumentError("Eigenvalue vector `vals` must have length equal to size(A, 1) and complex `eltype`"))
+    @assert T isa AbstractMatrix && Z isa AbstractMatrix && vals isa AbstractVector
+    @check_size(T, (m, m))
+    @check_scalar(T, A)
+    @check_size(Z, (m, m))
+    @check_scalar(Z, A)
+    @check_size(vals, (n,))
+    @check_scalar(vals, A, complex)
     return nothing
 end
 function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals)
     m, n = size(A)
-    m == n || throw(ArgumentError("Schur decompsition requires square input matrix"))
-    size(vals) == (n,) && eltype(vals) == complex(eltype(A)) ||
-        throw(ArgumentError("Eigenvalue vector `vals` must have length equal to size(A, 1) and complex `eltype`"))
+    m == n || throw(DimensionMismatch("square input matrix expected"))
+    @assert vals isa AbstractVector
+    @check_size(vals, (n,))
+    @check_scalar(vals, A, complex)
     return nothing
 end
 

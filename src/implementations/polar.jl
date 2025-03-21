@@ -7,22 +7,24 @@ function check_input(::typeof(left_polar!), A::AbstractMatrix, WP)
     m, n = size(A)
     W, P = WP
     m >= n ||
-        throw(ArgumentError("`left_polar!` requires a matrix A with at least as many rows as columns"))
-    (W isa AbstractMatrix && eltype(W) == eltype(A) && size(W) == (m, n)) ||
-        throw(ArgumentError("`left_polar!` requires a matrix W with the same size and eltype as A"))
-    (P isa AbstractMatrix && eltype(P) == eltype(A) && size(P) == (n, n)) ||
-        throw(ArgumentError("`left_polar!` requires a square matrix P with the same eltype and number of columns as A"))
+        throw(ArgumentError("input matrix needs at least as many rows as columns"))
+    @assert W isa AbstractMatrix && P isa AbstractMatrix
+    @check_size(W, (m, n))
+    @check_scalar(W, A)
+    @check_size(P, (n, n))
+    @check_scalar(P, A)
     return nothing
 end
 function check_input(::typeof(right_polar!), A::AbstractMatrix, PWᴴ)
     m, n = size(A)
     P, Wᴴ = PWᴴ
     n >= m ||
-        throw(ArgumentError("`right_polar!` requires a matrix A with at least as many columns as rows"))
-    (P isa AbstractMatrix && eltype(P) == eltype(A) && size(P) == (m, m)) ||
-        throw(ArgumentError("`right_polar!` requires a square matrix P with the same eltype and number of rows as A"))
-    (Wᴴ isa AbstractMatrix && eltype(Wᴴ) == eltype(A) && size(Wᴴ) == (m, n)) ||
-        throw(ArgumentError("`right_polar!` requires a matrix Wᴴ with the same size and eltype as A"))
+        throw(ArgumentError("input matrix needs at least as many columns as rows"))
+    @assert P isa AbstractMatrix && Wᴴ isa AbstractMatrix
+    @check_size(P, (m, m))
+    @check_scalar(P, A)
+    @check_size(Wᴴ, (m, n))
+    @check_scalar(Wᴴ, A)
     return nothing
 end
 
