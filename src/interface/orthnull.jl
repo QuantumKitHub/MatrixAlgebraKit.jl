@@ -62,7 +62,7 @@ of `kind`.
     the input matrix `A`. Always use the return value of the function as it may not always be
     possible to use the provided `CV` as output.
 
-See also [`right_orth(!)`](@ref right_orth), [`left_orth(!)`](@ref left_orth), [`right_orth(!)`](@ref right_orth)
+See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null), [`right_null(!)`](@ref right_null)
 """
 function left_orth end
 function left_orth! end
@@ -117,7 +117,7 @@ of `kind`.
     the input matrix `A`. Always use the return value of the function as it may not always be
     possible to use the provided `CVᴴ` as output.
 
-See also [`left_orth(!)`](@ref left_orth), [`left_orth(!)`](@ref left_orth), [`right_orth(!)`](@ref right_orth)
+See also [`left_orth(!)`](@ref left_orth), [`left_null(!)`](@ref left_null), [`right_null(!)`](@ref right_null)
 """
 function right_orth end
 function right_orth! end
