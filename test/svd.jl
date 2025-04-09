@@ -109,8 +109,9 @@ end
     end
 end
 
-@testset "svd_trunc! mix maxrank and tol for T = $T" for T in (Float32, Float64, ComplexF32,
-                                                               ComplexF64)
+@testset "svd_trunc! mix maxrank and tol for T = $T" for T in
+                                                         (Float32, Float64, ComplexF32,
+                                                          ComplexF64)
     rng = StableRNG(123)
     if LinearAlgebra.LAPACK.version() < v"3.12.0"
         algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
