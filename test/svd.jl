@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef
-using MatrixAlgebraKit: diagview
+using MatrixAlgebraKit: TruncationKeepAbove, diagview
 
 @testset "svd_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
@@ -112,6 +112,36 @@ end
             @test U1 ≈ U2
             @test S1 ≈ S2
             @test V1ᴴ ≈ V2ᴴ
+        end
+    end
+end
+
+@testset "svd_trunc! mix maxrank and tol for T = $T" for T in
+                                                         (Float32, Float64, ComplexF32,
+                                                          ComplexF64)
+    rng = StableRNG(123)
+    if LinearAlgebra.LAPACK.version() < v"3.12.0"
+        algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+    else
+        algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
+                LAPACK_Jacobi())
+    end
+    m = 4
+    @testset "algorithm $alg" for alg in algs
+        U = qr_compact(randn(rng, T, m, m))[1]
+        S = Diagonal([0.9, 0.3, 0.1, 0.01])
+        Vᴴ = qr_compact(randn(rng, T, m, m))[1]
+        A = U * S * Vᴴ
+
+        for trunc_fun in ((rtol, maxrank) -> (; rtol, maxrank),
+                          (rtol, maxrank) -> truncrank(maxrank) & TruncationKeepAbove(0, rtol))
+            U1, S1, V1ᴴ = svd_trunc(A; alg, trunc=trunc_fun(0.2, 1))
+            @test length(S1.diag) == 1
+            @test S1.diag ≈ S.diag[1:1] rtol = sqrt(eps(real(T)))
+
+            U2, S2, V2ᴴ = svd_trunc(A; alg, trunc=trunc_fun(0.2, 3))
+            @test length(S2.diag) == 2
+            @test S2.diag ≈ S.diag[1:2] rtol = sqrt(eps(real(T)))
         end
     end
 end
