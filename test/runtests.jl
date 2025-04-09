@@ -1,5 +1,8 @@
 using SafeTestsets
 
+@safetestset "Truncate" begin
+    include("truncate.jl")
+end
 @safetestset "QR / LQ Decomposition" begin
     include("qr.jl")
     include("lq.jl")
