@@ -133,17 +133,15 @@ end
         Vᴴ = qr_compact(randn(rng, T, m, m))[1]
         A = U * S * Vᴴ
 
-        for (rtol, maxrank) in ((0.2, 1), (0.2, 3))
-            for trunc in ((; rtol, maxrank),
-                          truncrank(maxrank) & TruncationKeepAbove(0, rtol))
-                U1, S1, V1ᴴ = svd_trunc(A; alg, trunc=(; rtol=0.2, maxrank=1))
-                @test length(S1.diag) == 1
-                @test S1.diag ≈ S.diag[1:1] rtol = sqrt(eps(real(T)))
+        for trunc_fun in ((rtol, maxrank) -> (; rtol, maxrank),
+                          (rtol, maxrank) -> truncrank(maxrank) & TruncationKeepAbove(0, rtol))
+            U1, S1, V1ᴴ = svd_trunc(A; alg, trunc=trunc_fun(0.2, 1))
+            @test length(S1.diag) == 1
+            @test S1.diag ≈ S.diag[1:1] rtol = sqrt(eps(real(T)))
 
-                U2, S2, V2ᴴ = svd_trunc(A; alg, trunc=(; rtol=0.2, maxrank=3))
-                @test length(S2.diag) == 2
-                @test S2.diag ≈ S.diag[1:2] rtol = sqrt(eps(real(T)))
-            end
+            U2, S2, V2ᴴ = svd_trunc(A; alg, trunc=trunc_fun(0.2, 3))
+            @test length(S2.diag) == 2
+            @test S2.diag ≈ S.diag[1:2] rtol = sqrt(eps(real(T)))
         end
     end
 end
