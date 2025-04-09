@@ -32,15 +32,17 @@ end
 @safetestset "Image and Null Space" begin
     include("orthnull.jl")
 end
-@safetestset "ChainRules" verbose = true begin
+@safetestset "ChainRules" begin
     include("chainrules.jl")
 end
 
 @safetestset "MatrixAlgebraKit.jl" begin
     @safetestset "Code quality (Aqua.jl)" begin
+        using Aqua
         Aqua.test_all(MatrixAlgebraKit)
     end
     @safetestset "Code linting (JET.jl)" begin
+        using JET
         JET.test_package(MatrixAlgebraKit; target_defined_modules=true)
     end
 end

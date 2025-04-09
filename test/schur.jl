@@ -1,3 +1,9 @@
+using MatrixAlgebraKit
+using Test
+using TestExtras
+using StableRNGs
+using LinearAlgebra: I
+
 @testset "schur_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54

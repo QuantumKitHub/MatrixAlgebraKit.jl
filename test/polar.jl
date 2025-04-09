@@ -1,3 +1,8 @@
+using MatrixAlgebraKit
+using Test
+using TestExtras
+using StableRNGs
+using LinearAlgebra: LinearAlgebra, I, isposdef
 using MatrixAlgebraKit: PolarViaSVD
 
 @testset "left_polar! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
