@@ -94,13 +94,21 @@ truncabove(atol) = TruncationKeepFiltered(≤(atol) ∘ abs)
 
 Compose two truncation strategies, keeping values common between the two strategies.
 """
-struct TruncationComposition{T1<:TruncationStrategy,T2<:TruncationStrategy} <:
+struct TruncationComposition{T<:Tuple{Vararg{TruncationStrategy}}} <:
        TruncationStrategy
-    trunc1::T1
-    trunc2::T2
+    components::T
 end
 function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
-    return TruncationComposition(trunc1, trunc2)
+    return TruncationComposition((trunc1, trunc2))
+end
+function Base.:&(trunc1::TruncationComposition, trunc2::TruncationComposition)
+    return TruncationComposition((trunc1.components..., trunc2.components...))
+end
+function Base.:&(trunc1::TruncationComposition, trunc2::TruncationStrategy)
+    return TruncationComposition((trunc1.components..., trunc2))
+end
+function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationComposition)
+    return TruncationComposition((trunc1, trunc2.components...))
 end
 
 # truncate!
@@ -169,9 +177,8 @@ function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationComposition)
-    ind1 = findtruncated(values, strategy.trunc1)
-    ind2 = findtruncated(values, strategy.trunc2)
-    return ind1 ∩ ind2
+    inds = map(Base.Fix1(findtruncated, values), strategy.components)
+    return intersect(inds...)
 end
 
 """
