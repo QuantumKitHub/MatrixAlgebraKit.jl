@@ -1,6 +1,10 @@
+using MatrixAlgebraKit
+using Test
+using TestExtras
+using StableRNGs
 using ChainRulesCore, ChainRulesTestUtils, Zygote
 using MatrixAlgebraKit: diagview, TruncatedAlgorithm, PolarViaSVD
-using LinearAlgebra: UpperTriangular, Diagonal, Hermitian
+using LinearAlgebra: UpperTriangular, Diagonal, Hermitian, mul!
 
 function remove_svdgauge_depence!(ΔU, ΔVᴴ, U, S, Vᴴ;
                                   degeneracy_atol=MatrixAlgebraKit.default_pullback_gaugetol(S))

@@ -1,3 +1,10 @@
+using MatrixAlgebraKit
+using Test
+using TestExtras
+using StableRNGs
+using LinearAlgebra: LinearAlgebra, Diagonal, I
+using MatrixAlgebraKit: diagview
+
 @testset "eigh_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
