@@ -115,3 +115,30 @@ end
         end
     end
 end
+
+@testset "svd_trunc! mix maxrank and tol for T = $T" for T in
+                                                         (Float32, Float64, ComplexF32,
+                                                          ComplexF64)
+    rng = StableRNG(123)
+    if LinearAlgebra.LAPACK.version() < v"3.12.0"
+        algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+    else
+        algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
+                LAPACK_Jacobi())
+    end
+    m = 4
+    @testset "algorithm $alg" for alg in algs
+        U = qr_compact(randn(rng, T, m, m))[1]
+        S = Diagonal([0.9, 0.3, 0.1, 0.01])
+        Vᴴ = qr_compact(randn(rng, T, m, m))[1]
+        A = U * S * Vᴴ
+
+        U1, S1, V1ᴴ = svd_trunc(A; alg, trunc=(; rtol=0.2, maxrank=1))
+        @test length(S1.diag) == 1
+        @test S1.diag ≈ S.diag[1:1] rtol = sqrt(eps(real(T)))
+
+        U2, S2, V2ᴴ = svd_trunc(A; alg, trunc=(; rtol=0.2, maxrank=3))
+        @test length(S2.diag) == 2
+        @test S2.diag ≈ S.diag[1:2] rtol = sqrt(eps(real(T)))
+    end
+end
