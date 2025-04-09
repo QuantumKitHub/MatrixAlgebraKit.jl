@@ -1,13 +1,3 @@
-## using MatrixAlgebraKit
-## using Test
-## using TestExtras
-## using ChainRulesTestUtils
-## using StableRNGs
-## using Aqua
-## using JET
-## using LinearAlgebra: LinearAlgebra, diag, Diagonal, I, isposdef, diagind, mul!
-## using MatrixAlgebraKit: diagview
-
 using SafeTestsets
 
 @safetestset "QR / LQ Decomposition" begin
