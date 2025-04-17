@@ -11,10 +11,17 @@ function TruncationStrategy(; atol=nothing, rtol=nothing, maxrank=nothing)
     if isnothing(maxrank) && isnothing(atol) && isnothing(rtol)
         return NoTruncation()
     elseif isnothing(maxrank)
-        @assert isnothing(rtol) "TODO: rtol"
-        return trunctol(atol)
+        atol = @something atol 0
+        rtol = @something rtol 0
+        return TruncationKeepAbove(atol, rtol)
     else
-        return truncrank(maxrank)
+        if isnothing(atol) && isnothing(rtol)
+            return truncrank(maxrank)
+        else
+            atol = @something atol 0
+            rtol = @something rtol 0
+            return truncrank(maxrank) & TruncationKeepAbove(atol, rtol)
+        end
     end
 end
 
@@ -82,6 +89,28 @@ Truncation strategy to discard the values that are larger than `atol` in absolut
 """
 truncabove(atol) = TruncationKeepFiltered(≤(atol) ∘ abs)
 
+"""
+    TruncationIntersection(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
+
+Compose two truncation strategies, keeping values common between the two strategies.
+"""
+struct TruncationIntersection{T<:Tuple{Vararg{TruncationStrategy}}} <:
+       TruncationStrategy
+    components::T
+end
+function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
+    return TruncationIntersection((trunc1, trunc2))
+end
+function Base.:&(trunc1::TruncationIntersection, trunc2::TruncationIntersection)
+    return TruncationIntersection((trunc1.components..., trunc2.components...))
+end
+function Base.:&(trunc1::TruncationIntersection, trunc2::TruncationStrategy)
+    return TruncationIntersection((trunc1.components..., trunc2))
+end
+function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationIntersection)
+    return TruncationIntersection((trunc1, trunc2.components...))
+end
+
 # truncate!
 # ---------
 # Generic implementation: `findtruncated` followed by indexing
@@ -145,6 +174,11 @@ function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
     atol = max(strategy.atol, strategy.rtol * first(values))
     i = @something findlast(≥(atol), values) 0
     return 1:i
+end
+
+function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
+    inds = map(Base.Fix1(findtruncated, values), strategy.components)
+    return intersect(inds...)
 end
 
 """
