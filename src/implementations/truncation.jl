@@ -90,24 +90,25 @@ Truncation strategy to discard the values that are larger than `atol` in absolut
 truncabove(atol) = TruncationKeepFiltered(≤(atol) ∘ abs)
 
 """
-    TruncationComposition(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
+    TruncationIntersection(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
+
 Compose two truncation strategies, keeping values common between the two strategies.
 """
-struct TruncationComposition{T<:Tuple{Vararg{TruncationStrategy}}} <:
+struct TruncationIntersection{T<:Tuple{Vararg{TruncationStrategy}}} <:
        TruncationStrategy
     components::T
 end
 function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
-    return TruncationComposition((trunc1, trunc2))
+    return TruncationIntersection((trunc1, trunc2))
 end
-function Base.:&(trunc1::TruncationComposition, trunc2::TruncationComposition)
-    return TruncationComposition((trunc1.components..., trunc2.components...))
+function Base.:&(trunc1::TruncationIntersection, trunc2::TruncationIntersection)
+    return TruncationIntersection((trunc1.components..., trunc2.components...))
 end
-function Base.:&(trunc1::TruncationComposition, trunc2::TruncationStrategy)
-    return TruncationComposition((trunc1.components..., trunc2))
+function Base.:&(trunc1::TruncationIntersection, trunc2::TruncationStrategy)
+    return TruncationIntersection((trunc1.components..., trunc2))
 end
-function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationComposition)
-    return TruncationComposition((trunc1, trunc2.components...))
+function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationIntersection)
+    return TruncationIntersection((trunc1, trunc2.components...))
 end
 
 # truncate!
@@ -175,7 +176,7 @@ function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
     return 1:i
 end
 
-function findtruncated(values::AbstractVector, strategy::TruncationComposition)
+function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
     inds = map(Base.Fix1(findtruncated, values), strategy.components)
     return intersect(inds...)
 end

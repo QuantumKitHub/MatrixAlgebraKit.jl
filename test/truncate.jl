@@ -1,7 +1,7 @@
 using MatrixAlgebraKit
 using Test
 using TestExtras
-using MatrixAlgebraKit: NoTruncation, TruncationComposition, TruncationKeepAbove,
+using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbove,
                         TruncationStrategy
 
 @testset "truncate" begin
@@ -22,7 +22,7 @@ using MatrixAlgebraKit: NoTruncation, TruncationComposition, TruncationKeepAbove
     @test trunc.rev == true
 
     trunc = @constinferred TruncationStrategy(; atol=1e-2, rtol=1e-3, maxrank=10)
-    @test trunc isa TruncationComposition
+    @test trunc isa TruncationIntersection
     @test trunc == truncrank(10) & TruncationKeepAbove(1e-2, 1e-3)
     @test trunc.components[1] == truncrank(10)
     @test trunc.components[2] == TruncationKeepAbove(1e-2, 1e-3)
