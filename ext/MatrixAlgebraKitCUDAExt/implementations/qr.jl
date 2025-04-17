@@ -7,6 +7,10 @@ the diagonal elements of `R` are non-negative.
 """
 @algdef CUSOLVER_HouseholderQR
 
+function MatrixAlgebraKit.default_qr_algorithm(A::CuMatrix{<:BlasFloat}; kwargs...)
+    return CUSOLVER_HouseholderQR(; kwargs...)
+end
+
 # Outputs
 # -------
 function MatrixAlgebraKit.initialize_output(::typeof(qr_full!), A::AbstractMatrix,

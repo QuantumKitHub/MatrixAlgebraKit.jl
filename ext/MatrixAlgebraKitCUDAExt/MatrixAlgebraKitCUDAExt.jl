@@ -1,4 +1,4 @@
-module MatrixAlgebraKitChainRulesCoreExt
+module MatrixAlgebraKitCUDAExt
 
 using MatrixAlgebraKit
 using CUDA
