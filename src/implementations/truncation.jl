@@ -90,14 +90,17 @@ Truncation strategy to discard the values that are larger than `atol` in absolut
 truncabove(atol) = TruncationKeepFiltered(≤(atol) ∘ abs)
 
 """
-    TruncationIntersection(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
+    TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...)
 
-Compose two truncation strategies, keeping values common between the two strategies.
+Composition of multiple truncation strategies, keeping values common between them.
 """
 struct TruncationIntersection{T<:Tuple{Vararg{TruncationStrategy}}} <:
        TruncationStrategy
     components::T
 end
+TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...) = 
+    TruncationIntersection((trunc, truncs...))
+
 function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
     return TruncationIntersection((trunc1, trunc2))
 end
