@@ -28,3 +28,23 @@ function uppertriangularind(A::AbstractMatrix)
     end
     return I
 end
+
+function uppertriangular!(A::AbstractMatrix)
+    Base.require_one_based_indexing(A)
+    m, n = size(A)
+    for i in 1:n
+        r = (i + 1):m
+        zero!(view(A, r, i))
+    end
+    return A
+end
+
+function lowertriangular!(A::AbstractMatrix)
+    Base.require_one_based_indexing(A)
+    m, n = size(A)
+    for i in 2:n
+        r = 1:(i - 1)
+        zero!(view(A, r, i))
+    end
+    return A
+end

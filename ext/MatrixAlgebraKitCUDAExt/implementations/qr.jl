@@ -78,14 +78,15 @@ function _cusolver_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
     # henceforth, τ is no longer needed and can be reused
 
     if positive # already fix Q even if we do not need R
+        # TODO: report that `lmul!` and `rmul!` with `Diagonal` don't work with CUDA
         τ .= sign_safe.(diagview(A))
-        Q = rmul!(Q, Diagonal(τ))
+        Q .= Q .* transpose(τ)
     end
 
     if computeR
-        R̃ = triu!(view(A, axes(R)...))
+        R̃ = uppertriangular!(view(A, axes(R)...))
         if positive
-            R̃ = lmul!(Diagonal(τ)', R̃)
+            R̃ .= conj.(τ) .* R̃
         end
         copyto!(R, R̃)
     end
@@ -103,6 +104,6 @@ function _cusolver_qr_null!(A::AbstractMatrix, N::AbstractMatrix;
     fill!(N, zero(eltype(N)))
     one!(view(N, (minmn + 1):m, 1:(m - minmn)))
     A, τ = YACUSOLVER.geqrf!(A)
-    N = unmqr!('L', 'N', A, τ, N)
+    N = YACUSOLVER.unmqr!('L', 'N', A, τ, N)
     return N
 end
