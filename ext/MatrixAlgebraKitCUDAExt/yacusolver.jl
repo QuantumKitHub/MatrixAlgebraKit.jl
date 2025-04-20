@@ -1,10 +1,11 @@
 module YACUSOLVER
 
 using LinearAlgebra
-using LinearAlgebra: BlasInt, checksquare, chkstride1, require_one_based_indexing
+using LinearAlgebra: BlasInt, BlasFloat, checksquare, chkstride1, require_one_based_indexing
 using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo
 
 using CUDA
+using CUDA: @allowscalar
 using CUDA.CUSOLVER: cusolverDnCreate
 
 # QR methods are implemented with full access to allocated arrays, so we do not need to redo this:

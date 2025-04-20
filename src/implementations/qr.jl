@@ -130,7 +130,7 @@ function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
     end
 
     if computeR
-        R̃ = triu!(view(A, axes(R)...))
+        R̃ = uppertriangular!(view(A, axes(R)...))
         if positive
             @inbounds for j in n:-1:1
                 @simd for i in 1:min(minmn, j)

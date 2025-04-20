@@ -126,7 +126,7 @@ function _lapack_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
     end
 
     if computeL
-        L̃ = tril!(view(A, axes(L)...))
+        L̃ = lowertriangular!(view(A, axes(L)...))
         if positive
             @inbounds for j in 1:minmn
                 s = conj(sign_safe(L̃[j, j]))
