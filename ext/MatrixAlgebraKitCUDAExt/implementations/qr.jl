@@ -11,31 +11,6 @@ function MatrixAlgebraKit.default_qr_algorithm(A::CuMatrix{<:BlasFloat}; kwargs.
     return CUSOLVER_HouseholderQR(; kwargs...)
 end
 
-# Outputs
-# -------
-function MatrixAlgebraKit.initialize_output(::typeof(qr_full!), A::AbstractMatrix,
-                                            ::CUSOLVER_HouseholderQR)
-    m, n = size(A)
-    Q = similar(A, (m, m))
-    R = similar(A, (m, n))
-    return (Q, R)
-end
-function MatrixAlgebraKit.initialize_output(::typeof(qr_compact!), A::AbstractMatrix,
-                                            ::CUSOLVER_HouseholderQR)
-    m, n = size(A)
-    minmn = min(m, n)
-    Q = similar(A, (m, minmn))
-    R = similar(A, (minmn, n))
-    return (Q, R)
-end
-function MatrixAlgebraKit.initialize_output(::typeof(qr_null!), A::AbstractMatrix,
-                                            ::CUSOLVER_HouseholderQR)
-    m, n = size(A)
-    minmn = min(m, n)
-    N = similar(A, (m, m - minmn))
-    return N
-end
-
 # Implementation
 # --------------
 # actual implementation
@@ -80,13 +55,15 @@ function _cusolver_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
     if positive # already fix Q even if we do not need R
         # TODO: report that `lmul!` and `rmul!` with `Diagonal` don't work with CUDA
         τ .= sign_safe.(diagview(A))
-        Q .= Q .* transpose(τ)
+        Qf = view(Q, 1:m, 1:minmn) # first minmn columns of Q
+        Qf .= Qf .* transpose(τ)
     end
 
     if computeR
         R̃ = uppertriangular!(view(A, axes(R)...))
         if positive
-            R̃ .= conj.(τ) .* R̃
+            R̃f = view(R̃, 1:minmn, 1:n) # first minmn rows of R
+            R̃f .= conj.(τ) .* R̃f
         end
         copyto!(R, R̃)
     end
@@ -94,9 +71,7 @@ function _cusolver_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
 end
 
 function _cusolver_qr_null!(A::AbstractMatrix, N::AbstractMatrix;
-                            positive=false,
-                            pivoted=false,
-                            blocksize=1)
+                            positive=false, blocksize=1)
     blocksize > 1 &&
         throw(ArgumentError("CUSOLVER does not provide a blocked implementation for a QR decomposition"))
     m, n = size(A)

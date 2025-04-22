@@ -42,20 +42,20 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(lq_full!), A::AbstractMatrix, ::LAPACK_HouseholderLQ)
+function initialize_output(::typeof(lq_full!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     L = similar(A, (m, n))
     Q = similar(A, (n, n))
     return (L, Q)
 end
-function initialize_output(::typeof(lq_compact!), A::AbstractMatrix, ::LAPACK_HouseholderLQ)
+function initialize_output(::typeof(lq_compact!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     L = similar(A, (m, minmn))
     Q = similar(A, (minmn, n))
     return (L, Q)
 end
-function initialize_output(::typeof(lq_null!), A::AbstractMatrix, ::LAPACK_HouseholderLQ)
+function initialize_output(::typeof(lq_null!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     Nᴴ = similar(A, (n - minmn, n))
@@ -71,15 +71,32 @@ function lq_full!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
     _lapack_lq!(A, L, Q; alg.kwargs...)
     return L, Q
 end
+function lq_full!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
+    check_input(lq_full!, A, LQ)
+    L, Q = LQ
+    lq_via_qr!(A, L, Q, alg.qr_alg)
+    return L, Q
+end
 function lq_compact!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
     check_input(lq_compact!, A, LQ)
     L, Q = LQ
     _lapack_lq!(A, L, Q; alg.kwargs...)
     return L, Q
 end
+function lq_compact!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
+    check_input(lq_compact!, A, LQ)
+    L, Q = LQ
+    lq_via_qr!(A, L, Q, alg.qr_alg)
+    return L, Q
+end
 function lq_null!(A::AbstractMatrix, Nᴴ, alg::LAPACK_HouseholderLQ)
     check_input(lq_null!, A, Nᴴ)
     _lapack_lq_null!(A, Nᴴ; alg.kwargs...)
+    return Nᴴ
+end
+function lq_null!(A::AbstractMatrix, Nᴴ, alg::LQViaTransposedQR)
+    check_input(lq_null!, A, Nᴴ)
+    lq_null_via_qr!(A, Nᴴ, alg.qr_alg)
     return Nᴴ
 end
 
@@ -157,4 +174,32 @@ function _lapack_lq_null!(A::AbstractMatrix, Nᴴ::AbstractMatrix;
         Nᴴ = YALAPACK.unmlq!('R', 'N', A, τ, Nᴴ)
     end
     return Nᴴ
+end
+
+# LQ via transposition and QR
+function lq_via_qr!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix,
+                    qr_alg::AbstractAlgorithm)
+    m, n = size(A)
+    minmn = min(m, n)
+    At = adjoint!(similar(A'), A)
+    Qt = (A === Q) ? At : similar(Q')
+    Lt = similar(L')
+    if size(Q) == (n, n)
+        Qt, Lt = qr_full!(At, (Qt, Lt), qr_alg)
+    else
+        Qt, Lt = qr_compact!(At, (Qt, Lt), qr_alg)
+    end
+    adjoint!(Q, Qt)
+    !isempty(L) && adjoint!(L, Lt)
+    return L, Q
+end
+
+function lq_null_via_qr!(A::AbstractMatrix, N::AbstractMatrix, qr_alg::AbstractAlgorithm)
+    m, n = size(A)
+    minmn = min(m, n)
+    At = adjoint!(similar(A'), A)
+    Nt = similar(N')
+    Nt = qr_null!(At, Nt, qr_alg)
+    !isempty(N) && adjoint!(N, Nt)
+    return N
 end

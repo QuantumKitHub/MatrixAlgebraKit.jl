@@ -30,14 +30,14 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(eig_full!), A::AbstractMatrix, ::LAPACK_EigAlgorithm)
+function initialize_output(::typeof(eig_full!), A::AbstractMatrix, ::AbstractAlgorithm)
     n = size(A, 1) # square check will happen later
     Tc = complex(eltype(A))
     D = Diagonal(similar(A, Tc, n))
     V = similar(A, Tc, (n, n))
     return (D, V)
 end
-function initialize_output(::typeof(eig_vals!), A::AbstractMatrix, ::LAPACK_EigAlgorithm)
+function initialize_output(::typeof(eig_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     n = size(A, 1) # square check will happen later
     Tc = complex(eltype(A))
     D = similar(A, Tc, n)
