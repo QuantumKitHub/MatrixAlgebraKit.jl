@@ -30,13 +30,13 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(left_polar!), A::AbstractMatrix, ::PolarViaSVD)
+function initialize_output(::typeof(left_polar!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     W = similar(A)
     P = similar(A, (n, n))
     return (W, P)
 end
-function initialize_output(::typeof(right_polar!), A::AbstractMatrix, ::PolarViaSVD)
+function initialize_output(::typeof(right_polar!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     P = similar(A, (m, m))
     Wᴴ = similar(A)

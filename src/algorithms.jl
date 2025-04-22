@@ -146,7 +146,7 @@ macro algdef(name)
                 return $name{typeof(kw)}(kw)
             end
             function Base.show(io::IO, alg::$name)
-                return _show_alg(io, alg)
+                return ($_show_alg)(io, alg)
             end
 
             Core.@__doc__ $name

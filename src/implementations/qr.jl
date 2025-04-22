@@ -42,20 +42,20 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(qr_full!), A::AbstractMatrix, ::LAPACK_HouseholderQR)
+function initialize_output(::typeof(qr_full!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     Q = similar(A, (m, m))
     R = similar(A, (m, n))
     return (Q, R)
 end
-function initialize_output(::typeof(qr_compact!), A::AbstractMatrix, ::LAPACK_HouseholderQR)
+function initialize_output(::typeof(qr_compact!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     Q = similar(A, (m, minmn))
     R = similar(A, (minmn, n))
     return (Q, R)
 end
-function initialize_output(::typeof(qr_null!), A::AbstractMatrix, ::LAPACK_HouseholderQR)
+function initialize_output(::typeof(qr_null!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     N = similar(A, (m, m - minmn))

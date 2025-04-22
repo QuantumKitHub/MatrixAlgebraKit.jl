@@ -29,13 +29,13 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(eigh_full!), A::AbstractMatrix, ::LAPACK_EighAlgorithm)
+function initialize_output(::typeof(eigh_full!), A::AbstractMatrix, ::AbstractAlgorithm)
     n = size(A, 1) # square check will happen later
     D = Diagonal(similar(A, real(eltype(A)), n))
     V = similar(A, (n, n))
     return (D, V)
 end
-function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::LAPACK_EighAlgorithm)
+function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     n = size(A, 1) # square check will happen later
     D = similar(A, real(eltype(A)), n)
     return D

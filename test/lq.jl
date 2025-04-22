@@ -3,6 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: diag, I
+using MatrixAlgebraKit: LQViaTransposedQR, LAPACK_HouseholderQR
 
 @testset "lq_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
@@ -32,6 +33,19 @@ using LinearAlgebra: diag, I
         lq_compact!(copy!(Ac, A), (noL, Q2))
         @test Q == Q2
 
+        # Transposed QR algorithm
+        qr_alg = LAPACK_HouseholderQR()
+        lq_alg = LQViaTransposedQR(qr_alg)
+        L2, Q2 = @constinferred lq_compact!(copy!(Ac, A), (L, Q), lq_alg)
+        @test L2 === L
+        @test Q2 === Q
+        Nᴴ2 = @constinferred lq_null!(copy!(Ac, A), Nᴴ, lq_alg)
+        @test Nᴴ2 === Nᴴ
+        noL = similar(A, 0, minmn)
+        Q2 = similar(Q)
+        lq_compact!(copy!(Ac, A), (noL, Q2), lq_alg)
+        @test Q == Q2
+
         # unblocked algorithm
         lq_compact!(copy!(Ac, A), (L, Q); blocksize=1)
         @test L * Q ≈ A
@@ -56,8 +70,22 @@ using LinearAlgebra: diag, I
         lq_null!(copy!(Ac, A), Nᴴ; blocksize=8)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
         @test isisometry(Nᴴ; side=:right)
+        @test Nᴴ * Nᴴ' ≈ I
+
+        qr_alg = LAPACK_HouseholderQR(; blocksize=1)
+        lq_alg = LQViaTransposedQR(qr_alg)
+        lq_compact!(copy!(Ac, A), (L, Q), lq_alg)
+        @test L * Q ≈ A
+        @test Q * Q' ≈ I
+        lq_compact!(copy!(Ac, A), (noL, Q2), lq_alg)
+        @test Q == Q2
+        lq_null!(copy!(Ac, A), Nᴴ, lq_alg)
+        @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
+        @test Nᴴ * Nᴴ' ≈ I
+
         # pivoted
         @test_throws ArgumentError lq_compact!(copy!(Ac, A), (L, Q); pivoted=true)
+
         # positive
         lq_compact!(copy!(Ac, A), (L, Q); positive=true)
         @test L * Q ≈ A
@@ -65,12 +93,21 @@ using LinearAlgebra: diag, I
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_compact!(copy!(Ac, A), (noL, Q2); positive=true)
         @test Q == Q2
+
         # positive and blocksize 1
         lq_compact!(copy!(Ac, A), (L, Q); positive=true, blocksize=1)
         @test L * Q ≈ A
         @test isisometry(Q; side=:right)
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_compact!(copy!(Ac, A), (noL, Q2); positive=true, blocksize=1)
+        @test Q == Q2
+        qr_alg = LAPACK_HouseholderQR(; positive=true, blocksize=1)
+        lq_alg = LQViaTransposedQR(qr_alg)
+        lq_compact!(copy!(Ac, A), (L, Q), lq_alg)
+        @test L * Q ≈ A
+        @test Q * Q' ≈ I
+        @test all(>=(zero(real(T))), real(diag(L)))
+        lq_compact!(copy!(Ac, A), (noL, Q2), lq_alg)
         @test Q == Q2
     end
 end
@@ -99,6 +136,19 @@ end
         lq_full!(copy!(Ac, A), (noL, Q2))
         @test Q == Q2
 
+        # Transposed QR algorithm
+        qr_alg = LAPACK_HouseholderQR()
+        lq_alg = LQViaTransposedQR(qr_alg)
+        L2, Q2 = @constinferred lq_full!(copy!(Ac, A), (L, Q), lq_alg)
+        @test L2 === L
+        @test Q2 === Q
+        @test L * Q ≈ A
+        @test Q * Q' ≈ I
+        noL = similar(A, 0, n)
+        Q2 = similar(Q)
+        lq_full!(copy!(Ac, A), (noL, Q2), lq_alg)
+        @test Q == Q2
+
         # unblocked algorithm
         lq_full!(copy!(Ac, A), (L, Q); blocksize=1)
         @test L * Q ≈ A
@@ -109,7 +159,19 @@ end
             lq_full!(copy!(Q2, A), (noL, Q2); blocksize=1) # in-place Q
             @test Q ≈ Q2
         end
-        # # other blocking
+        qr_alg = LAPACK_HouseholderQR(; blocksize=1)
+        lq_alg = LQViaTransposedQR(qr_alg)
+        lq_full!(copy!(Ac, A), (L, Q), lq_alg)
+        @test L * Q ≈ A
+        @test Q * Q' ≈ I
+        lq_full!(copy!(Ac, A), (noL, Q2), lq_alg)
+        @test Q == Q2
+        if n == m
+            lq_full!(copy!(Q2, A), (noL, Q2), lq_alg) # in-place Q
+            @test Q ≈ Q2
+        end
+
+        # other blocking
         lq_full!(copy!(Ac, A), (L, Q); blocksize=18)
         @test L * Q ≈ A
         @test isunitary(Q)
@@ -124,6 +186,16 @@ end
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_full!(copy!(Ac, A), (noL, Q2); positive=true)
         @test Q == Q2
+
+        qr_alg = LAPACK_HouseholderQR(; positive=true)
+        lq_alg = LQViaTransposedQR(qr_alg)
+        lq_full!(copy!(Ac, A), (L, Q), lq_alg)
+        @test L * Q ≈ A
+        @test Q * Q' ≈ I
+        @test all(>=(zero(real(T))), real(diag(L)))
+        lq_full!(copy!(Ac, A), (noL, Q2), lq_alg)
+        @test Q == Q2
+
         # positive and blocksize 1
         lq_full!(copy!(Ac, A), (L, Q); positive=true, blocksize=1)
         @test L * Q ≈ A
