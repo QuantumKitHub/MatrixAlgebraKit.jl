@@ -77,7 +77,8 @@ function _select_algorithm(f, A, alg::Nothing; kwargs...)
     return default_algorithm(f, A; kwargs...)
 end
 function _select_algorithm(f, A, alg::AbstractAlgorithm; kwargs...)
-    isempty(kwargs) || throw(ArgumentError("Additional keyword arguments are not allowed when an algorithm is specified."))
+    isempty(kwargs) ||
+        throw(ArgumentError("Additional keyword arguments are not allowed when an algorithm is specified."))
     return alg
 end
 function _select_algorithm(f, A, alg::Symbol; kwargs...)
@@ -87,7 +88,8 @@ function _select_algorithm(f, A, alg::Type; kwargs...)
     return _select_algorithm(f, A, alg(; kwargs...))
 end
 function _select_algorithm(f, A::AbstractMatrix, alg::NamedTuple; kwargs...)
-    isempty(kwargs) || throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
+    isempty(kwargs) ||
+        throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
     return select_algorithm(f, A; alg...)
 end
 function _select_algorithm(f, A, alg; kwargs...)
