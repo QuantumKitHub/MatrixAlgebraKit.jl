@@ -56,8 +56,16 @@ end
 @doc """
     select_algorithm(f, A; kwargs...)
 
-Given some keyword arguments and an input `A`, decide on an algrithm to use for
+Given some keyword arguments and an input `A`, decide on an algorithm to use for
 implementing the function `f` on inputs of type `A`.
+
+In general, if an algorithm is specified explicitly through the `alg` keyword argument
+(either as an algorithm type, an algorithm name as a Symbol, or as an algorithm object),
+that algorithm will be used instead of selecting it automatically. However, that
+behavior may be modified for factorization functions and/or matrix types.
+
+In general, if the algorithm is not specified, a default algorithm specified by
+[`default_algorithm`](@ref) will be used.
 """
 function select_algorithm end
 
@@ -81,6 +89,15 @@ end
 function _select_algorithm(f, A, alg; kwargs...)
     return throw(ArgumentError("Unknown alg $alg"))
 end
+
+@doc """
+    default_algorithm(f, A; kwargs...)
+
+Select the default algorithm for a given factorization function `f` and input `A`.
+In general, this is called by [`select_algorithm`](@ref) if no algorithm is specified
+explicitly.
+"""
+function default_algorithm end
 
 @doc """
     copy_input(f, A)
