@@ -32,6 +32,19 @@ Trivial truncation strategy that keeps all values, mostly for testing purposes.
 """
 struct NoTruncation <: TruncationStrategy end
 
+function to_truncationstrategy(trunc::TruncationStrategy)
+    return trunc
+end
+function to_truncationstrategy(trunc::NamedTuple)
+    return TruncationStrategy(; trunc...)
+end
+function to_truncationstrategy(trunc::Nothing)
+    return NoTruncation()
+end
+function to_truncationstrategy(trunc)
+    return throw(ArgumentError("Unknown truncation strategy: $trunc"))
+end
+
 # TODO: how do we deal with sorting/filters that treat zeros differently
 # since these are implicitly discarded by selecting compact/full
 

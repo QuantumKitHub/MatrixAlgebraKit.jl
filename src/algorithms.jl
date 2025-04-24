@@ -61,6 +61,27 @@ implementing the function `f` on inputs of type `A`.
 """
 function select_algorithm end
 
+function select_algorithm(f, A; alg=nothing, kwargs...)
+    return _select_algorithm(f, A, alg; kwargs...)
+end
+
+function _select_algorithm(f, A, alg::Nothing; kwargs...)
+    return default_algorithm(f, A; kwargs...)
+end
+function _select_algorithm(f, A, alg::AbstractAlgorithm; kwargs...)
+    isempty(kwargs) || throw(ArgumentError("Additional keyword arguments are not allowed when an algorithm is specified."))
+    return alg
+end
+function _select_algorithm(f, A, alg::Symbol; kwargs...)
+    return _select_algorithm(f, A, Algorithm{alg}; kwargs...)
+end
+function _select_algorithm(f, A, alg::Type; kwargs...)
+    return _select_algorithm(f, A, alg(; kwargs...))
+end
+function _select_algorithm(f, A, alg; kwargs...)
+    return throw(ArgumentError("Unknown alg $alg"))
+end
+
 @doc """
     copy_input(f, A)
 

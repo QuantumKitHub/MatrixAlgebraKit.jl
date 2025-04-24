@@ -93,18 +93,11 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) an
 for f in (:svd_full, :svd_compact, :svd_vals)
     f! = Symbol(f, :!)
     @eval begin
-        function select_algorithm(::typeof($f), A; kwargs...)
-            return select_algorithm($f!, A; kwargs...)
+        function default_algorithm(::typeof($f), A; kwargs...)
+            return default_algorithm($f!, A; kwargs...)
         end
-        function select_algorithm(::typeof($f!), A; alg=nothing, kwargs...)
-            if alg isa AbstractAlgorithm
-                return alg
-            elseif alg isa Symbol
-                return Algorithm{alg}(; kwargs...)
-            else
-                isnothing(alg) || throw(ArgumentError("Unknown alg $alg"))
-                return default_svd_algorithm(A; kwargs...)
-            end
+        function default_algorithm(::typeof($f!), A; kwargs...)
+            return default_svd_algorithm(A; kwargs...)
         end
     end
 end
@@ -112,13 +105,9 @@ end
 function select_algorithm(::typeof(svd_trunc), A; kwargs...)
     return select_algorithm(svd_trunc!, A; kwargs...)
 end
-function select_algorithm(::typeof(svd_trunc!), A; alg=nothing, trunc=nothing, kwargs...)
-    alg_svd = select_algorithm(svd_compact!, A; alg, kwargs...)
-    alg_trunc = trunc isa TruncationStrategy ? trunc :
-                trunc isa NamedTuple ? TruncationStrategy(; trunc...) :
-                isnothing(trunc) ? NoTruncation() :
-                throw(ArgumentError("Unknown truncation strategy: $trunc"))
-    return TruncatedAlgorithm(alg_svd, alg_trunc)
+function select_algorithm(::typeof(svd_trunc!), A; trunc=nothing, kwargs...)
+    alg_svd = select_algorithm(svd_compact!, A; kwargs...)
+    return TruncatedAlgorithm(alg_svd, to_truncationstrategy(trunc))
 end
 
 # Default to LAPACK SDD for `StridedMatrix{<:BlasFloat}`
