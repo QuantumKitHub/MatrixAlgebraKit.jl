@@ -93,7 +93,7 @@ for f in (:eigh_full, :eigh_vals)
             return default_algorithm($f!, A; kwargs...)
         end
         function default_algorithm(::typeof($f!), A; kwargs...)
-            return default_eig_algorithm(A; kwargs...)
+            return default_eigh_algorithm(A; kwargs...)
         end
     end
 end
