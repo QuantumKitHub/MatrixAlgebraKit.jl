@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbove,
-                        TruncationStrategy
+                        TruncationStrategy, findtruncated
 
 @testset "truncate" begin
     trunc = @constinferred TruncationStrategy()
@@ -26,4 +26,9 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbov
     @test trunc == truncrank(10) & TruncationKeepAbove(1e-2, 1e-3)
     @test trunc.components[1] == truncrank(10)
     @test trunc.components[2] == TruncationKeepAbove(1e-2, 1e-3)
+
+    values = [1, 0.9, 0.5, 0.3, 0.01]
+    @test @constinferred(findtruncated(values, truncrank(2))) == [1, 2]
+    @test @constinferred(findtruncated(values, truncrank(2; rev=false))) == [5, 4]
+    @test @constinferred(findtruncated(values, truncrank(2; by=-))) == [5, 4]
 end
