@@ -69,11 +69,11 @@ TruncationKeepBelow(atol::Real, rtol::Real) = TruncationKeepBelow(promote(atol, 
 
 # TODO: better names for these functions of the above types
 """
-    truncrank(howmany::Int, by=abs, rev=true)
+    truncrank(howmany::Int; by=abs, rev=true)
 
 Truncation strategy to keep the first `howmany` values when sorted according to `by` or the last `howmany` if `rev` is true.
 """
-truncrank(howmany::Int, by=abs, rev=true) = TruncationKeepSorted(howmany, by, rev)
+truncrank(howmany::Int; by=abs, rev=true) = TruncationKeepSorted(howmany, by, rev)
 
 """
     trunctol(atol::Real)
