@@ -86,6 +86,10 @@ end
 function _select_algorithm(f, A, alg::Type; kwargs...)
     return _select_algorithm(f, A, alg(; kwargs...))
 end
+function _select_algorithm(f, A::AbstractMatrix, alg::NamedTuple; kwargs...)
+    isempty(kwargs) || throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
+    return select_algorithm(f, A; alg...)
+end
 function _select_algorithm(f, A, alg; kwargs...)
     return throw(ArgumentError("Unknown alg $alg"))
 end
