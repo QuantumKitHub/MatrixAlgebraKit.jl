@@ -31,7 +31,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ,
 export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered
 
 VERSION >= v"1.11.0-DEV.469" &&
-    eval(Meta.parse("public default_truncation, select_algorithm"))
+    eval(Meta.parse("public default_algorithm, select_algorithm"))
 
 include("common/defaults.jl")
 include("common/initialization.jl")
