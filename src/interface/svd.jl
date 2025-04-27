@@ -107,7 +107,7 @@ function select_algorithm(::typeof(svd_trunc), A; kwargs...)
 end
 function select_algorithm(::typeof(svd_trunc!), A; trunc=nothing, kwargs...)
     alg_svd = select_algorithm(svd_compact!, A; kwargs...)
-    return TruncatedAlgorithm(alg_svd, to_truncationstrategy(trunc))
+    return TruncatedAlgorithm(alg_svd, select_truncation(trunc))
 end
 
 # Default to LAPACK SDD for `StridedMatrix{<:BlasFloat}`

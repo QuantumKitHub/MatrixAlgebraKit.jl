@@ -30,6 +30,8 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ,
        LAPACK_DivideAndConquer, LAPACK_Jacobi
 export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered
 
+public default_truncation, select_algorithm
+
 include("common/defaults.jl")
 include("common/initialization.jl")
 include("common/pullbacks.jl")

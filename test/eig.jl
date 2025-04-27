@@ -8,21 +8,35 @@ using MatrixAlgebraKit: diagview
 @testset "eig_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
-    for alg in (LAPACK_Simple(), LAPACK_Expert())
+    for alg in
+        (LAPACK_Simple(), LAPACK_Expert(), LAPACK_Simple, LAPACK_Expert, :LAPACK_Simple,
+         :LAPACK_Expert)
         A = randn(rng, T, m, m)
         Tc = complex(T)
 
-        D, V = @constinferred eig_full(A; alg)
+        alg′ = if (alg isa Type) || (alg isa Symbol)
+            # These cases aren't inferable right now.
+            MatrixAlgebraKit.select_algorithm(eig_full!, A; alg)
+        else
+            @constinferred MatrixAlgebraKit.select_algorithm(eig_full!, A; alg)
+        end
+
+        D, V = if (alg isa Type) || (alg isa Symbol)
+            # These cases aren't inferable right now.
+            eig_full(A; alg)
+        else
+            @constinferred eig_full(A; alg)
+        end
         @test eltype(D) == eltype(V) == Tc
         @test A * V ≈ V * D
 
         Ac = similar(A)
-        D2, V2 = @constinferred eig_full!(copy!(Ac, A), (D, V), alg)
+        D2, V2 = @constinferred eig_full!(copy!(Ac, A), (D, V), alg′)
         @test D2 === D
         @test V2 === V
         @test A * V ≈ V * D
 
-        Dc = @constinferred eig_vals(A, alg)
+        Dc = @constinferred eig_vals(A, alg′)
         @test eltype(Dc) == Tc
         @test D ≈ Diagonal(Dc)
     end

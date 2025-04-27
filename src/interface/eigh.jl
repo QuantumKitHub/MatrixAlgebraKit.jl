@@ -103,7 +103,7 @@ function select_algorithm(::typeof(eigh_trunc), A; kwargs...)
 end
 function select_algorithm(::typeof(eigh_trunc!), A; trunc=nothing, kwargs...)
     alg_eigh = select_algorithm(eigh_full!, A; kwargs...)
-    return TruncatedAlgorithm(alg_eigh, to_truncationstrategy(trunc))
+    return TruncatedAlgorithm(alg_eigh, select_truncation(trunc))
 end
 
 # Default to LAPACK 

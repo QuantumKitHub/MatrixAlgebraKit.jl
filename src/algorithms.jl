@@ -54,7 +54,7 @@ function _show_alg(io::IO, alg::Algorithm)
 end
 
 @doc """
-    select_algorithm(f, A; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A; kwargs...)
 
 Given some keyword arguments and an input `A`, decide on an algorithm to use for
 implementing the function `f` on inputs of type `A`.
@@ -82,7 +82,7 @@ function _select_algorithm(f, A, alg::AbstractAlgorithm; kwargs...)
     return alg
 end
 function _select_algorithm(f, A, alg::Symbol; kwargs...)
-    return _select_algorithm(f, A, Algorithm{alg}; kwargs...)
+    return _select_algorithm(f, A, Algorithm{alg}(; kwargs...))
 end
 function _select_algorithm(f, A, alg::Type; kwargs...)
     return _select_algorithm(f, A, alg(; kwargs...))
@@ -97,7 +97,7 @@ function _select_algorithm(f, A, alg; kwargs...)
 end
 
 @doc """
-    default_algorithm(f, A; kwargs...)
+    MatrixAlgebraKit.default_algorithm(f, A; kwargs...)
 
 Select the default algorithm for a given factorization function `f` and input `A`.
 In general, this is called by [`select_algorithm`](@ref) if no algorithm is specified

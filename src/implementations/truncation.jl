@@ -32,16 +32,16 @@ Trivial truncation strategy that keeps all values, mostly for testing purposes.
 """
 struct NoTruncation <: TruncationStrategy end
 
-function to_truncationstrategy(trunc::TruncationStrategy)
+function select_truncation(trunc::TruncationStrategy)
     return trunc
 end
-function to_truncationstrategy(trunc::NamedTuple)
+function select_truncation(trunc::NamedTuple)
     return TruncationStrategy(; trunc...)
 end
-function to_truncationstrategy(trunc::Nothing)
+function select_truncation(trunc::Nothing)
     return NoTruncation()
 end
-function to_truncationstrategy(trunc)
+function select_truncation(trunc)
     return throw(ArgumentError("Unknown truncation strategy: $trunc"))
 end
 

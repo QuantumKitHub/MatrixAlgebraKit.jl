@@ -104,7 +104,7 @@ function select_algorithm(::typeof(eig_trunc), A; kwargs...)
 end
 function select_algorithm(::typeof(eig_trunc!), A; trunc=nothing, kwargs...)
     alg_eig = select_algorithm(eig_full!, A; kwargs...)
-    return TruncatedAlgorithm(alg_eig, to_truncationstrategy(trunc))
+    return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
 end
 
 # Default to LAPACK 
