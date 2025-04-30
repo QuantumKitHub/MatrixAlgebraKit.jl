@@ -64,7 +64,7 @@ In general, if an algorithm is specified explicitly through the `alg` keyword ar
 that algorithm will be used instead of selecting it automatically. However, that
 behavior may be modified for factorization functions and/or matrix types.
 
-In general, if the algorithm is not specified, a default algorithm specified by
+When the `alg` keyword argument is not provided, a default algorithm specified by
 [`default_algorithm`](@ref) will be used.
 """
 function select_algorithm end
