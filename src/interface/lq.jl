@@ -91,3 +91,13 @@ end
 function default_lq_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
     return LAPACK_HouseholderLQ(; kwargs...)
 end
+
+# Alternative algorithm (necessary for CUDA)
+struct LQViaTransposedQR{A<:AbstractAlgorithm} <: AbstractAlgorithm
+    qr_alg::A
+end
+function Base.show(io::IO, alg::LQViaTransposedQR)
+    print(io, "LQViaTransposedQR(")
+    _show_alg(io, alg.qr_alg)
+    return print(io, ")")
+end

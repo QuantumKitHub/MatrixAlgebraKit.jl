@@ -28,13 +28,13 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(schur_full!), A::AbstractMatrix, ::LAPACK_EigAlgorithm)
+function initialize_output(::typeof(schur_full!), A::AbstractMatrix, ::AbstractAlgorithm)
     n = size(A, 1) # square check will happen later
     Z = similar(A, (n, n))
     vals = similar(A, complex(eltype(A)), n)
     return (A, Z, vals)
 end
-function initialize_output(::typeof(schur_vals!), A::AbstractMatrix, ::LAPACK_EigAlgorithm)
+function initialize_output(::typeof(schur_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     n = size(A, 1) # square check will happen later
     vals = similar(A, complex(eltype(A)), n)
     return vals

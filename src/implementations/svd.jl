@@ -44,14 +44,14 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(svd_full!), A::AbstractMatrix, ::LAPACK_SVDAlgorithm)
+function initialize_output(::typeof(svd_full!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     U = similar(A, (m, m))
     S = similar(A, real(eltype(A)), (m, n)) # TODO: Rectangular diagonal type?
     Vᴴ = similar(A, (n, n))
     return (U, S, Vᴴ)
 end
-function initialize_output(::typeof(svd_compact!), A::AbstractMatrix, ::LAPACK_SVDAlgorithm)
+function initialize_output(::typeof(svd_compact!), A::AbstractMatrix, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     U = similar(A, (m, minmn))
@@ -59,7 +59,7 @@ function initialize_output(::typeof(svd_compact!), A::AbstractMatrix, ::LAPACK_S
     Vᴴ = similar(A, (minmn, n))
     return (U, S, Vᴴ)
 end
-function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::LAPACK_SVDAlgorithm)
+function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
 function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
