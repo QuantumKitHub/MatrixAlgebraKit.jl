@@ -5,9 +5,7 @@ using TestExtras
 using StableRNGs
 using CUDA
 
-function isapproxone(A)
-    return (size(A, 1) == size(A, 2)) && (A ≈ MatrixAlgebraKit.one!(similar(A)))
-end
+include("utilities.jl")
 
 @testset "lq_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)

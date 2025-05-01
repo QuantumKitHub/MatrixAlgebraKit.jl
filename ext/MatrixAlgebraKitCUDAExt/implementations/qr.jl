@@ -1,19 +1,4 @@
-"""
-    CUSOLVER_HouseholderQR(; positive = false)
-
-Algorithm type to denote the standard CUSOLVER algorithm for computing the QR decomposition of
-a matrix using Householder reflectors. The keyword `positive=true` can be used to ensure that
-the diagonal elements of `R` are non-negative.
-"""
-@algdef CUSOLVER_HouseholderQR
-
-function MatrixAlgebraKit.default_qr_algorithm(A::CuMatrix{<:BlasFloat}; kwargs...)
-    return CUSOLVER_HouseholderQR(; kwargs...)
-end
-
-# Implementation
-# --------------
-# actual implementation
+# CUSOLVER QR implementation
 function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::CUSOLVER_HouseholderQR)
     check_input(qr_full!, A, QR)
     Q, R = QR
