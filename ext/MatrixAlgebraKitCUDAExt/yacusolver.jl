@@ -6,113 +6,188 @@ using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdia
 
 using CUDA
 using CUDA: @allowscalar
-using CUDA.CUSOLVER: cusolverDnCreate
+using CUDA.CUSOLVER
 
 # QR methods are implemented with full access to allocated arrays, so we do not need to redo this:
 using CUDA.CUSOLVER: geqrf!, ormqr!, orgqr!
 const unmqr! = ormqr!
 const ungqr! = orgqr!
 
-# # Wrapper for SVD via QR Iteration
-# for (bname, fname, elty, relty) in
-#     ((:cusolverDnSgesvd_bufferSize, :cusolverDnSgesvd, :Float32, :Float32),
-#      (:cusolverDnDgesvd_bufferSize, :cusolverDnDgesvd, :Float64, :Float64),
-#      (:cusolverDnCgesvd_bufferSize, :cusolverDnCgesvd, :ComplexF32, :Float32),
-#      (:cusolverDnZgesvd_bufferSize, :cusolverDnZgesvd, :ComplexF64, :Float64))
-#     @eval begin
-#         function gesvd!(A::StridedCuMatrix{$elty},
-#                         S::StridedCuVector{$relty}=similar(A, $relty, min(size(A)...)),
-#                         U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1),
-#                                                           min(size(A)...)),
-#                         Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...),
-#                                                            size(A, 2)))
-#             chkstride1(A, U, Vᴴ, S)
-#             m, n = size(A)
-#             (m < n) && throw(ArgumentError("CUSOLVER's gesvd requires m ≥ n"))
-#             minmn = min(m, n)
-#             lda = max(1, stride(A, 2))
+# Wrapper for SVD via QR Iteration
+for (bname, fname, elty, relty) in
+    ((:cusolverDnSgesvd_bufferSize, :cusolverDnSgesvd, :Float32, :Float32),
+     (:cusolverDnDgesvd_bufferSize, :cusolverDnDgesvd, :Float64, :Float64),
+     (:cusolverDnCgesvd_bufferSize, :cusolverDnCgesvd, :ComplexF32, :Float32),
+     (:cusolverDnZgesvd_bufferSize, :cusolverDnZgesvd, :ComplexF64, :Float64))
+    @eval begin
+        #! format: off
+        function gesvd!(A::StridedCuMatrix{$elty},
+                        S::StridedCuVector{$relty}=similar(A, $relty, min(size(A)...)),
+                        U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
+                        Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2)))
+        #! format: on
+            chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            (m < n) && throw(ArgumentError("CUSOLVER's gesvd requires m ≥ n"))
+            minmn = min(m, n)
+            if length(U) == 0
+                jobu = 'N'
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A
+                        jobu = 'O'
+                    else
+                        jobu = 'S'
+                    end
+                elseif size(U, 2) == m
+                    jobu = 'A'
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = 'N'
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A
+                        jobvt = 'O'
+                    else
+                        jobvt = 'S'
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = 'A'
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            length(S) == minmn ||
+                throw(DimensionMismatch("length mismatch between A and S"))
 
-#             if length(U) == 0
-#                 jobu = 'N'
-#             else
-#                 size(U, 1) == m ||
-#                     throw(DimensionMismatch("row size mismatch between A and U"))
-#                 if size(U, 2) == minmn
-#                     if U === A
-#                         jobu = 'O'
-#                     else
-#                         jobu = 'S'
-#                     end
-#                 elseif size(U, 2) == m
-#                     jobu = 'A'
-#                 else
-#                     throw(DimensionMismatch("invalid column size of U"))
-#                 end
-#             end
-#             if length(Vᴴ) == 0
-#                 jobvt = 'N'
-#             else
-#                 size(Vᴴ, 2) == n ||
-#                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
-#                 if size(Vᴴ, 1) == minmn
-#                     if Vᴴ === A
-#                         jobvt = 'O'
-#                     else
-#                         jobvt = 'S'
-#                     end
-#                 elseif size(Vᴴ, 1) == n
-#                     jobvt = 'A'
-#                 else
-#                     throw(DimensionMismatch("invalid row size of Vᴴ"))
-#                 end
-#             end
-#             length(S) == minmn ||
-#                 throw(DimensionMismatch("length mismatch between A and S"))
+            lda = max(1, stride(A, 2))
+            ldu = max(1, stride(U, 2))
+            ldv = max(1, stride(Vᴴ, 2))
 
-#             lda = max(1, stride(A, 2))
-#             ldu = max(1, stride(U, 2))
-#             ldv = max(1, stride(Vᴴ, 2))
+            dh = CUSOLVER.dense_handle()
+            function bufferSize()
+                out = Ref{Cint}(0)
+                CUSOLVER.$bname(dh, m, n, out)
+                return out[] * sizeof($elty)
+            end
+            rwork = CuArray{$relty}(undef, min(m, n) - 1)
+            CUDA.with_workspace(dh.workspace_gpu, bufferSize) do buffer
+                return CUSOLVER.$fname(dh, jobu, jobvt, m, n,
+                                       A, lda, S, U, ldu, Vᴴ, ldv,
+                                       buffer, sizeof(buffer) ÷ sizeof($elty), rwork,
+                                       dh.info)
+            end
+            CUDA.unsafe_free!(rwork)
 
-#             dh = dense_handle()
-#             function bufferSize()
-#                 out = Ref{Cint}(0)
-#                 $bname(dh, m, n, out)
-#                 return out[] * sizeof($elty)
-#             end
-#             rwork = CuArray{$relty}(undef, min(m, n) - 1)
-#             with_workspace(dh.workspace_gpu, bufferSize) do buffer
-#                 return $fname(dh, jobu, jobvt, m, n, A, lda, S, U, ldu, Vᴴ, ldv,
-#                               buffer, sizeof(buffer) ÷ sizeof($elty), rwork, dh.info)
-#             end
-#             unsafe_free!(rwork)
+            info = @allowscalar dh.info[1]
+            CUSOLVER.chkargsok(BlasInt(info))
 
-#             info = @allowscalar dh.info[1]
-#             chkargsok(BlasInt(info))
+            return (S, U, Vᴴ)
+        end
+    end
+end
 
-#             return (S, U, Vᴴ)
-#         end
-#     end
-# end
+function Xgesvdp!(A::StridedCuMatrix{T},
+                  S::StridedCuVector=similar(A, real(T), min(size(A)...)),
+                  U::StridedCuMatrix{T}=similar(A, T, size(A, 1), min(size(A)...)),
+                  Vᴴ::StridedCuMatrix{T}=similar(A, T, min(size(A)...), size(A, 2));
+                  tol=norm(A) * eps(real(T))) where {T<:BlasFloat}
+    chkstride1(A, U, S, Vᴴ)
+    m, n = size(A)
+    minmn = min(m, n)
+    if length(U) == length(Vᴴ) == 0
+        jobz = 'N'
+        econ = 1
+    else
+        jobz = 'V'
+        size(U, 1) == m ||
+            throw(DimensionMismatch("row size mismatch between A and U"))
+        size(Vᴴ, 2) == n ||
+            throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+        if size(U, 2) == size(Vᴴ, 1) == minmn
+            econ = 1
+        elseif size(U, 2) == m && size(Vᴴ, 1) == n
+            econ = 0
+        else
+            throw(DimensionMismatch("invalid column size of U or row size of Vᴴ"))
+        end
+    end
+    R = eltype(S)
+    length(S) == minmn ||
+        throw(DimensionMismatch("length mismatch between A and S"))
+    R == real(T) ||
+        throw(ArgumentError("S does not have the matching real `eltype` of A"))
 
-# # Wrapper for SVD via Jacobi
+    Ṽ = similar(Vᴴ, (n, n))
+    Ũ = (size(U) == (m, m)) ? U : similar(U, (m, m))
+    lda = max(1, stride(A, 2))
+    ldu = max(1, stride(Ũ, 2))
+    ldv = max(1, stride(Ṽ, 2))
+    h_err_sigma = Ref{Cdouble}(0)
+    params = CUSOLVER.CuSolverParameters()
+    dh = CUSOLVER.dense_handle()
+
+    function bufferSize()
+        out_cpu = Ref{Csize_t}(0)
+        out_gpu = Ref{Csize_t}(0)
+        CUSOLVER.cusolverDnXgesvdp_bufferSize(dh, params, jobz, econ, m, n,
+                                              T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+                                              T, out_gpu, out_cpu)
+
+        return out_gpu[], out_cpu[]
+    end
+    CUSOLVER.with_workspaces(dh.workspace_gpu, dh.workspace_cpu,
+                             bufferSize()...) do buffer_gpu, buffer_cpu
+        return CUSOLVER.cusolverDnXgesvdp(dh, params, jobz, econ, m, n,
+                                          T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+                                          T, buffer_gpu, sizeof(buffer_gpu),
+                                          buffer_cpu, sizeof(buffer_cpu),
+                                          dh.info, h_err_sigma)
+    end
+    err = h_err_sigma[]
+    if err > tol
+        warn("Xgesvdp! did not attained requested tolerance: error = $err > tolerance = $tol")
+    end
+
+    flag = @allowscalar dh.info[1]
+    CUSOLVER.chklapackerror(BlasInt(flag))
+    if Ũ !== U && length(U) > 0
+        U .= view(Ũ, 1:m, 1:size(U, 2))
+    end
+    if length(Vᴴ) > 0
+        Vᴴ .= view(Ṽ', 1:size(Vᴴ, 1), 1:n)
+    end
+    Ũ !== U && CUDA.unsafe_free!(Ũ)
+    CUDA.unsafe_free!(Ṽ)
+
+    return S, U, Vᴴ
+end
+
+# Wrapper for SVD via Jacobi
 # for (bname, fname, elty, relty) in
 #     ((:cusolverDnSgesvdj_bufferSize, :cusolverDnSgesvdj, :Float32, :Float32),
 #      (:cusolverDnDgesvdj_bufferSize, :cusolverDnDgesvdj, :Float64, :Float64),
 #      (:cusolverDnCgesvdj_bufferSize, :cusolverDnCgesvdj, :ComplexF32, :Float32),
 #      (:cusolverDnZgesvdj_bufferSize, :cusolverDnZgesvdj, :ComplexF64, :Float64))
 #     @eval begin
+#         #! format: off
 #         function gesvdj!(A::StridedCuMatrix{$elty},
 #                          S::StridedCuVector{$relty}=similar(A, $relty, min(size(A)...)),
-#                          U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1),
-#                                                            min(size(A)...)),
-#                          Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...),
-#                                                             size(A, 2));
+#                          U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
+#                          Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
 #                          tol::$relty=eps($relty),
 #                          max_sweeps::Int=100)
+#         #! format: on
 #             chkstride1(A, U, Vᴴ, S)
 #             m, n = size(A)
 #             minmn = min(m, n)
-#             lda = max(1, stride(A, 2))
 
 #             if length(U) == 0 && length(Vᴴ) == 0
 #                 jobz = 'N'
@@ -518,69 +593,5 @@ const ungqr! = orgqr!
 #         end
 #     end
 # end
-
-# Wrapper for Hermitian Eigenvalue Problem
-function heevd!(jobz::Char, uplo::Char, A::StridedCuMatrix{T},
-                W::StridedCuVector{T}) where {T<:BlasFloat}
-    chkuplo(uplo)
-    n = checksquare(A)
-    lda = max(1, stride(A, 2))
-    dh = dense_handle()
-
-    function bufferSize()
-        out = Ref{Cint}(0)
-        cusolverDnSsyevd_bufferSize(dh, jobz, uplo, n, A, lda, W, out)
-        return out[] * sizeof(T)
-    end
-
-    with_workspace(dh.workspace_gpu, bufferSize) do buffer
-        return cusolverDnSsyevd(dh, jobz, uplo, n, A, lda, W, buffer,
-                                sizeof(buffer) ÷ sizeof(T), dh.info)
-    end
-
-    info = @allowscalar dh.info[1]
-    chkargsok(BlasInt(info))
-    return W, A
-end
-
-# Wrapper for Non-Hermitian Eigenvalue Problem
-function geevd!(jobvl::Char, jobvr::Char, A::StridedCuMatrix{T}, W::StridedCuVector{T},
-                VL::StridedCuMatrix{T}, VR::StridedCuMatrix{T}) where {T<:BlasFloat}
-    n = checksquare(A)
-    lda = max(1, stride(A, 2))
-    ldvl = max(1, stride(VL, 2))
-    ldvr = max(1, stride(VR, 2))
-    dh = dense_handle()
-
-    function bufferSize()
-        out = Ref{Cint}(0)
-        cusolverDnSgeev_bufferSize(dh, jobvl, jobvr, n, A, lda, W, VL, ldvl, VR, ldvr, out)
-        return out[] * sizeof(T)
-    end
-
-    with_workspace(dh.workspace_gpu, bufferSize) do buffer
-        return cusolverDnSgeev(dh, jobvl, jobvr, n, A, lda, W, VL, ldvl, VR, ldvr, buffer,
-                               sizeof(buffer) ÷ sizeof(T), dh.info)
-    end
-
-    info = @allowscalar dh.info[1]
-    chkargsok(BlasInt(info))
-    return W, VL, VR
-end
-
-# Wrapper for Randomized SVD (example implementation)
-function randomized_svd!(A::StridedCuMatrix{T}, S::StridedCuVector{T},
-                         U::StridedCuMatrix{T}, V::StridedCuMatrix{T},
-                         rank::Int) where {T<:BlasFloat}
-    # Example implementation for randomized SVD
-    # Generate random projection matrix
-    Omega = CuArray{T}(randn(size(A, 2), rank))
-    Y = A * Omega
-    Q, _ = qr(Y)
-    B = Q' * A
-    gesvdqr!(B, S, U, V)
-    U = Q * U
-    return S, U, V
-end
 
 end

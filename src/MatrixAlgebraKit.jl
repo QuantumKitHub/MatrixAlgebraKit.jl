@@ -29,7 +29,9 @@ export left_orth!, right_orth!, left_null!, right_null!
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ,
        LAPACK_Simple, LAPACK_Expert,
        LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
-       LAPACK_DivideAndConquer, LAPACK_Jacobi
+       LAPACK_DivideAndConquer, LAPACK_Jacobi,
+       LQViaTransposedQR,
+       CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi
 export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered
 
 VERSION >= v"1.11.0-DEV.469" &&
@@ -46,6 +48,7 @@ include("common/matrixproperties.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
+include("interface/decompositions.jl")
 include("interface/qr.jl")
 include("interface/lq.jl")
 include("interface/svd.jl")
@@ -55,7 +58,6 @@ include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
 
-include("implementations/decompositions.jl")
 include("implementations/truncation.jl")
 include("implementations/qr.jl")
 include("implementations/lq.jl")

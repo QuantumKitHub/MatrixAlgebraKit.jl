@@ -32,6 +32,19 @@ end
     include("chainrules.jl")
 end
 
+using CUDA
+if CUDA.functional()
+    @safetestset "CUDA QR" begin
+        include("cuda/qr.jl")
+    end
+    @safetestset "CUDA LQ" begin
+        include("cuda/lq.jl")
+    end
+    @safetestset "CUDA SVD" begin
+        include("cuda/svd.jl")
+    end
+end
+
 @safetestset "MatrixAlgebraKit.jl" begin
     @safetestset "Code quality (Aqua.jl)" begin
         using MatrixAlgebraKit
