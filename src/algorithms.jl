@@ -54,45 +54,48 @@ function _show_alg(io::IO, alg::Algorithm)
 end
 
 @doc """
-    MatrixAlgebraKit.select_algorithm(f, A; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A, alg=nothing; kwargs...)
 
-Given some keyword arguments and an input `A`, decide on an algorithm to use for
-implementing the function `f` on inputs of type `A`.
+Decide on an algorithm to use for implementing the function `f` on inputs of type `A`.
 
-In general, if an algorithm is specified explicitly through the `alg` keyword argument
-(either as an algorithm type, an algorithm name as a Symbol, or as an algorithm object),
-that algorithm will be used instead of selecting it automatically. However, that
-behavior may be modified for factorization functions and/or matrix types.
+If `alg` is `nothing` (the default value), an algorithm will be selected automatically
+with [`MatrixAlgebra.default_algorithm`](@ref) and the keyword arguments will be passed
+to the algorithm constructor.
 
-When the `alg` keyword argument is not provided, a default algorithm specified by
-[`default_algorithm`](@ref) will be used.
+If `alg` is a `NamedTuple`, an algorithm will be selected automatically
+with [`default_algorithm`](@ref) and `alg` will be passed to the algorithm
+as keyword arguments. In that case, keyword arguments can't be passed
+to `MatrixAlgebraKit.select_algorithm`
+
+If `alg` is an `AbstractAlgorithm`, it will be returned as-is. In that case, keyword arguments
+can't be passed to `MatrixAlgebraKit.select_algorithm`.
 """
 function select_algorithm end
 
-function select_algorithm(f, A; alg=nothing, kwargs...)
+Base.@constprop :aggressive function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
     return _select_algorithm(f, A, alg; kwargs...)
 end
 
-function _select_algorithm(f, A, alg::Nothing; kwargs...)
+function _select_algorithm(f::F, A, alg::Nothing; kwargs...) where {F}
     return default_algorithm(f, A; kwargs...)
 end
-function _select_algorithm(f, A, alg::AbstractAlgorithm; kwargs...)
+Base.@constprop :aggressive function _select_algorithm(f::F, A, alg::Symbol; kwargs...) where {F}
+    return Algorithm{alg}(; kwargs...)
+end
+Base.@constprop :aggressive function _select_algorithm(f::F, A, ::Type{Alg}; kwargs...) where {F,Alg}
+    return Alg(; kwargs...)
+end
+function _select_algorithm(f::F, A, alg::NamedTuple; kwargs...) where {F}
+    isempty(kwargs) ||
+        throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
+    return default_algorithm(f, A; alg...)
+end
+function _select_algorithm(f::F, A, alg::AbstractAlgorithm; kwargs...) where {F}
     isempty(kwargs) ||
         throw(ArgumentError("Additional keyword arguments are not allowed when an algorithm is specified."))
     return alg
 end
-function _select_algorithm(f, A, alg::Symbol; kwargs...)
-    return _select_algorithm(f, A, Algorithm{alg}(; kwargs...))
-end
-function _select_algorithm(f, A, alg::Type; kwargs...)
-    return _select_algorithm(f, A, alg(; kwargs...))
-end
-function _select_algorithm(f, A::AbstractMatrix, alg::NamedTuple; kwargs...)
-    isempty(kwargs) ||
-        throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
-    return select_algorithm(f, A; alg...)
-end
-function _select_algorithm(f, A, alg; kwargs...)
+function _select_algorithm(f::F, A, alg; kwargs...) where {F}
     return throw(ArgumentError("Unknown alg $alg"))
 end
 
@@ -171,13 +174,15 @@ macro functiondef(f)
 
     return esc(quote
                    # out of place to inplace
-                   $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
+                   Base.@constprop :aggressive $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
                    $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
 
                    # fill in arguments
-                   $f!(A; kwargs...) = $f!(A, select_algorithm($f!, A; kwargs...))
-                   function $f!(A, out; kwargs...)
-                       return $f!(A, out, select_algorithm($f!, A; kwargs...))
+                   Base.@constprop :aggressive function $f!(A; alg=nothing, kwargs...)
+                       return $f!(A, select_algorithm($f!, A, alg; kwargs...))
+                   end
+                   Base.@constprop :aggressive function $f!(A, out; alg=nothing, kwargs...)
+                       return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
                    end
                    function $f!(A, alg::AbstractAlgorithm)
                        return $f!(A, initialize_output($f!, A, alg), alg)

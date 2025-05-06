@@ -102,11 +102,11 @@ for f in (:svd_full, :svd_compact, :svd_vals)
     end
 end
 
-function select_algorithm(::typeof(svd_trunc), A; kwargs...)
-    return select_algorithm(svd_trunc!, A; kwargs...)
+function select_algorithm(::typeof(svd_trunc), A, alg; kwargs...)
+    return select_algorithm(svd_trunc!, A, alg; kwargs...)
 end
-function select_algorithm(::typeof(svd_trunc!), A; trunc=nothing, kwargs...)
-    alg_svd = select_algorithm(svd_compact!, A; kwargs...)
+function select_algorithm(::typeof(svd_trunc!), A, alg; trunc=nothing, kwargs...)
+    alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_svd, select_truncation(trunc))
 end
 

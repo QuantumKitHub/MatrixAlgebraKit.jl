@@ -99,11 +99,11 @@ for f in (:eig_full, :eig_vals)
     end
 end
 
-function select_algorithm(::typeof(eig_trunc), A; kwargs...)
-    return select_algorithm(eig_trunc!, A; kwargs...)
+function select_algorithm(::typeof(eig_trunc), A, alg; kwargs...)
+    return select_algorithm(eig_trunc!, A, alg; kwargs...)
 end
-function select_algorithm(::typeof(eig_trunc!), A; trunc=nothing, kwargs...)
-    alg_eig = select_algorithm(eig_full!, A; kwargs...)
+function select_algorithm(::typeof(eig_trunc!), A, alg; trunc=nothing, kwargs...)
+    alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
 end
 
