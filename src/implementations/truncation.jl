@@ -32,6 +32,18 @@ Trivial truncation strategy that keeps all values, mostly for testing purposes.
 """
 struct NoTruncation <: TruncationStrategy end
 
+function select_truncation(trunc)
+    if isnothing(trunc)
+        return NoTruncation()
+    elseif trunc isa NamedTuple
+        return TruncationStrategy(; trunc...)
+    elseif trunc isa TruncationStrategy
+        return trunc
+    else
+        return throw(ArgumentError("Unknown truncation strategy: $trunc"))
+    end
+end
+
 # TODO: how do we deal with sorting/filters that treat zeros differently
 # since these are implicitly discarded by selecting compact/full
 
@@ -98,8 +110,9 @@ struct TruncationIntersection{T<:Tuple{Vararg{TruncationStrategy}}} <:
        TruncationStrategy
     components::T
 end
-TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...) = 
-    TruncationIntersection((trunc, truncs...))
+function TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...)
+    return TruncationIntersection((trunc, truncs...))
+end
 
 function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
     return TruncationIntersection((trunc1, trunc2))

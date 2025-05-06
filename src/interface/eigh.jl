@@ -89,32 +89,21 @@ See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_trunc(!)`](@ref eigh_trunc)
 for f in (:eigh_full, :eigh_vals)
     f! = Symbol(f, :!)
     @eval begin
-        function select_algorithm(::typeof($f), A; kwargs...)
-            return select_algorithm($f!, A; kwargs...)
+        function default_algorithm(::typeof($f), A; kwargs...)
+            return default_algorithm($f!, A; kwargs...)
         end
-        function select_algorithm(::typeof($f!), A; alg=nothing, kwargs...)
-            if alg isa AbstractAlgorithm
-                return alg
-            elseif alg isa Symbol
-                return Algorithm{alg}(; kwargs...)
-            else
-                isnothing(alg) || throw(ArgumentError("Unknown alg $alg"))
-                return default_eigh_algorithm(A; kwargs...)
-            end
+        function default_algorithm(::typeof($f!), A; kwargs...)
+            return default_eigh_algorithm(A; kwargs...)
         end
     end
 end
 
-function select_algorithm(::typeof(eigh_trunc), A; kwargs...)
-    return select_algorithm(eigh_trunc!, A; kwargs...)
+function select_algorithm(::typeof(eigh_trunc), A, alg; kwargs...)
+    return select_algorithm(eigh_trunc!, A, alg; kwargs...)
 end
-function select_algorithm(::typeof(eigh_trunc!), A; alg=nothing, trunc=nothing, kwargs...)
-    alg_eigh = select_algorithm(eigh_full!, A; alg, kwargs...)
-    alg_trunc = trunc isa TruncationStrategy ? trunc :
-                trunc isa NamedTuple ? TruncationStrategy(; trunc...) :
-                isnothing(trunc) ? NoTruncation() :
-                throw(ArgumentError("Unknown truncation strategy: $trunc"))
-    return TruncatedAlgorithm(alg_eigh, alg_trunc)
+function select_algorithm(::typeof(eigh_trunc!), A, alg; trunc=nothing, kwargs...)
+    alg_eigh = select_algorithm(eigh_full!, A, alg; kwargs...)
+    return TruncatedAlgorithm(alg_eigh, select_truncation(trunc))
 end
 
 # Default to LAPACK 

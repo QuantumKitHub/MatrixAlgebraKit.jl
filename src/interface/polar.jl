@@ -63,18 +63,11 @@ end
 for f in (:left_polar, :right_polar)
     f! = Symbol(f, :!)
     @eval begin
-        function select_algorithm(::typeof($f), A; kwargs...)
-            return select_algorithm($f!, A; kwargs...)
+        function default_algorithm(::typeof($f), A; kwargs...)
+            return default_algorithm($f!, A; kwargs...)
         end
-        function select_algorithm(::typeof($f!), A; alg=nothing, kwargs...)
-            if alg isa AbstractAlgorithm
-                return alg
-            elseif alg isa Symbol
-                return Algorithm{alg}(; kwargs...)
-            else
-                isnothing(alg) || throw(ArgumentError("Unknown alg $alg"))
-                return default_polar_algorithm(A; kwargs...)
-            end
+        function default_algorithm(::typeof($f!), A; kwargs...)
+            return default_polar_algorithm(A; kwargs...)
         end
     end
 end
