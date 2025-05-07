@@ -27,9 +27,7 @@ pipeline {
           }
           steps {
             sh '''
-              julia --project=. -e 'using Pkg: Pkg
-                Pkg.instantiate();
-                Pkg.test("MatrixAlgebraKit"; test_args=["cuda"])'
+              julia --project=. -e 'using Pkg: Pkg; Pkg.test("MatrixAlgebraKit"; test_args=["--group=cuda"])'
             '''
           }
         }
@@ -53,9 +51,7 @@ pipeline {
           }
           steps {
             sh '''
-              julia --project=. -e 'using Pkg: Pkg
-                Pkg.instantiate();
-                Pkg.test("MatrixAlgebraKit"; test_args=["cuda"])'
+              julia --project=. -e 'using Pkg: Pkg; Pkg.test("MatrixAlgebraKit"; test_args=["--group=cuda"])'
             '''
           }
         }

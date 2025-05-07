@@ -1,7 +1,7 @@
 using SafeTestsets
 
-pat = r"(?:--group=)(\w+)"
-arg_id = findfirst(pat, ARGS)
+const pat = r"(?:--group=)(\w+)"
+arg_id = findfirst(contains(pat), ARGS)
 const GROUP = if isnothing(arg_id)
     uppercase(get(ENV, "GROUP", "ALL"))
 else
