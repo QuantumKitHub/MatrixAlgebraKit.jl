@@ -16,6 +16,7 @@ MatrixAlgebraKitChainRulesCoreExt = "ChainRulesCore"
 Aqua = "0.6, 0.7, 0.8"
 ChainRulesCore = "1"
 ChainRulesTestUtils = "1"
+CUDA = "0.12, 0.13"
 JET = "0.9"
 LinearAlgebra = "1"
 SafeTestsets = "0.1"
@@ -27,6 +28,7 @@ julia = "1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
@@ -36,4 +38,5 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras","ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote"]
+test = ["Aqua", "JET", "SafeTestsets", "CUDA", "Test", "TestExtras", "ChainRulesCore",
+        "ChainRulesTestUtils", "StableRNGs", "Zygote"]
