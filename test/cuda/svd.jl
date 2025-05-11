@@ -13,7 +13,7 @@ include("utilities.jl")
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63)
         k = min(m, n)
-        algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar())
+        algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
             n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             minmn = min(m, n)
@@ -49,7 +49,7 @@ end
     rng = StableRNG(123)
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63)
-        algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar())
+        algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
             n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             A = CuArray(randn(rng, T, m, n))

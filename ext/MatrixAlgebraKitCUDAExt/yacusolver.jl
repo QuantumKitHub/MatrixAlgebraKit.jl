@@ -171,84 +171,81 @@ function Xgesvdp!(A::StridedCuMatrix{T},
 end
 
 # Wrapper for SVD via Jacobi
-# for (bname, fname, elty, relty) in
-#     ((:cusolverDnSgesvdj_bufferSize, :cusolverDnSgesvdj, :Float32, :Float32),
-#      (:cusolverDnDgesvdj_bufferSize, :cusolverDnDgesvdj, :Float64, :Float64),
-#      (:cusolverDnCgesvdj_bufferSize, :cusolverDnCgesvdj, :ComplexF32, :Float32),
-#      (:cusolverDnZgesvdj_bufferSize, :cusolverDnZgesvdj, :ComplexF64, :Float64))
-#     @eval begin
-#         #! format: off
-#         function gesvdj!(A::StridedCuMatrix{$elty},
-#                          S::StridedCuVector{$relty}=similar(A, $relty, min(size(A)...)),
-#                          U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-#                          Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
-#                          tol::$relty=eps($relty),
-#                          max_sweeps::Int=100)
-#         #! format: on
-#             chkstride1(A, U, Vᴴ, S)
-#             m, n = size(A)
-#             minmn = min(m, n)
+for (bname, fname, elty, relty) in
+    ((:cusolverDnSgesvdj_bufferSize, :cusolverDnSgesvdj, :Float32, :Float32),
+     (:cusolverDnDgesvdj_bufferSize, :cusolverDnDgesvdj, :Float64, :Float64),
+     (:cusolverDnCgesvdj_bufferSize, :cusolverDnCgesvdj, :ComplexF32, :Float32),
+     (:cusolverDnZgesvdj_bufferSize, :cusolverDnZgesvdj, :ComplexF64, :Float64))
+    @eval begin
+        #! format: off
+        function gesvdj!(A::StridedCuMatrix{$elty},
+                         S::StridedCuVector{$relty}=similar(A, $relty, min(size(A)...)),
+                         U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
+                         Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
+                         tol::$relty=eps($relty),
+                         max_sweeps::Int=100)
+        #! format: on
+            chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            minmn = min(m, n)
 
-#             if length(U) == 0 && length(Vᴴ) == 0
-#                 jobz = 'N'
-#                 econ = 0
-#             else
-#                 jobz = 'V'
-#                 size(U, 1) == m ||
-#                     throw(DimensionMismatch("row size mismatch between A and U"))
-#                 size(Vᴴ, 2) == n ||
-#                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
-#                 if size(U, 2) == size(Vᴴ, 1) == minmn
-#                     econ = 1
-#                 elseif size(U, 2) == m && size(Vᴴ, 1) == n
-#                     econ = 0
-#                 else
-#                     throw(DimensionMismatch("invalid column size of U or row size of Vᴴ"))
-#                 end
-#             end
-#             length(S) == minmn ||
-#                 throw(DimensionMismatch("length mismatch between A and S"))
+            if length(U) == 0 && length(Vᴴ) == 0
+                jobz = 'N'
+                econ = 0
+            else
+                jobz = 'V'
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(U, 2) == size(Vᴴ, 1) == minmn
+                    econ = 1
+                elseif size(U, 2) == m && size(Vᴴ, 1) == n
+                    econ = 0
+                else
+                    throw(DimensionMismatch("invalid column size of U or row size of Vᴴ"))
+                end
+            end
+            length(S) == minmn ||
+                throw(DimensionMismatch("length mismatch between A and S"))
 
-#             if jobz == 'N' # it seems we still need the memory for U and Vᴴ
-#                 U = similar(A, $elty, m, minmn)
-#                 V = similar(A, $elty, n, minmn)
-#             else
-#                 V = similar(Vᴴ')
-#             end
-#             lda = max(1, stride(A, 2))
-#             ldu = max(1, stride(U, 2))
-#             ldv = max(1, stride(V, 2))
+            Ṽ = (jobz == 'V') ? similar(Vᴴ') : similar(Vᴴ, (n, minmn))
+            Ũ = (jobz == 'V') ? U : similar(U, (m, minmn))
+            lda = max(1, stride(A, 2))
+            ldu = max(1, stride(Ũ, 2))
+            ldv = max(1, stride(Ṽ, 2))
 
-#             params = Ref{gesvdjInfo_t}(C_NULL)
-#             cusolverDnCreateGesvdjInfo(params)
-#             cusolverDnXgesvdjSetTolerance(params[], tol)
-#             cusolverDnXgesvdjSetMaxSweeps(params[], max_sweeps)
-#             dh = dense_handle()
+            params = Ref{CUSOLVER.gesvdjInfo_t}(C_NULL)
+            CUSOLVER.cusolverDnCreateGesvdjInfo(params)
+            CUSOLVER.cusolverDnXgesvdjSetTolerance(params[], tol)
+            CUSOLVER.cusolverDnXgesvdjSetMaxSweeps(params[], max_sweeps)
+            dh = CUSOLVER.dense_handle()
 
-#             function bufferSize()
-#                 out = Ref{Cint}(0)
-#                 $bname(dh, jobz, econ, m, n, A, lda, S, U, ldu, V, ldv,
-#                        out, params[])
-#                 return out[] * sizeof($elty)
-#             end
+            function bufferSize()
+                out = Ref{Cint}(0)
+                CUSOLVER.$bname(dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
+                                out, params[])
+                return out[] * sizeof($elty)
+            end
 
-#             with_workspace(dh.workspace_gpu, bufferSize) do buffer
-#                 return $fname(dh, jobz, econ, m, n, A, lda, S, U, ldu, V, ldv,
-#                               buffer, sizeof(buffer) ÷ sizeof($elty), dh.info, params[])
-#             end
+            CUSOLVER.with_workspace(dh.workspace_gpu, bufferSize) do buffer
+                return CUSOLVER.$fname(dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
+                                       buffer, sizeof(buffer) ÷ sizeof($elty), dh.info,
+                                       params[])
+            end
 
-#             info = @allowscalar dh.info[1]
-#             chkargsok(BlasInt(info))
+            info = @allowscalar dh.info[1]
+            CUSOLVER.chkargsok(BlasInt(info))
 
-#             cusolverDnDestroyGesvdjInfo(params[])
+            CUSOLVER.cusolverDnDestroyGesvdjInfo(params[])
 
-#             if jobz != 'N'
-#                 adjoint!(Vᴴ, V)
-#             end
-#             return U, S, Vᴴ
-#         end
-#     end
-# end
+            if jobz == 'V'
+                adjoint!(Vᴴ, Ṽ)
+            end
+            return U, S, Vᴴ
+        end
+    end
+end
 
 # for (jname, bname, fname, elty, relty) in
 #     ((:sygvd!, :cusolverDnSsygvd_bufferSize, :cusolverDnSsygvd, :Float32, :Float32),
