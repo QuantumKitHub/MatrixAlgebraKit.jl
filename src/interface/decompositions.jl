@@ -1,8 +1,8 @@
 # TODO: module Decompositions?
 
-# ==========
-# ALGORITHMS
-# ==========
+# =================
+# LAPACK ALGORITHMS
+# =================
 
 # reference for naming LAPACK algorithms:
 # https://www.netlib.org/lapack/explore-html/topics.html
@@ -112,3 +112,41 @@ const LAPACK_SVDAlgorithm = Union{LAPACK_QRIteration,
                                   LAPACK_Bisection,
                                   LAPACK_DivideAndConquer,
                                   LAPACK_Jacobi}
+
+# =========================
+# CUSOLVER ALGORITHMS
+# =========================
+"""
+    CUSOLVER_HouseholderQR(; positive = false)
+
+Algorithm type to denote the standard CUSOLVER algorithm for computing the QR decomposition of
+a matrix using Householder reflectors. The keyword `positive=true` can be used to ensure that
+the diagonal elements of `R` are non-negative.
+"""
+@algdef CUSOLVER_HouseholderQR
+
+"""
+    CUSOLVER_QRIteration()
+
+Algorithm type to denote the CUSOLVER driver for computing the eigenvalue decomposition of a
+Hermitian matrix, or the singular value decomposition of a general matrix using the
+QR Iteration algorithm.
+"""
+@algdef CUSOLVER_QRIteration
+
+"""
+    CUSOLVER_SVDPolar()
+
+Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
+a general matrix by using Halley's iterative algorithm to compute the polar decompositon,
+followed by the hermitian eigenvalue decomposition of the positive definite factor.
+"""
+@algdef CUSOLVER_SVDPolar
+
+"""
+    CUSOLVER_Jacobi()
+
+Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
+a general matrix using the Jacobi algorithm.
+"""
+@algdef CUSOLVER_Jacobi

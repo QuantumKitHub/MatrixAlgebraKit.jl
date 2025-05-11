@@ -31,7 +31,6 @@ using MatrixAlgebraKit: TruncationKeepAbove, diagview
             @test isposdef(S)
 
             Ac = similar(A)
-            Sc = similar(A, real(T), min(m, n))
             U2, S2, V2ᴴ = @constinferred svd_compact!(copy!(Ac, A), (U, S, Vᴴ), alg)
             @test U2 === U
             @test S2 === S
