@@ -22,7 +22,7 @@ using MatrixAlgebraKit: TruncationKeepAbove, diagview
             minmn = min(m, n)
             A = randn(rng, T, m, n)
 
-            if VERSION < v"1.12"
+            if VERSION < v"1.11"
                 # This is type unstable on older versions of Julia.
                 U, S, Vᴴ = svd_compact(A; alg)
             else
