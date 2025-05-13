@@ -53,10 +53,8 @@ end
     @test @constinferred(select_algorithm(svd_compact!, A)) === LAPACK_DivideAndConquer()
     @test @constinferred(select_algorithm(svd_compact!, A, nothing)) ===
           LAPACK_DivideAndConquer()
-    @test @constinferred(select_algorithm(svd_compact!, A, :LAPACK_QRIteration)) ===
-          LAPACK_QRIteration()
-    @test @constinferred(select_algorithm(svd_compact!, A, LAPACK_QRIteration)) ===
-          LAPACK_QRIteration()
-    @test @constinferred(select_algorithm(svd_compact!, A, LAPACK_QRIteration())) ===
-          LAPACK_QRIteration()
+    for alg in (:LAPACK_QRIteration, LAPACK_QRIteration, LAPACK_QRIteration())
+        @test @constinferred(select_algorithm(svd_compact!, A, $alg)) ===
+              LAPACK_QRIteration()
+    end
 end
