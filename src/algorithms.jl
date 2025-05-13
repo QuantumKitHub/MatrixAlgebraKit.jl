@@ -72,20 +72,17 @@ can't be passed to `MatrixAlgebraKit.select_algorithm`.
 """
 function select_algorithm end
 
-Base.@constprop :aggressive function select_algorithm(f::F, A, alg::Alg=nothing;
-                                                      kwargs...) where {F,Alg}
+function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
     return _select_algorithm(f, A, alg; kwargs...)
 end
 
 function _select_algorithm(f::F, A, alg::Nothing; kwargs...) where {F}
     return default_algorithm(f, A; kwargs...)
 end
-Base.@constprop :aggressive function _select_algorithm(f::F, A, alg::Symbol;
-                                                       kwargs...) where {F}
+function _select_algorithm(f::F, A, alg::Symbol; kwargs...) where {F}
     return Algorithm{alg}(; kwargs...)
 end
-Base.@constprop :aggressive function _select_algorithm(f::F, A, ::Type{Alg};
-                                                       kwargs...) where {F,Alg}
+function _select_algorithm(f::F, A, ::Type{Alg}; kwargs...) where {F,Alg}
     return Alg(; kwargs...)
 end
 function _select_algorithm(f::F, A, alg::NamedTuple; kwargs...) where {F}
@@ -177,15 +174,14 @@ macro functiondef(f)
 
     return esc(quote
                    # out of place to inplace
-                   Base.@constprop :aggressive $f(A; kwargs...) = $f!(copy_input($f, A);
-                                                                      kwargs...)
+                   $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
                    $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
 
                    # fill in arguments
-                   Base.@constprop :aggressive function $f!(A; alg=nothing, kwargs...)
+                   function $f!(A; alg=nothing, kwargs...)
                        return $f!(A, select_algorithm($f!, A, alg; kwargs...))
                    end
-                   Base.@constprop :aggressive function $f!(A, out; alg=nothing, kwargs...)
+                   function $f!(A, out; alg=nothing, kwargs...)
                        return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
                    end
                    function $f!(A, alg::AbstractAlgorithm)
