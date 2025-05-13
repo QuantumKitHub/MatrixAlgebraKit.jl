@@ -54,21 +54,25 @@ function _show_alg(io::IO, alg::Algorithm)
 end
 
 @doc """
-    MatrixAlgebraKit.select_algorithm(f, A, alg=nothing; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A, alg::AbstractAlgorithm)
+    MatrixAlgebraKit.select_algorithm(f, A, alg::Symbol; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A, alg::Type; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A, (; kwargs...))
 
 Decide on an algorithm to use for implementing the function `f` on inputs of type `A`.
 
-If `alg` is `nothing` (the default value), an algorithm will be selected automatically
-with [`MatrixAlgebraKit.default_algorithm`](@ref) and the keyword arguments will be passed
-to the algorithm constructor.
+If `alg` is an `AbstractAlgorithm` instance, it will be returned as-is.
 
-If `alg` is a `NamedTuple`, an algorithm will be selected automatically
-with [`default_algorithm`](@ref) and `alg` will be passed to the algorithm
-as keyword arguments. In that case, keyword arguments can't be passed
-to `MatrixAlgebraKit.select_algorithm`
+If `alg` is a `Symbol` or a `Type` of algorithm, the return value is obtained
+by calling the corresponding algorithm constructor;
+keyword arguments in `kwargs` are passed along  to this constructor.
 
-If `alg` is an `AbstractAlgorithm`, it will be returned as-is. In that case, keyword arguments
-can't be passed to `MatrixAlgebraKit.select_algorithm`.
+If `alg` is not specified (or `nothing`), an algorithm will be selected 
+automatically with [`MatrixAlgebraKit.default_algorithm`](@ref) and 
+the keyword arguments in `kwargs` will be passed to the algorithm constructor.
+Finally, the same behavior is obtained when the keyword arguments are
+passed as the third positional argument in the form of a `NamedTuple`. 
 """
 function select_algorithm end
 
