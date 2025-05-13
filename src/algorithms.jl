@@ -59,7 +59,7 @@ end
 Decide on an algorithm to use for implementing the function `f` on inputs of type `A`.
 
 If `alg` is `nothing` (the default value), an algorithm will be selected automatically
-with [`MatrixAlgebra.default_algorithm`](@ref) and the keyword arguments will be passed
+with [`MatrixAlgebraKit.default_algorithm`](@ref) and the keyword arguments will be passed
 to the algorithm constructor.
 
 If `alg` is a `NamedTuple`, an algorithm will be selected automatically
