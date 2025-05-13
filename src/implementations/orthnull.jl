@@ -130,11 +130,11 @@ function right_orth!(A, CVᴴ; trunc=nothing,
         throw(ArgumentError("truncation not supported for right_orth with kind=$kind"))
     end
     if kind == :lq
-        return right_orth_lq!(A, CVᴴ, alg)
+        return right_orth_lq!(A, CVᴴ, alg_lq)
     elseif kind == :polar
-        return right_orth_polar!(A, CVᴴ, alg)
+        return right_orth_polar!(A, CVᴴ, alg_polar)
     elseif kind == :svd
-        return right_orth_svd!(A, CVᴴ, alg, trunc)
+        return right_orth_svd!(A, CVᴴ, alg_svd, trunc)
     else
         throw(ArgumentError("`right_orth!` received unknown value `kind = $kind`"))
     end
