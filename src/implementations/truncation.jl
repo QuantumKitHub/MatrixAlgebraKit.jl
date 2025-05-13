@@ -98,8 +98,9 @@ struct TruncationIntersection{T<:Tuple{Vararg{TruncationStrategy}}} <:
        TruncationStrategy
     components::T
 end
-TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...) = 
-    TruncationIntersection((trunc, truncs...))
+function TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...)
+    return TruncationIntersection((trunc, truncs...))
+end
 
 function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
     return TruncationIntersection((trunc1, trunc2))
