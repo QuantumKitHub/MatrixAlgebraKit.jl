@@ -22,7 +22,12 @@ using MatrixAlgebraKit: TruncationKeepAbove, diagview
             minmn = min(m, n)
             A = randn(rng, T, m, n)
 
-            U, S, Vᴴ = @constinferred svd_compact(A; alg=($alg))
+            if VERSION < v"1.12"
+                # This is type unstable on older versions of Julia.
+                U, S, Vᴴ = svd_compact(A; alg)
+            else
+                U, S, Vᴴ = @constinferred svd_compact(A; alg=($alg))
+            end
             @test U isa Matrix{T} && size(U) == (m, minmn)
             @test S isa Diagonal{real(T)} && size(S) == (minmn, minmn)
             @test Vᴴ isa Matrix{T} && size(Vᴴ) == (minmn, n)
