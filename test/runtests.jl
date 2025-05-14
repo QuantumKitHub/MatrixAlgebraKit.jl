@@ -1,5 +1,8 @@
 using SafeTestsets
 
+@safetestset "Algorithms" begin
+    include("algorithms.jl")
+end
 @safetestset "Truncate" begin
     include("truncate.jl")
 end

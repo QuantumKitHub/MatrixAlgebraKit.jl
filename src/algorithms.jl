@@ -54,19 +54,63 @@ function _show_alg(io::IO, alg::Algorithm)
 end
 
 @doc """
-    select_algorithm(f, A; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A, alg::AbstractAlgorithm)
+    MatrixAlgebraKit.select_algorithm(f, A, alg::Symbol; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A, alg::Type; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A; kwargs...)
+    MatrixAlgebraKit.select_algorithm(f, A, (; kwargs...))
 
-Given some keyword arguments and an input `A`, decide on an algrithm to use for
-implementing the function `f` on inputs of type `A`.
+Decide on an algorithm to use for implementing the function `f` on inputs of type `A`.
+
+If `alg` is an `AbstractAlgorithm` instance, it will be returned as-is.
+
+If `alg` is a `Symbol` or a `Type` of algorithm, the return value is obtained
+by calling the corresponding algorithm constructor;
+keyword arguments in `kwargs` are passed along  to this constructor.
+
+If `alg` is not specified (or `nothing`), an algorithm will be selected 
+automatically with [`MatrixAlgebraKit.default_algorithm`](@ref) and 
+the keyword arguments in `kwargs` will be passed to the algorithm constructor.
+Finally, the same behavior is obtained when the keyword arguments are
+passed as the third positional argument in the form of a `NamedTuple`. 
 """
 function select_algorithm end
 
-function _select_algorithm(f, A::AbstractMatrix, alg::AbstractAlgorithm)
+function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
+    return _select_algorithm(f, A, alg; kwargs...)
+end
+
+function _select_algorithm(f::F, A, alg::Nothing; kwargs...) where {F}
+    return default_algorithm(f, A; kwargs...)
+end
+function _select_algorithm(f::F, A, alg::Symbol; kwargs...) where {F}
+    return Algorithm{alg}(; kwargs...)
+end
+function _select_algorithm(f::F, A, ::Type{Alg}; kwargs...) where {F,Alg}
+    return Alg(; kwargs...)
+end
+function _select_algorithm(f::F, A, alg::NamedTuple; kwargs...) where {F}
+    isempty(kwargs) ||
+        throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
+    return default_algorithm(f, A; alg...)
+end
+function _select_algorithm(f::F, A, alg::AbstractAlgorithm; kwargs...) where {F}
+    isempty(kwargs) ||
+        throw(ArgumentError("Additional keyword arguments are not allowed when an algorithm is specified."))
     return alg
 end
-function _select_algorithm(f, A::AbstractMatrix, alg::NamedTuple)
-    return select_algorithm(f, A; alg...)
+function _select_algorithm(f::F, A, alg; kwargs...) where {F}
+    return throw(ArgumentError("Unknown alg $alg"))
 end
+
+@doc """
+    MatrixAlgebraKit.default_algorithm(f, A; kwargs...)
+
+Select the default algorithm for a given factorization function `f` and input `A`.
+In general, this is called by [`select_algorithm`](@ref) if no algorithm is specified
+explicitly.
+"""
+function default_algorithm end
 
 @doc """
     copy_input(f, A)
@@ -138,9 +182,11 @@ macro functiondef(f)
                    $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
 
                    # fill in arguments
-                   $f!(A; kwargs...) = $f!(A, select_algorithm($f!, A; kwargs...))
-                   function $f!(A, out; kwargs...)
-                       return $f!(A, out, select_algorithm($f!, A; kwargs...))
+                   function $f!(A; alg=nothing, kwargs...)
+                       return $f!(A, select_algorithm($f!, A, alg; kwargs...))
+                   end
+                   function $f!(A, out; alg=nothing, kwargs...)
+                       return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
                    end
                    function $f!(A, alg::AbstractAlgorithm)
                        return $f!(A, initialize_output($f!, A, alg), alg)
