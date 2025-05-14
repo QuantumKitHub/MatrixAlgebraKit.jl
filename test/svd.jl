@@ -11,17 +11,23 @@ using MatrixAlgebraKit: TruncationKeepAbove, diagview
     @testset "size ($m, $n)" for n in (37, m, 63)
         k = min(m, n)
         if LinearAlgebra.LAPACK.version() < v"3.12.0"
-            algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+            algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
+                    LAPACK_DivideAndConquer, :LAPACK_DivideAndConquer)
         else
             algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
-                    LAPACK_Jacobi())
+                    LAPACK_Jacobi(), LAPACK_DivideAndConquer, :LAPACK_DivideAndConquer)
         end
         @testset "algorithm $alg" for alg in algs
             n > m && alg isa LAPACK_Jacobi && continue # not supported
             minmn = min(m, n)
             A = randn(rng, T, m, n)
 
-            U, S, Vᴴ = svd_compact(A; alg)
+            if VERSION < v"1.11"
+                # This is type unstable on older versions of Julia.
+                U, S, Vᴴ = svd_compact(A; alg)
+            else
+                U, S, Vᴴ = @constinferred svd_compact(A; alg=($alg))
+            end
             @test U isa Matrix{T} && size(U) == (m, minmn)
             @test S isa Diagonal{real(T)} && size(S) == (minmn, minmn)
             @test Vᴴ isa Matrix{T} && size(Vᴴ) == (minmn, n)
@@ -32,7 +38,8 @@ using MatrixAlgebraKit: TruncationKeepAbove, diagview
 
             Ac = similar(A)
             Sc = similar(A, real(T), min(m, n))
-            U2, S2, V2ᴴ = @constinferred svd_compact!(copy!(Ac, A), (U, S, Vᴴ), alg)
+            alg′ = @constinferred MatrixAlgebraKit.select_algorithm(svd_compact!, A, $alg)
+            U2, S2, V2ᴴ = @constinferred svd_compact!(copy!(Ac, A), (U, S, Vᴴ), alg′)
             @test U2 === U
             @test S2 === S
             @test V2ᴴ === Vᴴ
@@ -41,7 +48,7 @@ using MatrixAlgebraKit: TruncationKeepAbove, diagview
             @test Vᴴ * Vᴴ' ≈ I
             @test isposdef(S)
 
-            Sd = svd_vals(A, alg)
+            Sd = @constinferred svd_vals(A, alg′)
             @test S ≈ Diagonal(Sd)
         end
     end

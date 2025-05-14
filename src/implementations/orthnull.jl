@@ -89,22 +89,22 @@ function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
         throw(ArgumentError("truncation not supported for left_orth with kind=$kind"))
     end
     if kind == :qr
-        alg_qr′ = _select_algorithm(qr_compact!, A, alg_qr)
+        alg_qr′ = select_algorithm(qr_compact!, A, alg_qr)
         return qr_compact!(A, VC, alg_qr′)
     elseif kind == :polar
         size(A, 1) >= size(A, 2) ||
             throw(ArgumentError("`left_orth!` with `kind = :polar` only possible for `(m, n)` matrix with `m >= n`"))
-        alg_polar′ = _select_algorithm(left_polar!, A, alg_polar)
+        alg_polar′ = select_algorithm(left_polar!, A, alg_polar)
         return left_polar!(A, VC, alg_polar′)
     elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = _select_algorithm(svd_compact!, A, alg_svd)
+        alg_svd′ = select_algorithm(svd_compact!, A, alg_svd)
         V, C = VC
         S = Diagonal(initialize_output(svd_vals!, A, alg_svd′))
         U, S, Vᴴ = svd_compact!(A, (V, S, C), alg_svd′)
         return U, lmul!(S, Vᴴ)
     elseif kind == :svd
-        alg_svd′ = _select_algorithm(svd_compact!, A, alg_svd)
-        alg_svd_trunc = select_algorithm(svd_trunc!, A; trunc, alg=alg_svd′)
+        alg_svd′ = select_algorithm(svd_compact!, A, alg_svd)
+        alg_svd_trunc = select_algorithm(svd_trunc!, A, alg_svd′; trunc)
         V, C = VC
         S = Diagonal(initialize_output(svd_vals!, A, alg_svd_trunc.alg))
         U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg_svd_trunc)
@@ -122,22 +122,22 @@ function right_orth!(A::AbstractMatrix, CVᴴ; trunc=nothing,
         throw(ArgumentError("truncation not supported for right_orth with kind=$kind"))
     end
     if kind == :lq
-        alg_lq′ = _select_algorithm(lq_compact!, A, alg_lq)
+        alg_lq′ = select_algorithm(lq_compact!, A, alg_lq)
         return lq_compact!(A, CVᴴ, alg_lq′)
     elseif kind == :polar
         size(A, 2) >= size(A, 1) ||
             throw(ArgumentError("`right_orth!` with `kind = :polar` only possible for `(m, n)` matrix with `m <= n`"))
-        alg_polar′ = _select_algorithm(right_polar!, A, alg_polar)
+        alg_polar′ = select_algorithm(right_polar!, A, alg_polar)
         return right_polar!(A, CVᴴ, alg_polar′)
     elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = _select_algorithm(svd_compact!, A, alg_svd)
+        alg_svd′ = select_algorithm(svd_compact!, A, alg_svd)
         C, Vᴴ = CVᴴ
         S = Diagonal(initialize_output(svd_vals!, A, alg_svd′))
         U, S, Vᴴ = svd_compact!(A, (C, S, Vᴴ), alg_svd′)
         return rmul!(U, S), Vᴴ
     elseif kind == :svd
-        alg_svd′ = _select_algorithm(svd_compact!, A, alg_svd)
-        alg_svd_trunc = select_algorithm(svd_trunc!, A; trunc, alg=alg_svd′)
+        alg_svd′ = select_algorithm(svd_compact!, A, alg_svd)
+        alg_svd_trunc = select_algorithm(svd_trunc!, A, alg_svd′; trunc)
         C, Vᴴ = CVᴴ
         S = Diagonal(initialize_output(svd_vals!, A, alg_svd_trunc.alg))
         U, S, Vᴴ = svd_trunc!(A, (C, S, Vᴴ), alg_svd_trunc)
@@ -167,15 +167,15 @@ function left_null!(A::AbstractMatrix, N; trunc=nothing,
         throw(ArgumentError("truncation not supported for left_null with kind=$kind"))
     end
     if kind == :qr
-        alg_qr′ = _select_algorithm(qr_null!, A, alg_qr)
+        alg_qr′ = select_algorithm(qr_null!, A, alg_qr)
         return qr_null!(A, N, alg_qr′)
     elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = _select_algorithm(svd_full!, A, alg_svd)
+        alg_svd′ = select_algorithm(svd_full!, A, alg_svd)
         U, _, _ = svd_full!(A, alg_svd′)
         (m, n) = size(A)
         return copy!(N, view(U, 1:m, (n + 1):m))
     elseif kind == :svd
-        alg_svd′ = _select_algorithm(svd_full!, A, alg_svd)
+        alg_svd′ = select_algorithm(svd_full!, A, alg_svd)
         U, S, _ = svd_full!(A, alg_svd′)
         trunc′ = trunc isa TruncationStrategy ? trunc :
                  trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
@@ -194,15 +194,15 @@ function right_null!(A::AbstractMatrix, Nᴴ; trunc=nothing,
         throw(ArgumentError("truncation not supported for right_null with kind=$kind"))
     end
     if kind == :lq
-        alg_lq′ = _select_algorithm(lq_null!, A, alg_lq)
+        alg_lq′ = select_algorithm(lq_null!, A, alg_lq)
         return lq_null!(A, Nᴴ, alg_lq′)
     elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = _select_algorithm(svd_full!, A, alg_svd)
+        alg_svd′ = select_algorithm(svd_full!, A, alg_svd)
         _, _, Vᴴ = svd_full!(A, alg_svd′)
         (m, n) = size(A)
         return copy!(Nᴴ, view(Vᴴ, (m + 1):n, 1:n))
     elseif kind == :svd
-        alg_svd′ = _select_algorithm(svd_full!, A, alg_svd)
+        alg_svd′ = select_algorithm(svd_full!, A, alg_svd)
         _, S, Vᴴ = svd_full!(A, alg_svd′)
         trunc′ = trunc isa TruncationStrategy ? trunc :
                  trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
