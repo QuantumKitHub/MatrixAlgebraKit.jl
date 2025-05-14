@@ -219,7 +219,7 @@ function right_null!(A, Nᴴ; trunc=nothing,
     if kind == :lq
         return right_null_lq!(A, Nᴴ, alg_lq)
     elseif kind == :svd
-        return right_null_svd!(A, Nᴴ, alg_svd)
+        return right_null_svd!(A, Nᴴ, alg_svd, trunc)
     else
         throw(ArgumentError("`right_null!` received unknown value `kind = $kind`"))
     end
