@@ -115,7 +115,7 @@ function left_orth_svd!(A, VC, alg, trunc::Nothing=nothing)
 end
 function left_orth_svd!(A, VC, alg, trunc)
     alg′ = select_algorithm(svd_compact!, A, alg)
-    alg_trunc = select_algorithm(svd_trunc!, A; trunc, alg=alg′)
+    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
     V, C = VC
     S = Diagonal(initialize_output(svd_vals!, A, alg_trunc.alg))
     U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg_trunc)
@@ -156,7 +156,7 @@ function right_orth_svd!(A, CVᴴ, alg, trunc::Nothing=nothing)
 end
 function right_orth_svd!(A, CVᴴ, alg, trunc)
     alg′ = select_algorithm(svd_compact!, A, alg)
-    alg_trunc = select_algorithm(svd_trunc!, A; trunc, alg=alg′)
+    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
     C, Vᴴ = CVᴴ
     S = Diagonal(initialize_output(svd_vals!, A, alg_trunc.alg))
     U, S, Vᴴ = svd_trunc!(A, (C, S, Vᴴ), alg_trunc)
