@@ -127,32 +127,64 @@ function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationIntersection)
     return TruncationIntersection((trunc1, trunc2.components...))
 end
 
+"""
+    TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationAlgorithm)
+
+Generic wrapper type for algorithms that consist of first using `alg`, followed by a
+truncation through `trunc`.
+"""
+struct TruncatedAlgorithm{A,T} <: AbstractAlgorithm
+    alg::A
+    trunc::T
+end
+
 # truncate!
 # ---------
 # Generic implementation: `findtruncated` followed by indexing
 @doc """
     truncate!(f, out, strategy::TruncationStrategy)
+    truncate!(f, out, alg::AbstractAlgorithm)
 
 Generic interface for post-truncating a decomposition, specified in `out`.
 """ truncate!
+
 # TODO: should we return a view?
+function truncate!(::typeof(svd_trunc!), USVᴴ, alg::TruncatedAlgorithm)
+    return truncate!(svd_trunc!, USVᴴ, alg.trunc)
+end
 function truncate!(::typeof(svd_trunc!), (U, S, Vᴴ), strategy::TruncationStrategy)
     ind = findtruncated(diagview(S), strategy)
     return U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]
+end
+
+function truncate!(::typeof(eig_trunc!), DV, alg::TruncatedAlgorithm)
+    return truncate!(eig_trunc!, DV, alg.trunc)
 end
 function truncate!(::typeof(eig_trunc!), (D, V), strategy::TruncationStrategy)
     ind = findtruncated(diagview(D), strategy)
     return Diagonal(diagview(D)[ind]), V[:, ind]
 end
+
+function truncate!(::typeof(eigh_trunc!), DV, alg::TruncatedAlgorithm)
+    return truncate!(eigh_trunc!, DV, alg.trunc)
+end
 function truncate!(::typeof(eigh_trunc!), (D, V), strategy::TruncationStrategy)
     ind = findtruncated(diagview(D), strategy)
     return Diagonal(diagview(D)[ind]), V[:, ind]
+end
+
+function truncate!(::typeof(left_null!), US, alg::TruncatedAlgorithm)
+    return truncate!(left_null!, US, alg.trunc)
 end
 function truncate!(::typeof(left_null!), (U, S), strategy::TruncationStrategy)
     # TODO: avoid allocation?
     extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 1) - size(S, 2))))
     ind = findtruncated(extended_S, strategy)
     return U[:, ind]
+end
+
+function truncate!(::typeof(right_null!), SVᴴ, alg::TruncatedAlgorithm)
+    return truncate!(right_null!, SVᴴ, alg.trunc)
 end
 function truncate!(::typeof(right_null!), (S, Vᴴ), strategy::TruncationStrategy)
     # TODO: avoid allocation?
@@ -195,15 +227,4 @@ end
 function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
     inds = map(Base.Fix1(findtruncated, values), strategy.components)
     return intersect(inds...)
-end
-
-"""
-    TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationAlgorithm)
-
-Generic wrapper type for algorithms that consist of first using `alg`, followed by a
-truncation through `trunc`.
-"""
-struct TruncatedAlgorithm{A,T} <: AbstractAlgorithm
-    alg::A
-    trunc::T
 end
