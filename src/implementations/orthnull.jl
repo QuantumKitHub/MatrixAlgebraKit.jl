@@ -180,7 +180,7 @@ function left_null!(A::AbstractMatrix, N; trunc=nothing,
         trunc′ = trunc isa TruncationStrategy ? trunc :
                  trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
                  throw(ArgumentError("Unknown truncation strategy: $trunc"))
-        return truncate!(left_null!, (U, S), trunc′)
+        return truncate!(left_null!, (U, S), TruncatedAlgorithm(alg_svd′, trunc′))
     else
         throw(ArgumentError("`left_null!` received unknown value `kind = $kind`"))
     end
@@ -207,7 +207,7 @@ function right_null!(A::AbstractMatrix, Nᴴ; trunc=nothing,
         trunc′ = trunc isa TruncationStrategy ? trunc :
                  trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
                  throw(ArgumentError("Unknown truncation strategy: $trunc"))
-        return truncate!(right_null!, (S, Vᴴ), trunc′)
+        return truncate!(right_null!, (S, Vᴴ), TruncatedAlgorithm(alg_svd′, trunc′))
     else
         throw(ArgumentError("`right_null!` received unknown value `kind = $kind`"))
     end

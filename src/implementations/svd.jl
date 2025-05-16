@@ -170,5 +170,5 @@ end
 
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
     USVᴴ′ = svd_compact!(A, USVᴴ, alg.alg)
-    return truncate!(svd_trunc!, USVᴴ′, alg.trunc)
+    return truncate!(svd_trunc!, USVᴴ′, alg)
 end
