@@ -168,7 +168,7 @@ findtruncated(values::AbstractVector, ::NoTruncation) = Colon()
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepSorted)
     if issorted(values; by=strategy.sortby, rev=strategy.rev)
-        return findtruncated_sorted(values, strategy)
+        return convert(Vector{Int}, findtruncated_sorted(values, strategy))
     else
         return findtruncated_unsorted(values, strategy)
     end
@@ -194,7 +194,7 @@ end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepBelow)
     if issorted(values; by=abs, rev=true)
-        return findtruncated_sorted(values, strategy)
+        return convert(Vector{Int}, findtruncated_sorted(values, strategy))
     else
         return findtruncated_unsorted(values, strategy)
     end
@@ -211,7 +211,7 @@ end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
     if issorted(values; by=abs, rev=true)
-        return findtruncated_sorted(values, strategy)
+        return convert(Vector{Int}, findtruncated_sorted(values, strategy))
     else
         return findtruncated_unsorted(values, strategy)
     end

@@ -28,21 +28,15 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbov
     @test trunc.components[2] == TruncationKeepAbove(1e-2, 1e-3)
 
     values = [1, 0.9, 0.5, 0.3, 0.01]
-    @test @constinferred(Vector{Int}, findtruncated(values, truncrank(2))) === 1:2
-    @test @constinferred(UnitRange{Int}, findtruncated(values, truncrank(2; rev=false))) ==
-          [5, 4]
-    @test @constinferred(UnitRange{Int}, findtruncated(values, truncrank(2; by=-))) ==
-          [5, 4]
+    @test @constinferred(findtruncated(values, truncrank(2))) == 1:2
+    @test @constinferred(findtruncated(values, truncrank(2; rev=false))) == [5, 4]
+    @test @constinferred(findtruncated(values, truncrank(2; by=-))) == [5, 4]
 
     values = [1, 0.9, 0.5, 0.3, 0.01]
-    @test @constinferred(Vector{Int},
-                         findtruncated(values, TruncationKeepAbove(0.4, 0.0))) === 1:3
-    @test @constinferred(Vector{Int},
-                         findtruncated(values, TruncationKeepBelow(0.4, 0.0))) === 4:5
+    @test @constinferred(findtruncated(values, TruncationKeepAbove(0.4, 0.0))) == 1:3
+    @test @constinferred(findtruncated(values, TruncationKeepBelow(0.4, 0.0))) == 4:5
 
     values = [0.01, 1, 0.9, 0.3, 0.5]
-    @test @constinferred(UnitRange{Int},
-                         findtruncated(values, TruncationKeepAbove(0.4, 0.0))) == [2, 3, 5]
-    @test @constinferred(UnitRange{Int},
-                         findtruncated(values, TruncationKeepBelow(0.4, 0.0))) == [4, 1]
+    @test @constinferred(findtruncated(values, TruncationKeepAbove(0.4, 0.0))) == [2, 3, 5]
+    @test @constinferred(findtruncated(values, TruncationKeepBelow(0.4, 0.0))) == [1, 4]
 end
