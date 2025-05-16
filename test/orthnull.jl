@@ -5,6 +5,41 @@ using StableRNGs
 using LinearAlgebra: LinearAlgebra, I
 using MatrixAlgebraKit: TruncationKeepAbove, TruncationKeepBelow
 
+# Used to test non-AbstractMatrix codepaths.
+struct LinearMap{P<:AbstractMatrix}
+    parent::P
+end
+using MatrixAlgebraKit: LAPACK_SVDAlgorithm, check_input, copy_input, default_svd_algorithm,
+                        initialize_output
+function MatrixAlgebraKit.copy_input(::typeof(qr_compact), A::LinearMap)
+    return LinearMap(copy_input(qr_compact, A.parent))
+end
+function MatrixAlgebraKit.copy_input(::typeof(lq_compact), A::LinearMap)
+    return LinearMap(copy_input(lq_compact, A.parent))
+end
+function MatrixAlgebraKit.initialize_output(::typeof(left_orth!), A::LinearMap)
+    return initialize_output(left_orth!, A.parent)
+end
+function MatrixAlgebraKit.initialize_output(::typeof(right_orth!), A::LinearMap)
+    return initialize_output(right_orth!, A.parent)
+end
+function MatrixAlgebraKit.check_input(::typeof(left_orth!), A::LinearMap, VC)
+    return check_input(left_orth!, A.parent, VC)
+end
+function MatrixAlgebraKit.check_input(::typeof(right_orth!), A::LinearMap, VC)
+    return check_input(right_orth!, A.parent, VC)
+end
+function MatrixAlgebraKit.default_svd_algorithm(A::LinearMap)
+    return default_svd_algorithm(A.parent)
+end
+function MatrixAlgebraKit.initialize_output(::typeof(svd_compact!), A::LinearMap,
+                                            alg::LAPACK_SVDAlgorithm)
+    return initialize_output(svd_compact!, A.parent, alg)
+end
+function MatrixAlgebraKit.svd_compact!(A::LinearMap, USVᴴ, alg::LAPACK_SVDAlgorithm)
+    return svd_compact!(A.parent, USVᴴ, alg)
+end
+
 @testset "left_orth and left_null for T = $T" for T in (Float32, Float64, ComplexF32,
                                                         ComplexF64)
     rng = StableRNG(123)
@@ -22,6 +57,10 @@ using MatrixAlgebraKit: TruncationKeepAbove, TruncationKeepBelow
         @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test N' * N ≈ I
         @test V * V' + N * N' ≈ I
+
+        M = LinearMap(A)
+        V, C = @constinferred left_orth(M; kind=:svd)
+        @test V * C ≈ A
 
         if m > n
             nullity = 5
@@ -161,6 +200,10 @@ end
         @test LinearAlgebra.norm(A * adjoint(Nᴴ)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test Nᴴ * Nᴴ' ≈ I
         @test Vᴴ' * Vᴴ + Nᴴ' * Nᴴ ≈ I
+
+        M = LinearMap(A)
+        C, Vᴴ = @constinferred right_orth(M; kind=:svd)
+        @test C * Vᴴ ≈ A
 
         Ac = similar(A)
         C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ))

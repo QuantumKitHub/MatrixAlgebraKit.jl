@@ -108,12 +108,25 @@ function left_orth_polar!(A, VC, alg)
 end
 function left_orth_svd!(A, VC, alg, trunc::Nothing=nothing)
     alg′ = select_algorithm(svd_compact!, A, alg)
+    U, S, Vᴴ = svd_compact!(A, alg′)
+    V, C = VC
+    return copy!(V, U), mul!(C, S, Vᴴ)
+end
+function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc::Nothing=nothing)
+    alg′ = select_algorithm(svd_compact!, A, alg)
     V, C = VC
     S = Diagonal(initialize_output(svd_vals!, A, alg′))
     U, S, Vᴴ = svd_compact!(A, (V, S, C), alg′)
     return U, lmul!(S, Vᴴ)
 end
 function left_orth_svd!(A, VC, alg, trunc)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
+    U, S, Vᴴ = svd_trunc!(A, alg_trunc)
+    V, C = VC
+    return copy!(V, U), mul!(C, S, Vᴴ)
+end
+function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc)
     alg′ = select_algorithm(svd_compact!, A, alg)
     alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
     V, C = VC
@@ -149,12 +162,25 @@ function right_orth_polar!(A, CVᴴ, alg)
 end
 function right_orth_svd!(A, CVᴴ, alg, trunc::Nothing=nothing)
     alg′ = select_algorithm(svd_compact!, A, alg)
+    U, S, Vᴴ′ = svd_compact!(A, alg′)
+    C, Vᴴ = CVᴴ
+    return mul!(C, U, S), copy!(Vᴴ, Vᴴ′)
+end
+function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc::Nothing=nothing)
+    alg′ = select_algorithm(svd_compact!, A, alg)
     C, Vᴴ = CVᴴ
     S = Diagonal(initialize_output(svd_vals!, A, alg′))
     U, S, Vᴴ = svd_compact!(A, (C, S, Vᴴ), alg′)
     return rmul!(U, S), Vᴴ
 end
 function right_orth_svd!(A, CVᴴ, alg, trunc)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
+    U, S, Vᴴ′ = svd_trunc!(A, alg_trunc)
+    C, Vᴴ = CVᴴ
+    return mul!(C, U, S), copy!(Vᴴ, Vᴴ′)
+end
+function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc)
     alg′ = select_algorithm(svd_compact!, A, alg)
     alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
     C, Vᴴ = CVᴴ
