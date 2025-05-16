@@ -206,10 +206,7 @@ function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepBe
 end
 function findtruncated_unsorted(values::AbstractVector, strategy::TruncationKeepBelow)
     atol = max(strategy.atol, strategy.rtol * maximum(values))
-    sorted = sortperm(values; by=abs, rev=true)
-    i = @something findfirst(≤(atol), values[sorted]) length(values) + 1
-    ind = sorted[i:length(values)]
-    return ind # TODO: consider sort!(ind)
+    return findall(≤(atol), values)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
@@ -226,10 +223,7 @@ function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepAb
 end
 function findtruncated_unsorted(values::AbstractVector, strategy::TruncationKeepAbove)
     atol = max(strategy.atol, strategy.rtol * maximum(values))
-    sorted = sortperm(values; by=abs, rev=true)
-    i = @something findlast(≥(atol), values[sorted]) 0
-    ind = sorted[1:i]
-    return ind # TODO: consider sort!(ind)
+    return findall(≥(atol), values)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
