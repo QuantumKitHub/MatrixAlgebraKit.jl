@@ -2,8 +2,53 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using StableRNGs
-using LinearAlgebra: LinearAlgebra, I
+using LinearAlgebra: LinearAlgebra, I, mul!
 using MatrixAlgebraKit: TruncationKeepAbove, TruncationKeepBelow
+using MatrixAlgebraKit: LAPACK_SVDAlgorithm, check_input, copy_input, default_svd_algorithm,
+                        initialize_output
+
+# Used to test non-AbstractMatrix codepaths.
+struct LinearMap{P<:AbstractMatrix}
+    parent::P
+end
+Base.parent(A::LinearMap) = getfield(A, :parent)
+function Base.copy!(dest::LinearMap, src::LinearMap)
+    copy!(parent(dest), parent(src))
+    return dest
+end
+function LinearAlgebra.mul!(C::LinearMap, A::LinearMap, B::LinearMap)
+    mul!(parent(C), parent(A), parent(B))
+    return C
+end
+
+function MatrixAlgebraKit.copy_input(::typeof(qr_compact), A::LinearMap)
+    return LinearMap(copy_input(qr_compact, parent(A)))
+end
+function MatrixAlgebraKit.copy_input(::typeof(lq_compact), A::LinearMap)
+    return LinearMap(copy_input(lq_compact, parent(A)))
+end
+function MatrixAlgebraKit.initialize_output(::typeof(left_orth!), A::LinearMap)
+    return LinearMap.(initialize_output(left_orth!, parent(A)))
+end
+function MatrixAlgebraKit.initialize_output(::typeof(right_orth!), A::LinearMap)
+    return LinearMap.(initialize_output(right_orth!, parent(A)))
+end
+function MatrixAlgebraKit.check_input(::typeof(left_orth!), A::LinearMap, VC)
+    return check_input(left_orth!, parent(A), parent.(VC))
+end
+function MatrixAlgebraKit.check_input(::typeof(right_orth!), A::LinearMap, VC)
+    return check_input(right_orth!, parent(A), parent.(VC))
+end
+function MatrixAlgebraKit.default_svd_algorithm(A::LinearMap)
+    return default_svd_algorithm(parent(A))
+end
+function MatrixAlgebraKit.initialize_output(::typeof(svd_compact!), A::LinearMap,
+                                            alg::LAPACK_SVDAlgorithm)
+    return LinearMap.(initialize_output(svd_compact!, parent(A), alg))
+end
+function MatrixAlgebraKit.svd_compact!(A::LinearMap, USVᴴ, alg::LAPACK_SVDAlgorithm)
+    return LinearMap.(svd_compact!(parent(A), parent.(USVᴴ), alg))
+end
 
 @testset "left_orth and left_null for T = $T" for T in (Float32, Float64, ComplexF32,
                                                         ComplexF64)
@@ -22,6 +67,10 @@ using MatrixAlgebraKit: TruncationKeepAbove, TruncationKeepBelow
         @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test N' * N ≈ I
         @test V * V' + N * N' ≈ I
+
+        M = LinearMap(A)
+        VM, CM = @constinferred left_orth(M; kind=:svd)
+        @test parent(VM) * parent(CM) ≈ A
 
         if m > n
             nullity = 5
@@ -161,6 +210,10 @@ end
         @test LinearAlgebra.norm(A * adjoint(Nᴴ)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test Nᴴ * Nᴴ' ≈ I
         @test Vᴴ' * Vᴴ + Nᴴ' * Nᴴ ≈ I
+
+        M = LinearMap(A)
+        CM, VMᴴ = @constinferred right_orth(M; kind=:svd)
+        @test parent(CM) * parent(VMᴴ) ≈ A
 
         Ac = similar(A)
         C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ))
