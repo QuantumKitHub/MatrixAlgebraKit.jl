@@ -70,14 +70,20 @@ end
 struct TruncationKeepAbove{T<:Real} <: TruncationStrategy
     atol::T
     rtol::T
+    p::Int
 end
-TruncationKeepAbove(atol::Real, rtol::Real) = TruncationKeepAbove(promote(atol, rtol)...)
+function TruncationKeepAbove(atol::Real, rtol::Real, p::Int=2)
+    return TruncationKeepAbove(promote(atol, rtol)..., p)
+end
 
 struct TruncationKeepBelow{T<:Real} <: TruncationStrategy
     atol::T
     rtol::T
+    p::Int
 end
-TruncationKeepBelow(atol::Real, rtol::Real) = TruncationKeepBelow(promote(atol, rtol)...)
+function TruncationKeepBelow(atol::Real, rtol::Real, p::Int=2)
+    return TruncationKeepBelow(promote(atol, rtol)..., p)
+end
 
 # TODO: better names for these functions of the above types
 """
@@ -184,21 +190,21 @@ function findtruncated(values::AbstractVector, strategy::TruncationKeepFiltered)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepBelow)
-    atol = max(strategy.atol, strategy.rtol * maximum(values))
+    atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
     return findall(≤(atol), values)
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepBelow)
-    atol = max(strategy.atol, strategy.rtol * first(values))
+    atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
     i = searchsortedfirst(values, atol; by=abs, rev=true)
     return i:length(values)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
-    atol = max(strategy.atol, strategy.rtol * maximum(values))
+    atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
     return findall(≥(atol), values)
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepAbove)
-    atol = max(strategy.atol, strategy.rtol * first(values))
+    atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
     i = searchsortedlast(values, atol; by=abs, rev=true)
     return 1:i
 end
