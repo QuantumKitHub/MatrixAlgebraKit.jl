@@ -48,13 +48,13 @@ end
 # since these are implicitly discarded by selecting compact/full
 
 """
-    TruncationKeepSorted(howmany::Int, sortby::Function, rev::Bool)
+    TruncationKeepSorted(howmany::Int, by::Function, rev::Bool)
 
-Truncation strategy to keep the first `howmany` values when sorted according to `sortby` or the last `howmany` if `rev` is true.
+Truncation strategy to keep the first `howmany` values when sorted according to `by` or the last `howmany` if `rev` is true.
 """
 struct TruncationKeepSorted{F} <: TruncationStrategy
     howmany::Int
-    sortby::F
+    by::F
     rev::Bool
 end
 
@@ -137,7 +137,7 @@ Generic interface for post-truncating a decomposition, specified in `out`.
 """ truncate!
 # TODO: should we return a view?
 function truncate!(::typeof(svd_trunc!), (U, S, Vᴴ), strategy::TruncationStrategy)
-    ind = findtruncated(diagview(S), strategy)
+    ind = findtruncated_sorted(diagview(S), strategy)
     return U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]
 end
 function truncate!(::typeof(eig_trunc!), (D, V), strategy::TruncationStrategy)
@@ -166,24 +166,15 @@ end
 # specific implementations for finding truncated values
 findtruncated(values::AbstractVector, ::NoTruncation) = Colon()
 
+# TODO: this may also permute the eigenvalues, decide if we want to allow this or not
+# can be solved by going to simply sorting the resulting `ind`
 function findtruncated(values::AbstractVector, strategy::TruncationKeepSorted)
-    if issorted(values; by=strategy.sortby, rev=strategy.rev)
-        return convert(Vector{Int}, findtruncated_sorted(values, strategy))
-    else
-        return findtruncated_unsorted(values, strategy)
-    end
+    howmany = min(strategy.howmany, length(values))
+    return partialsortperm(values, 1:howmany; by=strategy.by, rev=strategy.rev)
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepSorted)
     howmany = min(strategy.howmany, length(values))
     return 1:howmany
-end
-# TODO: this may also permute the eigenvalues, decide if we want to allow this or not
-# can be solved by going to simply sorting the resulting `ind`
-function findtruncated_unsorted(values::AbstractVector, strategy::TruncationKeepSorted)
-    sorted = sortperm(values; by=strategy.sortby, rev=strategy.rev)
-    howmany = min(strategy.howmany, length(sorted))
-    ind = sorted[1:howmany]
-    return ind # TODO: consider sort!(ind)
 end
 
 # TODO: consider if worth using that values are sorted when filter is `<` or `>`.
@@ -193,42 +184,33 @@ function findtruncated(values::AbstractVector, strategy::TruncationKeepFiltered)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepBelow)
-    if issorted(values; by=abs, rev=true)
-        return convert(Vector{Int}, findtruncated_sorted(values, strategy))
-    else
-        return findtruncated_unsorted(values, strategy)
-    end
-end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepBelow)
-    atol = max(strategy.atol, strategy.rtol * first(values))
-    i = @something findfirst(≤(atol), values) length(values) + 1
-    return i:length(values)
-end
-function findtruncated_unsorted(values::AbstractVector, strategy::TruncationKeepBelow)
     atol = max(strategy.atol, strategy.rtol * maximum(values))
     return findall(≤(atol), values)
 end
+function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepBelow)
+    atol = max(strategy.atol, strategy.rtol * first(values))
+    i = searchsortedfirst(values, atol; by=abs, rev=true)
+    return i:length(values)
+end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
-    if issorted(values; by=abs, rev=true)
-        return convert(Vector{Int}, findtruncated_sorted(values, strategy))
-    else
-        return findtruncated_unsorted(values, strategy)
-    end
+    atol = max(strategy.atol, strategy.rtol * maximum(values))
+    return findall(≥(atol), values)
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepAbove)
     atol = max(strategy.atol, strategy.rtol * first(values))
-    i = @something findlast(≥(atol), values) 0
+    i = searchsortedlast(values, atol; by=abs, rev=true)
     return 1:i
-end
-function findtruncated_unsorted(values::AbstractVector, strategy::TruncationKeepAbove)
-    atol = max(strategy.atol, strategy.rtol * maximum(values))
-    return findall(≥(atol), values)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
     inds = map(Base.Fix1(findtruncated, values), strategy.components)
     return intersect(inds...)
+end
+
+# Generic fallback.
+function findtruncated_sorted(values::AbstractVector, strategy::TruncationStrategy)
+    return findtruncated(values, strategy)
 end
 
 """

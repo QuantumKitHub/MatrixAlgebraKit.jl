@@ -18,7 +18,7 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbov
     @test trunc isa TruncationKeepSorted
     @test trunc == truncrank(10)
     @test trunc.howmany == 10
-    @test trunc.sortby == abs
+    @test trunc.by == abs
     @test trunc.rev == true
 
     trunc = @constinferred TruncationStrategy(; atol=1e-2, rtol=1e-3, maxrank=10)
