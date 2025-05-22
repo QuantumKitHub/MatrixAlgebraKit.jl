@@ -73,8 +73,7 @@ automatically with [`MatrixAlgebraKit.default_algorithm`](@ref) and
 the keyword arguments in `kwargs` will be passed to the algorithm constructor.
 Finally, the same behavior is obtained when the keyword arguments are
 passed as the third positional argument in the form of a `NamedTuple`. 
-"""
-function select_algorithm end
+""" select_algorithm
 
 function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
     return _select_algorithm(f, A, alg; kwargs...)
@@ -109,8 +108,7 @@ end
 Select the default algorithm for a given factorization function `f` and input `A`.
 In general, this is called by [`select_algorithm`](@ref) if no algorithm is specified
 explicitly.
-"""
-function default_algorithm end
+""" default_algorithm
 
 @doc """
     copy_input(f, A)
@@ -118,8 +116,7 @@ function default_algorithm end
 Preprocess the input `A` for a given function, such that it may be handled correctly later.
 This may include a copy whenever the implementation would destroy the original matrix,
 or a change of element type to something that is supported.
-"""
-function copy_input end
+""" copy_input
 
 @doc """
     initialize_output(f, A, alg)
@@ -127,8 +124,7 @@ function copy_input end
 Whenever possible, allocate the destination for applying a given algorithm in-place.
 If this is not possible, for example when the output size is not known a priori or immutable,
 this function may return `nothing`.
-"""
-function initialize_output end
+""" initialize_output
 
 # Utility macros
 # --------------
