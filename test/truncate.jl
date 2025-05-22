@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbove,
-                        TruncationStrategy, findtruncated
+                        TruncationKeepBelow, TruncationStrategy, findtruncated
 
 @testset "truncate" begin
     trunc = @constinferred TruncationStrategy()
@@ -18,7 +18,7 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbov
     @test trunc isa TruncationKeepSorted
     @test trunc == truncrank(10)
     @test trunc.howmany == 10
-    @test trunc.sortby == abs
+    @test trunc.by == abs
     @test trunc.rev == true
 
     trunc = @constinferred TruncationStrategy(; atol=1e-2, rtol=1e-3, maxrank=10)
@@ -28,7 +28,15 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbov
     @test trunc.components[2] == TruncationKeepAbove(1e-2, 1e-3)
 
     values = [1, 0.9, 0.5, 0.3, 0.01]
-    @test @constinferred(findtruncated(values, truncrank(2))) == [1, 2]
+    @test @constinferred(findtruncated(values, truncrank(2))) == 1:2
     @test @constinferred(findtruncated(values, truncrank(2; rev=false))) == [5, 4]
     @test @constinferred(findtruncated(values, truncrank(2; by=-))) == [5, 4]
+
+    values = [1, 0.9, 0.5, 0.3, 0.01]
+    @test @constinferred(findtruncated(values, TruncationKeepAbove(0.4, 0.0))) == 1:3
+    @test @constinferred(findtruncated(values, TruncationKeepBelow(0.4, 0.0))) == 4:5
+
+    values = [0.01, 1, 0.9, 0.3, 0.5]
+    @test @constinferred(findtruncated(values, TruncationKeepAbove(0.4, 0.0))) == [2, 3, 5]
+    @test @constinferred(findtruncated(values, TruncationKeepBelow(0.4, 0.0))) == [1, 4]
 end
