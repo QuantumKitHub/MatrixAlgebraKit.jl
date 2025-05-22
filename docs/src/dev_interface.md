@@ -10,4 +10,6 @@ MatrixAlgebraKit.jl provides a developer interface for specifying custom algorit
 ```@docs; canonical=false
 MatrixAlgebraKit.default_algorithm
 MatrixAlgebraKit.select_algorithm
+MatrixAlgebraKit.findtruncated
+MatrixAlgebraKit.findtruncated_sorted
 ```

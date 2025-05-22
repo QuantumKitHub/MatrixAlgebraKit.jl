@@ -31,7 +31,8 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ,
 export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered
 
 VERSION >= v"1.11.0-DEV.469" &&
-    eval(Expr(:public, :default_algorithm, :select_algorithm))
+    eval(Expr(:public, :default_algorithm, :findtruncated, :findtruncated_sorted,
+              :select_algorithm))
 
 include("common/defaults.jl")
 include("common/initialization.jl")
