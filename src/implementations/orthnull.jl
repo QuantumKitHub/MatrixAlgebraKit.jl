@@ -1,9 +1,9 @@
 # Inputs
 # ------
-copy_input(::typeof(left_orth), A::AbstractMatrix) = copy_input(qr_compact, A) # do we ever need anything else
-copy_input(::typeof(right_orth), A::AbstractMatrix) = copy_input(lq_compact, A) # do we ever need anything else
-copy_input(::typeof(left_null), A::AbstractMatrix) = copy_input(qr_null, A) # do we ever need anything else
-copy_input(::typeof(right_null), A::AbstractMatrix) = copy_input(lq_null, A) # do we ever need anything else
+copy_input(::typeof(left_orth), A) = copy_input(qr_compact, A) # do we ever need anything else
+copy_input(::typeof(right_orth), A) = copy_input(lq_compact, A) # do we ever need anything else
+copy_input(::typeof(left_null), A) = copy_input(qr_null, A) # do we ever need anything else
+copy_input(::typeof(right_null), A) = copy_input(lq_null, A) # do we ever need anything else
 
 function check_input(::typeof(left_orth!), A::AbstractMatrix, VC)
     m, n = size(A)
@@ -81,7 +81,7 @@ end
 
 # Implementation of orth functions
 # --------------------------------
-function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
+function left_orth!(A, VC; trunc=nothing,
                     kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true),
                     alg_polar=(;), alg_svd=(;))
     check_input(left_orth!, A, VC)
@@ -89,32 +89,53 @@ function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
         throw(ArgumentError("truncation not supported for left_orth with kind=$kind"))
     end
     if kind == :qr
-        alg_qr′ = select_algorithm(qr_compact!, A, alg_qr)
-        return qr_compact!(A, VC, alg_qr′)
+        return left_orth_qr!(A, VC, alg_qr)
     elseif kind == :polar
-        size(A, 1) >= size(A, 2) ||
-            throw(ArgumentError("`left_orth!` with `kind = :polar` only possible for `(m, n)` matrix with `m >= n`"))
-        alg_polar′ = select_algorithm(left_polar!, A, alg_polar)
-        return left_polar!(A, VC, alg_polar′)
-    elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = select_algorithm(svd_compact!, A, alg_svd)
-        V, C = VC
-        S = Diagonal(initialize_output(svd_vals!, A, alg_svd′))
-        U, S, Vᴴ = svd_compact!(A, (V, S, C), alg_svd′)
-        return U, lmul!(S, Vᴴ)
+        return left_orth_polar!(A, VC, alg_polar)
     elseif kind == :svd
-        alg_svd′ = select_algorithm(svd_compact!, A, alg_svd)
-        alg_svd_trunc = select_algorithm(svd_trunc!, A, alg_svd′; trunc)
-        V, C = VC
-        S = Diagonal(initialize_output(svd_vals!, A, alg_svd_trunc.alg))
-        U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg_svd_trunc)
-        return U, lmul!(S, Vᴴ)
+        return left_orth_svd!(A, VC, alg_svd, trunc)
     else
         throw(ArgumentError("`left_orth!` received unknown value `kind = $kind`"))
     end
 end
+function left_orth_qr!(A, VC, alg)
+    alg′ = select_algorithm(qr_compact!, A, alg)
+    return qr_compact!(A, VC, alg′)
+end
+function left_orth_polar!(A, VC, alg)
+    alg′ = select_algorithm(left_polar!, A, alg)
+    return left_polar!(A, VC, alg′)
+end
+function left_orth_svd!(A, VC, alg, trunc::Nothing=nothing)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    U, S, Vᴴ = svd_compact!(A, alg′)
+    V, C = VC
+    return copy!(V, U), mul!(C, S, Vᴴ)
+end
+function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc::Nothing=nothing)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    V, C = VC
+    S = Diagonal(initialize_output(svd_vals!, A, alg′))
+    U, S, Vᴴ = svd_compact!(A, (V, S, C), alg′)
+    return U, lmul!(S, Vᴴ)
+end
+function left_orth_svd!(A, VC, alg, trunc)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
+    U, S, Vᴴ = svd_trunc!(A, alg_trunc)
+    V, C = VC
+    return copy!(V, U), mul!(C, S, Vᴴ)
+end
+function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
+    V, C = VC
+    S = Diagonal(initialize_output(svd_vals!, A, alg_trunc.alg))
+    U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg_trunc)
+    return U, lmul!(S, Vᴴ)
+end
 
-function right_orth!(A::AbstractMatrix, CVᴴ; trunc=nothing,
+function right_orth!(A, CVᴴ; trunc=nothing,
                      kind=isnothing(trunc) ? :lq : :svd, alg_lq=(; positive=true),
                      alg_polar=(;), alg_svd=(;))
     check_input(right_orth!, A, CVᴴ)
@@ -122,29 +143,50 @@ function right_orth!(A::AbstractMatrix, CVᴴ; trunc=nothing,
         throw(ArgumentError("truncation not supported for right_orth with kind=$kind"))
     end
     if kind == :lq
-        alg_lq′ = select_algorithm(lq_compact!, A, alg_lq)
-        return lq_compact!(A, CVᴴ, alg_lq′)
+        return right_orth_lq!(A, CVᴴ, alg_lq)
     elseif kind == :polar
-        size(A, 2) >= size(A, 1) ||
-            throw(ArgumentError("`right_orth!` with `kind = :polar` only possible for `(m, n)` matrix with `m <= n`"))
-        alg_polar′ = select_algorithm(right_polar!, A, alg_polar)
-        return right_polar!(A, CVᴴ, alg_polar′)
-    elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = select_algorithm(svd_compact!, A, alg_svd)
-        C, Vᴴ = CVᴴ
-        S = Diagonal(initialize_output(svd_vals!, A, alg_svd′))
-        U, S, Vᴴ = svd_compact!(A, (C, S, Vᴴ), alg_svd′)
-        return rmul!(U, S), Vᴴ
+        return right_orth_polar!(A, CVᴴ, alg_polar)
     elseif kind == :svd
-        alg_svd′ = select_algorithm(svd_compact!, A, alg_svd)
-        alg_svd_trunc = select_algorithm(svd_trunc!, A, alg_svd′; trunc)
-        C, Vᴴ = CVᴴ
-        S = Diagonal(initialize_output(svd_vals!, A, alg_svd_trunc.alg))
-        U, S, Vᴴ = svd_trunc!(A, (C, S, Vᴴ), alg_svd_trunc)
-        return rmul!(U, S), Vᴴ
+        return right_orth_svd!(A, CVᴴ, alg_svd, trunc)
     else
         throw(ArgumentError("`right_orth!` received unknown value `kind = $kind`"))
     end
+end
+function right_orth_lq!(A, CVᴴ, alg)
+    alg′ = select_algorithm(lq_compact!, A, alg)
+    return lq_compact!(A, CVᴴ, alg′)
+end
+function right_orth_polar!(A, CVᴴ, alg)
+    alg′ = select_algorithm(right_polar!, A, alg)
+    return right_polar!(A, CVᴴ, alg′)
+end
+function right_orth_svd!(A, CVᴴ, alg, trunc::Nothing=nothing)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    U, S, Vᴴ′ = svd_compact!(A, alg′)
+    C, Vᴴ = CVᴴ
+    return mul!(C, U, S), copy!(Vᴴ, Vᴴ′)
+end
+function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc::Nothing=nothing)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    C, Vᴴ = CVᴴ
+    S = Diagonal(initialize_output(svd_vals!, A, alg′))
+    U, S, Vᴴ = svd_compact!(A, (C, S, Vᴴ), alg′)
+    return rmul!(U, S), Vᴴ
+end
+function right_orth_svd!(A, CVᴴ, alg, trunc)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
+    U, S, Vᴴ′ = svd_trunc!(A, alg_trunc)
+    C, Vᴴ = CVᴴ
+    return mul!(C, U, S), copy!(Vᴴ, Vᴴ′)
+end
+function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc)
+    alg′ = select_algorithm(svd_compact!, A, alg)
+    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
+    C, Vᴴ = CVᴴ
+    S = Diagonal(initialize_output(svd_vals!, A, alg_trunc.alg))
+    U, S, Vᴴ = svd_trunc!(A, (C, S, Vᴴ), alg_trunc)
+    return rmul!(U, S), Vᴴ
 end
 
 # Implementation of null functions
@@ -159,7 +201,7 @@ function null_truncation_strategy(; atol=nothing, rtol=nothing, maxnullity=nothi
     return !isnothing(maxnullity) ? trunc & truncrank(maxnullity; rev=false) : trunc
 end
 
-function left_null!(A::AbstractMatrix, N; trunc=nothing,
+function left_null!(A, N; trunc=nothing,
                     kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true),
                     alg_svd=(;))
     check_input(left_null!, A, N)
@@ -167,26 +209,33 @@ function left_null!(A::AbstractMatrix, N; trunc=nothing,
         throw(ArgumentError("truncation not supported for left_null with kind=$kind"))
     end
     if kind == :qr
-        alg_qr′ = select_algorithm(qr_null!, A, alg_qr)
-        return qr_null!(A, N, alg_qr′)
-    elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = select_algorithm(svd_full!, A, alg_svd)
-        U, _, _ = svd_full!(A, alg_svd′)
-        (m, n) = size(A)
-        return copy!(N, view(U, 1:m, (n + 1):m))
+        left_null_qr!(A, N, alg_qr)
     elseif kind == :svd
-        alg_svd′ = select_algorithm(svd_full!, A, alg_svd)
-        U, S, _ = svd_full!(A, alg_svd′)
-        trunc′ = trunc isa TruncationStrategy ? trunc :
-                 trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
-                 throw(ArgumentError("Unknown truncation strategy: $trunc"))
-        return truncate!(left_null!, (U, S), trunc′)
+        left_null_svd!(A, N, alg_svd, trunc)
     else
         throw(ArgumentError("`left_null!` received unknown value `kind = $kind`"))
     end
 end
+function left_null_qr!(A, N, alg)
+    alg′ = select_algorithm(qr_null!, A, alg)
+    return qr_null!(A, N, alg′)
+end
+function left_null_svd!(A, N, alg, trunc::Nothing=nothing)
+    alg′ = select_algorithm(svd_full!, A, alg)
+    U, _, _ = svd_full!(A, alg′)
+    (m, n) = size(A)
+    return copy!(N, view(U, 1:m, (n + 1):m))
+end
+function left_null_svd!(A, N, alg, trunc)
+    alg′ = select_algorithm(svd_full!, A, alg)
+    U, S, _ = svd_full!(A, alg′)
+    trunc′ = trunc isa TruncationStrategy ? trunc :
+             trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
+             throw(ArgumentError("Unknown truncation strategy: $trunc"))
+    return truncate!(left_null!, (U, S), trunc′)
+end
 
-function right_null!(A::AbstractMatrix, Nᴴ; trunc=nothing,
+function right_null!(A, Nᴴ; trunc=nothing,
                      kind=isnothing(trunc) ? :lq : :svd, alg_lq=(; positive=true),
                      alg_svd=(;))
     check_input(right_null!, A, Nᴴ)
@@ -194,21 +243,28 @@ function right_null!(A::AbstractMatrix, Nᴴ; trunc=nothing,
         throw(ArgumentError("truncation not supported for right_null with kind=$kind"))
     end
     if kind == :lq
-        alg_lq′ = select_algorithm(lq_null!, A, alg_lq)
-        return lq_null!(A, Nᴴ, alg_lq′)
-    elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = select_algorithm(svd_full!, A, alg_svd)
-        _, _, Vᴴ = svd_full!(A, alg_svd′)
-        (m, n) = size(A)
-        return copy!(Nᴴ, view(Vᴴ, (m + 1):n, 1:n))
+        return right_null_lq!(A, Nᴴ, alg_lq)
     elseif kind == :svd
-        alg_svd′ = select_algorithm(svd_full!, A, alg_svd)
-        _, S, Vᴴ = svd_full!(A, alg_svd′)
-        trunc′ = trunc isa TruncationStrategy ? trunc :
-                 trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
-                 throw(ArgumentError("Unknown truncation strategy: $trunc"))
-        return truncate!(right_null!, (S, Vᴴ), trunc′)
+        return right_null_svd!(A, Nᴴ, alg_svd, trunc)
     else
         throw(ArgumentError("`right_null!` received unknown value `kind = $kind`"))
     end
+end
+function right_null_lq!(A, Nᴴ, alg)
+    alg′ = select_algorithm(lq_null!, A, alg)
+    return lq_null!(A, Nᴴ, alg′)
+end
+function right_null_svd!(A, Nᴴ, alg, trunc::Nothing=nothing)
+    alg′ = select_algorithm(svd_full!, A, alg)
+    _, _, Vᴴ = svd_full!(A, alg′)
+    (m, n) = size(A)
+    return copy!(Nᴴ, view(Vᴴ, (m + 1):n, 1:n))
+end
+function right_null_svd!(A, Nᴴ, alg, trunc)
+    alg′ = select_algorithm(svd_full!, A, alg)
+    _, S, Vᴴ = svd_full!(A, alg′)
+    trunc′ = trunc isa TruncationStrategy ? trunc :
+             trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
+             throw(ArgumentError("Unknown truncation strategy: $trunc"))
+    return truncate!(right_null!, (S, Vᴴ), trunc′)
 end

@@ -69,10 +69,10 @@ See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null), [
 """
 function left_orth end
 function left_orth! end
-function left_orth!(A::AbstractMatrix; kwargs...)
+function left_orth!(A; kwargs...)
     return left_orth!(A, initialize_output(left_orth!, A); kwargs...)
 end
-function left_orth(A::AbstractMatrix; kwargs...)
+function left_orth(A; kwargs...)
     return left_orth!(copy_input(left_orth, A); kwargs...)
 end
 
@@ -128,10 +128,10 @@ See also [`left_orth(!)`](@ref left_orth), [`left_null(!)`](@ref left_null), [`r
 """
 function right_orth end
 function right_orth! end
-function right_orth!(A::AbstractMatrix; kwargs...)
+function right_orth!(A; kwargs...)
     return right_orth!(A, initialize_output(right_orth!, A); kwargs...)
 end
-function right_orth(A::AbstractMatrix; kwargs...)
+function right_orth(A; kwargs...)
     return right_orth!(copy_input(right_orth, A); kwargs...)
 end
 
@@ -180,10 +180,10 @@ See also [`right_null(!)`](@ref right_null), [`left_orth(!)`](@ref left_orth), [
 """
 function left_null end
 function left_null! end
-function left_null!(A::AbstractMatrix; kwargs...)
+function left_null!(A; kwargs...)
     return left_null!(A, initialize_output(left_null!, A); kwargs...)
 end
-function left_null(A::AbstractMatrix; kwargs...)
+function left_null(A; kwargs...)
     return left_null!(copy_input(left_null, A); kwargs...)
 end
 
@@ -230,9 +230,9 @@ See also [`left_null(!)`](@ref left_null), [`left_orth(!)`](@ref left_orth), [`r
 """
 function right_null end
 function right_null! end
-function right_null!(A::AbstractMatrix; kwargs...)
+function right_null!(A; kwargs...)
     return right_null!(A, initialize_output(right_null!, A); kwargs...)
 end
-function right_null(A::AbstractMatrix; kwargs...)
+function right_null(A; kwargs...)
     return right_null!(copy_input(right_null, A); kwargs...)
 end
