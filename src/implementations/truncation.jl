@@ -50,7 +50,7 @@ end
 """
     TruncationKeepSorted(howmany::Int, by::Function, rev::Bool)
 
-Truncation strategy to keep the first `howmany` values when sorted according to `by` or the last `howmany` if `rev` is true.
+Truncation strategy to keep the first `howmany` values when sorted according to `by` in increasing (decreasing) order if `rev` is false (true).
 """
 struct TruncationKeepSorted{F} <: TruncationStrategy
     howmany::Int
