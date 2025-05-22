@@ -61,6 +61,7 @@ end
     MatrixAlgebraKit.select_algorithm(f, A, (; kwargs...))
 
 Decide on an algorithm to use for implementing the function `f` on inputs of type `A`.
+This can be obtained both for values `A` or types `A`.
 
 If `alg` is an `AbstractAlgorithm` instance, it will be returned as-is.
 
@@ -76,39 +77,47 @@ passed as the third positional argument in the form of a `NamedTuple`.
 """ select_algorithm
 
 function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
+    return select_algorithm(f, typeof(A), alg; kwargs...)
+end
+function select_algorithm(f::F, ::Type{A}, alg::Alg=nothing; kwargs...) where {F,A,Alg}
     return _select_algorithm(f, A, alg; kwargs...)
 end
 
-function _select_algorithm(f::F, A, alg::Nothing; kwargs...) where {F}
+function _select_algorithm(f::F, ::Type{A}, alg::Nothing; kwargs...) where {F,A}
     return default_algorithm(f, A; kwargs...)
 end
-function _select_algorithm(f::F, A, alg::Symbol; kwargs...) where {F}
+function _select_algorithm(f::F, ::Type{A}, alg::Symbol; kwargs...) where {F,A}
     return Algorithm{alg}(; kwargs...)
 end
-function _select_algorithm(f::F, A, ::Type{Alg}; kwargs...) where {F,Alg}
+function _select_algorithm(f::F, ::Type{A}, ::Type{Alg}; kwargs...) where {F,A,Alg}
     return Alg(; kwargs...)
 end
-function _select_algorithm(f::F, A, alg::NamedTuple; kwargs...) where {F}
+function _select_algorithm(f::F, ::Type{A}, alg::NamedTuple; kwargs...) where {F,A}
     isempty(kwargs) ||
         throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
     return default_algorithm(f, A; alg...)
 end
-function _select_algorithm(f::F, A, alg::AbstractAlgorithm; kwargs...) where {F}
+function _select_algorithm(f::F, ::Type{A}, alg::AbstractAlgorithm; kwargs...) where {F,A}
     isempty(kwargs) ||
         throw(ArgumentError("Additional keyword arguments are not allowed when an algorithm is specified."))
     return alg
 end
-function _select_algorithm(f::F, A, alg; kwargs...) where {F}
+function _select_algorithm(f::F, ::Type{A}, alg; kwargs...) where {F,A}
     return throw(ArgumentError("Unknown alg $alg"))
 end
 
 @doc """
     MatrixAlgebraKit.default_algorithm(f, A; kwargs...)
+    MatrixAlgebraKit.default_algorithm(f, ::Type{TA}; kwargs...) where {TA}
 
 Select the default algorithm for a given factorization function `f` and input `A`.
 In general, this is called by [`select_algorithm`](@ref) if no algorithm is specified
 explicitly.
+New types should prefer to register their default algorithms in the type domain.
 """ default_algorithm
+default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
+# avoid infinite recursion:
+default_algorithm(f, T::Type; kwargs...) = throw(MethodError(default_algorithm, (f, T)))
 
 @doc """
     copy_input(f, A)
@@ -172,25 +181,26 @@ macro functiondef(f)
     f isa Symbol || throw(ArgumentError("Unsupported usage of `@functiondef`"))
     f! = Symbol(f, :!)
 
-    return esc(quote
-                   # out of place to inplace
-                   $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
-                   $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
+    ex = quote
+        # out of place to inplace
+        $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
+        $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
 
-                   # fill in arguments
-                   function $f!(A; alg=nothing, kwargs...)
-                       return $f!(A, select_algorithm($f!, A, alg; kwargs...))
-                   end
-                   function $f!(A, out; alg=nothing, kwargs...)
-                       return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
-                   end
-                   function $f!(A, alg::AbstractAlgorithm)
-                       return $f!(A, initialize_output($f!, A, alg), alg)
-                   end
+        # fill in arguments
+        function $f!(A; alg=nothing, kwargs...)
+            return $f!(A, select_algorithm($f!, A, alg; kwargs...))
+        end
+        function $f!(A, out; alg=nothing, kwargs...)
+            return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
+        end
+        function $f!(A, alg::AbstractAlgorithm)
+            return $f!(A, initialize_output($f!, A, alg), alg)
+        end
 
-                   # copy documentation to both functions
-                   Core.@__doc__ $f, $f!
-               end)
+        # copy documentation to both functions
+        Core.@__doc__ $f, $f!
+    end
+    return esc(ex)
 end
 
 """
