@@ -197,6 +197,14 @@ macro functiondef(f)
             return $f!(A, initialize_output($f!, A, alg), alg)
         end
 
+        # define fallbacks for algorithm selection
+        @inline function select_algorithm(::typeof($f), A, alg::Alg; kwargs...) where {Alg}
+            return select_algorithm($f!, A, alg; kwargs...)
+        end
+        @inline function default_algorithm(::typeof($f), A; kwargs...)
+            return default_algorithm($f!, A; kwargs...)
+        end
+
         # copy documentation to both functions
         Core.@__doc__ $f, $f!
     end
