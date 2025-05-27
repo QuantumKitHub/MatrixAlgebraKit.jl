@@ -80,31 +80,25 @@ function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
     return select_algorithm(f, typeof(A), alg; kwargs...)
 end
 function select_algorithm(f::F, ::Type{A}, alg::Alg=nothing; kwargs...) where {F,A,Alg}
-    return _select_algorithm(f, A, alg; kwargs...)
+    if isnothing(alg)
+        return default_algorithm(f, A; kwargs...)
+    elseif alg isa Symbol
+        return Algorithm{alg}(; kwargs...)
+    elseif alg isa Type
+        return alg(; kwargs...)
+    elseif alg isa NamedTuple
+        isempty(kwargs) ||
+            throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
+        return default_algorithm(f, A; alg...)
+    elseif alg isa AbstractAlgorithm
+        isempty(kwargs) ||
+            throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
+        return alg
+    end
+
+    throw(ArgumentError("Unknown alg $alg"))
 end
 
-function _select_algorithm(f::F, ::Type{A}, alg::Nothing; kwargs...) where {F,A}
-    return default_algorithm(f, A; kwargs...)
-end
-function _select_algorithm(f::F, ::Type{A}, alg::Symbol; kwargs...) where {F,A}
-    return Algorithm{alg}(; kwargs...)
-end
-function _select_algorithm(f::F, ::Type{A}, ::Type{Alg}; kwargs...) where {F,A,Alg}
-    return Alg(; kwargs...)
-end
-function _select_algorithm(f::F, ::Type{A}, alg::NamedTuple; kwargs...) where {F,A}
-    isempty(kwargs) ||
-        throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
-    return default_algorithm(f, A; alg...)
-end
-function _select_algorithm(f::F, ::Type{A}, alg::AbstractAlgorithm; kwargs...) where {F,A}
-    isempty(kwargs) ||
-        throw(ArgumentError("Additional keyword arguments are not allowed when an algorithm is specified."))
-    return alg
-end
-function _select_algorithm(f::F, ::Type{A}, alg; kwargs...) where {F,A}
-    return throw(ArgumentError("Unknown alg $alg"))
-end
 
 @doc """
     MatrixAlgebraKit.default_algorithm(f, A; kwargs...)
