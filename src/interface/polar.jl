@@ -60,19 +60,11 @@ end
 
 # Algorithm selection
 # -------------------
-for f in (:left_polar, :right_polar)
-    f! = Symbol(f, :!)
-    @eval begin
-        function default_algorithm(::typeof($f), A; kwargs...)
-            return default_algorithm($f!, A; kwargs...)
+function default_algorithm(::typeof(left_polar!), ::Type{A};
+                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+    return PolarViaSVD(default_algorithm(svd_compact!, A; kwargs...))
         end
-        function default_algorithm(::typeof($f!), A; kwargs...)
-            return default_polar_algorithm(A; kwargs...)
-        end
-    end
-end
-
-# Default to LAPACK SDD for `StridedMatrix{<:BlasFloat}`
-function default_polar_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
-    return PolarViaSVD(default_svd_algorithm(A; kwargs...))
+function default_algorithm(::typeof(right_polar!), ::Type{A};
+                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+    return PolarViaSVD(default_algorithm(svd_compact!, A; kwargs...))
 end

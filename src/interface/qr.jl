@@ -68,19 +68,11 @@ See also [`lq_full(!)`](@ref lq_full) and [`lq_compact(!)`](@ref lq_compact).
 
 # Algorithm selection
 # -------------------
-for f in (:qr_full, :qr_compact, :qr_null)
-    f! = Symbol(f, :!)
+for f in (:qr_full!, :qr_compact!, :qr_null!)
     @eval begin
-        function default_algorithm(::typeof($f), A; kwargs...)
-            return default_algorithm($f!, A; kwargs...)
-        end
-        function default_algorithm(::typeof($f!), A; kwargs...)
-            return default_qr_algorithm(A; kwargs...)
+        function default_algorithm(::typeof($f), ::Type{A};
+                                   kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+            return LAPACK_HouseholderQR(; kwargs...)
         end
     end
-end
-
-# Default to LAPACK 
-function default_qr_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
-    return LAPACK_HouseholderQR(; kwargs...)
 end

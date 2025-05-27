@@ -90,27 +90,16 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) an
 
 # Algorithm selection
 # -------------------
-for f in (:svd_full, :svd_compact, :svd_vals)
-    f! = Symbol(f, :!)
-    @eval begin
-        function default_algorithm(::typeof($f), A; kwargs...)
-            return default_algorithm($f!, A; kwargs...)
-        end
-        function default_algorithm(::typeof($f!), A; kwargs...)
-            return default_svd_algorithm(A; kwargs...)
-        end
+for f in (:svd_full!, :svd_compact!, :svd_vals!)
+    # Default to LAPACK SDD for `StridedMatrix{<:BlasFloat}`
+    @eval function default_algorithm(::typeof($f), ::Type{A};
+                                     kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+        return LAPACK_DivideAndConquer(; kwargs...)
     end
 end
 
-function select_algorithm(::typeof(svd_trunc), A, alg; kwargs...)
-    return select_algorithm(svd_trunc!, A, alg; kwargs...)
-end
-function select_algorithm(::typeof(svd_trunc!), A, alg; trunc=nothing, kwargs...)
+function select_algorithm(::typeof(svd_trunc!), ::Type{A}, alg; trunc=nothing,
+                          kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
     alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_svd, select_truncation(trunc))
-end
-
-# Default to LAPACK SDD for `StridedMatrix{<:BlasFloat}`
-function default_svd_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
-    return LAPACK_DivideAndConquer(; kwargs...)
 end
