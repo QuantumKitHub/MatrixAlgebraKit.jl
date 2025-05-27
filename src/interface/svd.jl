@@ -91,15 +91,15 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) an
 # Algorithm selection
 # -------------------
 for f in (:svd_full!, :svd_compact!, :svd_vals!)
-    # Default to LAPACK SDD for `StridedMatrix{<:BlasFloat}`
+    # Default to LAPACK SDD for `YALAPACK.BlasMat`
     @eval function default_algorithm(::typeof($f), ::Type{A};
-                                     kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                                     kwargs...) where {A<:YALAPACK.BlasMat}
         return LAPACK_DivideAndConquer(; kwargs...)
     end
 end
 
 function select_algorithm(::typeof(svd_trunc!), ::Type{A}, alg; trunc=nothing,
-                          kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                          kwargs...) where {A<:YALAPACK.BlasMat}
     alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_svd, select_truncation(trunc))
 end

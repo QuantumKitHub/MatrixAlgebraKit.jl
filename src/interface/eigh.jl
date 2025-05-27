@@ -86,18 +86,18 @@ See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_trunc(!)`](@ref eigh_trunc)
 
 # Algorithm selection
 # -------------------
-# Default to LAPACK for `StridedMatrix{<:BlasFloat}`
+# Default to LAPACK for `YALAPACK.BlasMat`
 function default_algorithm(::typeof(eigh_full!), ::Type{A};
-                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                           kwargs...) where {A<:YALAPACK.BlasMat}
     return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
 end
 function default_algorithm(::typeof(eigh_vals!), ::Type{A};
-                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                           kwargs...) where {A<:YALAPACK.BlasMat}
     return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
 end
 
 function select_algorithm(::typeof(eigh_trunc!), ::Type{A}, alg; trunc=nothing,
-                          kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                          kwargs...) where {A<:YALAPACK.BlasMat}
     alg_eigh = select_algorithm(eigh_full!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_eigh, select_truncation(trunc))
 end

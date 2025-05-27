@@ -71,7 +71,7 @@ See also [`lq_full(!)`](@ref lq_full) and [`lq_compact(!)`](@ref lq_compact).
 for f in (:qr_full!, :qr_compact!, :qr_null!)
     @eval begin
         function default_algorithm(::typeof($f), ::Type{A};
-                                   kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                                   kwargs...) where {A<:YALAPACK.BlasMat}
             return LAPACK_HouseholderQR(; kwargs...)
         end
     end

@@ -16,6 +16,9 @@ using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, Char, LAPACK,
 using LinearAlgebra.BLAS: @blasfunc, libblastrampoline
 using LinearAlgebra.LAPACK: chkfinite, chktrans, chkside, chkuplofinite, chklapackerror
 
+# type alias for matrices that are definitely supported by YALAPACK
+const BlasMat{T<:BlasFloat} = StridedMatrix{T}
+
 # LU factorisation
 for (getrf, getrs, elty) in ((:dgetrf_, :dgetrs_, :Float64),
                              (:sgetrf_, :sgetrs_, :Float32),

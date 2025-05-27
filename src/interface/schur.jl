@@ -52,10 +52,10 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 # Algorithm selection
 # -------------------
 function default_algorithm(::typeof(schur_full!), ::Type{A};
-                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                           kwargs...) where {A<:YALAPACK.BlasMat}
     return default_algorithm(eig_full!, A; kwargs...)
 end
 function default_algorithm(::typeof(schur_vals!), ::Type{A};
-                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                           kwargs...) where {A<:YALAPACK.BlasMat}
     return default_algorithm(eig_vals!, A; kwargs...)
 end

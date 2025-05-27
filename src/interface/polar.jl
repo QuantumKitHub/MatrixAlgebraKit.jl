@@ -61,10 +61,10 @@ end
 # Algorithm selection
 # -------------------
 function default_algorithm(::typeof(left_polar!), ::Type{A};
-                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                           kwargs...) where {A<:YALAPACK.BlasMat}
     return PolarViaSVD(default_algorithm(svd_compact!, A; kwargs...))
         end
 function default_algorithm(::typeof(right_polar!), ::Type{A};
-                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                           kwargs...) where {A<:YALAPACK.BlasMat}
     return PolarViaSVD(default_algorithm(svd_compact!, A; kwargs...))
 end

@@ -87,18 +87,18 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 
 # Algorithm selection
 # -------------------
-# Default to LAPACK for `StridedMatrix{<:BlasFloat}`
+# Default to LAPACK for `YALAPACK.BlasMat`
 function default_algorithm(::typeof(eig_full!), ::Type{A};
-                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                           kwargs...) where {A<:YALAPACK.BlasMat}
     return LAPACK_Expert(; kwargs...)
 end
 function default_algorithm(::typeof(eig_vals!), ::Type{A};
-                           kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                           kwargs...) where {A<:YALAPACK.BlasMat}
     return LAPACK_Expert(; kwargs...)
 end
 
 function select_algorithm(::typeof(eig_trunc!), ::Type{A}, alg; trunc=nothing,
-                          kwargs...) where {A<:StridedMatrix{<:BlasFloat}}
+                          kwargs...) where {A<:YALAPACK.BlasMat}
     alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
 end
