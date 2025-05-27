@@ -117,7 +117,9 @@ New types should prefer to register their default algorithms in the type domain.
 """ default_algorithm
 default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
 # avoid infinite recursion:
-default_algorithm(f, T::Type; kwargs...) = throw(MethodError(default_algorithm, (f, T)))
+function default_algorithm(f::F, ::Type{T}; kwargs...) where {F,T}
+    throw(MethodError(default_algorithm, (f, T)))
+end
 
 @doc """
     copy_input(f, A)
@@ -198,10 +200,11 @@ macro functiondef(f)
         end
 
         # define fallbacks for algorithm selection
-        @inline function select_algorithm(::typeof($f), A, alg::Alg; kwargs...) where {Alg}
+        @inline function select_algorithm(::typeof($f), ::Type{A}, alg::Alg;
+                                          kwargs...) where {Alg,A}
             return select_algorithm($f!, A, alg; kwargs...)
         end
-        @inline function default_algorithm(::typeof($f), A; kwargs...)
+        @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_algorithm($f!, A; kwargs...)
         end
 
