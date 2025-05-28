@@ -51,11 +51,8 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 
 # Algorithm selection
 # -------------------
-function default_algorithm(::typeof(schur_full!), ::Type{A};
-                           kwargs...) where {A<:YALAPACK.BlasMat}
-    return default_algorithm(eig_full!, A; kwargs...)
-end
-function default_algorithm(::typeof(schur_vals!), ::Type{A};
-                           kwargs...) where {A<:YALAPACK.BlasMat}
-    return default_algorithm(eig_vals!, A; kwargs...)
+for f in (:schur_full!, :schur_vals!)
+    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        return default_eig_algorithm(A; kwargs...)
+    end
 end

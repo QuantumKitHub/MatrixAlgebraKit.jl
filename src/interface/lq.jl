@@ -68,11 +68,18 @@ See also [`qr_full(!)`](@ref lq_full) and [`qr_compact(!)`](@ref lq_compact).
 
 # Algorithm selection
 # -------------------
+default_lq_algorithm(A; kwargs...) = default_lq_algorithm(typeof(A); kwargs...)
+function default_lq_algorithm(T::Type; kwargs...)
+    throw(MethodError(default_lq_algorithm, (T,)))
+end
+function default_lq_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
+    return LAPACK_HouseholderLQ(; kwargs...)
+end
+
 for f in (:lq_full!, :lq_compact!, :lq_null!)
     @eval begin
-        function default_algorithm(::typeof($f), ::Type{A};
-                                   kwargs...) where {A<:YALAPACK.BlasMat}
-            return LAPACK_HouseholderLQ(; kwargs...)
+        function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+            return default_lq_algorithm(A; kwargs...)
         end
     end
 end

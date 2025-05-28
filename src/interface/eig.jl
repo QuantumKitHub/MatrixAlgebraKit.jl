@@ -87,14 +87,16 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 
 # Algorithm selection
 # -------------------
-# Default to LAPACK for `YALAPACK.BlasMat`
-function default_algorithm(::typeof(eig_full!), ::Type{A};
-                           kwargs...) where {A<:YALAPACK.BlasMat}
+default_eig_algorithm(A; kwargs...) = default_eig_algorithm(typeof(A); kwargs...)
+default_eig_algorithm(T::Type; kwargs...) = throw(MethodError(default_eig_algorithm, (T,)))
+function default_eig_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
     return LAPACK_Expert(; kwargs...)
 end
-function default_algorithm(::typeof(eig_vals!), ::Type{A};
-                           kwargs...) where {A<:YALAPACK.BlasMat}
-    return LAPACK_Expert(; kwargs...)
+
+for f in (:eig_full!, :eig_vals!)
+    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        return default_eig_algorithm(A; kwargs...)
+    end
 end
 
 function select_algorithm(::typeof(eig_trunc!), ::Type{A}, alg; trunc=nothing,

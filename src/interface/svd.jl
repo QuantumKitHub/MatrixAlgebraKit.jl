@@ -90,11 +90,17 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) an
 
 # Algorithm selection
 # -------------------
+default_svd_algorithm(A; kwargs...) = default_svd_algorithm(typeof(A); kwargs...)
+function default_svd_algorithm(T::Type; kwargs...)
+    throw(MethodError(default_svd_algorithm, (T,)))
+end
+function default_svd_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
+    return LAPACK_DivideAndConquer(; kwargs...)
+end
+
 for f in (:svd_full!, :svd_compact!, :svd_vals!)
-    # Default to LAPACK SDD for `YALAPACK.BlasMat`
-    @eval function default_algorithm(::typeof($f), ::Type{A};
-                                     kwargs...) where {A<:YALAPACK.BlasMat}
-        return LAPACK_DivideAndConquer(; kwargs...)
+    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        return default_svd_algorithm(A; kwargs...)
     end
 end
 
