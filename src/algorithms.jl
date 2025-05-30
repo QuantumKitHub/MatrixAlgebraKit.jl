@@ -196,6 +196,10 @@ macro functiondef(f)
         @inline function default_algorithm(::typeof($f), A; kwargs...)
             return default_algorithm($f!, A; kwargs...)
         end
+        # fix ambiguity error
+        @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+            return default_algorithm($f!, A; kwargs...)
+        end
 
         # copy documentation to both functions
         Core.@__doc__ $f, $f!
