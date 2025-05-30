@@ -76,10 +76,7 @@ Finally, the same behavior is obtained when the keyword arguments are
 passed as the third positional argument in the form of a `NamedTuple`. 
 """ select_algorithm
 
-function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
-    return select_algorithm(f, typeof(A), alg; kwargs...)
-end
-function select_algorithm(f::F, ::Type{A}, alg::Alg=nothing; kwargs...) where {F,A,Alg}
+function select_algorithm(f::F, A::T, alg::Alg=nothing; kwargs...) where {F,T,Alg}
     if isnothing(alg)
         return default_algorithm(f, A; kwargs...)
     elseif alg isa Symbol
@@ -98,7 +95,6 @@ function select_algorithm(f::F, ::Type{A}, alg::Alg=nothing; kwargs...) where {F
 
     throw(ArgumentError("Unknown alg $alg"))
 end
-
 
 @doc """
     MatrixAlgebraKit.default_algorithm(f, A; kwargs...)
@@ -194,10 +190,13 @@ macro functiondef(f)
         end
 
         # define fallbacks for algorithm selection
-        @inline function select_algorithm(::typeof($f), ::Type{A}, alg::Alg;
-                                          kwargs...) where {Alg,A}
+        @inline function select_algorithm(::typeof($f), A, alg::Alg; kwargs...) where {Alg}
             return select_algorithm($f!, A, alg; kwargs...)
         end
+        @inline function default_algorithm(::typeof($f), A; kwargs...)
+            return default_algorithm($f!, A; kwargs...)
+        end
+        # fix ambiguity error
         @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_algorithm($f!, A; kwargs...)
         end

@@ -77,10 +77,7 @@ function default_qr_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
 end
 
 for f in (:qr_full!, :qr_compact!, :qr_null!)
-    @eval begin
-        function default_algorithm(::typeof($f), ::Type{A};
-                                   kwargs...) where {A<:YALAPACK.BlasMat}
-            return default_qr_algorithm(A; kwargs...)
-        end
+    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        return default_qr_algorithm(A; kwargs...)
     end
 end
