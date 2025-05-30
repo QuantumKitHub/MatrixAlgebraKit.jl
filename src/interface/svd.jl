@@ -99,13 +99,8 @@ function default_svd_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
 end
 
 for f in (:svd_full!, :svd_compact!, :svd_vals!)
-    @eval begin
-        function default_algorithm(::typeof($f), A; kwargs...)
-            return default_svd_algorithm(A; kwargs...)
-        end
-        function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
-            return default_svd_algorithm(A; kwargs...)
-        end
+    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        return default_svd_algorithm(A; kwargs...)
     end
 end
 

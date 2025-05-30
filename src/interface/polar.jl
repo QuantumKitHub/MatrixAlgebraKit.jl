@@ -66,12 +66,7 @@ function default_polar_algorithm(::Type{T}; kwargs...) where {T}
 end
 
 for f in (:left_polar!, :right_polar!)
-    @eval begin
-        function default_algorithm(::typeof($f), A; kwargs...)
-            return default_polar_algorithm(A; kwargs...)
-        end
-        function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
-            return default_polar_algorithm(A; kwargs...)
-        end
+    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        return default_polar_algorithm(A; kwargs...)
     end
 end
