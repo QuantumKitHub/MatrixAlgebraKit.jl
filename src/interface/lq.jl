@@ -68,19 +68,18 @@ See also [`qr_full(!)`](@ref lq_full) and [`qr_compact(!)`](@ref lq_compact).
 
 # Algorithm selection
 # -------------------
-for f in (:lq_full, :lq_compact, :lq_null)
-    f! = Symbol(f, :!)
+default_lq_algorithm(A; kwargs...) = default_lq_algorithm(typeof(A); kwargs...)
+function default_lq_algorithm(T::Type; kwargs...)
+    throw(MethodError(default_lq_algorithm, (T,)))
+end
+function default_lq_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
+    return LAPACK_HouseholderLQ(; kwargs...)
+end
+
+for f in (:lq_full!, :lq_compact!, :lq_null!)
     @eval begin
-        function default_algorithm(::typeof($f), A; kwargs...)
-            return default_algorithm($f!, A; kwargs...)
-        end
-        function default_algorithm(::typeof($f!), A; kwargs...)
+        function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_lq_algorithm(A; kwargs...)
         end
     end
-end
-
-# Default to LAPACK 
-function default_lq_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
-    return LAPACK_HouseholderLQ(; kwargs...)
 end

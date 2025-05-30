@@ -87,27 +87,20 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 
 # Algorithm selection
 # -------------------
-for f in (:eig_full, :eig_vals)
-    f! = Symbol(f, :!)
-    @eval begin
-        function default_algorithm(::typeof($f), A; kwargs...)
-            return default_algorithm($f!, A; kwargs...)
-        end
-        function default_algorithm(::typeof($f!), A; kwargs...)
-            return default_eig_algorithm(A; kwargs...)
-        end
+default_eig_algorithm(A; kwargs...) = default_eig_algorithm(typeof(A); kwargs...)
+default_eig_algorithm(T::Type; kwargs...) = throw(MethodError(default_eig_algorithm, (T,)))
+function default_eig_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
+    return LAPACK_Expert(; kwargs...)
+end
+
+for f in (:eig_full!, :eig_vals!)
+    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        return default_eig_algorithm(A; kwargs...)
     end
 end
 
-function select_algorithm(::typeof(eig_trunc), A, alg; kwargs...)
-    return select_algorithm(eig_trunc!, A, alg; kwargs...)
-end
-function select_algorithm(::typeof(eig_trunc!), A, alg; trunc=nothing, kwargs...)
+function select_algorithm(::typeof(eig_trunc!), ::Type{A}, alg; trunc=nothing,
+                          kwargs...) where {A<:YALAPACK.BlasMat}
     alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
-end
-
-# Default to LAPACK 
-function default_eig_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
-    return LAPACK_Expert(; kwargs...)
 end

@@ -86,27 +86,22 @@ See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_trunc(!)`](@ref eigh_trunc)
 
 # Algorithm selection
 # -------------------
-for f in (:eigh_full, :eigh_vals)
-    f! = Symbol(f, :!)
-    @eval begin
-        function default_algorithm(::typeof($f), A; kwargs...)
-            return default_algorithm($f!, A; kwargs...)
-        end
-        function default_algorithm(::typeof($f!), A; kwargs...)
-            return default_eigh_algorithm(A; kwargs...)
-        end
+default_eigh_algorithm(A; kwargs...) = default_eigh_algorithm(typeof(A); kwargs...)
+function default_eigh_algorithm(T::Type; kwargs...)
+    throw(MethodError(default_eigh_algorithm, (T,)))
+end
+function default_eigh_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
+    return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
+end
+
+for f in (:eigh_full!, :eigh_vals!)
+    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        return default_eigh_algorithm(A; kwargs...)
     end
 end
 
-function select_algorithm(::typeof(eigh_trunc), A, alg; kwargs...)
-    return select_algorithm(eigh_trunc!, A, alg; kwargs...)
-end
-function select_algorithm(::typeof(eigh_trunc!), A, alg; trunc=nothing, kwargs...)
+function select_algorithm(::typeof(eigh_trunc!), ::Type{A}, alg; trunc=nothing,
+                          kwargs...) where {A<:YALAPACK.BlasMat}
     alg_eigh = select_algorithm(eigh_full!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_eigh, select_truncation(trunc))
-end
-
-# Default to LAPACK 
-function default_eigh_algorithm(A::StridedMatrix{T}; kwargs...) where {T<:BlasFloat}
-    return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
 end
