@@ -99,8 +99,10 @@ for f in (:eig_full!, :eig_vals!)
     end
 end
 
-function select_algorithm(::typeof(eig_trunc!), ::Type{A}, alg; trunc=nothing,
-                          kwargs...) where {A<:YALAPACK.BlasMat}
+function select_algorithm(::typeof(eig_trunc!), A, alg; trunc=nothing, kwargs...)
     alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+end
+function select_algorithm(::typeof(eig_trunc), A, alg; trunc=nothing, kwargs...)
+    return select_algorithm(eig_trunc!, A, alg; trunc, kwargs...)
 end
