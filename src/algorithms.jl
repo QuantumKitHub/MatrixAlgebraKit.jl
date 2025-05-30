@@ -190,11 +190,10 @@ macro functiondef(f)
         end
 
         # define fallbacks for algorithm selection
-        @inline function select_algorithm(::typeof($f), ::Type{A}, alg::Alg;
-                                          kwargs...) where {Alg,A}
+        @inline function select_algorithm(::typeof($f), A, alg::Alg; kwargs...) where {Alg}
             return select_algorithm($f!, A, alg; kwargs...)
         end
-        @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+        @inline function default_algorithm(::typeof($f), A; kwargs...)
             return default_algorithm($f!, A; kwargs...)
         end
 

@@ -108,6 +108,3 @@ function select_algorithm(::typeof(svd_trunc!), A, alg; trunc=nothing, kwargs...
     alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_svd, select_truncation(trunc))
 end
-function select_algorithm(::typeof(svd_trunc), A, alg; trunc=nothing, kwargs...)
-    return select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
-end

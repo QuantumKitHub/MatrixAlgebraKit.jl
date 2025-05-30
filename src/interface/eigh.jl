@@ -104,6 +104,3 @@ function select_algorithm(::typeof(eigh_trunc!), A, alg; trunc=nothing, kwargs..
     alg_eigh = select_algorithm(eigh_full!, A, alg; kwargs...)
     return TruncatedAlgorithm(alg_eigh, select_truncation(trunc))
 end
-function select_algorithm(::typeof(eigh_trunc), A, alg; trunc=nothing, kwargs...)
-    return select_algorithm(eigh_trunc!, A, alg; trunc, kwargs...)
-end
