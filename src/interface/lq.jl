@@ -78,6 +78,9 @@ end
 
 for f in (:lq_full!, :lq_compact!, :lq_null!)
     @eval begin
+        function default_algorithm(::typeof($f), A; kwargs...)
+            return default_lq_algorithm(A; kwargs...)
+        end
         function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_lq_algorithm(A; kwargs...)
         end

@@ -95,8 +95,13 @@ function default_eigh_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat
 end
 
 for f in (:eigh_full!, :eigh_vals!)
-    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
-        return default_eigh_algorithm(A; kwargs...)
+    @eval begin
+        function default_algorithm(::typeof($f), A; kwargs...)
+            return default_eigh_algorithm(A; kwargs...)
+        end
+        function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+            return default_eigh_algorithm(A; kwargs...)
+        end
     end
 end
 

@@ -52,7 +52,12 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 # Algorithm selection
 # -------------------
 for f in (:schur_full!, :schur_vals!)
-    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
-        return default_eig_algorithm(A; kwargs...)
+    @eval begin
+        function default_algorithm(::typeof($f), A; kwargs...)
+            return default_eig_algorithm(A; kwargs...)
+        end
+        function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
+            return default_eig_algorithm(A; kwargs...)
+        end
     end
 end
