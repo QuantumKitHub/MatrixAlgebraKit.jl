@@ -193,6 +193,15 @@ macro functiondef(f)
         @inline function select_algorithm(::typeof($f), A, alg::Alg; kwargs...) where {Alg}
             return select_algorithm($f!, A, alg; kwargs...)
         end
+        # define default algorithm fallbacks for out-of-place functions
+        # in terms of the corresponding in-place function
+        @inline function default_algorithm(::typeof($f), A; kwargs...)
+            return default_algorithm($f!, A; kwargs...)
+        end
+        # define default algorithm fallbacks for out-of-place functions
+        # in terms of the corresponding in-place function for types,
+        # in principle this is covered by the definition above but
+        # it is necessary to avoid ambiguity errors
         @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_algorithm($f!, A; kwargs...)
         end
