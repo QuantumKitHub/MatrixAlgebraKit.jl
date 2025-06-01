@@ -67,22 +67,30 @@ struct TruncationKeepFiltered{F} <: TruncationStrategy
     filter::F
 end
 
-struct TruncationKeepAbove{T<:Real} <: TruncationStrategy
+struct TruncationKeepAbove{T<:Real,F} <: TruncationStrategy
     atol::T
     rtol::T
     p::Int
+    by::F
 end
-function TruncationKeepAbove(atol::Real, rtol::Real, p::Int=2)
-    return TruncationKeepAbove(promote(atol, rtol)..., p)
+function TruncationKeepAbove(; atol::Real, rtol::Real, p::Int=2, by=abs)
+    return TruncationKeepAbove(atol, rtol, p, by)
+end
+function TruncationKeepAbove(atol::Real, rtol::Real, p::Int=2, by=abs)
+    return TruncationKeepAbove(promote(atol, rtol)..., p, by)
 end
 
-struct TruncationKeepBelow{T<:Real} <: TruncationStrategy
+struct TruncationKeepBelow{T<:Real,F} <: TruncationStrategy
     atol::T
     rtol::T
     p::Int
+    by::F
 end
-function TruncationKeepBelow(atol::Real, rtol::Real, p::Int=2)
-    return TruncationKeepBelow(promote(atol, rtol)..., p)
+function TruncationKeepBelow(; atol::Real, rtol::Real, p::Int=2, by=abs)
+    return TruncationKeepBelow(atol, rtol, p, by)
+end
+function TruncationKeepBelow(atol::Real, rtol::Real, p::Int=2, by=abs)
+    return TruncationKeepBelow(promote(atol, rtol)..., p, by)
 end
 
 # TODO: better names for these functions of the above types
@@ -94,18 +102,18 @@ Truncation strategy to keep the first `howmany` values when sorted according to 
 truncrank(howmany::Int; by=abs, rev=true) = TruncationKeepSorted(howmany, by, rev)
 
 """
-    trunctol(atol::Real)
+    trunctol(atol::Real; by=abs)
 
-Truncation strategy to discard the values that are smaller than `atol` in absolute value.
+Truncation strategy to discard the values that are smaller than `atol` according to `by`.
 """
-trunctol(atol) = TruncationKeepFiltered(≥(atol) ∘ abs)
+trunctol(atol; by=abs) = TruncationKeepFiltered(≥(atol) ∘ by)
 
 """
-    truncabove(atol::Real)
+    truncabove(atol::Real; by=abs)
 
-Truncation strategy to discard the values that are larger than `atol` in absolute value.
+Truncation strategy to discard the values that are larger than `atol` according to `by`.
 """
-truncabove(atol) = TruncationKeepFiltered(≤(atol) ∘ abs)
+truncabove(atol; by=abs) = TruncationKeepFiltered(≤(atol) ∘ by)
 
 """
     TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...)
@@ -177,17 +185,18 @@ Generic interface for finding truncated values of the spectrum of a decompositio
 based on the `strategy`. The output should be a collection of indices specifying
 which values to keep. `MatrixAlgebraKit.findtruncated` is used inside of the default
 implementation of [`truncate!`](@ref) to perform the truncation. It does not assume that the
-values are sorted. For a version that assumes the values are reverse sorted by
-absolute value (which is the standard case for SVD) see
-[`MatrixAlgebraKit.findtruncated_sorted`](@ref).
+values are sorted. For a version that assumes the values are reverse sorted (which is the
+standard case for SVD) see [`MatrixAlgebraKit.findtruncated_sorted`](@ref).
 """ findtruncated
 
 @doc """
     MatrixAlgebraKit.findtruncated_sorted(values::AbstractVector, strategy::TruncationStrategy)
 
-Like [`MatrixAlgebraKit.findtruncated`](@ref) but assumes that the values are sorted in reverse order by
-absolute value. However, note that this assumption is not checked, so passing values that are not sorted
-in that way can silently give unexpected results. This is used in the default implementation of
+Like [`MatrixAlgebraKit.findtruncated`](@ref) but assumes that the values are sorted in reverse order.
+They are assumed to be sorted in a way that is consistent with the truncation strategy,
+which generally means they are sorted by absolute value but some truncation strategies allow
+customizing that. However, note that this assumption is not checked, so passing values that are not sorted
+in the correct way can silently give unexpected results. This is used in the default implementation of
 [`svd_trunc!`](@ref).
 """ findtruncated_sorted
 
@@ -212,21 +221,21 @@ end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepBelow)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    return findall(≤(atol), values)
+    return findall(≤(atol) ∘ strategy.by, values)
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepBelow)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    i = searchsortedfirst(values, atol; by=abs, rev=true)
+    i = searchsortedfirst(values, atol; by=strategy.by, rev=true)
     return i:length(values)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    return findall(≥(atol), values)
+    return findall(≥(atol) ∘ strategy.by, values)
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepAbove)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    i = searchsortedlast(values, atol; by=abs, rev=true)
+    i = searchsortedlast(values, atol; by=strategy.by, rev=true)
     return 1:i
 end
 
