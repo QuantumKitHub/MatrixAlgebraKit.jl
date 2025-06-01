@@ -193,10 +193,6 @@ macro functiondef(f)
         @inline function select_algorithm(::typeof($f), A, alg::Alg; kwargs...) where {Alg}
             return select_algorithm($f!, A, alg; kwargs...)
         end
-        @inline function default_algorithm(::typeof($f), A; kwargs...)
-            return default_algorithm($f!, A; kwargs...)
-        end
-        # fix ambiguity error
         @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_algorithm($f!, A; kwargs...)
         end
