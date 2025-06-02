@@ -4,7 +4,7 @@ using LinearAlgebra
 using MatrixAlgebraKit
 using MatrixAlgebraKit: AbstractAlgorithm, check_input, diagview
 using FillArrays
-using FillArrays: AbstractZerosMatrix, OnesVector, RectDiagonal
+using FillArrays: AbstractZerosMatrix, OnesVector, RectDiagonal, SquareEye
 
 function MatrixAlgebraKit.diagview(A::RectDiagonal{<:Any,<:OnesVector})
     return A.diag
@@ -202,11 +202,17 @@ function MatrixAlgebraKit.qr_compact!(A::Eye, F, alg::EyeAlgorithm)
         return (Eye(q_ax), Eye(ax))
     end
 end
+function MatrixAlgebraKit.qr_compact!(A::SquareEye, F, alg::EyeAlgorithm)
+    return (A, A)
+end
 
 function MatrixAlgebraKit.qr_full!(A::Eye, F, alg::EyeAlgorithm)
     ax = axes(A)
     q_ax = (ax[1], ax[1])
     return (Eye(q_ax), A)
+end
+function MatrixAlgebraKit.qr_full!(A::SquareEye, F, alg::EyeAlgorithm)
+    return (A, A)
 end
 
 function MatrixAlgebraKit.lq_compact!(A::Eye, F, alg::EyeAlgorithm)
@@ -220,11 +226,17 @@ function MatrixAlgebraKit.lq_compact!(A::Eye, F, alg::EyeAlgorithm)
         return (Eye(ax), Eye(q_ax))
     end
 end
+function MatrixAlgebraKit.lq_compact!(A::SquareEye, F, alg::EyeAlgorithm)
+    return (A, A)
+end
 
 function MatrixAlgebraKit.lq_full!(A::Eye, F, alg::EyeAlgorithm)
     ax = axes(A)
     q_ax = (ax[2], ax[2])
     return (A, Eye(q_ax))
+end
+function MatrixAlgebraKit.lq_full!(A::SquareEye, F, alg::EyeAlgorithm)
+    return (A, A)
 end
 
 function MatrixAlgebraKit.svd_compact!(A::Eye, F, alg::EyeAlgorithm)
@@ -238,10 +250,16 @@ function MatrixAlgebraKit.svd_compact!(A::Eye, F, alg::EyeAlgorithm)
         return (Eye(s_ax), Eye(s_ax), Eye(ax))
     end
 end
+function MatrixAlgebraKit.svd_compact!(A::SquareEye, F, alg::EyeAlgorithm)
+    return (A, A, A)
+end
 
 function MatrixAlgebraKit.svd_full!(A::Eye, F, alg::EyeAlgorithm)
     ax = axes(A)
     return (Eye((ax[1], ax[1])), A, Eye((ax[2], ax[2])))
+end
+function MatrixAlgebraKit.svd_full!(A::SquareEye, F, alg::EyeAlgorithm)
+    return (A, A, A)
 end
 
 function MatrixAlgebraKit.svd_vals!(A::Eye, F, alg::EyeAlgorithm)
