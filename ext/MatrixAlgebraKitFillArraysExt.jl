@@ -60,6 +60,27 @@ for f in [:eig_full!, :eigh_full!]
     end
 end
 
+for f in [:eig_trunc!, :eigh_trunc!]
+    @eval begin
+        # TODO: Delete this when `select_algorithm` is generalized.
+        function MatrixAlgebraKit.select_algorithm(::typeof($f), ::Type{A}, alg;
+                                                   trunc=nothing,
+                                                   kwargs...) where {A<:Zeros}
+            alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
+            return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+        end
+        # TODO: I think it would be better to dispatch on the algorithm here,
+        # rather than the output types.
+        function MatrixAlgebraKit.truncate!(::typeof($f), (D, V)::Tuple{Zeros,Eye},
+                                            strategy::TruncationStrategy)
+            ind = findtruncated(diagview(D), strategy)
+            D′ = D[ind, ind]
+            V′ = Eye((axes(V, 1), only(axes(axes(V, 2)[ind]))))
+            return (D′, V′)
+        end
+    end
+end
+
 for f in [:eig_vals!, :eigh_vals!]
     @eval begin
         function MatrixAlgebraKit.check_input(::typeof($f), A::AbstractZerosMatrix, F)
@@ -125,6 +146,24 @@ end
 function MatrixAlgebraKit.svd_full!(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm)
     ax = axes(A)
     return (Eye((ax[1], ax[1])), Zeros(ax), Eye((ax[2], ax[2])))
+end
+
+# TODO: Delete this when `select_algorithm` is generalized.
+function MatrixAlgebraKit.select_algorithm(::typeof(svd_trunc!), ::Type{A}, alg;
+                                           trunc=nothing,
+                                           kwargs...) where {A<:Zeros}
+    alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
+    return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+end
+# TODO: I think it would be better to dispatch on the algorithm here,
+# rather than the output types.
+function MatrixAlgebraKit.truncate!(::typeof(svd_trunc!), (U, S, V)::Tuple{Eye,Zeros,Eye},
+                                    strategy::TruncationStrategy)
+    ind = findtruncated(diagview(S), strategy)
+    U′ = Eye((axes(U, 1), only(axes(axes(U, 2)[ind]))))
+    S′ = S[ind, ind]
+    V′ = Eye((only(axes(axes(V, 1)[ind])), axes(V, 2)))
+    return (U′, S′, V′)
 end
 
 function MatrixAlgebraKit.svd_vals!(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm)
@@ -193,8 +232,9 @@ for f in [:eig_trunc!, :eigh_trunc!]
         function MatrixAlgebraKit.truncate!(::typeof($f), (D, V)::Tuple{Eye,Eye},
                                             strategy::TruncationStrategy)
             ind = findtruncated(diagview(D), strategy)
-            return Diagonal(diagview(D)[ind]),
-                   Eye((axes(V, 1), only(axes(axes(V, 2)[ind]))))
+            D′ = Diagonal(diagview(D)[ind])
+            U′ = Eye((axes(V, 1), only(axes(axes(V, 2)[ind]))))
+            return (D′, U′)
         end
     end
 end

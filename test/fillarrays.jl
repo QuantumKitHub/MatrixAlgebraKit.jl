@@ -20,6 +20,20 @@ using FillArrays: SquareEye
         end
     end
 
+    for f in [:eig_trunc, :eigh_trunc]
+        @eval begin
+            A = Zeros(3, 3)
+            D, V = @constinferred $f(A; trunc=(; maxrank=2))
+            @test A * V == V * D
+            @test size(D) == (2, 2)
+            @test size(V) == (3, 2)
+            @test D == Zeros(2, 2)
+            @test D isa Zeros
+            @test V == Eye(3, 2)
+            @test V isa Eye
+        end
+    end
+
     for f in [:eig_vals, :eigh_vals]
         @eval begin
             A = Zeros(3, 3)
@@ -129,6 +143,19 @@ using FillArrays: SquareEye
     @test U == I
     @test U isa Eye
     @test V == I
+    @test V isa Eye
+
+    A = Zeros(3, 4)
+    U, S, V = @constinferred svd_trunc(A; trunc=(; maxrank=2))
+    @test U * S * V == Eye(3, 2) * Zeros(2, 2) * Eye(2, 4)
+    @test size(U) == (3, 2)
+    @test size(S) == (2, 2)
+    @test size(V) == (2, 4)
+    @test S == Zeros(2, 2)
+    @test S isa Zeros
+    @test U == Eye(3, 2)
+    @test U isa Eye
+    @test V == Eye(2, 4)
     @test V isa Eye
 
     A = Zeros(3, 4)
