@@ -3,13 +3,14 @@ using LinearAlgebra
 using Test
 using TestExtras
 using FillArrays
+using FillArrays: SquareEye
 
 @testset "Zeros" begin
     for f in [:eig_full, :eigh_full]
         @eval begin
             A = Zeros(3, 3)
             D, V = @constinferred $f(A)
-            @test A * V == D * V
+            @test A * V == V * D
             @test size(D) == size(A)
             @test size(V) == size(A)
             @test iszero(D)
@@ -142,13 +143,28 @@ end
         @eval begin
             for A in (Eye(3), Eye(3, 3))
                 local D, V = @constinferred $f(A)
-                @test A * V == D * V
+                @test A * V == V * D
                 @test size(D) == size(A)
                 @test size(V) == size(A)
                 @test V == I
                 @test typeof(D) === typeof(A)
                 @test V == I
                 @test typeof(V) === typeof(A)
+            end
+        end
+    end
+
+    for f in [:eig_trunc, :eigh_trunc]
+        @eval begin
+            for A in (Eye(3), Eye(3, 3))
+                local D, V = @constinferred $f(A; trunc=(; maxrank=2))
+                @test A * V == V * D
+                @test size(D) == (2, 2)
+                @test size(V) == (3, 2)
+                @test D == Eye(2, 2)
+                @test D isa SquareEye
+                @test V == Eye(3, 2)
+                @test V isa Eye
             end
         end
     end
@@ -299,6 +315,19 @@ end
     @test U === A
     @test S === A
     @test V === A
+
+    A = Eye(3, 4)
+    U, S, V = @constinferred svd_trunc(A; trunc=(; maxrank=2))
+    @test U * S * V == Eye(3, 2) * Eye(2, 2) * Eye(2, 4)
+    @test size(U) == (3, 2)
+    @test size(S) == (2, 2)
+    @test size(V) == (2, 4)
+    @test S == Eye(2, 2)
+    @test S isa Eye
+    @test U == Eye(3, 2)
+    @test U isa Eye
+    @test V == Eye(2, 4)
+    @test V isa Eye
 
     A = Eye(3, 4)
     D = @constinferred svd_vals(A)

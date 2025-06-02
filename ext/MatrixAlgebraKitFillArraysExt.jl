@@ -2,7 +2,9 @@ module MatrixAlgebraKitFillArraysExt
 
 using LinearAlgebra
 using MatrixAlgebraKit
-using MatrixAlgebraKit: AbstractAlgorithm, check_input, diagview
+using MatrixAlgebraKit: AbstractAlgorithm, TruncatedAlgorithm, TruncationStrategy,
+                        check_input, diagview,
+                        findtruncated, select_algorithm, select_truncation
 using FillArrays
 using FillArrays: AbstractZerosMatrix, OnesVector, RectDiagonal, SquareEye
 
@@ -177,6 +179,26 @@ for f in [:eig_full!, :eigh_full!]
     end
 end
 
+for f in [:eig_trunc!, :eigh_trunc!]
+    @eval begin
+        # TODO: Delete this when `select_algorithm` is generalized.
+        function MatrixAlgebraKit.select_algorithm(::typeof($f), ::Type{A}, alg;
+                                                   trunc=nothing,
+                                                   kwargs...) where {A<:Eye}
+            alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
+            return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+        end
+        # TODO: I think it would be better to dispatch on the algorithm here,
+        # rather than the output types.
+        function MatrixAlgebraKit.truncate!(::typeof($f), (D, V)::Tuple{Eye,Eye},
+                                            strategy::TruncationStrategy)
+            ind = findtruncated(diagview(D), strategy)
+            return Diagonal(diagview(D)[ind]),
+                   Eye((axes(V, 1), only(axes(axes(V, 2)[ind]))))
+        end
+    end
+end
+
 for f in [:eig_vals!, :eigh_vals!]
     @eval begin
         function MatrixAlgebraKit.check_input(::typeof($f), A::Eye, F)
@@ -260,6 +282,24 @@ function MatrixAlgebraKit.svd_full!(A::Eye, F, alg::EyeAlgorithm)
 end
 function MatrixAlgebraKit.svd_full!(A::SquareEye, F, alg::EyeAlgorithm)
     return (A, A, A)
+end
+
+# TODO: Delete this when `select_algorithm` is generalized.
+function MatrixAlgebraKit.select_algorithm(::typeof(svd_trunc!), ::Type{A}, alg;
+                                           trunc=nothing,
+                                           kwargs...) where {A<:Eye}
+    alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
+    return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+end
+# TODO: I think it would be better to dispatch on the algorithm here,
+# rather than the output types.
+function MatrixAlgebraKit.truncate!(::typeof(svd_trunc!), (U, S, V)::Tuple{Eye,Eye,Eye},
+                                    strategy::TruncationStrategy)
+    ind = findtruncated(diagview(S), strategy)
+    U′ = Eye((axes(U, 1), only(axes(axes(U, 2)[ind]))))
+    S′ = Diagonal(diagview(S)[ind])
+    V′ = Eye((only(axes(axes(V, 1)[ind])), axes(V, 2)))
+    return (U′, S′, V′)
 end
 
 function MatrixAlgebraKit.svd_vals!(A::Eye, F, alg::EyeAlgorithm)
