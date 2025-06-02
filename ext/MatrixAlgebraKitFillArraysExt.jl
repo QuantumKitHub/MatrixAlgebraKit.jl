@@ -4,7 +4,11 @@ using LinearAlgebra
 using MatrixAlgebraKit
 using MatrixAlgebraKit: AbstractAlgorithm, check_input, diagview
 using FillArrays
-using FillArrays: AbstractZerosMatrix
+using FillArrays: AbstractZerosMatrix, OnesVector, RectDiagonal
+
+function MatrixAlgebraKit.diagview(A::RectDiagonal{<:Any,<:OnesVector})
+    return A.diag
+end
 
 struct ZerosAlgorithm <: AbstractAlgorithm end
 
@@ -63,7 +67,7 @@ for f in [:eig_vals!, :eigh_vals!]
         function MatrixAlgebraKit.$f(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm;
                                      kwargs...)
             check_input($f, A, F)
-            return Zeros(axes(A, 1))
+            return diagview(A)
         end
     end
 end
@@ -119,6 +123,10 @@ end
 function MatrixAlgebraKit.svd_full!(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm)
     ax = axes(A)
     return (Eye((ax[1], ax[1])), Zeros(ax), Eye((ax[2], ax[2])))
+end
+
+function MatrixAlgebraKit.svd_vals!(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm)
+    return diagview(A)
 end
 
 struct EyeAlgorithm <: AbstractAlgorithm end
@@ -234,6 +242,10 @@ end
 function MatrixAlgebraKit.svd_full!(A::Eye, F, alg::EyeAlgorithm)
     ax = axes(A)
     return (Eye((ax[1], ax[1])), A, Eye((ax[2], ax[2])))
+end
+
+function MatrixAlgebraKit.svd_vals!(A::Eye, F, alg::EyeAlgorithm)
+    return diagview(A)
 end
 
 end

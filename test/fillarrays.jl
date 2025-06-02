@@ -102,6 +102,12 @@ using FillArrays
     @test U isa Eye
     @test V == I
     @test V isa Eye
+
+    A = Zeros(3, 4)
+    D = @constinferred svd_vals(A)
+    @test size(D) == (minimum(size(A)),)
+    @test iszero(D)
+    @test D isa Zeros
 end
 
 @testset "Eye" begin
@@ -202,4 +208,10 @@ end
     @test U isa Eye
     @test V == I
     @test V isa Eye
+
+    A = Eye(3, 4)
+    D = @constinferred svd_vals(A)
+    @test size(D) == (minimum(size(A)),)
+    @test all(isone, D)
+    @test D isa Ones
 end
