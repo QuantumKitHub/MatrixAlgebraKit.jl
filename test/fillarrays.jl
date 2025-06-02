@@ -19,6 +19,16 @@ using FillArrays
         end
     end
 
+    for f in [:eig_vals, :eigh_vals]
+        @eval begin
+            A = Zeros(3, 3)
+            D = @constinferred $f(A)
+            @test size(D) == (size(A, 1),)
+            @test iszero(D)
+            @test D isa Zeros
+        end
+    end
+
     # for f in [:qr_compact, :left_polar]
     #     @eval begin
     #         A = Zeros(4, 3)
@@ -106,6 +116,16 @@ end
             @test D isa Eye
             @test V == I
             @test V isa Eye
+        end
+    end
+
+    for f in [:eig_vals, :eigh_vals]
+        @eval begin
+            A = Eye(3, 3)
+            D = @constinferred $f(A)
+            @test size(D) == (size(A, 1),)
+            @test all(isone, D)
+            @test D isa Ones
         end
     end
 

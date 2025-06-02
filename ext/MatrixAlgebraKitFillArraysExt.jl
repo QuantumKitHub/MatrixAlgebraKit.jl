@@ -2,7 +2,7 @@ module MatrixAlgebraKitFillArraysExt
 
 using LinearAlgebra
 using MatrixAlgebraKit
-using MatrixAlgebraKit: AbstractAlgorithm, check_input
+using MatrixAlgebraKit: AbstractAlgorithm, check_input, diagview
 using FillArrays
 using FillArrays: AbstractZerosMatrix
 
@@ -19,6 +19,8 @@ end
 
 for f in [:eig_full,
           :eigh_full,
+          :eig_vals,
+          :eigh_vals,
           :qr_compact,
           :qr_full,
           :left_polar,
@@ -26,7 +28,8 @@ for f in [:eig_full,
           :lq_full,
           :right_polar,
           :svd_compact,
-          :svd_full]
+          :svd_full,
+          :svd_vals]
     f! = Symbol(f, "!")
     @eval begin
         MatrixAlgebraKit.copy_input(::typeof($f), A::AbstractZerosMatrix) = A
@@ -37,8 +40,7 @@ for f in [:eig_full,
     end
 end
 
-for f in [:eig_full!,
-          :eigh_full!]
+for f in [:eig_full!, :eigh_full!]
     @eval begin
         function MatrixAlgebraKit.check_input(::typeof($f), A::AbstractZerosMatrix, F)
             LinearAlgebra.checksquare(A)
@@ -48,6 +50,20 @@ for f in [:eig_full!,
                                      kwargs...)
             check_input($f, A, F)
             return (A, Eye(axes(A)))
+        end
+    end
+end
+
+for f in [:eig_vals!, :eigh_vals!]
+    @eval begin
+        function MatrixAlgebraKit.check_input(::typeof($f), A::AbstractZerosMatrix, F)
+            LinearAlgebra.checksquare(A)
+            return nothing
+        end
+        function MatrixAlgebraKit.$f(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm;
+                                     kwargs...)
+            check_input($f, A, F)
+            return Zeros(axes(A, 1))
         end
     end
 end
@@ -118,6 +134,8 @@ end
 
 for f in [:eig_full,
           :eigh_full,
+          :eig_vals,
+          :eigh_vals,
           :qr_compact,
           :qr_full,
           :lq_compact,
@@ -125,7 +143,8 @@ for f in [:eig_full,
           :left_polar,
           :right_polar,
           :svd_compact,
-          :svd_full]
+          :svd_full,
+          :svd_vals]
     f! = Symbol(f, "!")
     @eval begin
         MatrixAlgebraKit.copy_input(::typeof($f), A::Eye) = A
@@ -136,8 +155,7 @@ for f in [:eig_full,
     end
 end
 
-for f in [:eig_full!,
-          :eigh_full!]
+for f in [:eig_full!, :eigh_full!]
     @eval begin
         function MatrixAlgebraKit.check_input(::typeof($f), A::Eye, F)
             LinearAlgebra.checksquare(A)
@@ -147,6 +165,20 @@ for f in [:eig_full!,
                                      kwargs...)
             check_input($f, A, F)
             return (A, A)
+        end
+    end
+end
+
+for f in [:eig_vals!, :eigh_vals!]
+    @eval begin
+        function MatrixAlgebraKit.check_input(::typeof($f), A::Eye, F)
+            LinearAlgebra.checksquare(A)
+            return nothing
+        end
+        function MatrixAlgebraKit.$f(A::Eye, F, alg::EyeAlgorithm;
+                                     kwargs...)
+            check_input($f, A, F)
+            return diagview(A)
         end
     end
 end
