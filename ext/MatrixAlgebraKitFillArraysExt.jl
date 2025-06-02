@@ -256,7 +256,7 @@ end
 
 function MatrixAlgebraKit.svd_full!(A::Eye, F, alg::EyeAlgorithm)
     ax = axes(A)
-    return (Eye((ax[1], ax[1])), A, Eye((ax[2], ax[2])))
+    return (Eye((ax[1],)), A, Eye((ax[2],)))
 end
 function MatrixAlgebraKit.svd_full!(A::SquareEye, F, alg::EyeAlgorithm)
     return (A, A, A)
