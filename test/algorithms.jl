@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using MatrixAlgebraKit: LAPACK_SVDAlgorithm, NoTruncation, PolarViaSVD, TruncatedAlgorithm,
-                        default_algorithm, select_algorithm
+                        TruncationKeepBelow, default_algorithm, select_algorithm
 
 @testset "default_algorithm" begin
     A = randn(3, 3)
