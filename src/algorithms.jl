@@ -99,7 +99,6 @@ function select_algorithm(f::F, ::Type{A}, alg::Alg=nothing; kwargs...) where {F
     throw(ArgumentError("Unknown alg $alg"))
 end
 
-
 @doc """
     MatrixAlgebraKit.default_algorithm(f, A; kwargs...)
     MatrixAlgebraKit.default_algorithm(f, ::Type{TA}; kwargs...) where {TA}
