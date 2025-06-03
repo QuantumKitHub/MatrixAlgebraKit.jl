@@ -76,7 +76,7 @@ Finally, the same behavior is obtained when the keyword arguments are
 passed as the third positional argument in the form of a `NamedTuple`. 
 """ select_algorithm
 
-function select_algorithm(f::F, A::T, alg::Alg=nothing; kwargs...) where {F,T,Alg}
+function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
     if isnothing(alg)
         return default_algorithm(f, A; kwargs...)
     elseif alg isa Symbol
