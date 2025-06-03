@@ -152,3 +152,18 @@ end
         end
     end
 end
+
+@testset "svd_trunc! specify truncation algorithm T = $T" for T in
+                                                              (Float32, Float64, ComplexF32,
+                                                               ComplexF64)
+    rng = StableRNG(123)
+    m = 4
+    U = qr_compact(randn(rng, T, m, m))[1]
+    S = Diagonal([0.9, 0.3, 0.1, 0.01])
+    Vᴴ = qr_compact(randn(rng, T, m, m))[1]
+    A = U * S * Vᴴ
+    alg = TruncatedAlgorithm(LAPACK_DivideAndConquer(), TruncationKeepAbove(0.2, 0.0))
+    U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg)
+    @test diagview(S2) ≈ diagview(S)[1:2] rtol = sqrt(eps(real(T)))
+    @test_throws ArgumentError svd_trunc(A; alg, trunc=(; maxrank=2))
+end
