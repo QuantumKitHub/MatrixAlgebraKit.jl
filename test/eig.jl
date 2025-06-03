@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: Diagonal
-using MatrixAlgebraKit: diagview
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
 @testset "eig_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
