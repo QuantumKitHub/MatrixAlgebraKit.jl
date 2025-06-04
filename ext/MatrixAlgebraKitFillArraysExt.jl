@@ -14,7 +14,7 @@ end
 
 struct ZerosAlgorithm <: AbstractAlgorithm end
 
-for f in [:eig, :eigh, :lq, :qr, :svd]
+for f in [:eig, :eigh, :lq, :polar, :qr, :svd]
     ff = Symbol("default_", f, "_algorithm")
     @eval begin
         function MatrixAlgebraKit.$ff(::Type{<:AbstractZerosMatrix}; kwargs...)
@@ -168,6 +168,30 @@ end
 
 function MatrixAlgebraKit.svd_vals!(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm)
     return diagview(A)
+end
+
+function MatrixAlgebraKit.check_input(::typeof(left_polar!), A::AbstractZerosMatrix, F)
+    m, n = size(A)
+    m >= n ||
+        throw(ArgumentError("input matrix needs at least as many rows as columns"))
+    return nothing
+end
+function MatrixAlgebraKit.left_polar!(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm)
+    check_input(left_polar!, A, F)
+    U, S, Vᴴ = svd_compact(A)
+    return (Eye((axes(U, 1), axes(Vᴴ, 2))), Vᴴ' * S * Vᴴ)
+end
+
+function MatrixAlgebraKit.check_input(::typeof(right_polar!), A::AbstractZerosMatrix, F)
+    m, n = size(A)
+    n >= m ||
+        throw(ArgumentError("input matrix needs at least as many columns as rows"))
+    return nothing
+end
+function MatrixAlgebraKit.right_polar!(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm)
+    check_input(right_polar!, A, F)
+    U, S, Vᴴ = svd_compact(A)
+    return (U * S * U', Eye((axes(U, 1), axes(Vᴴ, 2))))
 end
 
 struct EyeAlgorithm <: AbstractAlgorithm end

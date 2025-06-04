@@ -64,15 +64,15 @@ using FillArrays: SquareEye
     @test iszero(R)
     @test R isa Zeros
 
-    # A = Zeros(4, 3)
-    # Q, R = @constinferred left_polar(A)
-    # @test Q * R == A
-    # @test size(Q) == (4, 3)
-    # @test size(R) == (3, 3)
-    # @test Q == Matrix(I, (4, 3))
-    # @test Q isa Eye
-    # @test iszero(R)
-    # @test R isa Zeros
+    A = Zeros(4, 3)
+    Q, R = @constinferred left_polar(A)
+    @test Q * R == A
+    @test size(Q) == (4, 3)
+    @test size(R) == (3, 3)
+    @test Q == Matrix(I, (4, 3))
+    @test Q isa Eye
+    @test iszero(R)
+    @test R isa Zeros
 
     A = Zeros(3, 4)
     L, Q = @constinferred lq_compact(A)
@@ -109,15 +109,15 @@ using FillArrays: SquareEye
     @test Q == Eye(4)
     @test Q isa Eye
 
-    # A = Zeros(3, 4)
-    # L, Q = @constinferred right_polar(A)
-    # @test L * Q == A
-    # @test size(L) == (3, 3)
-    # @test size(Q) == (3, 4)
-    # @test iszero(L)
-    # @test L isa Zeros
-    # @test Q == Matrix(I, (3, 4))
-    # @test Q isa Eye
+    A = Zeros(3, 4)
+    L, Q = @constinferred right_polar(A)
+    @test L * Q == A
+    @test size(L) == (3, 3)
+    @test size(Q) == (3, 4)
+    @test iszero(L)
+    @test L isa Zeros
+    @test Q == Matrix(I, (3, 4))
+    @test Q isa Eye
 
     A = Zeros(3, 4)
     U, S, V = @constinferred svd_compact(A)
