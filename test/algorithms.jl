@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using MatrixAlgebraKit: LAPACK_SVDAlgorithm, NoTruncation, PolarViaSVD, TruncatedAlgorithm,
-                        default_algorithm, select_algorithm
+                        TruncationKeepBelow, default_algorithm, select_algorithm
 
 @testset "default_algorithm" begin
     A = randn(3, 3)
@@ -48,6 +48,12 @@ end
         @test @constinferred(select_algorithm(f, A)) ===
               TruncatedAlgorithm(LAPACK_MultipleRelativelyRobustRepresentations(),
                                  NoTruncation())
+    end
+
+    alg = TruncatedAlgorithm(LAPACK_Simple(), TruncationKeepBelow(0.1, 0.0))
+    for f in (eig_trunc!, eigh_trunc!, svd_trunc!)
+        @test @constinferred(select_algorithm(eig_trunc!, A, alg)) === alg
+        @test_throws ArgumentError select_algorithm(eig_trunc!, A, alg; trunc=(; maxrank=2))
     end
 
     @test @constinferred(select_algorithm(svd_compact!, A)) === LAPACK_DivideAndConquer()

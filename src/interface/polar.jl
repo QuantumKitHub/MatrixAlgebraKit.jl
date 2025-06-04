@@ -61,10 +61,7 @@ end
 # Algorithm selection
 # -------------------
 default_polar_algorithm(A; kwargs...) = default_polar_algorithm(typeof(A); kwargs...)
-function default_polar_algorithm(T::Type; kwargs...)
-    throw(MethodError(default_polar_algorithm, (T,)))
-end
-function default_polar_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
+function default_polar_algorithm(::Type{T}; kwargs...) where {T}
     return PolarViaSVD(default_algorithm(svd_compact!, T; kwargs...))
 end
 

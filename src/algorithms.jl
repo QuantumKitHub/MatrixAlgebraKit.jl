@@ -77,9 +77,6 @@ passed as the third positional argument in the form of a `NamedTuple`.
 """ select_algorithm
 
 function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
-    return select_algorithm(f, typeof(A), alg; kwargs...)
-end
-function select_algorithm(f::F, ::Type{A}, alg::Alg=nothing; kwargs...) where {F,A,Alg}
     if isnothing(alg)
         return default_algorithm(f, A; kwargs...)
     elseif alg isa Symbol
@@ -193,10 +190,24 @@ macro functiondef(f)
         end
 
         # define fallbacks for algorithm selection
-        @inline function select_algorithm(::typeof($f), ::Type{A}, alg::Alg;
-                                          kwargs...) where {Alg,A}
+        @inline function select_algorithm(::typeof($f), A, alg::Alg; kwargs...) where {Alg}
             return select_algorithm($f!, A, alg; kwargs...)
         end
+        # define default algorithm fallbacks for out-of-place functions
+        # in terms of the corresponding in-place function
+        @inline function default_algorithm(::typeof($f), A; kwargs...)
+            return default_algorithm($f!, A; kwargs...)
+        end
+        # define default algorithm fallbacks for out-of-place functions
+        # in terms of the corresponding in-place function for types,
+        # in principle this is covered by the definition above but
+        # it is necessary to avoid ambiguity errors with the generic definitions:
+        # ```julia
+        # default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
+        # function default_algorithm(f::F, ::Type{T}; kwargs...) where {F,T}
+        #     throw(MethodError(default_algorithm, (f, T)))
+        # end
+        # ```
         @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_algorithm($f!, A; kwargs...)
         end

@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I
-using MatrixAlgebraKit: diagview
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
 @testset "eigh_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
@@ -61,4 +61,20 @@ end
         @test V1 * (V1' * V2) ≈ V2
         @test V2 * (V2' * V1) ≈ V1
     end
+end
+
+@testset "eigh_trunc! specify truncation algorithm T = $T" for T in
+                                                               (Float32, Float64,
+                                                                ComplexF32,
+                                                                ComplexF64)
+    rng = StableRNG(123)
+    m = 4
+    V = qr_compact(randn(rng, T, m, m))[1]
+    D = Diagonal([0.9, 0.3, 0.1, 0.01])
+    A = V * D * V'
+    A = (A + A') / 2
+    alg = TruncatedAlgorithm(LAPACK_QRIteration(), truncrank(2))
+    D2, V2 = @constinferred eigh_trunc(A; alg)
+    @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
+    @test_throws ArgumentError eigh_trunc(A; alg, trunc=(; maxrank=2))
 end
