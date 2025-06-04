@@ -44,25 +44,25 @@ using FillArrays: SquareEye
         end
     end
 
-    # A = Zeros(4, 3)
-    # Q, R = @constinferred qr_compact(A)
-    # @test Q * R == A
-    # @test size(Q) == (4, 3)
-    # @test size(R) == (3, 3)
-    # @test Q == Matrix(I, (4, 3))
-    # @test Q isa Eye
-    # @test iszero(R)
-    # @test R isa Zeros
+    A = Zeros(4, 3)
+    Q, R = @constinferred qr_compact(A)
+    @test Q * R == A
+    @test size(Q) == (4, 3)
+    @test size(R) == (3, 3)
+    @test Q == Matrix(I, (4, 3))
+    @test Q isa Eye
+    @test iszero(R)
+    @test R isa Zeros
 
-    # A = Zeros(4, 3)
-    # Q, R = @constinferred qr_full(A)
-    # @test Q * R == A
-    # @test size(Q) == (4, 4)
-    # @test size(R) == (4, 3)
-    # @test Q == I
-    # @test Q isa Eye
-    # @test iszero(R)
-    # @test R isa Zeros
+    A = Zeros(4, 3)
+    Q, R = @constinferred qr_full(A)
+    @test Q * R == A
+    @test size(Q) == (4, 4)
+    @test size(R) == (4, 3)
+    @test Q == I
+    @test Q isa Eye
+    @test iszero(R)
+    @test R isa Zeros
 
     # A = Zeros(4, 3)
     # Q, R = @constinferred left_polar(A)
