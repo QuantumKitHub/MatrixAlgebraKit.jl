@@ -44,15 +44,17 @@ using FillArrays: SquareEye
         end
     end
 
-    A = Zeros(4, 3)
-    Q, R = @constinferred qr_compact(A)
-    @test Q * R == A
-    @test size(Q) == (4, 3)
-    @test size(R) == (3, 3)
-    @test Q == Matrix(I, (4, 3))
-    @test Q isa Eye
-    @test iszero(R)
-    @test R isa Zeros
+    for f in (qr_compact, left_orth)
+        A = Zeros(4, 3)
+        Q, R = @constinferred f(A)
+        @test Q * R == A
+        @test size(Q) == (4, 3)
+        @test size(R) == (3, 3)
+        @test Q == Matrix(I, (4, 3))
+        @test Q isa Eye
+        @test iszero(R)
+        @test R isa Zeros
+    end
 
     A = Zeros(4, 3)
     Q, R = @constinferred qr_full(A)
@@ -84,13 +86,15 @@ using FillArrays: SquareEye
     @test Q == Matrix(I, (3, 4))
     @test Q isa Eye
 
-    A = Zeros(3, 4)
-    L, Q = @constinferred lq_compact(A)
-    @test L * Q == A
-    @test L == Zeros(3, 3)
-    @test L isa Zeros
-    @test Q == Eye(3, 4)
-    @test Q isa Eye
+    for f in (lq_compact, right_orth)
+        A = Zeros(3, 4)
+        L, Q = @constinferred lq_compact(A)
+        @test L * Q == A
+        @test L == Zeros(3, 3)
+        @test L isa Zeros
+        @test Q == Eye(3, 4)
+        @test Q isa Eye
+    end
 
     A = Zeros(3, 4)
     L, Q = @constinferred lq_full(A)
