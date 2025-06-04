@@ -99,8 +99,13 @@ for f in (:eig_full!, :eig_vals!)
     end
 end
 
-function select_algorithm(::typeof(eig_trunc!), ::Type{A}, alg; trunc=nothing,
-                          kwargs...) where {A<:YALAPACK.BlasMat}
-    alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
-    return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+function select_algorithm(::typeof(eig_trunc!), A, alg; trunc=nothing, kwargs...)
+    if alg isa TruncatedAlgorithm
+        isnothing(trunc) ||
+            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
+        return alg
+    else
+        alg_eig = select_algorithm(eig_full!, A, alg; kwargs...)
+        return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+    end
 end
