@@ -201,7 +201,13 @@ macro functiondef(f)
         # define default algorithm fallbacks for out-of-place functions
         # in terms of the corresponding in-place function for types,
         # in principle this is covered by the definition above but
-        # it is necessary to avoid ambiguity errors
+        # it is necessary to avoid ambiguity errors with the generic definitions:
+        # ```julia
+        # default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
+        # function default_algorithm(f::F, ::Type{T}; kwargs...) where {F,T}
+        #     throw(MethodError(default_algorithm, (f, T)))
+        # end
+        # ```
         @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_algorithm($f!, A; kwargs...)
         end

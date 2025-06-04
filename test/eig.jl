@@ -63,9 +63,9 @@ end
                                                                ComplexF64)
     rng = StableRNG(123)
     m = 4
-    V = qr_compact(randn(rng, T, m, m))[1]
+    V = randn(rng, T, m, m)
     D = Diagonal([0.9, 0.3, 0.1, 0.01])
-    A = V * D * V'
+    A = V * D * inv(V)
     alg = TruncatedAlgorithm(LAPACK_Simple(), truncrank(2))
     D2, V2 = @constinferred eig_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
