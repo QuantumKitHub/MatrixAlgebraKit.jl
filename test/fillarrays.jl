@@ -76,19 +76,9 @@ using FillArrays: SquareEye
     @test iszero(R)
     @test R isa Zeros
 
-    A = Zeros(3, 4)
-    L, Q = @constinferred lq_compact(A)
-    @test L * Q == A
-    @test size(L) == (3, 3)
-    @test size(Q) == (3, 4)
-    @test iszero(L)
-    @test L isa Zeros
-    @test Q == Matrix(I, (3, 4))
-    @test Q isa Eye
-
     for f in (lq_compact, right_orth)
         A = Zeros(3, 4)
-        L, Q = @constinferred lq_compact(A)
+        L, Q = @constinferred f(A)
         @test L * Q == A
         @test L == Zeros(3, 3)
         @test L isa Zeros
@@ -211,69 +201,73 @@ end
         end
     end
 
-    # A = Eye(4, 3)
-    # Q, R = @constinferred qr_compact(A)
-    # @test Q * R == A
-    # @test size(Q) == (4, 3)
-    # @test size(R) == (3, 3)
-    # @test Q == Matrix(I, (4, 3))
-    # @test Q isa Eye
-    # @test R == I
-    # @test R isa Eye
+    for f in (qr_compact, left_orth)
+        A = Eye(4, 3)
+        Q, R = @constinferred f(A)
+        @test Q * R == A
+        @test size(Q) == (4, 3)
+        @test size(R) == (3, 3)
+        @test Q == Matrix(I, (4, 3))
+        @test Q isa Eye
+        @test R == I
+        @test R isa Eye
 
-    # A = Eye(3)
-    # Q, R = @constinferred qr_compact(A)
-    # @test Q * R == A
-    # @test Q === A
-    # @test R === A
+        A = Eye(3)
+        Q, R = @constinferred f(A)
+        @test Q * R == A
+        @test Q === A
+        @test R === A
+    end
 
-    # A = Eye(4, 3)
-    # Q, R = @constinferred qr_full(A)
-    # @test Q * R == A
-    # @test size(Q) == (4, 4)
-    # @test size(R) == (4, 3)
-    # @test Q == I
-    # @test Q isa Eye
-    # @test R == I
-    # @test R isa Eye
-
-    # A = Eye(3)
-    # Q, R = @constinferred qr_full(A)
-    # @test Q * R == A
-    # @test Q === A
-    # @test R === A
-
-    # A = Eye(4, 3)
-    # Q, R = @constinferred left_polar(A)
-    # @test Q * R == A
-    # @test size(Q) == (4, 3)
-    # @test size(R) == (3, 3)
-    # @test Q == Matrix(I, (4, 3))
-    # @test Q isa Eye
-    # @test R == I
-    # @test R isa Eye
-
-    # A = Eye(3)
-    # Q, R = @constinferred left_polar(A)
-    # @test Q * R == A
-    # @test Q === A
-    # @test R === A
-
-    A = Eye(3, 4)
-    L, Q = @constinferred lq_compact(A)
-    @test L * Q == A
-    @test size(L) == (3, 3)
-    @test size(Q) == (3, 4)
-    @test L == I
-    @test L isa Eye
-    @test Q == Matrix(I, (3, 4))
+    A = Eye(4, 3)
+    Q, R = @constinferred qr_full(A)
+    @test Q * R == A
+    @test size(Q) == (4, 4)
+    @test size(R) == (4, 3)
+    @test Q == I
     @test Q isa Eye
+    @test R == Eye(4, 3)
+    @test R isa Eye
 
     A = Eye(3)
-    L, Q = @constinferred lq_compact(A)
-    @test L * Q == A
-    @test L === A
+    Q, R = @constinferred qr_full(A)
+    @test Q * R == A
     @test Q === A
+    @test R === A
+
+    A = Eye(4, 3)
+    Q, R = @constinferred left_polar(A)
+    @test Q * R == A
+    @test size(Q) == (4, 3)
+    @test size(R) == (3, 3)
+    @test Q == Matrix(I, (4, 3))
+    @test Q isa Eye
+    @test R == I
+    @test R isa Eye
+
+    A = Eye(3)
+    Q, R = @constinferred left_polar(A)
+    @test Q * R == A
+    @test Q === A
+    @test R === A
+
+    for f in (lq_compact, right_orth)
+        A = Eye(3, 4)
+        L, Q = @constinferred lq_compact(A)
+        @test L * Q == A
+        @test size(L) == (3, 3)
+        @test size(Q) == (3, 4)
+        @test L == I
+        @test L isa Eye
+        @test Q == Matrix(I, (3, 4))
+        @test Q isa Eye
+
+        A = Eye(3)
+        L, Q = @constinferred lq_compact(A)
+        @test L * Q == A
+        @test L === A
+        @test Q === A
+    end
 
     A = Eye(3, 4)
     L, Q = @constinferred lq_full(A)
@@ -291,21 +285,21 @@ end
     @test L === A
     @test Q === A
 
-    # A = Eye(3, 4)
-    # L, Q = @constinferred right_polar(A)
-    # @test L * Q == A
-    # @test size(L) == (3, 3)
-    # @test size(Q) == (3, 4)
-    # @test L == I
-    # @test L isa Eye
-    # @test Q == Matrix(I, (3, 4))
-    # @test Q isa Eye
+    A = Eye(3, 4)
+    L, Q = @constinferred right_polar(A)
+    @test L * Q == A
+    @test size(L) == (3, 3)
+    @test size(Q) == (3, 4)
+    @test L == I
+    @test L isa Eye
+    @test Q == Matrix(I, (3, 4))
+    @test Q isa Eye
 
-    # A = Eye(3)
-    # L, Q = @constinferred right_polar(A)
-    # @test L * Q == A
-    # @test L === A
-    # @test Q === A
+    A = Eye(3)
+    L, Q = @constinferred right_polar(A)
+    @test L * Q == A
+    @test L === A
+    @test Q === A
 
     A = Eye(3, 4)
     U, S, V = @constinferred svd_compact(A)

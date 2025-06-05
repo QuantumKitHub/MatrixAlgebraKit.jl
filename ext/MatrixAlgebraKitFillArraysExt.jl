@@ -179,7 +179,7 @@ end
 function MatrixAlgebraKit.left_polar!(A::AbstractZerosMatrix, F, alg::ZerosAlgorithm)
     check_input(left_polar!, A, F)
     U, S, Vᴴ = svd_compact(A)
-    return (Eye((axes(U, 1), axes(Vᴴ, 2))), Vᴴ' * S * Vᴴ)
+    return (Eye((axes(A, 1), axes(A, 2))), Vᴴ' * S * Vᴴ)
 end
 
 function MatrixAlgebraKit.check_input(::typeof(right_polar!), A::AbstractZerosMatrix, F)
@@ -368,6 +368,34 @@ end
 
 function MatrixAlgebraKit.svd_vals!(A::Eye, F, alg::EyeAlgorithm)
     return diagview(A)
+end
+
+function MatrixAlgebraKit.check_input(::typeof(left_polar!), A::Eye, F)
+    m, n = size(A)
+    m >= n ||
+        throw(ArgumentError("input matrix needs at least as many rows as columns"))
+    return nothing
+end
+function MatrixAlgebraKit.left_polar!(A::Eye, F, alg::EyeAlgorithm)
+    check_input(left_polar!, A, F)
+    return (Eye((axes(A, 1), axes(A, 2))), Eye((axes(A, 2), axes(A, 2))))
+end
+function MatrixAlgebraKit.left_polar!(A::SquareEye, F, alg::EyeAlgorithm)
+    return (A, A)
+end
+
+function MatrixAlgebraKit.check_input(::typeof(right_polar!), A::Eye, F)
+    m, n = size(A)
+    n >= m ||
+        throw(ArgumentError("input matrix needs at least as many columns as rows"))
+    return nothing
+end
+function MatrixAlgebraKit.right_polar!(A::Eye, F, alg::EyeAlgorithm)
+    check_input(right_polar!, A, F)
+    return (Eye((axes(A, 1), axes(A, 1))), Eye((axes(A, 1), axes(A, 2))))
+end
+function MatrixAlgebraKit.right_polar!(A::SquareEye, F, alg::EyeAlgorithm)
+    return (A, A)
 end
 
 end
