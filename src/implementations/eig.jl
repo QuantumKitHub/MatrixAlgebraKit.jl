@@ -4,7 +4,7 @@ function copy_input(::typeof(eig_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
 function copy_input(::typeof(eig_vals), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
+    return copy_input(eig_full, A)
 end
 copy_input(::typeof(eig_trunc), A) = copy_input(eig_full, A)
 
