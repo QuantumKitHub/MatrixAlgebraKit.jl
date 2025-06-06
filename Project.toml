@@ -8,14 +8,17 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [weakdeps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
 
 [extensions]
 MatrixAlgebraKitChainRulesCoreExt = "ChainRulesCore"
+MatrixAlgebraKitFillArraysExt = "FillArrays"
 
 [compat]
 Aqua = "0.6, 0.7, 0.8"
 ChainRulesCore = "1"
 ChainRulesTestUtils = "1"
+FillArrays = "1"
 JET = "0.9"
 LinearAlgebra = "1"
 SafeTestsets = "0.1"
@@ -36,5 +39,4 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore",
-        "ChainRulesTestUtils", "StableRNGs", "Zygote"]
+test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote"]
