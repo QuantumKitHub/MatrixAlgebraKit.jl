@@ -8,7 +8,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview
 @testset "svd_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
-    @testset "size ($m, $n)" for n in (37, m, 63)
+    @testset "size ($m, $n)" for n in (37, m, 63, 0)
         k = min(m, n)
         if LinearAlgebra.LAPACK.version() < v"3.12.0"
             algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
@@ -57,7 +57,7 @@ end
 @testset "svd_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
-    @testset "size ($m, $n)" for n in (37, m, 63)
+    @testset "size ($m, $n)" for n in (37, m, 63, 0)
         @testset "algorithm $alg" for alg in
                                       (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
             A = randn(rng, T, m, n)
