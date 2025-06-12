@@ -40,6 +40,7 @@ include("common/pullbacks.jl")
 include("common/safemethods.jl")
 include("common/view.jl")
 include("common/regularinv.jl")
+include("common/matrixproperties.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
