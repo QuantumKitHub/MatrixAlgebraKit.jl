@@ -74,6 +74,12 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     fill!(S, zero(eltype(S)))
     m, n = size(A)
     minmn = min(m, n)
+    if minmn == 0
+        one!(U)
+        zero!(S)
+        one!(Vᴴ)
+        return USVᴴ
+    end
     if alg isa LAPACK_QRIteration
         isempty(alg.kwargs) ||
             throw(ArgumentError("LAPACK_QRIteration does not accept any keyword arguments"))
