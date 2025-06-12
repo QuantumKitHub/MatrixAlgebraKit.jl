@@ -24,7 +24,7 @@ using MatrixAlgebraKit: PolarViaSVD
             @test W isa Matrix{T} && size(W) == (m, n)
             @test P isa Matrix{T} && size(P) == (n, n)
             @test W * P ≈ A
-            @test W' * W ≈ I
+            @test isisometry(W)
             @test isposdef(P)
 
             Ac = similar(A)
@@ -32,7 +32,7 @@ using MatrixAlgebraKit: PolarViaSVD
             @test W2 === W
             @test P2 === P
             @test W * P ≈ A
-            @test W' * W ≈ I
+            @test isisometry(W)
             @test isposdef(P)
         end
     end
@@ -52,7 +52,7 @@ end
             @test Wᴴ isa Matrix{T} && size(Wᴴ) == (m, n)
             @test P isa Matrix{T} && size(P) == (m, m)
             @test P * Wᴴ ≈ A
-            @test Wᴴ * Wᴴ' ≈ I
+            @test isisometry(Wᴴ')
             @test isposdef(P)
 
             Ac = similar(A)
@@ -60,7 +60,7 @@ end
             @test P2 === P
             @test Wᴴ2 === Wᴴ
             @test P * Wᴴ ≈ A
-            @test Wᴴ * Wᴴ' ≈ I
+            @test isisometry(Wᴴ')
             @test isposdef(P)
         end
     end

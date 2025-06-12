@@ -14,11 +14,11 @@ using LinearAlgebra: diag, I
         @test L isa Matrix{T} && size(L) == (m, minmn)
         @test Q isa Matrix{T} && size(Q) == (minmn, n)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q')
         Nᴴ = @constinferred lq_null(A)
         @test Nᴴ isa Matrix{T} && size(Nᴴ) == (n - minmn, n)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
-        @test Nᴴ * Nᴴ' ≈ I
+        @test isisometry(Nᴴ')
 
         Ac = similar(A)
         L2, Q2 = @constinferred lq_compact!(copy!(Ac, A), (L, Q))
@@ -35,12 +35,12 @@ using LinearAlgebra: diag, I
         # unblocked algorithm
         lq_compact!(copy!(Ac, A), (L, Q); blocksize=1)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q')
         lq_compact!(copy!(Ac, A), (noL, Q2); blocksize=1)
         @test Q == Q2
         lq_null!(copy!(Ac, A), Nᴴ; blocksize=1)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
-        @test Nᴴ * Nᴴ' ≈ I
+        @test isisometry(Nᴴ')
         if m <= n
             lq_compact!(copy!(Q2, A), (noL, Q2); blocksize=1) # in-place Q
             @test Q ≈ Q2
@@ -50,25 +50,25 @@ using LinearAlgebra: diag, I
         end
         lq_compact!(copy!(Ac, A), (L, Q); blocksize=8)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q')
         lq_compact!(copy!(Ac, A), (noL, Q2); blocksize=8)
         @test Q == Q2
         lq_null!(copy!(Ac, A), Nᴴ; blocksize=8)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
-        @test Nᴴ * Nᴴ' ≈ I
+        @test isisometry(Nᴴ')
         # pivoted
         @test_throws ArgumentError lq_compact!(copy!(Ac, A), (L, Q); pivoted=true)
         # positive
         lq_compact!(copy!(Ac, A), (L, Q); positive=true)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q')
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_compact!(copy!(Ac, A), (noL, Q2); positive=true)
         @test Q == Q2
         # positive and blocksize 1
         lq_compact!(copy!(Ac, A), (L, Q); positive=true, blocksize=1)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q')
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_compact!(copy!(Ac, A), (noL, Q2); positive=true, blocksize=1)
         @test Q == Q2
@@ -85,14 +85,14 @@ end
         @test L isa Matrix{T} && size(L) == (m, n)
         @test Q isa Matrix{T} && size(Q) == (n, n)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q) && isisometry(Q')
 
         Ac = similar(A)
         L2, Q2 = @constinferred lq_full!(copy!(Ac, A), (L, Q))
         @test L2 === L
         @test Q2 === Q
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q) && isisometry(Q')
 
         noL = similar(A, 0, n)
         Q2 = similar(Q)
@@ -102,7 +102,7 @@ end
         # unblocked algorithm
         lq_full!(copy!(Ac, A), (L, Q); blocksize=1)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q) && isisometry(Q')
         lq_full!(copy!(Ac, A), (noL, Q2); blocksize=1)
         @test Q == Q2
         if n == m
@@ -112,7 +112,7 @@ end
         # # other blocking
         lq_full!(copy!(Ac, A), (L, Q); blocksize=18)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q) && isisometry(Q')
         lq_full!(copy!(Ac, A), (noL, Q2); blocksize=18)
         @test Q == Q2
         # pivoted
@@ -120,14 +120,14 @@ end
         # positive
         lq_full!(copy!(Ac, A), (L, Q); positive=true)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q) && isisometry(Q')
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_full!(copy!(Ac, A), (noL, Q2); positive=true)
         @test Q == Q2
         # positive and blocksize 1
         lq_full!(copy!(Ac, A), (L, Q); positive=true, blocksize=1)
         @test L * Q ≈ A
-        @test Q * Q' ≈ I
+        @test isisometry(Q) && isisometry(Q')
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_full!(copy!(Ac, A), (noL, Q2); positive=true, blocksize=1)
         @test Q == Q2

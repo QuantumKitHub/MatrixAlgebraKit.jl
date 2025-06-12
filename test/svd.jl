@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef
-using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview
+using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview, isisometry
 
 @testset "svd_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
@@ -32,8 +32,8 @@ using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview
             @test S isa Diagonal{real(T)} && size(S) == (minmn, minmn)
             @test Vᴴ isa Matrix{T} && size(Vᴴ) == (minmn, n)
             @test U * S * Vᴴ ≈ A
-            @test U' * U ≈ I
-            @test Vᴴ * Vᴴ' ≈ I
+            @test isisometry(U)
+            @test isisometry(Vᴴ')
             @test isposdef(S)
 
             Ac = similar(A)
@@ -44,8 +44,8 @@ using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview
             @test S2 === S
             @test V2ᴴ === Vᴴ
             @test U * S * Vᴴ ≈ A
-            @test U' * U ≈ I
-            @test Vᴴ * Vᴴ' ≈ I
+            @test isisometry(U)
+            @test isisometry(Vᴴ')
             @test isposdef(S)
 
             Sd = @constinferred svd_vals(A, alg′)
@@ -66,8 +66,8 @@ end
             @test S isa Matrix{real(T)} && size(S) == (m, n)
             @test Vᴴ isa Matrix{T} && size(Vᴴ) == (n, n)
             @test U * S * Vᴴ ≈ A
-            @test U' * U ≈ I
-            @test Vᴴ * Vᴴ' ≈ I
+            @test isisometry(U) && isisometry(U')
+            @test isisometry(Vᴴ) && isisometry(Vᴴ')
             @test all(isposdef, diagview(S))
 
             Ac = similar(A)
@@ -76,9 +76,8 @@ end
             @test S2 === S
             @test V2ᴴ === Vᴴ
             @test U * S * Vᴴ ≈ A
-            @test U' * U ≈ I
-            @test Vᴴ * Vᴴ' ≈ I
-            @test Vᴴ' * Vᴴ ≈ I
+            @test isisometry(U) && isisometry(U')
+            @test isisometry(Vᴴ) && isisometry(Vᴴ')
             @test all(isposdef, diagview(S))
 
             Sc = similar(A, real(T), min(m, n))
