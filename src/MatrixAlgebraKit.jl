@@ -9,7 +9,7 @@ using LinearAlgebra: Diagonal, diag, diagind
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!, tril!, rdiv!, ldiv!
 
-export isisometry
+export isisometry, isunitary
 
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
