@@ -52,7 +52,7 @@ end
             @test Wᴴ isa Matrix{T} && size(Wᴴ) == (m, n)
             @test P isa Matrix{T} && size(P) == (m, m)
             @test P * Wᴴ ≈ A
-            @test isisometry(Wᴴ; kind=:right)
+            @test isisometry(Wᴴ; side=:right)
             @test isposdef(P)
 
             Ac = similar(A)
@@ -60,7 +60,7 @@ end
             @test P2 === P
             @test Wᴴ2 === Wᴴ
             @test P * Wᴴ ≈ A
-            @test isisometry(Wᴴ; kind=:right)
+            @test isisometry(Wᴴ; side=:right)
             @test isposdef(P)
         end
     end

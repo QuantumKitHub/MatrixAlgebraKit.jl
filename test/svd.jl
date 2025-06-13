@@ -33,7 +33,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview, isiso
             @test Vᴴ isa Matrix{T} && size(Vᴴ) == (minmn, n)
             @test U * S * Vᴴ ≈ A
             @test isisometry(U)
-            @test isisometry(Vᴴ; kind=:right)
+            @test isisometry(Vᴴ; side=:right)
             @test isposdef(S)
 
             Ac = similar(A)
@@ -45,7 +45,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview, isiso
             @test V2ᴴ === Vᴴ
             @test U * S * Vᴴ ≈ A
             @test isisometry(U)
-            @test isisometry(Vᴴ; kind=:right)
+            @test isisometry(Vᴴ; side=:right)
             @test isposdef(S)
 
             Sd = @constinferred svd_vals(A, alg′)

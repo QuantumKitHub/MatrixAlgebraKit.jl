@@ -1,10 +1,10 @@
 """
-    isisometry(A; kind=:left, isapprox_kwargs...) -> Bool
+    isisometry(A; side=:left, isapprox_kwargs...) -> Bool
 
 Test whether a linear map is an isometry, where the type of isometry is controlled by `kind`:
 
-- `kind = :left` : `A' * A ≈ I`. 
-- `kind = :right` : `A * A` ≈ I`.
+- `side = :left` : `A' * A ≈ I`. 
+- `side = :right` : `A * A` ≈ I`.
 
 The `isapprox_kwargs` are passed on to `isapprox` to control the tolerances.
 
@@ -12,11 +12,11 @@ New specializations should overload [`is_left_isometry`](@ref) and [`is_right_is
 
 See also [`isunitary`](@ref).
 """
-function isisometry(A; kind::Symbol=:left, isapprox_kwargs...)
-    kind === :left && return is_left_isometry(A; isapprox_kwargs...)
-    kind === :right && return is_right_isometry(A; isapprox_kwargs...)
+function isisometry(A; side::Symbol=:left, isapprox_kwargs...)
+    side === :left && return is_left_isometry(A; isapprox_kwargs...)
+    side === :right && return is_right_isometry(A; isapprox_kwargs...)
 
-    throw(ArgumentError(lazy"Invalid isometry kind: $kind"))
+    throw(ArgumentError(lazy"Invalid isometry side: $side"))
 end
 
 """
