@@ -17,7 +17,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
         D, V = @constinferred eigh_full(A; alg)
         @test A * V ≈ V * D
-        @test isisometry(V) && isisometry(V')
+        @test isunitary(V)
         @test all(isreal, D)
 
         D2, V2 = eigh_full!(copy(A), (D, V), alg)
