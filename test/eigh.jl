@@ -17,8 +17,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
         D, V = @constinferred eigh_full(A; alg)
         @test A * V ≈ V * D
-        @test V' * V ≈ I
-        @test V * V' ≈ I
+        @test isunitary(V)
         @test all(isreal, D)
 
         D2, V2 = eigh_full!(copy(A), (D, V), alg)
@@ -47,14 +46,14 @@ end
 
         D1, V1 = @constinferred eigh_trunc(A; alg, trunc=truncrank(r))
         @test length(diagview(D1)) == r
-        @test V1' * V1 ≈ I
+        @test isisometry(V1)
         @test A * V1 ≈ V1 * D1
         @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
 
         trunc = trunctol(s * D₀[r + 1])
         D2, V2 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
-        @test V2' * V2 ≈ I
+        @test isisometry(V2)
         @test A * V2 ≈ V2 * D2
 
         # test for same subspace

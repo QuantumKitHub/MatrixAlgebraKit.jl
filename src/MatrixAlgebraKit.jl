@@ -9,6 +9,8 @@ using LinearAlgebra: Diagonal, diag, diagind
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!, tril!, rdiv!, ldiv!
 
+export isisometry, isunitary
+
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
 export svd_compact, svd_full, svd_vals, svd_trunc
@@ -40,6 +42,7 @@ include("common/pullbacks.jl")
 include("common/safemethods.jl")
 include("common/view.jl")
 include("common/regularinv.jl")
+include("common/matrixproperties.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")

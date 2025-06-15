@@ -14,7 +14,7 @@ using LinearAlgebra: I
         TA, Z, vals = @constinferred schur_full(A; alg)
         @test eltype(TA) == eltype(Z) == T
         @test eltype(vals) == Tc
-        @test Z' * Z ≈ I
+        @test isisometry(Z)
         @test A * Z ≈ Z * TA
 
         Ac = similar(A)

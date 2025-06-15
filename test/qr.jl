@@ -17,9 +17,9 @@ using LinearAlgebra: diag, I
         @test Q * R ≈ A
         N = @constinferred qr_null(A)
         @test N isa Matrix{T} && size(N) == (m, m - minmn)
-        @test Q' * Q ≈ I
+        @test isisometry(Q)
         @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
-        @test N' * N ≈ I
+        @test isisometry(N)
 
         Ac = similar(A)
         Q2, R2 = @constinferred qr_compact!(copy!(Ac, A), (Q, R))
@@ -36,13 +36,13 @@ using LinearAlgebra: diag, I
         # unblocked algorithm
         qr_compact!(copy!(Ac, A), (Q, R); blocksize=1)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isisometry(Q)
         qr_compact!(copy!(Ac, A), (Q2, noR); blocksize=1)
         @test Q == Q2
         qr_compact!(copy!(Ac, A), (Q2, noR); blocksize=1)
         qr_null!(copy!(Ac, A), N; blocksize=1)
         @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
-        @test N' * N ≈ I
+        @test isisometry(N)
         if n <= m
             qr_compact!(copy!(Q2, A), (Q2, noR); blocksize=1) # in-place Q
             @test Q ≈ Q2
@@ -53,12 +53,12 @@ using LinearAlgebra: diag, I
         # other blocking
         qr_compact!(copy!(Ac, A), (Q, R); blocksize=8)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isisometry(Q)
         qr_compact!(copy!(Ac, A), (Q2, noR); blocksize=8)
         @test Q == Q2
         qr_null!(copy!(Ac, A), N; blocksize=8)
         @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
-        @test N' * N ≈ I
+        @test isisometry(N)
 
         # pivoted
         qr_compact!(copy!(Ac, A), (Q, R); pivoted=true)
@@ -69,21 +69,21 @@ using LinearAlgebra: diag, I
         # positive
         qr_compact!(copy!(Ac, A), (Q, R); positive=true)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isisometry(Q)
         @test all(>=(zero(real(T))), real(diag(R)))
         qr_compact!(copy!(Ac, A), (Q2, noR); positive=true)
         @test Q == Q2
         # positive and blocksize 1
         qr_compact!(copy!(Ac, A), (Q, R); positive=true, blocksize=1)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isisometry(Q)
         @test all(>=(zero(real(T))), real(diag(R)))
         qr_compact!(copy!(Ac, A), (Q2, noR); positive=true, blocksize=1)
         @test Q == Q2
         # positive and pivoted
         qr_compact!(copy!(Ac, A), (Q, R); positive=true, pivoted=true)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isisometry(Q)
         if n <= m
             # the following test tries to find the diagonal element (in order to test positivity)
             # before the column permutation. This only works if all columns have a diagonal
@@ -117,14 +117,14 @@ end
         @test Q2 === Q
         @test R2 === R
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isunitary(Q)
         qr_full!(copy!(Ac, A), (Q2, noR))
         @test Q == Q2
 
         # unblocked algorithm
         qr_full!(copy!(Ac, A), (Q, R); blocksize=1)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isunitary(Q)
         qr_full!(copy!(Ac, A), (Q2, noR); blocksize=1)
         @test Q == Q2
         if n == m
@@ -134,33 +134,33 @@ end
         # other blocking
         qr_full!(copy!(Ac, A), (Q, R); blocksize=8)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isunitary(Q)
         qr_full!(copy!(Ac, A), (Q2, noR); blocksize=8)
         @test Q == Q2
         # pivoted
         qr_full!(copy!(Ac, A), (Q, R); pivoted=true)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isunitary(Q)
         qr_full!(copy!(Ac, A), (Q2, noR); pivoted=true)
         @test Q == Q2
         # positive
         qr_full!(copy!(Ac, A), (Q, R); positive=true)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isunitary(Q)
         @test all(>=(zero(real(T))), real(diag(R)))
         qr_full!(copy!(Ac, A), (Q2, noR); positive=true)
         @test Q == Q2
         # positive and blocksize 1
         qr_full!(copy!(Ac, A), (Q, R); positive=true, blocksize=1)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isunitary(Q)
         @test all(>=(zero(real(T))), real(diag(R)))
         qr_full!(copy!(Ac, A), (Q2, noR); positive=true, blocksize=1)
         @test Q == Q2
         # positive and pivoted
         qr_full!(copy!(Ac, A), (Q, R); positive=true, pivoted=true)
         @test Q * R ≈ A
-        @test Q' * Q ≈ I
+        @test isunitary(Q)
         if n <= m
             # the following test tries to find the diagonal element (in order to test positivity)
             # before the column permutation. This only works if all columns have a diagonal
