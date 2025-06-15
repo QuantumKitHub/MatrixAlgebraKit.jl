@@ -4,7 +4,7 @@
 Test whether a linear map is an isometry, where the type of isometry is controlled by `kind`:
 
 - `side = :left` : `A' * A ≈ I`. 
-- `side = :right` : `A * A` ≈ I`.
+- `side = :right` : `A * A' ≈ I`.
 
 The `isapprox_kwargs` are passed on to `isapprox` to control the tolerances.
 
