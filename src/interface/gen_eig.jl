@@ -40,7 +40,7 @@ and the diagonal matrix `W` contains the associated generalized eigenvalues.
 
 See also [`gen_eig_vals(!)`](@ref eig_vals).
 """
-@functiondef gen_eig_full
+@functiondef n_args=2 gen_eig_full
 
 """
     gen_eig_vals(A, B; kwargs...) -> W
@@ -61,7 +61,7 @@ Compute the list of generalized eigenvalues of `A` and `B`.
 
 See also [`gen_eig_full(!)`](@ref gen_eig_full).
 """
-@functiondef gen_eig_vals
+@functiondef n_args=2 gen_eig_vals
 
 # Algorithm selection
 # -------------------

@@ -158,10 +158,10 @@ macro algdef(name)
 end
 
 """
-    @functiondef f
+    @functiondef [n_args=1] f
 
 Convenience macro to define the boilerplate code that dispatches between several versions of `f` and `f!`.
-By default, this enables the following signatures to be defined in terms of
+By default, `f` accepts a single argument `A`.  This enables the following signatures to be defined in terms of
 the final `f!(A, out, alg::Algorithm)`.
 
 ```julia
@@ -171,18 +171,54 @@ the final `f!(A, out, alg::Algorithm)`.
     f!(A, alg::Algorithm)
 ```
 
+The number of inputs can be set with the `n_args` keyword
+argument, so that 
+
+```julia
+@functiondef n_args=2 f
+```
+
+would create 
+
+```julia
+    f(A, B; kwargs...)
+    f(A, B, alg::Algorithm)
+    f!(A, B, [out]; kwargs...)
+    f!(A, B, alg::Algorithm)
+```
+
 See also [`copy_input`](@ref), [`select_algorithm`](@ref) and [`initialize_output`](@ref).
 """
-macro functiondef(f)
+macro functiondef(args...)
+    kwargs = map(args[1:end-1]) do kwarg
+        if kwarg isa Symbol
+            :($kwarg = $kwarg)
+        elseif Meta.isexpr(kwarg, :(=))
+            kwarg
+        else
+            throw(ArgumentError("Invalid keyword argument '$kwarg'"))
+        end
+    end
+    isempty(kwargs) || length(kwargs) == 1 || throw(ArgumentError("Only one keyword argument to `@functiondef` is supported"))
+    f_n_args = 1 # default
+    if length(kwargs) == 1
+        kwarg = only(kwargs) # only one kwarg is currently supported, TODO modify if we support more
+        key::Symbol, val = kwarg.args
+        key === :n_args || throw(ArgumentError("Unsupported keyword argument $key to `@functiondef`"))
+        (isa(val, Integer) && val > 0) || throw(ArgumentError("`n_args` keyword argument to `@functiondef` should be an integer > 0"))
+        f_n_args = val
+    end
+
+    f = args[end]
     f isa Symbol || throw(ArgumentError("Unsupported usage of `@functiondef`"))
     f! = Symbol(f, :!)
 
-    ex = quote
+    # TODO is the right way?
+    @gensym A B
+    ex_single_arg = quote
         # out of place to inplace
         $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
         $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
-        $f(A, B; kwargs...) = $f!(copy_input($f, A, B)...; kwargs...)
-        $f(A, B, alg::AbstractAlgorithm) = $f!(copy_input($f, A, B)..., alg)
 
         # fill in arguments
         function $f!(A; alg=nothing, kwargs...)
@@ -190,12 +226,6 @@ macro functiondef(f)
         end
         function $f!(A, out; alg=nothing, kwargs...)
             return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
-        end
-        function $f!(A, B, out; alg=nothing, kwargs...)
-            return $f!(A, B, out, select_algorithm($f!, (A, B), alg; kwargs...))
-        end
-        function $f!(A, B, alg::AbstractAlgorithm)
-            return $f!(A, B, initialize_output($f!, A, B, alg), alg)
         end
         function $f!(A, alg::AbstractAlgorithm)
             return $f!(A, initialize_output($f!, A, alg), alg)
@@ -210,9 +240,6 @@ macro functiondef(f)
         @inline function default_algorithm(::typeof($f), A; kwargs...)
             return default_algorithm($f!, A; kwargs...)
         end
-        @inline function default_algorithm(::typeof($f), A, B; kwargs...)
-            return default_algorithm($f!, A, B; kwargs...)
-        end
         # define default algorithm fallbacks for out-of-place functions
         # in terms of the corresponding in-place function for types,
         # in principle this is covered by the definition above but
@@ -226,6 +253,45 @@ macro functiondef(f)
         @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_algorithm($f!, A; kwargs...)
         end
+
+        # copy documentation to both functions
+        Core.@__doc__ $f, $f!
+    end
+    ex_double_arg = quote
+        # out of place to inplace
+        $f(A, B; kwargs...) = $f!(copy_input($f, A, B)...; kwargs...)
+        $f(A, B, alg::AbstractAlgorithm) = $f!(copy_input($f, A, B)..., alg)
+
+        # fill in arguments
+        function $f!(A, B; alg=nothing, kwargs...)
+            return $f!(A, B, select_algorithm($f!, (A, B), alg; kwargs...))
+        end
+        function $f!(A, B, out; alg=nothing, kwargs...)
+            return $f!(A, B, out, select_algorithm($f!, (A, B), alg; kwargs...))
+        end
+        function $f!(A, B, alg::AbstractAlgorithm)
+            return $f!(A, B, initialize_output($f!, A, B, alg), alg)
+        end
+
+        # define fallbacks for algorithm selection
+        @inline function select_algorithm(::typeof($f), A, alg::Alg; kwargs...) where {Alg}
+            return select_algorithm($f!, A, alg; kwargs...)
+        end
+        # define default algorithm fallbacks for out-of-place functions
+        # in terms of the corresponding in-place function
+        @inline function default_algorithm(::typeof($f), A, B; kwargs...)
+            return default_algorithm($f!, A, B; kwargs...)
+        end
+        # define default algorithm fallbacks for out-of-place functions
+        # in terms of the corresponding in-place function for types,
+        # in principle this is covered by the definition above but
+        # it is necessary to avoid ambiguity errors with the generic definitions:
+        # ```julia
+        # default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
+        # function default_algorithm(f::F, ::Type{T}; kwargs...) where {F,T}
+        #     throw(MethodError(default_algorithm, (f, T)))
+        # end
+        # ```
         @inline function default_algorithm(::typeof($f), ::Type{A}, ::Type{B}; kwargs...) where {A, B}
             return default_algorithm($f!, A, B; kwargs...)
         end
@@ -233,7 +299,11 @@ macro functiondef(f)
         # copy documentation to both functions
         Core.@__doc__ $f, $f!
     end
-    return esc(ex)
+    if f_n_args == 1
+        return esc(ex_single_arg)
+    elseif f_n_args == 2
+        return esc(ex_double_arg)
+    end
 end
 
 """
