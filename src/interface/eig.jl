@@ -35,21 +35,6 @@ and the diagonal matrix `D` contains the associated eigenvalues.
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `DV` as output.
     
-    eig_full(A, B; kwargs...) -> W, V
-    eig_full(A, B, alg::AbstractAlgorithm) -> W, V
-    eig_full!(A, B, [WV]; kwargs...) -> W, V
-    eig_full!(A, B, [WV], alg::AbstractAlgorithm) -> W, V
-
-Compute the full generalized eigenvalue decomposition of the square matrices `A` and `B`,
-such that `A * V = B * V * W`, where the invertible matrix `V` contains the generalized eigenvectors
-and the diagonal matrix `W` contains the associated generalized eigenvalues.
-
-!!! note
-    The bang method `eig_full!` optionally accepts the output structure and
-    possibly destroys the input matrices `A` and `B`.
-    Always use the return value of the function as it may not always be
-    possible to use the provided `WV` as output.
-
 !!! note
     $(docs_eig_note)
 
@@ -87,13 +72,6 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_vals(!)`](@ref eig_vals).
     eig_vals!(A, [D], alg::AbstractAlgorithm) -> D
 
 Compute the list of eigenvalues of `A`.
-    
-    eig_vals(A, B; kwargs...) -> W
-    eig_vals(A, B, alg::AbstractAlgorithm) -> W
-    eig_vals!(A, B, [W]; kwargs...) -> W 
-    eig_vals!(A, B, [W], alg::AbstractAlgorithm) -> W
-
-Compute the list of generalized eigenvalues of `A` and `B`.
 
 !!! note
     The bang method `eig_vals!` optionally accepts the output structure and
@@ -115,16 +93,10 @@ default_eig_algorithm(T::Type; kwargs...) = throw(MethodError(default_eig_algori
 function default_eig_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
     return LAPACK_Expert(; kwargs...)
 end
-function default_eig_algorithm(::Type{TA}, ::Type{TB}; kwargs...) where {TA<:YALAPACK.BlasMat,TB<:YALAPACK.BlasMat}
-    return LAPACK_Simple(; kwargs...)
-end
 
 for f in (:eig_full!, :eig_vals!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
         return default_eig_algorithm(A; kwargs...)
-    end
-    @eval function default_algorithm(::typeof($f), ::Type{A}, ::Type{B}; kwargs...) where {A, B}
-        return default_eig_algorithm(A, B; kwargs...)
     end
 end
 
