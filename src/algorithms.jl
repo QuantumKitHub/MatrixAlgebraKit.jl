@@ -106,9 +106,13 @@ explicitly.
 New types should prefer to register their default algorithms in the type domain.
 """ default_algorithm
 default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
+default_algorithm(f::F, A, B; kwargs...) where {F} = default_algorithm(f, typeof(A), typeof(B); kwargs...)
 # avoid infinite recursion:
 function default_algorithm(f::F, ::Type{T}; kwargs...) where {F,T}
     throw(MethodError(default_algorithm, (f, T)))
+end
+function default_algorithm(f::F, ::Type{TA}, ::Type{TB}; kwargs...) where {F,TA,TB}
+    throw(MethodError(default_algorithm, (f, TA, TB)))
 end
 
 @doc """
@@ -177,6 +181,8 @@ macro functiondef(f)
         # out of place to inplace
         $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
         $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
+        $f(A, B; kwargs...) = $f!(copy_input($f, A, B)...; kwargs...)
+        $f(A, B, alg::AbstractAlgorithm) = $f!(copy_input($f, A, B)..., alg)
 
         # fill in arguments
         function $f!(A; alg=nothing, kwargs...)
@@ -184,6 +190,12 @@ macro functiondef(f)
         end
         function $f!(A, out; alg=nothing, kwargs...)
             return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
+        end
+        function $f!(A, B, out; alg=nothing, kwargs...)
+            return $f!(A, B, out, select_algorithm($f!, (A, B), alg; kwargs...))
+        end
+        function $f!(A, B, alg::AbstractAlgorithm)
+            return $f!(A, B, initialize_output($f!, A, B, alg), alg)
         end
         function $f!(A, alg::AbstractAlgorithm)
             return $f!(A, initialize_output($f!, A, alg), alg)
@@ -198,6 +210,9 @@ macro functiondef(f)
         @inline function default_algorithm(::typeof($f), A; kwargs...)
             return default_algorithm($f!, A; kwargs...)
         end
+        @inline function default_algorithm(::typeof($f), A, B; kwargs...)
+            return default_algorithm($f!, A, B; kwargs...)
+        end
         # define default algorithm fallbacks for out-of-place functions
         # in terms of the corresponding in-place function for types,
         # in principle this is covered by the definition above but
@@ -210,6 +225,9 @@ macro functiondef(f)
         # ```
         @inline function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
             return default_algorithm($f!, A; kwargs...)
+        end
+        @inline function default_algorithm(::typeof($f), ::Type{A}, ::Type{B}; kwargs...) where {A, B}
+            return default_algorithm($f!, A, B; kwargs...)
         end
 
         # copy documentation to both functions
