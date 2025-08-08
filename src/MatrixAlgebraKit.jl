@@ -19,6 +19,7 @@ export eigh_full, eigh_vals, eigh_trunc
 export eigh_full!, eigh_vals!, eigh_trunc!
 export eig_full, eig_vals, eig_trunc
 export eig_full!, eig_vals!, eig_trunc!
+export gen_eig, gen_eig!
 export gen_eig_full, gen_eig_vals
 export gen_eig_full!, gen_eig_vals!
 export schur_full, schur_vals
