@@ -2,7 +2,7 @@ using SafeTestsets
 
 # don't run all tests on GPU, only the GPU
 # specific ones
-is_buildkite = get(ENV, "BUILDKITE", false)
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 if !is_buildkite
     @safetestset "Algorithms" begin
         include("algorithms.jl")
