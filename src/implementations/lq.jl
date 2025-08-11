@@ -181,7 +181,7 @@ function lq_via_qr!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix,
                     qr_alg::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
-    At = adjoint!(similar(A'), A)
+    At = adjoint!(similar(A'), A)::AbstractMatrix
     Qt = (A === Q) ? At : similar(Q')
     Lt = similar(L')
     if size(Q) == (n, n)
@@ -197,7 +197,7 @@ end
 function lq_null_via_qr!(A::AbstractMatrix, N::AbstractMatrix, qr_alg::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
-    At = adjoint!(similar(A'), A)
+    At = adjoint!(similar(A'), A)::AbstractMatrix
     Nt = similar(N')
     Nt = qr_null!(At, Nt, qr_alg)
     !isempty(N) && adjoint!(N, Nt)
