@@ -66,6 +66,7 @@ function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::Truncat
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
+
 # Implementation
 # --------------
 function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
@@ -174,6 +175,7 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
+#YACUSOLVER.Xgesvdr!(A, view(S, 1:k, 1), U, Vᴴ; alg.kwargs...)
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
     USVᴴ′ = svd_compact!(A, USVᴴ, alg.alg)
     return truncate!(svd_trunc!, USVᴴ′, alg.trunc)
@@ -185,7 +187,8 @@ end
 ###
 const CUSOLVER_SVDAlgorithm = Union{CUSOLVER_QRIteration,
                                     CUSOLVER_SVDPolar,
-                                    CUSOLVER_Jacobi}
+                                    CUSOLVER_Jacobi,
+                                    CUSOLVER_Randomized}
 const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration,
                                      ROCSOLVER_Jacobi}
 const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
@@ -193,9 +196,11 @@ const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
 const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
+const GPU_Randomized = Union{CUSOLVER_Randomized}
 
 _gpu_gesvd!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix) = throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
 _gpu_Xgesvdp!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
+_gpu_Xgesvdr!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
 _gpu_gesvdj!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
 
 # GPU SVD implementation
