@@ -17,4 +17,18 @@ steps:
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 30
 
-# TODO add lts support
+steps:
+  - label: "Julia LTS"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: "lts"
+      - JuliaCI/julia-test#v1: ~
+      - JuliaCI/julia-coverage#v1:
+          dirs:
+            - src
+            - ext
+    agents:
+      queue: "juliagpu"
+      cuda: "*"
+    if: build.message !~ /\[skip tests\]/
+    timeout_in_minutes: 30
