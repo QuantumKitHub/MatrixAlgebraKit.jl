@@ -21,7 +21,7 @@ steps:
   - label: "Julia LTS"
     plugins:
       - JuliaCI/julia#v1:
-          version: "lts"
+          version: "1.10" # "lts" isn't valid
       - JuliaCI/julia-test#v1: ~
       - JuliaCI/julia-coverage#v1:
           dirs:
