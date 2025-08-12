@@ -29,8 +29,7 @@ function check_input(::typeof(gen_eig_vals!), A::AbstractMatrix, B::AbstractMatr
     mb, nb = size(B)
     ma == na || throw(DimensionMismatch("square input matrix A expected"))
     mb == nb || throw(DimensionMismatch("square input matrix B expected"))
-    ma == mb || throw(DimensionMismatch("first dimension of input matrices expected to match"))
-    na == nb || throw(DimensionMismatch("second dimension of input matrices expected to match"))
+    ma == mb || throw(DimensionMismatch("dimension of input matrices expected to match"))
     @assert W isa AbstractVector
     @check_size(W, (na,))
     @check_scalar(W, A, complex)
