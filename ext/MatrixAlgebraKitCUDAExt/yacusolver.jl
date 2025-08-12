@@ -260,7 +260,6 @@ function Xgesvdr!(A::StridedCuMatrix{T},
     minmn = min(m, n)
     jobu = length(U) == 0 ? 'N' : 'S'
     jobv = length(Vᴴ) == 0 ? 'N' : 'S'
-    k = min(size(S)...)
     R = eltype(S)
     k < minmn || throw(DimensionMismatch("length of S ($k) must be less than the smaller dimension of A ($minmn)"))
     k + p < minmn || throw(DimensionMismatch("length of S ($k) plus oversampling ($p) must be less than the smaller dimension of A ($minmn)"))
