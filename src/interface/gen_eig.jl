@@ -1,12 +1,3 @@
-# Gen Eig API
-# -------
-function gen_eig!(A::AbstractMatrix, B::AbstractMatrix, args...; kwargs...)
-    return gen_eig_full!(A, B, args...; kwargs...)
-end
-function gen_eig(A::AbstractMatrix, B::AbstractMatrix, args...; kwargs...)
-    return gen_eig_full(A, B, args...; kwargs...)
-end
-
 # Gen Eig functions
 # -------------
 

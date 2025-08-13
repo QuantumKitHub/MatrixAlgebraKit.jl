@@ -67,11 +67,7 @@ function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_Eig
         throw(ArgumentError("LAPACK_Expert is not supported for ggev"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:size(V, 2)
-        v = view(V, :, j)
-        s = conj(sign(argmax(abs, v)))
-        v .*= s
-    end
+    V = gaugefix(V)
     return W, V
 end
 

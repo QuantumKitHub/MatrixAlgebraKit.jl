@@ -61,11 +61,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
         YALAPACK.geevx!(A, D.diag, V; alg.kwargs...)
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:size(V, 2)
-        v = view(V, :, j)
-        s = conj(sign(argmax(abs, v)))
-        v .*= s
-    end
+    V = gaugefix(V)
     return D, V
 end
 
