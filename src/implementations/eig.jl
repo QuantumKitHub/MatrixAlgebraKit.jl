@@ -61,7 +61,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
         YALAPACK.geevx!(A, D.diag, V; alg.kwargs...)
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    V = gaugefix(V)
+    V = gaugefix!(V)
     return D, V
 end
 
