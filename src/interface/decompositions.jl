@@ -150,3 +150,32 @@ Algorithm type to denote the CUSOLVER driver for computing the singular value de
 a general matrix using the Jacobi algorithm.
 """
 @algdef CUSOLVER_Jacobi
+
+# =========================
+# ROCSOLVER ALGORITHMS
+# =========================
+"""
+    ROCSOLVER_HouseholderQR(; positive = false)
+
+Algorithm type to denote the standard ROCSOLVER algorithm for computing the QR decomposition of
+a matrix using Householder reflectors. The keyword `positive=true` can be used to ensure that
+the diagonal elements of `R` are non-negative.
+"""
+@algdef ROCSOLVER_HouseholderQR
+
+"""
+    ROCSOLVER_QRIteration()
+
+Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
+Hermitian matrix, or the singular value decomposition of a general matrix using the
+QR Iteration algorithm.
+"""
+@algdef ROCSOLVER_QRIteration
+
+"""
+    ROCSOLVER_Jacobi()
+
+Algorithm type to denote the ROCSOLVER driver for computing the singular value decomposition of
+a general matrix using the Jacobi algorithm.
+"""
+@algdef ROCSOLVER_Jacobi
