@@ -34,7 +34,7 @@ and the diagonal matrix `D` contains the associated eigenvalues.
     The bang method `eig_full!` optionally accepts the output structure and
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `DV` as output.
-    
+
 !!! note
     $(docs_eig_note)
 
@@ -75,9 +75,8 @@ Compute the list of eigenvalues of `A`.
 
 !!! note
     The bang method `eig_vals!` optionally accepts the output structure and
-    possibly destroys the input matrices `A` and `B`. Always use the return
-    value of the function as it may not always be possible to use the
-    provided `W` as output.
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `D` as output.
 
 !!! note
     $(docs_eig_note)
