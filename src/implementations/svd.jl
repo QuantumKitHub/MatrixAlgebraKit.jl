@@ -66,6 +66,7 @@ function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::Truncat
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
+
 # Implementation
 # --------------
 function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)

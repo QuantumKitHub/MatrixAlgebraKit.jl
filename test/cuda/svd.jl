@@ -76,10 +76,47 @@ end
             @test isapproxone(Vᴴ' * Vᴴ)
             @test all(isposdef, diagview(S))
 
-            Sc = similar(A, real(T), min(m, n))
+            minmn = min(m, n)
+            Sc = similar(A, real(T), minmn)
             Sc2 = svd_vals!(copy!(Ac, A), Sc, alg)
             @test Sc === Sc2
             @test CuArray(diagview(S)) ≈ Sc
+            # CuArray is necessary because norm of CuArray view with non-unit step is broken
+        end
+        k = min(m, n) - 20
+        p = min(m, n) - k - 1
+        algs = (CUSOLVER_Randomized(; k=k, p=p, niters=100),)
+        @testset "algorithm $alg" for alg in algs
+            A = CuArray(randn(rng, T, m, n))
+            Uref, Sref, Vᴴref = svd_full(A, CUSOLVER_SVDPolar())
+            U, S, Vᴴ = svd_full(A; alg)
+            @test U isa CuMatrix{T} && size(U) == (m, m)
+            @test S isa CuMatrix{real(T)} && size(S) == (m, n)
+            @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (n, n)
+            for col in 1:k
+                @test view(collect(U), :, col) ≈ view(collect(Uref), :, col)
+                @test view(collect(Vᴴ), col, :) ≈ view(collect(Vᴴref), col, :)
+            end
+            @test all(isposdef, view(diagview(S), 1:k))
+            @test view(CuArray(diagview(S)), 1:k) ≈ view(CuArray(diagview(Sref)), 1:k)
+
+            Ac = similar(A)
+            U2, S2, V2ᴴ = @constinferred svd_full!(copy!(Ac, A), (U, S, Vᴴ), alg)
+            @test U2 === U
+            @test S2 === S
+            @test V2ᴴ === Vᴴ 
+            for col in 1:k
+                @test view(collect(U), :, col) ≈ view(collect(Uref), :, col)
+                @test view(collect(Vᴴ), col, :) ≈ view(collect(Vᴴref), col, :)
+            end
+            @test all(isposdef, view(diagview(S), 1:k))
+            @test view(CuArray(diagview(S2)), 1:k) ≈ view(CuArray(diagview(Sref)), 1:k)
+
+            Sc = similar(A, real(T), k)
+            Sc2 = svd_vals!(copy!(Ac, A), Sc, alg)
+            @test Sc === Sc2 
+            @test view(Sc, 1:k) ≈ view(CuArray(diagview(Sref)), 1:k)
+            @test view(CuArray(diagview(S)), 1:k) ≈ Sc
             # CuArray is necessary because norm of CuArray view with non-unit step is broken
         end
     end
