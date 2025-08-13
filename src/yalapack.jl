@@ -1616,12 +1616,14 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
         end
         function ggev!(A::AbstractMatrix{$elty}, B::AbstractMatrix{$elty},
                        W::AbstractVector{$celty}=similar(A, $celty, size(A, 1)),
-                       V::AbstractMatrix{$celty}=similar(A, $celty))
+                       V::AbstractMatrix{$celty}=similar(A, $celty),
+                       Wbeta::AbstractVector{$elty}=similar(A, $elty, size(A, 1)))
             require_one_based_indexing(A, B, V, W)
             chkstride1(A, B, V, W)
             n = checksquare(A)
             n == checksquare(B) || throw(DimensionMismatch("size mismatch between A and B"))
             n == length(W) || throw(DimensionMismatch("length mismatch between A and W"))
+            n == length(Wbeta) || throw(DimensionMismatch("length mismatch between A and W_beta"))
             if length(V) == 0
                 jobvr = 'N'
             else
@@ -1638,7 +1640,6 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
             info = Ref{BlasInt}()
             VL = similar(A, n, 0)
             ldvl = stride(VL, 2)
-
             if eltype(A) <: Real
                 W2 = reinterpret($elty, W)
                 # reuse memory, we will have to reorder afterwards to bring real and imaginary
@@ -1649,15 +1650,15 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
                 ldvr = stride(VR, 2)
                 for i in 1:2  # first call returns lwork as work[1]
                     #! format: off
-                    ccall((@blasfunc($geev), libblastrampoline), Cvoid,
+                    ccall((@blasfunc($ggev), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8},
-                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$elty}, Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ptr{$elty}, Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                            Ptr{$elty}, Ref{BlasInt},
                            Ptr{BlasInt}, Clong, Clong),
                           jobvl, jobvr,
-                          n, A, lda,
-                          WR, WI, VL, ldvl, VR, ldvr,
+                          n, A, lda, B, ldb,
+                          WR, WI, Wbeta, VL, ldvl, VR, ldvr,
                           work, lwork,
                           info, 1, 1)
                     #! format: on
@@ -1668,20 +1669,20 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
                     end
                 end
             else
-                VR = V
-                ldvr = stride(VR, 2)
-                rwork = Vector{$relty}(undef, 2n)
+                VR    = V
+                ldvr  = stride(VR, 2)
+                rwork = Vector{$relty}(undef, 8*n)
                 for i in 1:2
                     #! format: off
-                    ccall((@blasfunc($geev), libblastrampoline), Cvoid,
+                    ccall((@blasfunc($ggev), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8},
-                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                            Ptr{$elty}, Ref{BlasInt}, Ptr{$relty},
                            Ptr{BlasInt}, Clong, Clong),
                           jobvl, jobvr,
-                          n, A, lda, 
-                          W, VL, ldvl, VR, ldvr,
+                          n, A, lda, B, ldb,
+                          W, Wbeta, VL, ldvl, VR, ldvr,
                           work, lwork, rwork,
                           info, 1, 1)
                     #! format: on
@@ -1695,7 +1696,11 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
 
             # Cleanup the output in the real case
             if eltype(A) <: Real
-                _reorder_realeigendecomposition!(W, WR, WI, work, VR, jobvr)
+                _reorder_realeigendecomposition!(W, WR, WI, Wbeta, work, VR, jobvr)
+            else
+                for i in 1:n
+                    W[i] /= Wbeta[i]
+                end
             end
             return W, V
         end
@@ -1709,6 +1714,37 @@ function _reorder_realeigendecomposition!(W, WR, WI, work, VR, jobvr)
     copy!(work, WI)
     for i in n:-1:1
         W[i] = WR[i] + im * work[i]
+    end
+    if jobvr == 'V' # also reorganise vectors
+        i = 1
+        while i <= n
+            if iszero(imag(W[i])) # real eigenvalue => real eigenvector
+                for j in n:-1:1
+                    VR[2 * j, i] = 0
+                    VR[2 * j - 1, i] = VR[j, i]
+                end
+                i += 1
+            else # complex eigenvalue => complex eigenvector and conjugate
+                @assert i != n
+                for j in n:-1:1
+                    VR[2 * j, i] = VR[j, i + 1]
+                    VR[2 * j - 1, i] = VR[j, i]
+                    VR[2 * j, i + 1] = -VR[j, i + 1]
+                    VR[2 * j - 1, i + 1] = VR[j, i]
+                end
+                i += 2
+            end
+        end
+    end
+end
+
+function _reorder_realeigendecomposition!(W, WR, WI, Wbeta, work, VR, jobvr)
+    # first reorder eigenvalues and recycle work as temporary buffer to efficiently implement the permutation
+    n = size(W, 1)
+    resize!(work, n)
+    copy!(work, WI)
+    for i in n:-1:1
+        W[i] = (WR[i] + im * work[i]) / Wbeta[i]
     end
     if jobvr == 'V' # also reorganise vectors
         i = 1

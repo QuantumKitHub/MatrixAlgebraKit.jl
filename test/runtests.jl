@@ -23,6 +23,9 @@ if !is_buildkite
     @safetestset "General Eigenvalue Decomposition" begin
         include("eig.jl")
     end
+    @safetestset "Generalized Eigenvalue Decomposition" begin
+        include("gen_eig.jl")
+    end
     @safetestset "Schur Decomposition" begin
         include("schur.jl")
     end

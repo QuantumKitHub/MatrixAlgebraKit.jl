@@ -1,13 +1,3 @@
-# Eig API
-# -------
-# TODO: export? or not export but mark as public ?
-function eig!(A::AbstractMatrix, args...; kwargs...)
-    return eig_full!(A, args...; kwargs...)
-end
-function eig(A::AbstractMatrix, args...; kwargs...)
-    return eig_full(A, args...; kwargs...)
-end
-
 # Eig functions
 # -------------
 

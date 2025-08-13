@@ -19,6 +19,8 @@ export eigh_full, eigh_vals, eigh_trunc
 export eigh_full!, eigh_vals!, eigh_trunc!
 export eig_full, eig_vals, eig_trunc
 export eig_full!, eig_vals!, eig_trunc!
+export gen_eig_full, gen_eig_vals
+export gen_eig_full!, gen_eig_vals!
 export schur_full, schur_vals
 export schur_full!, schur_vals!
 export left_polar, right_polar
@@ -45,6 +47,7 @@ include("common/safemethods.jl")
 include("common/view.jl")
 include("common/regularinv.jl")
 include("common/matrixproperties.jl")
+include("common/gauge.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
@@ -54,6 +57,7 @@ include("interface/lq.jl")
 include("interface/svd.jl")
 include("interface/eig.jl")
 include("interface/eigh.jl")
+include("interface/gen_eig.jl")
 include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
@@ -64,6 +68,7 @@ include("implementations/lq.jl")
 include("implementations/svd.jl")
 include("implementations/eig.jl")
 include("implementations/eigh.jl")
+include("implementations/gen_eig.jl")
 include("implementations/schur.jl")
 include("implementations/polar.jl")
 include("implementations/orthnull.jl")
