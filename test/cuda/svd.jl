@@ -6,7 +6,7 @@ using TestExtras
 using StableRNGs
 using CUDA
 
-include("utilities.jl")
+include(joinpath("..", "utilities.jl"))
 
 @testset "svd_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
