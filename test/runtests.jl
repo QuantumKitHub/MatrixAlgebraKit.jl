@@ -65,3 +65,15 @@ if CUDA.functional()
     end
 end
 
+using AMDGPU 
+if AMDGPU.functional()
+    @safetestset "AMDGPU QR" begin
+        include("amd/qr.jl")
+    end
+    @safetestset "AMDGPU LQ" begin
+        include("amd/lq.jl")
+    end
+    @safetestset "AMDGPU SVD" begin
+        include("amd/svd.jl")
+    end
+end
