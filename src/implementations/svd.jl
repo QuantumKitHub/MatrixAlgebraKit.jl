@@ -8,7 +8,7 @@ copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
 
 # TODO: many of these checks are happening again in the LAPACK routines
-function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ)
+function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ, ::AbstractAlgorithm)
     m, n = size(A)
     U, S, Vᴴ = USVᴴ
     @assert U isa AbstractMatrix && S isa AbstractMatrix && Vᴴ isa AbstractMatrix
@@ -20,7 +20,7 @@ function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ)
     @check_scalar(Vᴴ, A)
     return nothing
 end
-function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ)
+function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
@@ -33,7 +33,7 @@ function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ)
     @check_scalar(Vᴴ, A)
     return nothing
 end
-function check_input(::typeof(svd_vals!), A::AbstractMatrix, S)
+function check_input(::typeof(svd_vals!), A::AbstractMatrix, S, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     @assert S isa AbstractVector
@@ -70,7 +70,7 @@ end
 # Implementation
 # --------------
 function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_full!, A, USVᴴ)
+    check_input(svd_full!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     fill!(S, zero(eltype(S)))
     m, n = size(A)
@@ -122,7 +122,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
 end
 
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_compact!, A, USVᴴ)
+    check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     if alg isa LAPACK_QRIteration
         isempty(alg.kwargs) ||
@@ -153,7 +153,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
 end
 
 function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_vals!, A, S)
+    check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
     if alg isa LAPACK_QRIteration
         isempty(alg.kwargs) ||
@@ -175,7 +175,6 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
-#YACUSOLVER.Xgesvdr!(A, view(S, 1:k, 1), U, Vᴴ; alg.kwargs...)
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
     USVᴴ′ = svd_compact!(A, USVᴴ, alg.alg)
     return truncate!(svd_trunc!, USVᴴ′, alg.trunc)
@@ -198,14 +197,36 @@ const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
+function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ, ::CUSOLVER_Randomized)
+    m, n = size(A)
+    minmn = min(m, n)
+    U, S, Vᴴ = USVᴴ
+    @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
+    @check_size(U, (m, m))
+    @check_scalar(U, A)
+    @check_size(S, (minmn,minmn))
+    @check_scalar(S, A, real)
+    @check_size(Vᴴ, (n, n))
+    @check_scalar(Vᴴ, A)
+    return nothing
+end
+
+function initialize_output(::typeof(svd_compact!), A::AbstractMatrix, ::CUSOLVER_Randomized)
+    m, n = size(A)
+    minmn = min(m, n)
+    U = similar(A, (m, m))
+    S = Diagonal(similar(A, real(eltype(A)), (minmn,)))
+    Vᴴ = similar(A, (n, n))
+    return (U, S, Vᴴ)
+end
+
 _gpu_gesvd!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix) = throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
 _gpu_Xgesvdp!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
 _gpu_Xgesvdr!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
 _gpu_gesvdj!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
-
 # GPU SVD implementation
 function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
-    check_input(svd_full!, A, USVᴴ)
+    check_input(svd_full!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     fill!(S, zero(eltype(S)))
     m, n = size(A)
@@ -249,7 +270,7 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgor
 end
 
 function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
-    check_input(svd_compact!, A, USVᴴ)
+    check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||
@@ -259,6 +280,8 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
         _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; alg.kwargs...)
     elseif alg isa GPU_Jacobi
         _gpu_gesvdj!(A, S.diag, U, Vᴴ; alg.kwargs...)
+    elseif alg isa GPU_Randomized
+        _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
@@ -276,7 +299,7 @@ _argmaxabs(x) = reduce(_largest, x; init=zero(eltype(x)))
 _largest(x, y) = abs(x) < abs(y) ? y : x
 
 function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
-    check_input(svd_vals!, A, S)
+    check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||

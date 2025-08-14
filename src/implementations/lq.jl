@@ -10,7 +10,7 @@ function copy_input(::typeof(lq_null), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
 
-function check_input(::typeof(lq_full!), A::AbstractMatrix, LQ)
+function check_input(::typeof(lq_full!), A::AbstractMatrix, LQ, ::AbstractAlgorithm)
     m, n = size(A)
     L, Q = LQ
     @assert L isa AbstractMatrix && Q isa AbstractMatrix
@@ -20,7 +20,7 @@ function check_input(::typeof(lq_full!), A::AbstractMatrix, LQ)
     @check_scalar(Q, A)
     return nothing
 end
-function check_input(::typeof(lq_compact!), A::AbstractMatrix, LQ)
+function check_input(::typeof(lq_compact!), A::AbstractMatrix, LQ, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     L, Q = LQ
@@ -31,7 +31,7 @@ function check_input(::typeof(lq_compact!), A::AbstractMatrix, LQ)
     @check_scalar(Q, A)
     return nothing
 end
-function check_input(::typeof(lq_null!), A::AbstractMatrix, Nᴴ)
+function check_input(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     @assert Nᴴ isa AbstractMatrix
@@ -66,36 +66,36 @@ end
 # --------------
 # actual implementation
 function lq_full!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
-    check_input(lq_full!, A, LQ)
+    check_input(lq_full!, A, LQ, alg)
     L, Q = LQ
     _lapack_lq!(A, L, Q; alg.kwargs...)
     return L, Q
 end
 function lq_full!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
-    check_input(lq_full!, A, LQ)
+    check_input(lq_full!, A, LQ, alg)
     L, Q = LQ
     lq_via_qr!(A, L, Q, alg.qr_alg)
     return L, Q
 end
 function lq_compact!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
-    check_input(lq_compact!, A, LQ)
+    check_input(lq_compact!, A, LQ, alg)
     L, Q = LQ
     _lapack_lq!(A, L, Q; alg.kwargs...)
     return L, Q
 end
 function lq_compact!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
-    check_input(lq_compact!, A, LQ)
+    check_input(lq_compact!, A, LQ, alg)
     L, Q = LQ
     lq_via_qr!(A, L, Q, alg.qr_alg)
     return L, Q
 end
 function lq_null!(A::AbstractMatrix, Nᴴ, alg::LAPACK_HouseholderLQ)
-    check_input(lq_null!, A, Nᴴ)
+    check_input(lq_null!, A, Nᴴ, alg)
     _lapack_lq_null!(A, Nᴴ; alg.kwargs...)
     return Nᴴ
 end
 function lq_null!(A::AbstractMatrix, Nᴴ, alg::LQViaTransposedQR)
-    check_input(lq_null!, A, Nᴴ)
+    check_input(lq_null!, A, Nᴴ, alg)
     lq_null_via_qr!(A, Nᴴ, alg.qr_alg)
     return Nᴴ
 end

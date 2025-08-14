@@ -8,7 +8,7 @@ function copy_input(::typeof(eigh_vals), A::AbstractMatrix)
 end
 copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
 
-function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV)
+function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::AbstractAlgorithm)
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected"))
     D, V = DV
@@ -19,7 +19,7 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV)
     @check_scalar(V, A)
     return nothing
 end
-function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D)
+function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, ::AbstractAlgorithm)
     m, n = size(A)
     @assert D isa AbstractVector
     @check_size(D, (n,))
@@ -48,7 +48,7 @@ end
 # Implementation
 # --------------
 function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
-    check_input(eigh_full!, A, DV)
+    check_input(eigh_full!, A, DV, alg)
     D, V = DV
     Dd = D.diag
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
@@ -70,7 +70,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
 end
 
 function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
-    check_input(eigh_vals!, A, D)
+    check_input(eigh_vals!, A, D, alg)
     V = similar(A, (size(A, 1), 0))
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
         YALAPACK.heevr!(A, D, V; alg.kwargs...)

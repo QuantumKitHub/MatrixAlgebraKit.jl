@@ -5,7 +5,7 @@ using StableRNGs
 using LinearAlgebra: LinearAlgebra, I, mul!
 using MatrixAlgebraKit: TruncationKeepAbove, TruncationKeepBelow
 using MatrixAlgebraKit: LAPACK_SVDAlgorithm, check_input, copy_input, default_svd_algorithm,
-                        initialize_output
+                        initialize_output, AbstractAlgorithm
 
 # Used to test non-AbstractMatrix codepaths.
 struct LinearMap{P<:AbstractMatrix}
@@ -33,11 +33,11 @@ end
 function MatrixAlgebraKit.initialize_output(::typeof(right_orth!), A::LinearMap)
     return LinearMap.(initialize_output(right_orth!, parent(A)))
 end
-function MatrixAlgebraKit.check_input(::typeof(left_orth!), A::LinearMap, VC)
-    return check_input(left_orth!, parent(A), parent.(VC))
+function MatrixAlgebraKit.check_input(::typeof(left_orth!), A::LinearMap, VC, alg::AbstractAlgorithm)
+    return check_input(left_orth!, parent(A), parent.(VC), alg)
 end
-function MatrixAlgebraKit.check_input(::typeof(right_orth!), A::LinearMap, VC)
-    return check_input(right_orth!, parent(A), parent.(VC))
+function MatrixAlgebraKit.check_input(::typeof(right_orth!), A::LinearMap, VC, alg::AbstractAlgorithm)
+    return check_input(right_orth!, parent(A), parent.(VC), alg)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{LinearMap{A}}; kwargs...) where {A}
     return default_svd_algorithm(A; kwargs...)

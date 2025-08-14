@@ -7,7 +7,7 @@ function copy_input(::typeof(gen_eig_vals), A::AbstractMatrix, B::AbstractMatrix
     return copy_input(gen_eig_full, A, B)
 end
 
-function check_input(::typeof(gen_eig_full!), A::AbstractMatrix, B::AbstractMatrix, WV)
+function check_input(::typeof(gen_eig_full!), A::AbstractMatrix, B::AbstractMatrix, WV, ::AbstractAlgorithm)
     ma, na = size(A)
     mb, nb = size(B)
     ma == na || throw(DimensionMismatch("square input matrix A expected"))
@@ -24,7 +24,7 @@ function check_input(::typeof(gen_eig_full!), A::AbstractMatrix, B::AbstractMatr
     @check_scalar(V, B, complex)
     return nothing
 end
-function check_input(::typeof(gen_eig_vals!), A::AbstractMatrix, B::AbstractMatrix, W)
+function check_input(::typeof(gen_eig_vals!), A::AbstractMatrix, B::AbstractMatrix, W, ::AbstractAlgorithm)
     ma, na = size(A)
     mb, nb = size(B)
     ma == na || throw(DimensionMismatch("square input matrix A expected"))
@@ -57,7 +57,7 @@ end
 # --------------
 # actual implementation
 function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_EigAlgorithm)
-    check_input(gen_eig_full!, A, B, WV)
+    check_input(gen_eig_full!, A, B, WV, alg)
     W, V = WV
     if alg isa LAPACK_Simple
         isempty(alg.kwargs) ||
@@ -72,7 +72,7 @@ function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_Eig
 end
 
 function gen_eig_vals!(A::AbstractMatrix, B::AbstractMatrix, W, alg::LAPACK_EigAlgorithm)
-    check_input(gen_eig_vals!, A, B, W)
+    check_input(gen_eig_vals!, A, B, W, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
     if alg isa LAPACK_Simple
         isempty(alg.kwargs) ||
