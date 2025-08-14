@@ -164,9 +164,6 @@ for (fname, elty, relty) in
 
             AMDGPU.unsafe_free!(dev_residual) 
             AMDGPU.unsafe_free!(dev_n_sweeps) 
-            #if jobvt == rocSOLVER.rocblas_svect_singular || jobvt == rocSOLVER.rocblas_svect_all
-            #    adjoint!(Vᴴ, Ṽ)
-            #end
             return U, S, Vᴴ
         end
     end

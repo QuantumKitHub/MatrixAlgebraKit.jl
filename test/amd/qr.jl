@@ -5,7 +5,7 @@ using TestExtras
 using StableRNGs
 using AMDGPU
 
-include("utilities.jl")
+include(joinpath("..", "utilities.jl"))
 
 @testset "qr_compact! and qr_null! for T = $T" for T in (Float32, Float64, ComplexF32,
                                                          ComplexF64)
