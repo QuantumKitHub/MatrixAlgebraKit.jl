@@ -1,6 +1,6 @@
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
-using LinearAlgebra: Diagonal, isposdef
+using LinearAlgebra: Diagonal, isposdef, opnorm
 using Test
 using TestExtras
 using StableRNGs
@@ -96,7 +96,7 @@ end
         p = min(m, n) - k - 1
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi(), CUSOLVER_Randomized(; k=k, p=p, niters=100),)
         @testset "algorithm $alg" for alg in algs
-            #n > m && alg isa CUSOLVER_Jacobi && continue # not supported
+            n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             hA = randn(rng, T, m, n)
             S₀ = svd_vals(hA)
             A = CuArray(hA)
@@ -105,7 +105,7 @@ end
 
             U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc=truncrank(r))
             @test length(S1.diag) == r
-            @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
 
             if !(alg isa CUSOLVER_Randomized)
                 s = 1 + sqrt(eps(real(T)))
@@ -114,42 +114,9 @@ end
                 U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(s * S₀[r + 1]))
                 @test length(S2.diag) == r
                 @test U1 ≈ U2
-                @test S1 ≈ S2
+                @test parent(S1) ≈ parent(S2)
                 @test V1ᴴ ≈ V2ᴴ
             end
-            
-            #=A = CuArray(randn(rng, T, m, n))
-            Uref, Sref, Vᴴref = svd_full(A, CUSOLVER_SVDPolar())
-            U, S, Vᴴ = svd_full(A; alg)
-            @test U isa CuMatrix{T} && size(U) == (m, m)
-            @test S isa CuMatrix{real(T)} && size(S) == (m, n)
-            @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (n, n)
-            for col in 1:k
-                @test view(collect(U), :, col) ≈ view(collect(Uref), :, col)
-                @test view(collect(Vᴴ), col, :) ≈ view(collect(Vᴴref), col, :)
-            end
-            @test all(isposdef, view(diagview(S), 1:k))
-            @test view(CuArray(diagview(S)), 1:k) ≈ view(CuArray(diagview(Sref)), 1:k)
-
-            Ac = similar(A)
-            U2, S2, V2ᴴ = @constinferred svd_full!(copy!(Ac, A), (U, S, Vᴴ), alg)
-            @test U2 === U
-            @test S2 === S
-            @test V2ᴴ === Vᴴ 
-            for col in 1:k
-                @test view(collect(U), :, col) ≈ view(collect(Uref), :, col)
-                @test view(collect(Vᴴ), col, :) ≈ view(collect(Vᴴref), col, :)
-            end
-            @test all(isposdef, view(diagview(S), 1:k))
-            @test view(CuArray(diagview(S2)), 1:k) ≈ view(CuArray(diagview(Sref)), 1:k)
-
-            Sc = similar(A, real(T), k)
-            Sc2 = svd_vals!(copy!(Ac, A), Sc, alg)
-            @test Sc === Sc2 
-            @test view(Sc, 1:k) ≈ view(CuArray(diagview(Sref)), 1:k)
-            @test view(CuArray(diagview(S)), 1:k) ≈ Sc
-            # CuArray is necessary because norm of CuArray view with non-unit step is broken
-            =#
         end
     end
 end

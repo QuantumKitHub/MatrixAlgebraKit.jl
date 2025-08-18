@@ -286,7 +286,8 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:size(U, 2)
+    minmn = min(size(A)...)
+    for j in 1:minmn # make this more general to account for the larger U in CUSOVLER_Randomized
         u = view(U, :, j)
         v = view(Vᴴ, j, :)
         s = conj(sign(_argmaxabs(u)))
