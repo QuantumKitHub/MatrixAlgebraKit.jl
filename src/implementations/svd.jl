@@ -126,7 +126,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(Val(:compact), U, S, Vᴴ, m, n)
+    gaugefix!(Val(:compact), U, S, Vᴴ, size(A)...)
     return USVᴴ
 end
 
