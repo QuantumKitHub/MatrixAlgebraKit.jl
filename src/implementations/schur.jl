@@ -4,7 +4,7 @@ copy_input(::typeof(schur_full), A::AbstractMatrix) = copy_input(eig_full, A)
 copy_input(::typeof(schur_vals), A::AbstractMatrix) = copy_input(eig_vals, A)
 
 # check input
-function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv)
+function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::AbstractAlgorithm)
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected"))
     T, Z, vals = TZv
@@ -17,7 +17,7 @@ function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv)
     @check_scalar(vals, A, complex)
     return nothing
 end
-function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals)
+function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, ::AbstractAlgorithm)
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected"))
     @assert vals isa AbstractVector
@@ -43,7 +43,7 @@ end
 # Implementation
 # --------------
 function schur_full!(A::AbstractMatrix, TZv, alg::LAPACK_EigAlgorithm)
-    check_input(schur_full!, A, TZv)
+    check_input(schur_full!, A, TZv, alg)
     T, Z, vals = TZv
     if alg isa LAPACK_Simple
         isempty(alg.kwargs) ||
@@ -59,7 +59,7 @@ function schur_full!(A::AbstractMatrix, TZv, alg::LAPACK_EigAlgorithm)
 end
 
 function schur_vals!(A::AbstractMatrix, vals, alg::LAPACK_EigAlgorithm)
-    check_input(schur_vals!, A, vals)
+    check_input(schur_vals!, A, vals, alg)
     Z = similar(A, eltype(A), (size(A, 1), 0))
     if alg isa LAPACK_Simple
         isempty(alg.kwargs) ||

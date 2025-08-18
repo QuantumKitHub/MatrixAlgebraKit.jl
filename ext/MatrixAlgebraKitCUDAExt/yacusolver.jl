@@ -242,9 +242,68 @@ for (bname, fname, elty, relty) in
             if jobz == 'V'
                 adjoint!(Vᴴ, Ṽ)
             end
-            return U, S, Vᴴ
+            return S, U, Vᴴ
         end
     end
+end
+
+# Wrapper for randomized SVD
+function Xgesvdr!(A::StridedCuMatrix{T},
+                   S::StridedCuVector=similar(A, real(T), min(size(A)...)),
+                   U::StridedCuMatrix{T}=similar(A, T, size(A, 1), min(size(A)...)),
+                   Vᴴ::StridedCuMatrix{T}=similar(A, T, min(size(A)...), size(A, 2));
+                   k::Int=length(S),
+                   p::Int=min(size(A)...)-k-1,
+                   niters::Int=1) where {T<:BlasFloat}
+    chkstride1(A, U, S, Vᴴ)
+    m, n = size(A)
+    minmn = min(m, n)
+    jobu = length(U) == 0 ? 'N' : 'S'
+    jobv = length(Vᴴ) == 0 ? 'N' : 'S'
+    R = eltype(S)
+    k < minmn || throw(DimensionMismatch("length of S ($k) must be less than the smaller dimension of A ($minmn)"))
+    k + p < minmn || throw(DimensionMismatch("length of S ($k) plus oversampling ($p) must be less than the smaller dimension of A ($minmn)"))
+    R == real(T) ||
+        throw(ArgumentError("S does not have the matching real `eltype` of A"))
+
+    Ṽ = similar(Vᴴ, (n, n))
+    Ũ = (size(U) == (m, m)) ? U : similar(U, (m, m))
+    lda = max(1, stride(A, 2))
+    ldu = max(1, stride(Ũ, 2))
+    ldv = max(1, stride(Ṽ, 2))
+    params = CUSOLVER.CuSolverParameters()
+    dh = CUSOLVER.dense_handle()
+
+    function bufferSize()
+        out_cpu = Ref{Csize_t}(0)
+        out_gpu = Ref{Csize_t}(0)
+        CUSOLVER.cusolverDnXgesvdr_bufferSize(dh, params, jobu, jobv, m, n, k, p, niters,
+                                              T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+                                              T, out_gpu, out_cpu)
+
+        return out_gpu[], out_cpu[]
+    end
+    CUSOLVER.with_workspaces(dh.workspace_gpu, dh.workspace_cpu,
+                             bufferSize()...) do buffer_gpu, buffer_cpu
+        return CUSOLVER.cusolverDnXgesvdr(dh, params, jobu, jobv, m, n, k, p, niters,
+                                          T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+                                          T, buffer_gpu, sizeof(buffer_gpu),
+                                          buffer_cpu, sizeof(buffer_cpu),
+                                          dh.info)
+    end
+
+    flag = @allowscalar dh.info[1]
+    CUSOLVER.chklapackerror(BlasInt(flag))
+    if Ũ !== U && length(U) > 0
+        U .= view(Ũ, 1:m, 1:size(U, 2))
+    end
+    if length(Vᴴ) > 0
+        Vᴴ .= view(Ṽ', 1:size(Vᴴ, 1), 1:n)
+    end
+    Ũ !== U && CUDA.unsafe_free!(Ũ)
+    CUDA.unsafe_free!(Ṽ)
+
+    return S, U, Vᴴ
 end
 
 # for (jname, bname, fname, elty, relty) in

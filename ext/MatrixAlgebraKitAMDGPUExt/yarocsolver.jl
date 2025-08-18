@@ -164,7 +164,7 @@ for (fname, elty, relty) in
 
             AMDGPU.unsafe_free!(dev_residual) 
             AMDGPU.unsafe_free!(dev_n_sweeps) 
-            return U, S, Vᴴ
+            return (S, U, Vᴴ)
         end
     end
 end

@@ -1,6 +1,6 @@
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
-using LinearAlgebra: Diagonal, isposdef
+using LinearAlgebra: Diagonal, isposdef, opnorm
 using Test
 using TestExtras
 using StableRNGs
@@ -76,45 +76,47 @@ end
             @test isapproxone(Vᴴ' * Vᴴ)
             @test all(isposdef, diagview(S))
 
-            Sc = similar(A, real(T), min(m, n))
+            minmn = min(m, n)
+            Sc = similar(A, real(T), minmn)
             Sc2 = svd_vals!(copy!(Ac, A), Sc, alg)
             @test Sc === Sc2
             @test CuArray(diagview(S)) ≈ Sc
             # CuArray is necessary because norm of CuArray view with non-unit step is broken
         end
+        @testset "algorithm $alg" for alg in algs
+        end
     end
 end
 
-# @testset "svd_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-#     rng = StableRNG(123)
-#     m = 54
-#     if LinearAlgebra.LAPACK.version() < v"3.12.0"
-#         algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
-#     else
-#         algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
-#                 LAPACK_Jacobi())
-#     end
+@testset "svd_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
+    m = 54
+    @testset "size ($m, $n)" for n in (37, m, 63)
+        k = min(m, n) - 20
+        p = min(m, n) - k - 1
+        algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi(), CUSOLVER_Randomized(; k=k, p=p, niters=100),)
+        @testset "algorithm $alg" for alg in algs
+            n > m && alg isa CUSOLVER_QRIteration && continue # not supported
+            hA = randn(rng, T, m, n)
+            S₀ = svd_vals(hA)
+            A = CuArray(hA)
+            minmn = min(m, n)
+            r = k 
 
-#     @testset "size ($m, $n)" for n in (37, m, 63)
-#         @testset "algorithm $alg" for alg in algs
-#             n > m && alg isa LAPACK_Jacobi && continue # not supported
-#             A = randn(rng, T, m, n)
-#             S₀ = svd_vals(A)
-#             minmn = min(m, n)
-#             r = minmn - 2
+            U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc=truncrank(r))
+            @test length(S1.diag) == r
+            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
 
-#             U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc=truncrank(r))
-#             @test length(S1.diag) == r
-#             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            if !(alg isa CUSOLVER_Randomized)
+                s = 1 + sqrt(eps(real(T)))
+                trunc2 = trunctol(s * S₀[r + 1])
 
-#             s = 1 + sqrt(eps(real(T)))
-#             trunc2 = trunctol(s * S₀[r + 1])
-
-#             U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(s * S₀[r + 1]))
-#             @test length(S2.diag) == r
-#             @test U1 ≈ U2
-#             @test S1 ≈ S2
-#             @test V1ᴴ ≈ V2ᴴ
-#         end
-#     end
-# end
+                U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(s * S₀[r + 1]))
+                @test length(S2.diag) == r
+                @test U1 ≈ U2
+                @test parent(S1) ≈ parent(S2)
+                @test V1ᴴ ≈ V2ᴴ
+            end
+        end
+    end
+end

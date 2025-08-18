@@ -8,7 +8,7 @@ copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
 
 # TODO: many of these checks are happening again in the LAPACK routines
-function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ)
+function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ, ::AbstractAlgorithm)
     m, n = size(A)
     U, S, Vᴴ = USVᴴ
     @assert U isa AbstractMatrix && S isa AbstractMatrix && Vᴴ isa AbstractMatrix
@@ -20,7 +20,7 @@ function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ)
     @check_scalar(Vᴴ, A)
     return nothing
 end
-function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ)
+function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
@@ -33,7 +33,7 @@ function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ)
     @check_scalar(Vᴴ, A)
     return nothing
 end
-function check_input(::typeof(svd_vals!), A::AbstractMatrix, S)
+function check_input(::typeof(svd_vals!), A::AbstractMatrix, S, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     @assert S isa AbstractVector
@@ -66,10 +66,56 @@ function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::Truncat
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
+function gaugefix!(::typeof(svd_full!), U, S, Vᴴ, m::Int, n::Int)
+    for j in 1:max(m, n)
+        if j <= min(m, n)
+            u = view(U, :, j)
+            v = view(Vᴴ, j, :)
+            s = conj(sign(_argmaxabs(u)))
+            u .*= s
+            v .*= conj(s)
+        elseif j <= m
+            u = view(U, :, j)
+            s = conj(sign(_argmaxabs(u)))
+            u .*= s
+        else
+            v = view(Vᴴ, j, :)
+            s = conj(sign(_argmaxabs(v)))
+            v .*= s
+        end
+    end
+    return (U, S, Vᴴ)
+end
+
+# Gauge fixation 
+# --------------
+function gaugefix!(::typeof(svd_compact!), U, S, Vᴴ, m::Int, n::Int)
+    for j in 1:size(U, 2)
+        u = view(U, :, j)
+        v = view(Vᴴ, j, :)
+        s = conj(sign(_argmaxabs(u)))
+        u .*= s
+        v .*= conj(s)
+    end
+    return (U, S, Vᴴ)
+end
+
+function gaugefix!(::typeof(svd_trunc!), U, S, Vᴴ, m::Int, n::Int)
+    for j in 1:min(m, n)
+        u = view(U, :, j)
+        v = view(Vᴴ, j, :)
+        s = conj(sign(_argmaxabs(u)))
+        u .*= s
+        v .*= conj(s)
+    end
+    return (U, S, Vᴴ)
+end
+
+
 # Implementation
 # --------------
 function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_full!, A, USVᴴ)
+    check_input(svd_full!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     fill!(S, zero(eltype(S)))
     m, n = size(A)
@@ -100,28 +146,12 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         S[i, 1] = zero(eltype(S))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:max(m, n)
-        if j <= minmn
-            u = view(U, :, j)
-            v = view(Vᴴ, j, :)
-            s = conj(sign(argmax(abs, u)))
-            u .*= s
-            v .*= conj(s)
-        elseif j <= m
-            u = view(U, :, j)
-            s = conj(sign(argmax(abs, u)))
-            u .*= s
-        else
-            v = view(Vᴴ, j, :)
-            s = conj(sign(argmax(abs, v)))
-            v .*= s
-        end
-    end
+    gaugefix!(svd_full!, U, S, Vᴴ, m, n)
     return USVᴴ
 end
 
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_compact!, A, USVᴴ)
+    check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     if alg isa LAPACK_QRIteration
         isempty(alg.kwargs) ||
@@ -141,18 +171,12 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:size(U, 2)
-        u = view(U, :, j)
-        v = view(Vᴴ, j, :)
-        s = conj(sign(argmax(abs, u)))
-        u .*= s
-        v .*= conj(s)
-    end
+    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
     return USVᴴ
 end
 
 function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_vals!, A, S)
+    check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
     if alg isa LAPACK_QRIteration
         isempty(alg.kwargs) ||
@@ -185,7 +209,8 @@ end
 ###
 const CUSOLVER_SVDAlgorithm = Union{CUSOLVER_QRIteration,
                                     CUSOLVER_SVDPolar,
-                                    CUSOLVER_Jacobi}
+                                    CUSOLVER_Jacobi,
+                                    CUSOLVER_Randomized}
 const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration,
                                      ROCSOLVER_Jacobi}
 const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
@@ -193,14 +218,38 @@ const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
 const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
+const GPU_Randomized = Union{CUSOLVER_Randomized}
+
+function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized)
+    m, n = size(A)
+    minmn = min(m, n)
+    U, S, Vᴴ = USVᴴ
+    @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
+    @check_size(U, (m, m))
+    @check_scalar(U, A)
+    @check_size(S, (minmn, minmn))
+    @check_scalar(S, A, real)
+    @check_size(Vᴴ, (n, n))
+    @check_scalar(Vᴴ, A)
+    return nothing
+end
+
+function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized})
+    m, n = size(A)
+    minmn = min(m, n)
+    U = similar(A, (m, m))
+    S = Diagonal(similar(A, real(eltype(A)), (minmn,)))
+    Vᴴ = similar(A, (n, n))
+    return (U, S, Vᴴ)
+end
 
 _gpu_gesvd!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix) = throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
 _gpu_Xgesvdp!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
+_gpu_Xgesvdr!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
 _gpu_gesvdj!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
-
 # GPU SVD implementation
 function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
-    check_input(svd_full!, A, USVᴴ)
+    check_input(svd_full!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     fill!(S, zero(eltype(S)))
     m, n = size(A)
@@ -223,28 +272,21 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgor
     diagview(S) .= view(S, 1:minmn, 1)
     view(S, 2:minmn, 1) .= zero(eltype(S))
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:max(m, n)
-        if j <= minmn
-            u = view(U, :, j)
-            v = view(Vᴴ, j, :)
-            s = conj(sign(_argmaxabs(u)))
-            u .*= s
-            v .*= conj(s)
-        elseif j <= m
-            u = view(U, :, j)
-            s = conj(sign(_argmaxabs(u)))
-            u .*= s
-        else
-            v = view(Vᴴ, j, :)
-            s = conj(sign(_argmaxabs(v)))
-            v .*= s
-        end
-    end
+    gaugefix!(svd_full!, U, S, Vᴴ, m, n)
     return USVᴴ
 end
 
+function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
+    check_input(svd_trunc!, A, USVᴴ, alg.alg)
+    U, S, Vᴴ = USVᴴ
+    _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
+    # TODO: make this controllable using a `gaugefix` keyword argument
+    gaugefix!(svd_trunc!, U, S, Vᴴ, size(A)...)
+    return truncate!(svd_trunc!, USVᴴ, alg.trunc)
+end
+
 function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
-    check_input(svd_compact!, A, USVᴴ)
+    check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||
@@ -258,20 +300,14 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:size(U, 2)
-        u = view(U, :, j)
-        v = view(Vᴴ, j, :)
-        s = conj(sign(_argmaxabs(u)))
-        u .*= s
-        v .*= conj(s)
-    end
+    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...) 
     return USVᴴ
 end
 _argmaxabs(x) = reduce(_largest, x; init=zero(eltype(x)))
 _largest(x, y) = abs(x) < abs(y) ? y : x
 
 function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
-    check_input(svd_vals!, A, S)
+    check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||

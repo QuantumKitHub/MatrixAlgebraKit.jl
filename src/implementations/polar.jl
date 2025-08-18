@@ -3,7 +3,7 @@
 copy_input(::typeof(left_polar), A) = copy_input(svd_full, A)
 copy_input(::typeof(right_polar), A) = copy_input(svd_full, A)
 
-function check_input(::typeof(left_polar!), A::AbstractMatrix, WP)
+function check_input(::typeof(left_polar!), A::AbstractMatrix, WP, ::AbstractAlgorithm)
     m, n = size(A)
     W, P = WP
     m >= n ||
@@ -15,7 +15,7 @@ function check_input(::typeof(left_polar!), A::AbstractMatrix, WP)
     @check_scalar(P, A)
     return nothing
 end
-function check_input(::typeof(right_polar!), A::AbstractMatrix, PWᴴ)
+function check_input(::typeof(right_polar!), A::AbstractMatrix, PWᴴ, ::AbstractAlgorithm)
     m, n = size(A)
     P, Wᴴ = PWᴴ
     n >= m ||
@@ -46,7 +46,7 @@ end
 # Implementation
 # --------------
 function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
-    check_input(left_polar!, A, WP)
+    check_input(left_polar!, A, WP, alg)
     U, S, Vᴴ = svd_compact!(A, alg.svdalg)
     W, P = WP
     W = mul!(W, U, Vᴴ)
@@ -56,7 +56,7 @@ function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
     return (W, P)
 end
 function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarViaSVD)
-    check_input(right_polar!, A, PWᴴ)
+    check_input(right_polar!, A, PWᴴ, alg)
     U, S, Vᴴ = svd_compact!(A, alg.svdalg)
     P, Wᴴ = PWᴴ
     Wᴴ = mul!(Wᴴ, U, Vᴴ)

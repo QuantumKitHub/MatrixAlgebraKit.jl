@@ -151,6 +151,19 @@ a general matrix using the Jacobi algorithm.
 """
 @algdef CUSOLVER_Jacobi
 
+"""
+    CUSOLVER_Randomized(; p, niters)
+
+Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
+a general matrix using the randomized SVD algorithm.
+
+!!! note
+  Randomized SVD cannot compute all singular values of the input matrix `A`, only the first `k` where
+  `k < min(m, n)`. The remainder are used for oversampling. See the [CUSOLVER documentation](https://docs.nvidia.com/cuda/cusolver/index.html#cusolverdnxgesvdr)
+  for more information.
+"""
+@algdef CUSOLVER_Randomized
+
 # =========================
 # ROCSOLVER ALGORITHMS
 # =========================

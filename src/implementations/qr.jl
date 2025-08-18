@@ -10,7 +10,7 @@ function copy_input(::typeof(qr_null), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
 
-function check_input(::typeof(qr_full!), A::AbstractMatrix, QR)
+function check_input(::typeof(qr_full!), A::AbstractMatrix, QR, ::AbstractAlgorithm)
     m, n = size(A)
     Q, R = QR
     @assert Q isa AbstractMatrix && R isa AbstractMatrix
@@ -20,7 +20,7 @@ function check_input(::typeof(qr_full!), A::AbstractMatrix, QR)
     @check_scalar(R, A)
     return nothing
 end
-function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR)
+function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     Q, R = QR
@@ -31,7 +31,7 @@ function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR)
     @check_scalar(R, A)
     return nothing
 end
-function check_input(::typeof(qr_null!), A::AbstractMatrix, N)
+function check_input(::typeof(qr_null!), A::AbstractMatrix, N, ::AbstractAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     @assert N isa AbstractMatrix
@@ -66,19 +66,19 @@ end
 # --------------
 # actual implementation
 function qr_full!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
-    check_input(qr_full!, A, QR)
+    check_input(qr_full!, A, QR, alg)
     Q, R = QR
     _lapack_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
 function qr_compact!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
-    check_input(qr_compact!, A, QR)
+    check_input(qr_compact!, A, QR, alg)
     Q, R = QR
     _lapack_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
 function qr_null!(A::AbstractMatrix, N, alg::LAPACK_HouseholderQR)
-    check_input(qr_null!, A, N)
+    check_input(qr_null!, A, N, alg)
     _lapack_qr_null!(A, N; alg.kwargs...)
     return N
 end
@@ -172,19 +172,19 @@ end
 # CUDA and AMDGPU
 ###
 function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR})
-    check_input(qr_full!, A, QR)
+    check_input(qr_full!, A, QR, alg)
     Q, R = QR
     _gpu_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
 function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR})
-    check_input(qr_compact!, A, QR)
+    check_input(qr_compact!, A, QR, alg)
     Q, R = QR
     _gpu_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
 function MatrixAlgebraKit.qr_null!(A::AbstractMatrix, N, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR})
-    check_input(qr_null!, A, N)
+    check_input(qr_null!, A, N, alg)
     _gpu_qr_null!(A, N; alg.kwargs...)
     return N
 end
