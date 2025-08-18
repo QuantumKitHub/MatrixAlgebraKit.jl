@@ -1,7 +1,7 @@
 function gaugefix!(V::AbstractMatrix)
     for j in axes(V, 2)
         v = view(V, :, j)
-        s = conj(sign(argmax(abs, v)))
+        s = conj(sign(_argmaxabs(v)))
         @inbounds v .*= s
     end
     return V
@@ -12,16 +12,16 @@ function gaugefix!(::Val{:full}, U, S, Vᴴ, m::Int, n::Int)
         if j <= min(m, n)
             u = view(U, :, j)
             v = view(Vᴴ, j, :)
-            s = conj(sign(argmax(abs, u)))
+            s = conj(sign(_argmaxabs(u)))
             u .*= s
             v .*= conj(s)
         elseif j <= m
             u = view(U, :, j)
-            s = conj(sign(argmax(abs, u)))
+            s = conj(sign(_argmaxabs(u)))
             u .*= s
         else
             v = view(Vᴴ, j, :)
-            s = conj(sign(argmax(abs, v)))
+            s = conj(sign(_argmaxabs(v)))
             v .*= s
         end
     end
@@ -32,7 +32,18 @@ function gaugefix!(::Val{:compact}, U, S, Vᴴ, m::Int, n::Int)
     for j in 1:size(U, 2)
         u = view(U, :, j)
         v = view(Vᴴ, j, :)
-        s = conj(sign(argmax(abs, u)))
+        s = conj(sign(_argmaxabs(u)))
+        u .*= s
+        v .*= conj(s)
+    end
+    return (U, S, Vᴴ)
+end
+
+function gaugefix!(::Val{:trunc}, U, S, Vᴴ, m::Int, n::Int)
+    for j in 1:min(m, n)
+        u = view(U, :, j)
+        v = view(Vᴴ, j, :)
+        s = conj(sign(_argmaxabs(u)))
         u .*= s
         v .*= conj(s)
     end

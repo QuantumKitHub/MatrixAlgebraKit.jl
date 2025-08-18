@@ -242,7 +242,7 @@ for (bname, fname, elty, relty) in
             if jobz == 'V'
                 adjoint!(Vᴴ, Ṽ)
             end
-            return U, S, Vᴴ
+            return S, U, Vᴴ
         end
     end
 end
