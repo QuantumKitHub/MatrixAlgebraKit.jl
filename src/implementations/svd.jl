@@ -1,10 +1,10 @@
 # Inputs
 # ------
-function copy_input(::typeof(svd_full), A::AbstractMatrix)
+function copy_input(::typeof(svd_full), A)
     return copy!(similar(A, float(eltype(A))), A)
 end
-copy_input(::typeof(svd_compact), A::AbstractMatrix) = copy_input(svd_full, A)
-copy_input(::typeof(svd_vals), A::AbstractMatrix) = copy_input(svd_full, A)
+copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
+copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
 
 # TODO: many of these checks are happening again in the LAPACK routines
