@@ -1,7 +1,7 @@
 # Inputs
 # ------
-copy_input(::typeof(left_polar), A::AbstractMatrix) = copy_input(svd_full, A)
-copy_input(::typeof(right_polar), A::AbstractMatrix) = copy_input(svd_full, A)
+copy_input(::typeof(left_polar), A) = copy_input(svd_full, A)
+copy_input(::typeof(right_polar), A) = copy_input(svd_full, A)
 
 function check_input(::typeof(left_polar!), A::AbstractMatrix, WP)
     m, n = size(A)
