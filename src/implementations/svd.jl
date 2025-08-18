@@ -101,7 +101,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         S[i, 1] = zero(eltype(S))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(Val(:full), U, S, Vᴴ, m, n)
+    gaugefix!(svd_full!, U, S, Vᴴ, m, n)
     return USVᴴ
 end
 
@@ -126,7 +126,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(Val(:compact), U, S, Vᴴ, size(A)...)
+    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
     return USVᴴ
 end
 
@@ -227,7 +227,7 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgor
     diagview(S) .= view(S, 1:minmn, 1)
     view(S, 2:minmn, 1) .= zero(eltype(S))
     # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(Val(:full), U, S, Vᴴ, m, n)
+    gaugefix!(svd_full!, U, S, Vᴴ, m, n)
     return USVᴴ
 end
 
@@ -236,7 +236,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     U, S, Vᴴ = USVᴴ
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
     # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(Val(:trunc), U, S, Vᴴ, size(A)...)
+    gaugefix!(svd_trunc!, U, S, Vᴴ, size(A)...)
     return truncate!(svd_trunc!, USVᴴ, alg.trunc)
 end
 
@@ -255,7 +255,7 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(Val(:compact), U, S, Vᴴ, size(A)...) 
+    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...) 
     return USVᴴ
 end
 _argmaxabs(x) = reduce(_largest, x; init=zero(eltype(x)))

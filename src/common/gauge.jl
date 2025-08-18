@@ -7,7 +7,7 @@ function gaugefix!(V::AbstractMatrix)
     return V
 end
 
-function gaugefix!(::Val{:full}, U, S, Vᴴ, m::Int, n::Int)
+function gaugefix!(::typeof(svd_full!), U, S, Vᴴ, m::Int, n::Int)
     for j in 1:max(m, n)
         if j <= min(m, n)
             u = view(U, :, j)
@@ -28,7 +28,7 @@ function gaugefix!(::Val{:full}, U, S, Vᴴ, m::Int, n::Int)
     return (U, S, Vᴴ)
 end
 
-function gaugefix!(::Val{:compact}, U, S, Vᴴ, m::Int, n::Int)
+function gaugefix!(::typeof(svd_compact!), U, S, Vᴴ, m::Int, n::Int)
     for j in 1:size(U, 2)
         u = view(U, :, j)
         v = view(Vᴴ, j, :)
@@ -39,7 +39,7 @@ function gaugefix!(::Val{:compact}, U, S, Vᴴ, m::Int, n::Int)
     return (U, S, Vᴴ)
 end
 
-function gaugefix!(::Val{:trunc}, U, S, Vᴴ, m::Int, n::Int)
+function gaugefix!(::typeof(svd_trunc!), U, S, Vᴴ, m::Int, n::Int)
     for j in 1:min(m, n)
         u = view(U, :, j)
         v = view(Vᴴ, j, :)
