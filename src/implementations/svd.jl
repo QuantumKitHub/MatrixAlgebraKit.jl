@@ -175,7 +175,7 @@ const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
-function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ, ::CUSOLVER_Randomized)
+function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{CUSOLVER_Randomized})
     m, n = size(A)
     minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
@@ -189,7 +189,7 @@ function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ, ::CUSOLV
     return nothing
 end
 
-function initialize_output(::typeof(svd_compact!), A::AbstractMatrix, ::CUSOLVER_Randomized)
+function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm{CUSOLVER_Randomized})
     m, n = size(A)
     minmn = min(m, n)
     U = similar(A, (m, m))
@@ -231,6 +231,15 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgor
     return USVᴴ
 end
 
+function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
+    check_input(svd_trunc!, A, USVᴴ, alg)
+    U, S, Vᴴ = USVᴴ
+    _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.kwargs...)
+    # TODO: make this controllable using a `gaugefix` keyword argument
+    gaugefix!(Val(:compact), U, S, Vᴴ, m, n)
+    return truncate!(svd_trunc!, USVᴴ′, alg.trunc)
+end
+
 function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
@@ -242,8 +251,6 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
         _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; alg.kwargs...)
     elseif alg isa GPU_Jacobi
         _gpu_gesvdj!(A, S.diag, U, Vᴴ; alg.kwargs...)
-    elseif alg isa GPU_Randomized
-        _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
