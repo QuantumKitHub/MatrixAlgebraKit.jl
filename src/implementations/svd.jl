@@ -101,23 +101,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         S[i, 1] = zero(eltype(S))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:max(m, n)
-        if j <= minmn
-            u = view(U, :, j)
-            v = view(Vᴴ, j, :)
-            s = conj(sign(argmax(abs, u)))
-            u .*= s
-            v .*= conj(s)
-        elseif j <= m
-            u = view(U, :, j)
-            s = conj(sign(argmax(abs, u)))
-            u .*= s
-        else
-            v = view(Vᴴ, j, :)
-            s = conj(sign(argmax(abs, v)))
-            v .*= s
-        end
-    end
+    gaugefix!(Val(:full), U, S, Vᴴ, m, n)
     return USVᴴ
 end
 
@@ -142,13 +126,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:size(U, 2)
-        u = view(U, :, j)
-        v = view(Vᴴ, j, :)
-        s = conj(sign(argmax(abs, u)))
-        u .*= s
-        v .*= conj(s)
-    end
+    gaugefix!(Val(:compact), U, S, Vᴴ, m, n)
     return USVᴴ
 end
 
@@ -249,23 +227,7 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgor
     diagview(S) .= view(S, 1:minmn, 1)
     view(S, 2:minmn, 1) .= zero(eltype(S))
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:max(m, n)
-        if j <= minmn
-            u = view(U, :, j)
-            v = view(Vᴴ, j, :)
-            s = conj(sign(_argmaxabs(u)))
-            u .*= s
-            v .*= conj(s)
-        elseif j <= m
-            u = view(U, :, j)
-            s = conj(sign(_argmaxabs(u)))
-            u .*= s
-        else
-            v = view(Vᴴ, j, :)
-            s = conj(sign(_argmaxabs(v)))
-            v .*= s
-        end
-    end
+    gaugefix!(Val(:full), U, S, Vᴴ, m, n)
     return USVᴴ
 end
 
@@ -286,14 +248,7 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    minmn = min(size(A)...)
-    for j in 1:minmn # make this more general to account for the larger U in CUSOVLER_Randomized
-        u = view(U, :, j)
-        v = view(Vᴴ, j, :)
-        s = conj(sign(_argmaxabs(u)))
-        u .*= s
-        v .*= conj(s)
-    end
+    gaugefix!(Val(:compact), U, S, Vᴴ, m, n)
     return USVᴴ
 end
 _argmaxabs(x) = reduce(_largest, x; init=zero(eltype(x)))

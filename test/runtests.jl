@@ -35,9 +35,9 @@ if !is_buildkite
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
-    #=@safetestset "ChainRules" begin
+    @safetestset "ChainRules" begin
         include("chainrules.jl")
-    end=#
+    end
     @safetestset "MatrixAlgebraKit.jl" begin
         @safetestset "Code quality (Aqua.jl)" begin
             using MatrixAlgebraKit
