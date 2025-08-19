@@ -2,10 +2,10 @@ module YACUSOLVER
 
 using LinearAlgebra
 using LinearAlgebra: BlasInt, BlasFloat, checksquare, chkstride1, require_one_based_indexing
-using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo
+using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo#, chkfinite
 
 using CUDA
-using CUDA: @allowscalar
+using CUDA: @allowscalar, i32
 using CUDA.CUSOLVER
 
 # QR methods are implemented with full access to allocated arrays, so we do not need to redo this:
@@ -304,6 +304,73 @@ function Xgesvdr!(A::StridedCuMatrix{T},
     CUDA.unsafe_free!(Ṽ)
 
     return S, U, Vᴴ
+end
+
+# Wrapper for general eigensolver 
+for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:ComplexF32, :ComplexF32), (:ComplexF64, :ComplexF64))
+    @eval begin
+        function Xgeev!(A::StridedCuMatrix{$elty}, D::StridedCuVector{$celty}, V::StridedCuMatrix{$celty})
+            require_one_based_indexing(A, V, D)
+            chkstride1(A, V, D)
+            n = checksquare(A)
+            # TODO GPU appropriate version
+            #chkfinite(A) # balancing routines don't support NaNs and Infs
+            n == length(D) || throw(DimensionMismatch("length mismatch between A and D"))
+            if length(V) == 0
+                jobvr = 'N'
+            elseif length(V) == n*n
+                jobvr = 'V'
+            else
+                throw(DimensionMismatch("size of VR must match size of A"))
+            end
+            jobvl = 'N' # required by API for now (https://docs.nvidia.com/cuda/cusolver/index.html#cusolverdnxgeev)
+            #=if length(VL) == 0
+                jobvl = 'N'
+            elseif length(VL) == n*n
+                jobvl = 'V'
+            else
+                throw(DimensionMismatch("size of VL must match size of A"))
+            end=#
+            VL   = similar(A, n, 0)
+            lda  = max(1, stride(A, 2))
+            ldvl = max(1, stride(VL, 2))
+            params = CUSOLVER.CuSolverParameters()
+            dh = CUSOLVER.dense_handle()
+            
+            if $elty <: Real
+                D2 = reinterpret($elty, D)
+                # reuse memory, we will have to reorder afterwards to bring real and imaginary
+                # components in the order as required for the Complex type
+                VR = reinterpret($elty, V)
+            else
+                D2 = D
+                VR = V
+            end
+            ldvr = max(1, stride(VR, 2))
+            function bufferSize()
+                out_cpu = Ref{Csize_t}(0)
+                out_gpu = Ref{Csize_t}(0)
+                CUSOLVER.cusolverDnXgeev_bufferSize(dh, params, jobvl, jobvr, n, $elty, A,
+                                           lda, $elty, D2, $elty, VL, ldvl, $elty, VR, ldvr,
+                                           $elty, out_gpu, out_cpu)
+                out_gpu[], out_cpu[]
+            end
+            CUDA.with_workspaces(dh.workspace_gpu, dh.workspace_cpu, bufferSize()...) do buffer_gpu, buffer_cpu
+                CUSOLVER.cusolverDnXgeev(dh, params, jobvl, jobvr, n, $elty, A, lda, $elty,
+                                         D2, $elty, VL, ldvl, $elty, VR, ldvr, $elty, buffer_gpu,
+                                         sizeof(buffer_gpu), buffer_cpu, sizeof(buffer_cpu), dh.info)
+            end
+            flag = @allowscalar dh.info[1]
+            CUSOLVER.chkargsok(BlasInt(flag))
+            if eltype(A) <: Real
+                work = CuVector{$elty}(undef, n)
+                DR = view(D2, 1:n)
+                DI = view(D2, (n + 1):(2n))
+                _reorder_realeigendecomposition!(D, DR, DI, work, VR, jobvr)
+            end
+            return D, V
+        end
+    end
 end
 
 # for (jname, bname, fname, elty, relty) in
@@ -649,5 +716,55 @@ end
 #         end
 #     end
 # end
+
+# TODO use a shmem array here
+function _reorder_kernel_real(real_ev_ixs, VR::CuDeviceArray{T}, n::Int) where {T}
+    grid_idx = threadIdx().x + (blockIdx().x - 1i32) * blockDim().x
+    @inbounds if grid_idx <= length(real_ev_ixs)
+        i = real_ev_ixs[grid_idx]
+        for j in n:-1:1
+            VR[2 * j, i] = zero(T) 
+            VR[2 * j - 1, i] = VR[j, i]
+        end
+    end
+    return
+end
+
+function _reorder_kernel_complex(complex_ev_ixs, VR::CuDeviceArray{T}, n::Int) where {T}
+    grid_idx = threadIdx().x + (blockIdx().x - 1i32) * blockDim().x
+    @inbounds if grid_idx <= length(complex_ev_ixs)
+        i = complex_ev_ixs[grid_idx]
+        for j in n:-1:1
+            VR[2 * j, i] = VR[j, i + 1]
+            VR[2 * j - 1, i] = VR[j, i]
+            VR[2 * j, i + 1] = -VR[j, i + 1]
+            VR[2 * j - 1, i + 1] = VR[j, i]
+        end
+    end
+    return
+end
+
+function _reorder_realeigendecomposition!(W, WR, WI, work, VR, jobvr)
+# first reorder eigenvalues and recycle work as temporary buffer to efficiently implement the permutation
+    copy!(work, WI)
+    n = size(W, 1)
+    @. W[1:n] = WR[1:n] + im * work[1:n]
+    T = eltype(WR)
+    if jobvr == 'V' # also reorganise vectors
+        real_ev_ixs    = findall(isreal, W)
+        _cmplx_ev_ixs  = findall(!isreal, W) # these come in pairs, choose only the first of each pair
+        complex_ev_ixs = view(_cmplx_ev_ixs, 1:2:length(_cmplx_ev_ixs))
+        if !isempty(real_ev_ixs)
+            real_threads = 128
+            real_blocks = max(1, div(length(real_ev_ixs), real_threads))
+            @cuda threads=real_threads blocks=real_blocks _reorder_kernel_real(real_ev_ixs, VR, n)
+        end
+        if !isempty(complex_ev_ixs)
+            complex_threads = 128
+            complex_blocks = max(1, div(length(complex_ev_ixs), complex_threads))
+            @cuda threads=complex_threads blocks=complex_blocks _reorder_kernel_complex(complex_ev_ixs, VR, n)
+        end
+    end
+end
 
 end

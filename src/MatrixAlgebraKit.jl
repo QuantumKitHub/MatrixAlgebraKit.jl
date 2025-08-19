@@ -33,6 +33,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ,
        LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
        LAPACK_DivideAndConquer, LAPACK_Jacobi,
        LQViaTransposedQR,
+       CUSOLVER_Simple,
        CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
        ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi
 export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered

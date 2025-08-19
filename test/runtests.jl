@@ -63,6 +63,9 @@ if CUDA.functional()
     @safetestset "CUDA SVD" begin
         include("cuda/svd.jl")
     end
+    @safetestset "CUDA General Eigenvalue Decomposition" begin
+        include("cuda/eig.jl")
+    end
 end
 
 using AMDGPU 
