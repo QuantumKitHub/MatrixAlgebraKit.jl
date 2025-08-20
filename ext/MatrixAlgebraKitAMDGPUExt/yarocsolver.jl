@@ -490,20 +490,21 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             lda = max(1, stride(A, 2))
             length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
             if length(V) == 0
-                jobz = 'N'
+                jobz = rocSOLVER.rocblas_evect_none
             else
                 size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
-                jobz = 'O'
+                jobz = rocSOLVER.rocblas_evect_original
             end
             dh = rocBLAS.handle()
             work = ROCVector{$relty}(undef, n)
             dev_info = ROCVector{Cint}(undef, 1)
-            $heevd(dh, jobz, uplo, n, A, lda, W, work, dev_info)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            $heevd(dh, jobz, roc_uplo, n, A, lda, W, work, dev_info)
 
             info = @allowscalar dev_info[1]
             chkargsok(BlasInt(info))
 
-            if jobz == 'O' && V !== A
+            if jobz == rocSOLVER.rocblas_evect_original && V !== A
                 copy!(V, A)
             end
             return W, V
@@ -517,20 +518,21 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             lda = max(1, stride(A, 2))
             length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
             if length(V) == 0
-                jobz = 'N'
+                jobz = rocSOLVER.rocblas_evect_none
             else
                 size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
-                jobz = 'O'
+                jobz = rocSOLVER.rocblas_evect_original
             end
             dh = rocBLAS.handle()
             work = ROCVector{$relty}(undef, n)
             dev_info = ROCVector{Cint}(undef, 1)
-            $heev(dh, jobz, uplo, n, A, lda, W, work, dev_info)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            $heev(dh, jobz, roc_uplo, n, A, lda, W, work, dev_info)
 
             info = @allowscalar dev_info[1]
             chkargsok(BlasInt(info))
 
-            if jobz == 'O' && V !== A
+            if jobz == rocSOLVER.rocblas_evect_original && V !== A
                 copy!(V, A)
             end
             return W, V
@@ -548,22 +550,22 @@ for (heevd, heev, heevx, heevj, elty, relty) in
                 il = first(kwargs[:irange])
                 iu = last(kwargs[:irange])
                 vl = vu = zero($relty)
-                range = 'I'
+                range = rocSOLVER.rocblas_erange_index
             elseif haskey(kwargs, :vl) || haskey(kwargs, :vu)
                 vl = convert($relty, get(kwargs, :vl, -Inf))
                 vu = convert($relty, get(kwargs, :vu, +Inf))
                 il = iu = 0
-                range = 'V'
+                range = rocSOLVER.rocblas_erange_value
             else
                 il = iu = 0
                 vl = vu = zero($relty)
-                range = 'A'
+                range = rocSOLVER.rocblas_erange_all
             end
             if length(V) == 0
-                jobz = 'N'
+                jobz = rocSOLVER.rocblas_evect_none
             else
                 size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
-                jobz = 'O'
+                jobz = rocSOLVER.rocblas_evect_original
             end
             dh     = rocBLAS.handle()
             abstol = -one($relty)
@@ -572,7 +574,8 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             work   = ROCVector{$relty}(undef, n)
             ifail  = ROCVector{BlasInt}(undef, n)
             dev_info = ROCVector{Cint}(undef, 1)
-            $heevx(dh, jobz, range, uplo, n, A, lda, vl, vu, il, iu, abstol, m, W, V, ldv, ifail, dev_info)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            $heevx(dh, jobz, range, roc_uplo, n, A, lda, vl, vu, il, iu, abstol, m, W, V, ldv, ifail, dev_info)
 
             info = @allowscalar dev_info[1]
             chkargsok(BlasInt(info))
@@ -589,21 +592,22 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             lda = max(1, stride(A, 2))
             length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
             if length(V) == 0
-                jobz = 'N'
+                jobz = rocSOLVER.rocblas_evect_none
             else
                 size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
-                jobz = 'O'
+                jobz = rocSOLVER.rocblas_evect_original
             end
             dh = rocBLAS.handle()
             dev_info = ROCVector{Cint}(undef, 1)
             residual = ROCVector{$relty}(undef, 1)
             n_sweeps = ROCVector{Cint}(undef, 1)
-            $heev(dh, jobz, uplo, n, A, lda, abstol, residual, max_sweeps, n_sweeps, W, dev_info)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            $heev(dh, jobz, roc_uplo, n, A, lda, abstol, residual, max_sweeps, n_sweeps, W, dev_info)
 
             info = @allowscalar dev_info[1]
             chkargsok(BlasInt(info))
 
-            if jobz == 'O' && V !== A
+            if jobz == rocSOLVER.rocblas_evect_original && V !== A
                 copy!(V, A)
             end
             return W, V
