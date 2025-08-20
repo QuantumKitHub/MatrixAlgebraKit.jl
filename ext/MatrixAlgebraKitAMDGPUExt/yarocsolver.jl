@@ -569,10 +569,10 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             end
             dh     = rocBLAS.handle()
             abstol = -one($relty)
-            m      = Ref{BlasInt}()
+            m      = Ref{Cint}()
             ldv    = max(1, stride(V, 2))
             work   = ROCVector{$relty}(undef, n)
-            ifail  = ROCVector{BlasInt}(undef, n)
+            ifail  = ROCVector{Cint}(undef, n)
             dev_info = ROCVector{Cint}(undef, 1)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             $heevx(dh, jobz, range, roc_uplo, n, A, lda, vl, vu, il, iu, abstol, m, W, V, ldv, ifail, dev_info)
