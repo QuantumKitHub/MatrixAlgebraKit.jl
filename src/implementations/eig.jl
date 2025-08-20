@@ -85,26 +85,6 @@ end
 
 _gpu_geev!(A::AbstractMatrix, D, V) = throw(MethodError(_gpu_geev!, (A, D, V)))
 
-function initialize_output(::typeof(eig_full!), A::AbstractMatrix, ::CUSOLVER_Simple)
-    n = size(A, 1) # square check will happen later
-    Tc = complex(eltype(A))
-    D = Diagonal(similar(A, Tc, n))
-    V = similar(A, Tc, (n, n))
-    return (D, V)
-end
-
-function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::CUSOLVER_Simple)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected"))
-    D, V = DV
-    @assert D isa Diagonal && V isa AbstractMatrix
-    @check_size(D, (m, m))
-    @check_scalar(D, A, complex)
-    @check_size(V, (m, m))
-    @check_scalar(V, A, complex)
-    return nothing
-end
-
 function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV

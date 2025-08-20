@@ -2,7 +2,7 @@ module YACUSOLVER
 
 using LinearAlgebra
 using LinearAlgebra: BlasInt, BlasFloat, checksquare, chkstride1, require_one_based_indexing
-using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo#, chkfinite
+using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo
 
 using CUDA
 using CUDA: @allowscalar, i32
@@ -717,6 +717,8 @@ end
 #     end
 # end
 
+# device code is unreachable by coverage right now
+# COV_EXCL_START
 # TODO use a shmem array here
 function _reorder_kernel_real(real_ev_ixs, VR::CuDeviceArray{T}, n::Int) where {T}
     grid_idx = threadIdx().x + (blockIdx().x - 1i32) * blockDim().x
@@ -743,6 +745,7 @@ function _reorder_kernel_complex(complex_ev_ixs, VR::CuDeviceArray{T}, n::Int) w
     end
     return
 end
+# COV_EXCL_STOP
 
 function _reorder_realeigendecomposition!(W, WR, WI, work, VR, jobvr)
 # first reorder eigenvalues and recycle work as temporary buffer to efficiently implement the permutation
