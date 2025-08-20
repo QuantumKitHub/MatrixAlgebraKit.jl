@@ -567,19 +567,19 @@ for (heevd, heev, heevx, heevj, elty, relty) in
                 size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
                 jobz = rocSOLVER.rocblas_evect_original
             end
-            dh     = rocBLAS.handle()
-            abstol = -one($relty)
-            m      = Ref{Cint}()
-            ldv    = max(1, stride(V, 2))
-            work   = ROCVector{$relty}(undef, n)
-            ifail  = ROCVector{Cint}(undef, n)
+            dh       = rocBLAS.handle()
+            abstol   = -one($relty)
+            nev      = ROCVector{Cint}(undef, 1)
+            ldv      = max(1, stride(V, 2))
+            ifail    = ROCVector{Cint}(undef, n)
             dev_info = ROCVector{Cint}(undef, 1)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
-            $heevx(dh, jobz, range, roc_uplo, n, A, lda, vl, vu, il, iu, abstol, m, W, V, ldv, ifail, dev_info)
+            $heevx(dh, jobz, range, roc_uplo, n, A, lda, vl, vu, il, iu, abstol, nev, W, V, ldv, ifail, dev_info)
 
             info = @allowscalar dev_info[1]
             chkargsok(BlasInt(info))
-            return W, V, m[]
+            m    = @allowscalar nev[1]
+            return W, V, m
         end
         function heevj!(A::StridedROCMatrix{$elty},
                         W::StridedROCVector{$relty},
