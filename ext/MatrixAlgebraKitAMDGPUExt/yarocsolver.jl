@@ -602,7 +602,7 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             residual = ROCVector{$relty}(undef, 1)
             n_sweeps = ROCVector{Cint}(undef, 1)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
-            $heev(dh, jobz, roc_uplo, n, A, lda, tol, residual, max_sweeps, n_sweeps, W, dev_info)
+            $heevj(dh, jobz, roc_uplo, n, A, lda, tol, residual, max_sweeps, n_sweeps, W, dev_info)
 
             info = @allowscalar dev_info[1]
             chkargsok(BlasInt(info))
