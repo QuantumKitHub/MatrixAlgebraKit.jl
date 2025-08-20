@@ -82,3 +82,29 @@ function eig_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
     D, V = eig_full!(A, DV, alg.alg)
     return truncate!(eig_trunc!, (D, V), alg.trunc)
 end
+
+_gpu_geev!(A::AbstractMatrix, D, V) = throw(MethodError(_gpu_geev!, (A, D, V)))
+
+function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
+    check_input(eig_full!, A, DV, alg)
+    D, V = DV
+    if alg isa GPU_Simple
+        isempty(alg.kwargs) ||
+            throw(ArgumentError("GPU_Simple (geev) does not accept any keyword arguments"))
+        _gpu_geev!(A, D.diag, V)
+    end
+    # TODO: make this controllable using a `gaugefix` keyword argument
+    V = gaugefix!(V)
+    return D, V
+end
+
+function eig_vals!(A::AbstractMatrix, D, alg::GPU_EigAlgorithm)
+    check_input(eig_vals!, A, D, alg)
+    V  = similar(A, complex(eltype(A)), (size(A, 1), 0))
+    if alg isa GPU_Simple
+        isempty(alg.kwargs) ||
+            throw(ArgumentError("LAPACK_Simple (geev) does not accept any keyword arguments"))
+        _gpu_geev!(A, D, V)
+    end
+    return D
+end

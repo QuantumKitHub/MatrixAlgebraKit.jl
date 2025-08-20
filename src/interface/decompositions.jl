@@ -164,6 +164,15 @@ a general matrix using the randomized SVD algorithm.
 """
 @algdef CUSOLVER_Randomized
 
+"""
+    CUSOLVER_Simple()
+
+Algorithm type to denote the simple CUSOLVER driver for computing the non-Hermitian
+eigenvalue decomposition of a matrix.
+"""
+@algdef CUSOLVER_Simple
+
+const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
 # =========================
 # ROCSOLVER ALGORITHMS
 # =========================
@@ -192,3 +201,6 @@ Algorithm type to denote the ROCSOLVER driver for computing the singular value d
 a general matrix using the Jacobi algorithm.
 """
 @algdef ROCSOLVER_Jacobi
+
+const GPU_Simple = Union{CUSOLVER_Simple}
+const GPU_EigAlgorithm = Union{GPU_Simple}

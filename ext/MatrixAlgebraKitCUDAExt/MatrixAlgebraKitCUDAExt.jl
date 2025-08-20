@@ -5,8 +5,8 @@ using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
 using MatrixAlgebraKit: LQViaTransposedQR
-using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm
-import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_Xgesvdr!, _gpu_gesvdj!
+using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm
+import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_Xgesvdr!, _gpu_gesvdj!, _gpu_geev!
 using CUDA
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
@@ -23,8 +23,12 @@ end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T<:StridedCuMatrix}
     return CUSOLVER_QRIteration(; kwargs...)
 end
+function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T<:StridedCuMatrix}
+    return CUSOLVER_Simple(; kwargs...)
+end
 
 
+_gpu_geev!(A::StridedCuMatrix, D::StridedCuVector, V::StridedCuMatrix) = YACUSOLVER.Xgeev!(A, D, V)
 _gpu_geqrf!(A::StridedCuMatrix) = YACUSOLVER.geqrf!(A)
 _gpu_ungqr!(A::StridedCuMatrix, τ::StridedCuVector) = YACUSOLVER.ungqr!(A, τ)
 _gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::StridedCuMatrix, τ::StridedCuVector, C::StridedCuVecOrMat) = YACUSOLVER.unmqr!(side, trans, A, τ, C)
