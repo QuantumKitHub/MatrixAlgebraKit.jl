@@ -1,7 +1,7 @@
 module MatrixAlgebraKitCUDAExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: @algdef, Algorithm, check_input, _reorder_realeigendecomposition!
+using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
 using MatrixAlgebraKit: LQViaTransposedQR
