@@ -82,4 +82,7 @@ if AMDGPU.functional()
     @safetestset "AMDGPU SVD" begin
         include("amd/svd.jl")
     end
+    @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
+        include("amd/eigh.jl")
+    end
 end

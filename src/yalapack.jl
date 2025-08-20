@@ -921,8 +921,8 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             end
             chkuplofinite(A, uplo)
             if haskey(kwargs, :irange)
-                il = first(irange)
-                iu = last(irange)
+                il = first(kwargs[:irange])
+                iu = last(kwargs[:irange])
                 vl = vu = zero($relty)
                 range = 'I'
             elseif haskey(kwargs, :vl) || haskey(kwargs, :vu)

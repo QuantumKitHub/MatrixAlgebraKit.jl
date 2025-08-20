@@ -1,7 +1,7 @@
 module YArocSOLVER
 
 using LinearAlgebra
-using LinearAlgebra: BlasInt, BlasFloat, checksquare, chkstride1, require_one_based_indexing
+using LinearAlgebra: BlasInt, BlasReal, BlasFloat, checksquare, chkstride1, require_one_based_indexing
 using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo
 
 using AMDGPU
@@ -475,42 +475,140 @@ end
 #     return X, info
 # end
 
-# for (jname, bname, fname, elty, relty) in
-#     ((:syevd!, :rocsolverDnSsyevd_bufferSize, :rocsolverDnSsyevd, :Float32, :Float32),
-#      (:syevd!, :rocsolverDnDsyevd_bufferSize, :rocsolverDnDsyevd, :Float64, :Float64),
-#      (:heevd!, :rocsolverDnCheevd_bufferSize, :rocsolverDnCheevd, :ComplexF32, :Float32),
-#      (:heevd!, :rocsolverDnZheevd_bufferSize, :rocsolverDnZheevd, :ComplexF64, :Float64))
-#     @eval begin
-#         function $jname(jobz::Char,
-#                         uplo::Char,
-#                         A::StridedROCMatrix{$elty})
-#             chkuplo(uplo)
-#             n = checksquare(A)
-#             lda = max(1, stride(A, 2))
-#             W = CuArray{$relty}(undef, n)
-#             dh = rocBLAS.handle()
+for (heevd, heev, heevx, heevj, elty, relty) in
+    ((:(rocSOLVER.rocsolver_ssyevd), :(rocSOLVER.rocsolver_ssyev), :(rocSOLVER.rocsolver_ssyevx), :(rocSOLVER.rocsolver_ssyevj), :Float32, :Float32),
+     (:(rocSOVLER.rocsolver_dsyevd), :(rocSOLVER.rocsolver_dsyev), :(rocSOLVER.rocsolver_dsyevx), :(rocSOLVER.rocsolver_dsyevj), :Float64, :Float64),
+     (:(rocSOLVER.rocsolver_cheevd), :(rocSOLVER.rocsolver_cheev), :(rocSOLVER.rocsolver_cheevx), :(rocSOLVER.rocsolver_cheevj), :ComplexF32, :Float32),
+     (:(rocSOLVER.rocsolver_zheevd), :(rocSOLVER.rocsolver_zheev), :(rocSOLVER.rocsolver_zheevx), :(rocSOLVER.rocsolver_zheevj), :ComplexF64, :Float64))
+    @eval begin
+        function heevd!(A::StridedROCMatrix{$elty},
+                        W::StridedROCVector{$relty},
+                        V::StridedROCMatrix{$elty};
+                        uplo::Char='U')
+            chkuplo(uplo)
+            n = checksquare(A)
+            lda = max(1, stride(A, 2))
+            length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
+            if length(V) == 0
+                jobz = 'N'
+            else
+                size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = 'O'
+            end
+            dh = rocBLAS.handle()
+            work = ROCVector{$relty}(undef, n)
+            dev_info = ROCVector{Cint}(undef, 1)
+            $heevd(dh, jobz, uplo, n, A, lda, W, work, dev_info)
 
-#             function bufferSize()
-#                 out = Ref{Cint}(0)
-#                 $bname(dh, jobz, uplo, n, A, lda, W, out)
-#                 return out[] * sizeof($elty)
-#             end
+            info = @allowscalar dev_info[1]
+            chkargsok(BlasInt(info))
 
-#             with_workspace(dh.workspace_gpu, bufferSize) do buffer
-#                 return $fname(dh, jobz, uplo, n, A, lda, W,
-#                               buffer, sizeof(buffer) ÷ sizeof($elty), dh.info)
-#             end
+            if jobz == 'O' && V !== A
+                copy!(V, A)
+            end
+            return W, V
+        end
+        function heev!(A::StridedROCMatrix{$elty},
+                       W::StridedROCVector{$relty},
+                       V::StridedROCMatrix{$elty};
+                       uplo::Char='U')
+            chkuplo(uplo)
+            n = checksquare(A)
+            lda = max(1, stride(A, 2))
+            length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
+            if length(V) == 0
+                jobz = 'N'
+            else
+                size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = 'O'
+            end
+            dh = rocBLAS.handle()
+            work = ROCVector{$relty}(undef, n)
+            dev_info = ROCVector{Cint}(undef, 1)
+            $heev(dh, jobz, uplo, n, A, lda, W, work, dev_info)
 
-#             info = @allowscalar dh.info[1]
-#             chkargsok(BlasInt(info))
+            info = @allowscalar dev_info[1]
+            chkargsok(BlasInt(info))
 
-#             if jobz == 'N'
-#                 return W
-#             elseif jobz == 'V'
-#                 return W, A
-#             end
-#         end
-#     end
-# end
+            if jobz == 'O' && V !== A
+                copy!(V, A)
+            end
+            return W, V
+        end
+        function heevx!(A::StridedROCMatrix{$elty},
+                        W::StridedROCVector{$relty},
+                        V::StridedROCMatrix{$elty};
+                        uplo::Char='U',
+                        kwargs...)
+            chkuplo(uplo)
+            n = checksquare(A)
+            lda = max(1, stride(A, 2))
+            length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
+            if haskey(kwargs, :irange)
+                il = first(kwargs[:irange])
+                iu = last(kwargs[:irange])
+                vl = vu = zero($relty)
+                range = 'I'
+            elseif haskey(kwargs, :vl) || haskey(kwargs, :vu)
+                vl = convert($relty, get(kwargs, :vl, -Inf))
+                vu = convert($relty, get(kwargs, :vu, +Inf))
+                il = iu = 0
+                range = 'V'
+            else
+                il = iu = 0
+                vl = vu = zero($relty)
+                range = 'A'
+            end
+            if length(V) == 0
+                jobz = 'N'
+            else
+                size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = 'O'
+            end
+            dh     = rocBLAS.handle()
+            abstol = -one($relty)
+            m      = Ref{BlasInt}()
+            ldv    = max(1, stride(V, 2))
+            work   = ROCVector{$relty}(undef, n)
+            ifail  = ROCVector{BlasInt}(undef, n)
+            dev_info = ROCVector{Cint}(undef, 1)
+            $heevx(dh, jobz, range, uplo, n, A, lda, vl, vu, il, iu, abstol, m, W, V, ldv, ifail, dev_info)
+
+            info = @allowscalar dev_info[1]
+            chkargsok(BlasInt(info))
+            return W, V, m[]
+        end
+        function heevj!(A::StridedROCMatrix{$elty},
+                        W::StridedROCVector{$relty},
+                        V::StridedROCMatrix{$elty};
+                        uplo::Char='U',
+                        tol::$relty=eps($relty),
+                        max_sweeps::Int=100)
+            chkuplo(uplo)
+            n = checksquare(A)
+            lda = max(1, stride(A, 2))
+            length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
+            if length(V) == 0
+                jobz = 'N'
+            else
+                size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = 'O'
+            end
+            dh = rocBLAS.handle()
+            dev_info = ROCVector{Cint}(undef, 1)
+            residual = ROCVector{$relty}(undef, 1)
+            n_sweeps = ROCVector{Cint}(undef, 1)
+            $heev(dh, jobz, uplo, n, A, lda, abstol, residual, max_sweeps, n_sweeps, W, dev_info)
+
+            info = @allowscalar dev_info[1]
+            chkargsok(BlasInt(info))
+
+            if jobz == 'O' && V !== A
+                copy!(V, A)
+            end
+            return W, V
+        end
+    end
+end
 
 end
