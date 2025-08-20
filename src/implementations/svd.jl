@@ -215,9 +215,7 @@ const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration,
                                      ROCSOLVER_Jacobi}
 const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
 
-const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
-const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
 function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized)

@@ -61,11 +61,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
         YALAPACK.heevx!(A, Dd, V; alg.kwargs...)
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    for j in 1:size(V, 2)
-        v = view(V, :, j)
-        s = conj(sign(argmax(abs, v)))
-        v .*= s
-    end
+    V = gaugefix!(V)
     return D, V
 end
 
@@ -87,4 +83,46 @@ end
 function eigh_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
     D, V = eigh_full!(A, DV, alg.alg)
     return truncate!(eigh_trunc!, (D, V), alg.trunc)
+end
+
+_gpu_heevj!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heevj!, (A, Dd, V)))
+_gpu_heevd!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heevd!, (A, Dd, V)))
+_gpu_heev!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heev!, (A, Dd, V)))
+_gpu_heevx!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heevx!, (A, Dd, V)))
+
+function eigh_full!(A::AbstractMatrix, DV, alg::GPU_EighAlgorithm)
+    check_input(eigh_full!, A, DV, alg)
+    D, V = DV
+    Dd = D.diag
+    if alg isa GPU_Jacobi 
+        _gpu_heevj!(A, Dd, V; alg.kwargs...)
+    elseif alg isa GPU_DivideAndConquer
+        _gpu_heevd!(A, Dd, V; alg.kwargs...)
+    elseif alg isa GPU_QRIteration # alg isa GPU_QRIteration == GPU_Simple
+        _gpu_heev!(A, Dd, V; alg.kwargs...)
+    elseif alg isa GPU_Bisection # alg isa GPU_Bisection == GPU_Expert
+        _gpu_heevx!(A, Dd, V; alg.kwargs...)
+    else
+        throw(ArgumentError("Unsupported eigh algorithm"))
+    end
+    # TODO: make this controllable using a `gaugefix` keyword argument
+    V = gaugefix!(V)
+    return D, V
+end
+
+function eigh_vals!(A::AbstractMatrix, D, alg::GPU_EighAlgorithm)
+    check_input(eigh_vals!, A, D, alg)
+    V = similar(A, (size(A, 1), 0))
+    if alg isa GPU_Jacobi 
+        _gpu_heevj!(A, D, V; alg.kwargs...)
+    elseif alg isa GPU_DivideAndConquer
+        _gpu_heevd!(A, D, V; alg.kwargs...)
+    elseif alg isa GPU_QRIteration
+        _gpu_heev!(A, D, V; alg.kwargs...)
+    elseif alg isa GPU_Bisection
+        _gpu_heevx!(A, D, V; alg.kwargs...)
+    else
+        throw(ArgumentError("Unsupported eigh algorithm"))
+    end
+    return D
 end
