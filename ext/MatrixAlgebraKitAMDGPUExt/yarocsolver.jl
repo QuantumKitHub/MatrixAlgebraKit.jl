@@ -586,7 +586,8 @@ for (heevd, heev, heevx, heevj, elty, relty) in
                         V::StridedROCMatrix{$elty};
                         uplo::Char='U',
                         tol::$relty=eps($relty),
-                        max_sweeps::Int=100)
+                        max_sweeps::Int=100,
+                        sort::Char='N')
             chkuplo(uplo)
             n = checksquare(A)
             lda = max(1, stride(A, 2))
@@ -602,7 +603,8 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             residual = ROCVector{$relty}(undef, 1)
             n_sweeps = ROCVector{Cint}(undef, 1)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
-            $heevj(dh, jobz, roc_uplo, n, A, lda, tol, residual, max_sweeps, n_sweeps, W, dev_info)
+            roc_sort = sort == 'N' ? rocSOLVER.rocblas_esort_none : rocSOLVER.rocblas_esort_ascending
+            $heevj(dh, roc_sort, jobz, roc_uplo, n, A, lda, tol, residual, max_sweeps, n_sweeps, W, dev_info)
 
             info = @allowscalar dev_info[1]
             chkargsok(BlasInt(info))
