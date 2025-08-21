@@ -1,7 +1,7 @@
 module YACUSOLVER
 
 using LinearAlgebra
-using LinearAlgebra: BlasInt, BlasFloat, checksquare, chkstride1, require_one_based_indexing
+using LinearAlgebra: BlasInt, BlasFloat, BlasReal, checksquare, chkstride1, require_one_based_indexing
 using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo
 
 using CUDA
@@ -679,43 +679,93 @@ end
 #     return X, info
 # end
 
-# for (jname, bname, fname, elty, relty) in
-#     ((:syevd!, :cusolverDnSsyevd_bufferSize, :cusolverDnSsyevd, :Float32, :Float32),
-#      (:syevd!, :cusolverDnDsyevd_bufferSize, :cusolverDnDsyevd, :Float64, :Float64),
-#      (:heevd!, :cusolverDnCheevd_bufferSize, :cusolverDnCheevd, :ComplexF32, :Float32),
-#      (:heevd!, :cusolverDnZheevd_bufferSize, :cusolverDnZheevd, :ComplexF64, :Float64))
-#     @eval begin
-#         function $jname(jobz::Char,
-#                         uplo::Char,
-#                         A::StridedCuMatrix{$elty})
-#             chkuplo(uplo)
-#             n = checksquare(A)
-#             lda = max(1, stride(A, 2))
-#             W = CuArray{$relty}(undef, n)
-#             dh = dense_handle()
+for (bname, fname, elty, relty) in ((:(CUSOLVER.cusolverDnSsyevj_bufferSize), :(CUSOLVER.cusolverDnSsyevj), :Float32, :Float32),
+                                    (:(CUSOLVER.cusolverDnDsyevj_bufferSize), :(CUSOLVER.cusolverDnDsyevj), :Float64, :Float64),
+                                    (:(CUSOLVER.cusolverDnCheevj_bufferSize), :(CUSOLVER.cusolverDnCheevj), :ComplexF32, :Float32),
+                                    (:(CUSOLVER.cusolverDnZheevj_bufferSize), :(CUSOLVER.cusolverDnZheevj), :ComplexF64, :Float64))
+    @eval begin
+        function heevj!(A::StridedCuMatrix{$elty},
+                        W::StridedCuVector{$relty},
+                        V::StridedCuMatrix{$elty};
+                        uplo::Char='U',
+                        tol::$relty=eps($relty),
+                        max_sweeps::Int=100
+                       )
+            chkuplo(uplo)
+            n   = checksquare(A)
+            lda = max(1, stride(A, 2))
+            dh  = CUSOLVER.dense_handle()
+            length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
+            if length(V) == 0
+                jobz = 'N'
+            else
+                size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = 'V'
+            end
+            params    = Ref{CUSOLVER.syevjInfo_t}(C_NULL)
+            CUSOLVER.cusolverDnCreateSyevjInfo(params)
+            CUSOLVER.cusolverDnXsyevjSetTolerance(params[], tol)
+            CUSOLVER.cusolverDnXsyevjSetMaxSweeps(params[], max_sweeps)
+            function bufferSize()
+                out = Ref{Cint}(0)
+                $bname(dh, jobz, uplo, n, A, lda, W, out, params[])
+                return out[] * sizeof($elty)
+            end
+            CUDA.with_workspace(dh.workspace_gpu, bufferSize) do buffer
+                $fname(dh, jobz, uplo, n, A, lda, W, buffer,
+                       sizeof(buffer) ÷ sizeof($elty), dh.info, params[])
+            end
 
-#             function bufferSize()
-#                 out = Ref{Cint}(0)
-#                 $bname(dh, jobz, uplo, n, A, lda, W, out)
-#                 return out[] * sizeof($elty)
-#             end
+            info = @allowscalar dh.info[1]
+            chkargsok(BlasInt(info))
 
-#             with_workspace(dh.workspace_gpu, bufferSize) do buffer
-#                 return $fname(dh, jobz, uplo, n, A, lda, W,
-#                               buffer, sizeof(buffer) ÷ sizeof($elty), dh.info)
-#             end
+            if jobz == 'V' && V !== A
+                copy!(V, A)
+            end
+            return W, V
+        end
+    end
+end
 
-#             info = @allowscalar dh.info[1]
-#             chkargsok(BlasInt(info))
+function heevd!(A::StridedCuMatrix{T},
+                W::StridedCuVector{Tr},
+                V::StridedCuMatrix{T};
+                uplo::Char='U') where {T<:BlasFloat, Tr<:BlasReal}
+    chkuplo(uplo)
+    n   = checksquare(A)
+    lda = max(1, stride(A, 2))
+    dh  = CUSOLVER.dense_handle()
+    length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
+    if length(V) == 0
+        jobz = 'N'
+    else
+        size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
+        jobz = 'V'
+    end
 
-#             if jobz == 'N'
-#                 return W
-#             elseif jobz == 'V'
-#                 return W, A
-#             end
-#         end
-#     end
-# end
+    params = CUSOLVER.CuSolverParameters()
+    function bufferSize()
+        out_cpu = Ref{Csize_t}(0)
+        out_gpu = Ref{Csize_t}(0)
+        CUSOLVER.cusolverDnXsyevd_bufferSize(dh, params, jobz, uplo, n, T, A, lda, Tr, W, T, out_gpu, out_cpu)
+        return out_gpu[], out_cpu[]
+    end
+
+    CUSOLVER.with_workspaces(dh.workspace_gpu, dh.workspace_cpu,
+                             bufferSize()...) do buffer_gpu, buffer_cpu
+        return CUSOLVER.cusolverDnXsyevd(dh, params, jobz, uplo, n, T, A, lda, Tr, W,
+                                         T, buffer_gpu, sizeof(buffer_gpu), buffer_cpu,
+                                         sizeof(buffer_cpu), dh.info)
+    end
+
+    info = @allowscalar dh.info[1]
+    chkargsok(BlasInt(info))
+
+    if jobz == 'V' && V !== A
+        copy!(V, A)
+    end
+    return W, V
+end
 
 # device code is unreachable by coverage right now
 # COV_EXCL_START

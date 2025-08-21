@@ -173,6 +173,16 @@ eigenvalue decomposition of a matrix.
 @algdef CUSOLVER_Simple
 
 const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
+
+"""
+    CUSOLVER_DivideAndConquer()
+
+Algorithm type to denote the CUSOLVER driver for computing the eigenvalue decomposition of a
+Hermitian matrix, or the singular value decomposition of a general matrix using the
+Divide and Conquer algorithm.
+"""
+@algdef CUSOLVER_DivideAndConquer
+
 # =========================
 # ROCSOLVER ALGORITHMS
 # =========================
@@ -202,5 +212,33 @@ a general matrix using the Jacobi algorithm.
 """
 @algdef ROCSOLVER_Jacobi
 
+"""
+    ROCSOLVER_Bisection()
+
+Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
+Hermitian matrix, or the singular value decomposition of a general matrix using the
+Bisection algorithm.
+"""
+@algdef ROCSOLVER_Bisection
+
+"""
+    ROCSOLVER_DivideAndConquer()
+
+Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
+Hermitian matrix, or the singular value decomposition of a general matrix using the
+Divide and Conquer algorithm.
+"""
+@algdef ROCSOLVER_DivideAndConquer
+
+
 const GPU_Simple = Union{CUSOLVER_Simple}
 const GPU_EigAlgorithm = Union{GPU_Simple}
+const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
+const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
+const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
+const GPU_Bisection = Union{ROCSOLVER_Bisection}
+const GPU_EighAlgorithm = Union{GPU_QRIteration,
+                                GPU_Jacobi,
+                                GPU_DivideAndConquer,
+                                GPU_Bisection}
+
