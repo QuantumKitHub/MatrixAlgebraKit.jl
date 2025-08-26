@@ -10,7 +10,7 @@ import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gp
 import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!
 using CUDA
 using LinearAlgebra
-using LinearAlgebra: BlasFloat, eigvals!
+using LinearAlgebra: BlasFloat
 
 include("yacusolver.jl")
 
@@ -40,7 +40,7 @@ function MatrixAlgebraKit.default_lq_algorithm(::Type{Base.ReshapedArray{T,2,Sub
     return LQViaTransposedQR(qr_alg)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{Base.ReshapedArray{T,2,SubArray{T,1,A,Tuple{UnitRange{Int}},true},Tuple{}}}; kwargs...) where {T<:BlasFloat, A<:CuVecOrMat{T}}
-    return CUSOLVER_QRIteration(; kwargs...)
+    return CUSOLVER_Jacobi(; kwargs...)
 end
 function MatrixAlgebraKit.default_eig_algorithm(::Type{Base.ReshapedArray{T,2,SubArray{T,1,A,Tuple{UnitRange{Int}},true},Tuple{}}}; kwargs...) where {T<:BlasFloat, A<:CuVecOrMat{T}}
     return CUSOLVER_Simple(; kwargs...)
