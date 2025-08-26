@@ -418,7 +418,7 @@ end
 _argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
 _largest(x, y) = abs(x) < abs(y) ? y : x
 
-function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
+function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
     if alg isa GPU_QRIteration
