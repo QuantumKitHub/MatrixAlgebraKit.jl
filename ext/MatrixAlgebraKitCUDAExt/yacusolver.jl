@@ -28,7 +28,7 @@ for (bname, fname, elty, relty) in
         #! format: on
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
-            (m < n) && throw(ArgumentError("CUSOLVER's gesvd requires m ≥ n"))
+            (m < n) && throw(ArgumentError("CUSOLVER's gesvd requires m ($m) ≥ n ($n)"))
             minmn = min(m, n)
             if length(U) == 0
                 jobu = 'N'
