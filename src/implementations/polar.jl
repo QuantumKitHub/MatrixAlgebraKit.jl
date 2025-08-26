@@ -50,9 +50,8 @@ function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
     U, S, Vᴴ = svd_compact!(A, alg.svdalg)
     W, P = WP
     W = mul!(W, U, Vᴴ)
-    @. S = sqrt(S)
-    @. Vᴴ *= S 
-    SsqrtVᴴ = Vᴴ
+    S .= sqrt.(S)
+    SsqrtVᴴ = lmul!(S, Vᴴ)
     P = mul!(P, SsqrtVᴴ', SsqrtVᴴ)
     return (W, P)
 end
@@ -61,9 +60,8 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarViaSVD)
     U, S, Vᴴ = svd_compact!(A, alg.svdalg)
     P, Wᴴ = PWᴴ
     Wᴴ = mul!(Wᴴ, U, Vᴴ)
-    @. S = sqrt(S)
-    @. U *= S
-    USsqrt = U
+    S .= sqrt.(S)
+    USsqrt = rmul!(U, S)
     P = mul!(P, USsqrt, USsqrt')
     return (P, Wᴴ)
 end
