@@ -191,14 +191,15 @@ for (bname, fname, elty, relty) in
         (:cusolverDnZgesvdj_bufferSize, :cusolverDnZgesvdj, :ComplexF64, :Float64),
     )
     @eval begin
-        function gesvdj!(
-                A::StridedCuMatrix{$elty},
-                S::StridedCuVector{$relty} = similar(A, $relty, min(size(A)...)),
-                U::StridedCuMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
-                Vᴴ::StridedCuMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
-                tol::$relty = eps($relty),
-                max_sweeps::Int = 100
-            )
+        #! format: off
+        function gesvdj!(A::StridedCuMatrix{$elty},
+                         S::StridedCuVector{$relty}=similar(A, $relty, min(size(A)...)),
+                         U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
+                         Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
+                         tol::$relty=eps($relty),
+                         max_sweeps::Int=100,
+                         kwargs...)
+        #! format: on
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
             minmn = min(m, n)
