@@ -389,7 +389,7 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
     U, S, Vᴴ = USVᴴ
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||
-            throw(ArgumentError("GPU_QRIteration does not accept any keyword arguments"))
+            @warn "GPU_QRIteration does not accept any keyword arguments"
         _gpu_gesvd!(A, S.diag, U, Vᴴ)
     elseif alg isa GPU_SVDPolar
         _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; alg.kwargs...)
