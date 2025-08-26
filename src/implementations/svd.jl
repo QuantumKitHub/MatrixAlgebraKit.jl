@@ -347,12 +347,18 @@ function _gpu_gesvdj!(
     throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
 end
 # GPU SVD implementation
-function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
+function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_full!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     fill!(S, zero(eltype(S)))
     m, n = size(A)
     minmn = min(m, n)
+    if minmn == 0
+        one!(U)
+        zero!(S)
+        one!(Vᴴ)
+        return USVᴴ
+    end
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||
             throw(ArgumentError("GPU_QRIteration does not accept any keyword arguments"))
@@ -384,7 +390,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     return first(truncate(svd_trunc!, USVᴴ, alg.trunc))
 end
 
-function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
+function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     if alg isa GPU_QRIteration
@@ -405,7 +411,7 @@ end
 _argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
 _largest(x, y) = abs(x) < abs(y) ? y : x
 
-function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
+function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
     if alg isa GPU_QRIteration
