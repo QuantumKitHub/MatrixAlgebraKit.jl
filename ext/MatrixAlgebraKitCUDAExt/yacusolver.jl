@@ -183,7 +183,8 @@ for (bname, fname, elty, relty) in
                          U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
                          Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
                          tol::$relty=eps($relty),
-                         max_sweeps::Int=100)
+                         max_sweeps::Int=100,
+                         kwargs...)
         #! format: on
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
