@@ -22,7 +22,7 @@ function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {TT<:
     return LQViaTransposedQR(qr_alg)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {TT<:BlasFloat, T<:StridedCuMatrix{TT}}
-    return CUSOLVER_QRIteration(; kwargs...)
+    return CUSOLVER_Jacobi(; kwargs...)
 end
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {TT<:BlasFloat, T<:StridedCuMatrix{TT}}
     return CUSOLVER_Simple(; kwargs...)
