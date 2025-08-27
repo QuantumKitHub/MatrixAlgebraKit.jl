@@ -8,7 +8,7 @@ using MatrixAlgebraKit: LQViaTransposedQR, TruncationByValue
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_Xgesvdr!, _gpu_gesvdj!, _gpu_geev!
 import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!
-using CUDA
+using CUDA, CUDA.CUBLAS
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
 
