@@ -1,13 +1,10 @@
 # Inputs
 # ------
-function copy_input(::typeof(qr_full), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
-function copy_input(::typeof(qr_compact), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
-function copy_input(::typeof(qr_null), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
+for f in (:qr_full, :qr_compact, :qr_null)
+    @eval function copy_input(::typeof($f), A::AbstractMatrix)
+        return copy!(similar(A, float(eltype(A))), A)
+    end
+    @eval copy_input(::typeof($f), A::Diagonal) = copy(A)
 end
 
 function check_input(::typeof(qr_full!), A::AbstractMatrix, QR, ::AbstractAlgorithm)
@@ -40,6 +37,28 @@ function check_input(::typeof(qr_null!), A::AbstractMatrix, N, ::AbstractAlgorit
     return nothing
 end
 
+function check_input(::typeof(qr_full!), A::AbstractMatrix, (Q, R), alg::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert Q isa Diagonal && R isa Diagonal
+    @check_size(Q, (m, n))
+    @check_scalar(Q, A)
+    isempty(R) || @check_size(R, (m, n))
+    @check_scalar(R, A)
+    return nothing
+end
+function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
+    return check_input(qr_full!, A, QR, alg)
+end
+function check_input(::typeof(qr_null!), A::AbstractMatrix, N, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert N isa AbstractMatrix
+    @check_size(N, (m, 0))
+    @check_scalar(N, A)
+    return nothing
+end
+
 # Outputs
 # -------
 function initialize_output(::typeof(qr_full!), A::AbstractMatrix, ::AbstractAlgorithm)
@@ -60,6 +79,12 @@ function initialize_output(::typeof(qr_null!), A::AbstractMatrix, ::AbstractAlgo
     minmn = min(m, n)
     N = similar(A, (m, m - minmn))
     return N
+end
+
+for f! in (:qr_full!, :qr_compact!)
+    @eval function initialize_output(::typeof($f!), A::AbstractMatrix, ::DiagonalAlgorithm)
+        return similar(A), A
+    end
 end
 
 # Implementation
@@ -83,6 +108,26 @@ function qr_null!(A::AbstractMatrix, N, alg::LAPACK_HouseholderQR)
     return N
 end
 
+function qr_full!(A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
+    check_input(qr_full!, A, QR, alg)
+    Q, R = QR
+    _diagonal_qr!(A, Q, R; alg.kwargs...)
+    return Q, R
+end
+function qr_compact!(A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
+    check_input(qr_compact!, A, QR, alg)
+    Q, R = QR
+    _diagonal_qr!(A, Q, R; alg.kwargs...)
+    return Q, R
+end
+function qr_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
+    check_input(qr_null!, A, N, alg)
+    _diagonal_qr_null!(A, N; alg.kwargs...)
+    return N
+end
+
+# LAPACK logic
+# ------------
 function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
                      positive=false,
                      pivoted=false,
@@ -167,23 +212,51 @@ function _lapack_qr_null!(A::AbstractMatrix, N::AbstractMatrix;
     return N
 end
 
+# Diagonal logic
+# --------------
+function _diagonal_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+                       positive::Bool=false)
+    Ad = diagview(A)
+    Qd = diagview(Q)
+    Rd = diagview(R)
+    if positive
+        @inbounds @simd for i in eachindex(Ad)
+            s = sign_safe(Ad[i])
+            Qd[i] = s
+            Rd[i] = conj(s) * Ad[i]
+        end
+    else
+        A === R || copy!(Rd, Ad)
+        one!(Q)
+    end
+    return Q, R
+end
+
+_diagonal_qr_null!(A::AbstractMatrix, N::AbstractMatrix) = N
+
 ### GPU logic
 # placed here to avoid code duplication since much of the logic is replicable across
 # CUDA and AMDGPU
 ###
-function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR})
+function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR,
+                                   alg::Union{CUSOLVER_HouseholderQR,
+                                              ROCSOLVER_HouseholderQR})
     check_input(qr_full!, A, QR, alg)
     Q, R = QR
     _gpu_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
-function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR})
+function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR,
+                                      alg::Union{CUSOLVER_HouseholderQR,
+                                                 ROCSOLVER_HouseholderQR})
     check_input(qr_compact!, A, QR, alg)
     Q, R = QR
     _gpu_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
-function MatrixAlgebraKit.qr_null!(A::AbstractMatrix, N, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR})
+function MatrixAlgebraKit.qr_null!(A::AbstractMatrix, N,
+                                   alg::Union{CUSOLVER_HouseholderQR,
+                                              ROCSOLVER_HouseholderQR})
     check_input(qr_null!, A, N, alg)
     _gpu_qr_null!(A, N; alg.kwargs...)
     return N
@@ -191,11 +264,13 @@ end
 
 _gpu_geqrf!(A::AbstractMatrix) = throw(MethodError(_gpu_geqrf!, (A,)))
 _gpu_ungqr!(A::AbstractMatrix, τ::AbstractVector) = throw(MethodError(_gpu_ungqr!, (A, τ)))
-_gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix, τ::AbstractVector, C) = throw(MethodError(_gpu_unmqr!, (side, trans, A, τ, C)))
-
+function _gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix,
+                     τ::AbstractVector, C)
+    throw(MethodError(_gpu_unmqr!, (side, trans, A, τ, C)))
+end
 
 function _gpu_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-                       positive=false, blocksize=1)
+                  positive=false, blocksize=1)
     blocksize > 1 &&
         throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
     m, n = size(A)
