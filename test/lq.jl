@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using StableRNGs
-using LinearAlgebra: diag, I
+using LinearAlgebra: diag, I, Diagonal
 using MatrixAlgebraKit: LQViaTransposedQR, LAPACK_HouseholderQR
 
 @testset "lq_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
@@ -203,5 +203,51 @@ end
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_full!(copy!(Ac, A), (noL, Q2); positive=true, blocksize=1)
         @test Q == Q2
+    end
+end
+
+@testset "lq_compact, lq_full and lq_null for Diagonal{$T}" for T in (Float32, Float64,
+                                                                      ComplexF32, ComplexF64)
+    rng = StableRNG(123)
+    atol = eps(real(T))^(3 / 4)
+    for m in (54, 0)
+        Ad = randn(rng, T, m)
+        A = Diagonal(Ad)
+
+        # compact
+        L, Q = @constinferred lq_compact(A)
+        @test Q isa Diagonal{T} && size(Q) == (m, m)
+        @test L isa Diagonal{T} && size(L) == (m, m)
+        @test L * Q ≈ A
+        @test isunitary(Q)
+
+        # compact and positive
+        Lp, Qp = @constinferred lq_compact(A; positive=true)
+        @test Qp isa Diagonal{T} && size(Qp) == (m, m)
+        @test Lp isa Diagonal{T} && size(Lp) == (m, m)
+        @test Lp * Qp ≈ A
+        @test isunitary(Qp)
+        @test all(≥(zero(real(T))), real(diag(Lp))) &&
+              all(≈(zero(real(T)); atol), imag(diag(Lp)))
+
+        # full
+        L, Q = @constinferred lq_full(A)
+        @test Q isa Diagonal{T} && size(Q) == (m, m)
+        @test L isa Diagonal{T} && size(L) == (m, m)
+        @test L * Q ≈ A
+        @test isunitary(Q)
+
+        # full and positive
+        Lp, Qp = @constinferred lq_full(A; positive=true)
+        @test Qp isa Diagonal{T} && size(Qp) == (m, m)
+        @test Lp isa Diagonal{T} && size(Lp) == (m, m)
+        @test Lp * Qp ≈ A
+        @test isunitary(Qp)
+        @test all(≥(zero(real(T))), real(diag(Lp))) &&
+              all(≈(zero(real(T)); atol), imag(diag(Lp)))
+
+        # null
+        N = @constinferred lq_null(A)
+        @test N isa AbstractMatrix{T} && size(N) == (0, m)
     end
 end

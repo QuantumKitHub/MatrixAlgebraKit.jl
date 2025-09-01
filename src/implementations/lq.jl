@@ -1,13 +1,10 @@
 # Inputs
 # ------
-function copy_input(::typeof(lq_full), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
-function copy_input(::typeof(lq_compact), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
-function copy_input(::typeof(lq_null), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
+for f in (:lq_full, :lq_compact, :lq_null)
+    @eval function copy_input(::typeof($f), A::AbstractMatrix)
+        return copy!(similar(A, float(eltype(A))), A)
+    end
+    @eval copy_input(::typeof($f), A::Diagonal) = copy(A)
 end
 
 function check_input(::typeof(lq_full!), A::AbstractMatrix, LQ, ::AbstractAlgorithm)
@@ -40,6 +37,28 @@ function check_input(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, ::AbstractAlgo
     return nothing
 end
 
+function check_input(::typeof(lq_full!), A::AbstractMatrix, (L, Q), ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert Q isa Diagonal && L isa Diagonal
+    isempty(L) || @check_size(L, (m, n))
+    @check_scalar(L, A)
+    @check_size(Q, (n, n))
+    @check_scalar(Q, A)
+    return nothing
+end
+function check_input(::typeof(lq_compact!), A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
+    return check_input(lq_full!, A, LQ, alg)
+end
+function check_input(::typeof(lq_null!), A::AbstractMatrix, N, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert N isa AbstractMatrix
+    @check_size(N, (0, m))
+    @check_scalar(N, A)
+    return nothing
+end
+
 # Outputs
 # -------
 function initialize_output(::typeof(lq_full!), A::AbstractMatrix, ::AbstractAlgorithm)
@@ -62,19 +81,18 @@ function initialize_output(::typeof(lq_null!), A::AbstractMatrix, ::AbstractAlgo
     return Nᴴ
 end
 
+for f! in (:lq_full!, :lq_compact!)
+    @eval function initialize_output(::typeof($f!), A::AbstractMatrix, ::DiagonalAlgorithm)
+        return A, similar(A)
+    end
+end
+
 # Implementation
 # --------------
-# actual implementation
 function lq_full!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
     check_input(lq_full!, A, LQ, alg)
     L, Q = LQ
     _lapack_lq!(A, L, Q; alg.kwargs...)
-    return L, Q
-end
-function lq_full!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
-    check_input(lq_full!, A, LQ, alg)
-    L, Q = LQ
-    lq_via_qr!(A, L, Q, alg.qr_alg)
     return L, Q
 end
 function lq_compact!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
@@ -83,16 +101,23 @@ function lq_compact!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
     _lapack_lq!(A, L, Q; alg.kwargs...)
     return L, Q
 end
+function lq_null!(A::AbstractMatrix, Nᴴ, alg::LAPACK_HouseholderLQ)
+    check_input(lq_null!, A, Nᴴ, alg)
+    _lapack_lq_null!(A, Nᴴ; alg.kwargs...)
+    return Nᴴ
+end
+
+function lq_full!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
+    check_input(lq_full!, A, LQ, alg)
+    L, Q = LQ
+    lq_via_qr!(A, L, Q, alg.qr_alg)
+    return L, Q
+end
 function lq_compact!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
     check_input(lq_compact!, A, LQ, alg)
     L, Q = LQ
     lq_via_qr!(A, L, Q, alg.qr_alg)
     return L, Q
-end
-function lq_null!(A::AbstractMatrix, Nᴴ, alg::LAPACK_HouseholderLQ)
-    check_input(lq_null!, A, Nᴴ, alg)
-    _lapack_lq_null!(A, Nᴴ; alg.kwargs...)
-    return Nᴴ
 end
 function lq_null!(A::AbstractMatrix, Nᴴ, alg::LQViaTransposedQR)
     check_input(lq_null!, A, Nᴴ, alg)
@@ -100,6 +125,25 @@ function lq_null!(A::AbstractMatrix, Nᴴ, alg::LQViaTransposedQR)
     return Nᴴ
 end
 
+function lq_full!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
+    check_input(lq_full!, A, LQ, alg)
+    L, Q = LQ
+    _diagonal_lq!(A, L, Q; alg.kwargs...)
+    return L, Q
+end
+function lq_compact!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
+    check_input(lq_compact!, A, LQ, alg)
+    L, Q = LQ
+    _diagonal_lq!(A, L, Q; alg.kwargs...)
+    return L, Q
+end
+function lq_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
+    check_input(lq_null!, A, N, alg)
+    return _diagonal_lq_null!(A, N; alg.kwargs...)
+end
+
+# LAPACK logic
+# ------------
 function _lapack_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
                      positive=false,
                      pivoted=false,
@@ -177,6 +221,7 @@ function _lapack_lq_null!(A::AbstractMatrix, Nᴴ::AbstractMatrix;
 end
 
 # LQ via transposition and QR
+# ---------------------------
 function lq_via_qr!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix,
                     qr_alg::AbstractAlgorithm)
     m, n = size(A)
@@ -203,3 +248,25 @@ function lq_null_via_qr!(A::AbstractMatrix, N::AbstractMatrix, qr_alg::AbstractA
     !isempty(N) && adjoint!(N, Nt)
     return N
 end
+
+# Diagonal logic
+# --------------
+function _diagonal_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
+                       positive::Bool=false)
+    Ad = diagview(A)
+    Ld = diagview(L)
+    Qd = diagview(Q)
+    if positive
+        @inbounds @simd for i in eachindex(Ad)
+            s = sign_safe(Ad[i])
+            Qd[i] = s
+            Ld[i] = conj(s) * Ad[i]
+        end
+    else
+        A === L || copy!(Ld, Ad)
+        one!(Q)
+    end
+    return L, Q
+end
+
+_diagonal_lq_null!(A::AbstractMatrix, N::AbstractMatrix) = N

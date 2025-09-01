@@ -75,6 +75,9 @@ end
 function default_lq_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
     return LAPACK_HouseholderLQ(; kwargs...)
 end
+function default_lq_algorithm(::Type{T}; kwargs...) where {T<:Diagonal}
+    return DiagonalAlgorithm(; kwargs...)
+end
 
 for f in (:lq_full!, :lq_compact!, :lq_null!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
