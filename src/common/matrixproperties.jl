@@ -42,6 +42,7 @@ See also [`isisometry`](@ref) and [`is_right_isometry`](@ref).
 """ is_left_isometry
 
 function is_left_isometry(A::AbstractMatrix; isapprox_kwargs...)
+    iszero(min(size(A)...)) && return true
     return isapprox(A' * A, LinearAlgebra.I; isapprox_kwargs...)
 end
 
@@ -55,5 +56,6 @@ See also [`isisometry`](@ref) and [`is_left_isometry`](@ref).
 """ is_right_isometry
 
 function is_right_isometry(A::AbstractMatrix; isapprox_kwargs...)
+    iszero(min(size(A)...)) && return true
     return isapprox(A * A', LinearAlgebra.I; isapprox_kwargs...)
 end
