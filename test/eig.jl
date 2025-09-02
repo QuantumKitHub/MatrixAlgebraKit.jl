@@ -5,7 +5,9 @@ using StableRNGs
 using LinearAlgebra: Diagonal
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
-@testset "eig_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+
+@testset "eig_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_Simple(), LAPACK_Expert(), :LAPACK_Simple, LAPACK_Simple)
@@ -30,7 +32,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm, diagview
     end
 end
 
-@testset "eig_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+@testset "eig_trunc! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_Simple(), LAPACK_Expert())
@@ -58,9 +60,7 @@ end
     end
 end
 
-@testset "eig_trunc! specify truncation algorithm T = $T" for T in
-                                                              (Float32, Float64, ComplexF32,
-                                                               ComplexF64)
+@testset "eig_trunc! specify truncation algorithm T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 4
     V = randn(rng, T, m, m)
@@ -70,4 +70,25 @@ end
     D2, V2 = @constinferred eig_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
     @test_throws ArgumentError eig_trunc(A; alg, trunc=(; maxrank=2))
+end
+
+@testset "eig for Diagonal{$T}" for T in BLASFloats
+    rng = StableRNG(123)
+    m = 54
+    Ad = randn(rng, T, m)
+    A = Diagonal(Ad)
+
+    D, V = @constinferred eig_full(A)
+    @test D isa Diagonal{T} && size(D) == size(A)
+    @test V isa Diagonal{T} && size(V) == size(A)
+    @test A * V ≈ V * D
+
+    D2 = @constinferred eig_vals(A)
+    @test D2 isa AbstractVector{T} && length(D2) == m
+    @test diagview(D) ≈ D2
+
+    A2 = Diagonal(T[0.9, 0.3, 0.1, 0.01])
+    alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
+    D2, V2 = @constinferred eig_trunc(A2; alg)
+    @test diagview(D2) ≈ diagview(A2)[1:2]
 end
