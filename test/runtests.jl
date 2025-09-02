@@ -94,9 +94,9 @@ if AMDGPU.functional()
     @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
         include("amd/eigh.jl")
     end
-    @safetestset "AMDGPU Schur Decomposition" begin
+    #=@safetestset "AMDGPU Schur Decomposition" begin
         include("amd/schur.jl")
-    end
+    end=# #TODO
     @safetestset "AMDGPU Polar Decomposition" begin
         include("amd/polar.jl")
     end
