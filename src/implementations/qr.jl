@@ -232,7 +232,7 @@ function _diagonal_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
     return Q, R
 end
 
-_diagonal_qr_null!(A::AbstractMatrix, N::AbstractMatrix) = N
+_diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool=false) = N
 
 ### GPU logic
 # placed here to avoid code duplication since much of the logic is replicable across

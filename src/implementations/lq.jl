@@ -269,4 +269,4 @@ function _diagonal_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
     return L, Q
 end
 
-_diagonal_lq_null!(A::AbstractMatrix, N::AbstractMatrix) = N
+_diagonal_lq_null!(A::AbstractMatrix, N; positive::Bool=false) = N
