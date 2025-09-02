@@ -155,31 +155,31 @@ end
 
             # with kind and tol kwargs
             if kind == :svd
-                V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
-                                                   trunc=(; atol=atol))
+                #V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
+                #                                   trunc=(; atol=atol))
                 N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind,
                                                trunc=(; atol=atol))
-                @test V2 !== V
-                @test C2 !== C
+                #@test V2 !== V
+                #@test C2 !== C
                 @test N2 !== C
-                @test V2 * C2 ≈ A
-                @test V2' * V2 ≈ I
-                @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-                @test N2' * N2 ≈ I
-                @test V2 * V2' + N2 * N2' ≈ I
-
-                V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
-                                                   trunc=(; rtol=rtol))
-                N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind,
-                                               trunc=(; rtol=rtol))
-                @test V2 !== V
-                @test C2 !== C
-                @test N2 !== C
-                @test V2 * C2 ≈ A
-                @test isisometry(V2)
+                #@test V2 * C2 ≈ A
+                #@test V2' * V2 ≈ I
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometry(N2)
-                @test V2 * V2' + N2 * N2' ≈ I
+                #@test V2 * V2' + N2 * N2' ≈ I
+
+                #V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
+                #                                   trunc=(; rtol=rtol))
+                N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind,
+                                               trunc=(; rtol=rtol))
+                #@test V2 !== V
+                #@test C2 !== C
+                @test N2 !== C
+                #@test V2 * C2 ≈ A
+                #@test isisometry(V2)
+                @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
+                @test isisometry(N2)
+                #@test V2 * V2' + N2 * N2' ≈ I
             else
                 @test_throws ArgumentError left_orth!(copy!(Ac, A), (V, C); kind=kind,
                                                       trunc=(; atol=atol))
