@@ -11,9 +11,9 @@ using AMDGPU
     m = 54
     @testset "size ($m, $n)" for n in (37, m)
         k = min(m, n)
-        svd_algs = (rocSOLVER_QRIteration(), rocSOLVER_Jacobi())
+        svd_algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
         @testset "algorithm $svd_alg" for svd_alg in svd_algs
-            n < m && svd_alg isa rocSOLVER_QRIteration && continue 
+            n < m && svd_alg isa ROCSOLVER_QRIteration && continue 
             A = ROCArray(randn(rng, T, m, n))
             alg = PolarViaSVD(svd_alg)
             W, P = left_polar(A; alg)
@@ -39,9 +39,9 @@ end
     n = 54
     @testset "size ($m, $n)" for m in (37, n)
         k = min(m, n)
-        svd_algs = (rocSOLVER_QRIteration(), rocSOLVER_Jacobi())
+        svd_algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
         @testset "algorithm $svd_alg" for svd_alg in svd_algs
-            n > m && svd_alg isa rocSOLVER_QRIteration && continue 
+            n > m && svd_alg isa ROCSOLVER_QRIteration && continue 
             A = ROCArray(randn(rng, T, m, n))
             alg = PolarViaSVD(svd_alg)
             P, Wᴴ = right_polar(A; alg)
