@@ -48,4 +48,4 @@ test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras","ChainRulesCore", "C
 
 [sources]
 CUDA = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "ksh/rmul"}
-AMDGPU = {url = "https://github.com/JuliaGPU/AMDGPU.jl", rev = "master"}
+AMDGPU = {url = "https://github.com/kshyatt/AMDGPU.jl", rev = "ksh/lrmul"}
