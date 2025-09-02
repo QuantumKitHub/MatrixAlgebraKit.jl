@@ -93,6 +93,9 @@ end
 function default_eigh_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
     return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
 end
+function default_eigh_algorithm(::Type{T}; kwargs...) where {T<:Diagonal}
+    return DiagonalAlgorithm(; kwargs...)
+end
 
 for f in (:eigh_full!, :eigh_vals!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
