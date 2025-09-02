@@ -21,8 +21,8 @@ function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <:
     qr_alg = ROCSOLVER_HouseholderQR(; kwargs...)
     return LQViaTransposedQR(qr_alg)
 end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
-    return ROCSOLVER_QRIteration(; kwargs...)
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T<:StridedROCMatrix}
+    return ROCSOLVER_Jacobi(; kwargs...)
 end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
     return ROCSOLVER_DivideAndConquer(; kwargs...)
