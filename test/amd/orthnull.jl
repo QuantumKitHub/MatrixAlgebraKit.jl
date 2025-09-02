@@ -66,7 +66,7 @@ end
         @test isisometry(V)
         @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test isisometry(N)
-        @test V * V' + N * N' ≈ I
+        @test V * V' + N * N' ≈ I atol = MatrixAlgebraKit.defaulttol(T)
 
         M = LinearMap(A)
         VM, CM = @constinferred left_orth(M; kind=:svd)
@@ -96,7 +96,7 @@ end
             @test isisometry(V)
             @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
             @test isisometry(N)
-            @test V * V' + N * N' ≈ I
+            @test V * V' + N * N' ≈ I atol = MatrixAlgebraKit.defaulttol(T)
         end
 
         Ac = similar(A)
@@ -109,7 +109,7 @@ end
         @test isisometry(V2)
         @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test isisometry(N2)
-        @test V2 * V2' + N2 * N2' ≈ I
+        @test V2 * V2' + N2 * N2' ≈ I atol = MatrixAlgebraKit.defaulttol(T)
 
         atol = eps(real(T))
         #V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=(; atol=atol))
@@ -150,7 +150,7 @@ end
                 @test N2 === N
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometry(N2)
-                @test V2 * V2' + N2 * N2' ≈ I
+                @test V2 * V2' + N2 * N2' ≈ I atol = MatrixAlgebraKit.defaulttol(T)
             end
 
             # with kind and tol kwargs
@@ -210,7 +210,7 @@ end
         @test isisometry(Vᴴ; side=:right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test isisometry(Nᴴ; side=:right)
-        @test Vᴴ' * Vᴴ + Nᴴ' * Nᴴ ≈ I
+        @test Vᴴ' * Vᴴ + Nᴴ' * Nᴴ ≈ I atol = MatrixAlgebraKit.defaulttol(T)
 
         M = LinearMap(A)
         CM, VMᴴ = @constinferred right_orth(M; kind=:svd)
@@ -267,7 +267,7 @@ end
                 @test Nᴴ2 === Nᴴ
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometry(Nᴴ2; side=:right)
-                @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
+                @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I atol = MatrixAlgebraKit.defaulttol(T)
             end
 
             if kind == :svd
