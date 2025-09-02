@@ -86,7 +86,7 @@ end
             #@test isisometry(N)
         end
 
-        for alg_qr in ((; positive=true), (; positive=false), rocSOLVER_HouseholderQR())
+        for alg_qr in ((; positive=true), (; positive=false), ROCSOLVER_HouseholderQR())
             V, C = @constinferred left_orth(A; alg_qr)
             N = @constinferred left_null(A; alg_qr)
             @test V isa ROCMatrix{T} && size(V) == (m, minmn)
