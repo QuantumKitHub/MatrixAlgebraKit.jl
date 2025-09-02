@@ -5,7 +5,9 @@ using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef
 using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview, isisometry
 
-@testset "svd_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+
+@testset "svd_compact! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63, 0)
@@ -54,7 +56,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview, isiso
     end
 end
 
-@testset "svd_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+@testset "svd_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63, 0)
@@ -88,7 +90,7 @@ end
     end
 end
 
-@testset "svd_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+@testset "svd_trunc! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     if LinearAlgebra.LAPACK.version() < v"3.12.0"
@@ -122,9 +124,7 @@ end
     end
 end
 
-@testset "svd_trunc! mix maxrank and tol for T = $T" for T in
-                                                         (Float32, Float64, ComplexF32,
-                                                          ComplexF64)
+@testset "svd_trunc! mix maxrank and tol for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     if LinearAlgebra.LAPACK.version() < v"3.12.0"
         algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
@@ -152,9 +152,7 @@ end
     end
 end
 
-@testset "svd_trunc! specify truncation algorithm T = $T" for T in
-                                                              (Float32, Float64, ComplexF32,
-                                                               ComplexF64)
+@testset "svd_trunc! specify truncation algorithm T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 4
     U = qr_compact(randn(rng, T, m, m))[1]
@@ -165,4 +163,38 @@ end
     U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg)
     @test diagview(S2) ≈ diagview(S)[1:2] rtol = sqrt(eps(real(T)))
     @test_throws ArgumentError svd_trunc(A; alg, trunc=(; maxrank=2))
+end
+
+@testset "svd for Diagonal{$T}" for T in BLASFloats
+    rng = StableRNG(123)
+    for m in (54, 0)
+        Ad = randn(T, m)
+        A = Diagonal(Ad)
+
+        U, S, Vᴴ = @constinferred svd_compact(A)
+        @test U isa AbstractMatrix{T} && size(U) == size(A)
+        @test Vᴴ isa AbstractMatrix{T} && size(Vᴴ) == size(A)
+        @test S isa Diagonal{real(T)} && size(S) == size(A)
+        @test isunitary(U)
+        @test isunitary(Vᴴ)
+        @test all(≥(0), diagview(S))
+        @test A ≈ U * S * Vᴴ
+
+        U, S, Vᴴ = @constinferred svd_full(A)
+        @test U isa AbstractMatrix{T} && size(U) == size(A)
+        @test Vᴴ isa AbstractMatrix{T} && size(Vᴴ) == size(A)
+        @test S isa Diagonal{real(T)} && size(S) == size(A)
+        @test isunitary(U)
+        @test isunitary(Vᴴ)
+        @test all(≥(0), diagview(S))
+        @test A ≈ U * S * Vᴴ
+
+        S2 = @constinferred svd_vals(A)
+        @test S2 isa AbstractVector{real(T)} && length(S2) == m
+        @test S2 ≈ diagview(S)
+
+        alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
+        U3, S3, Vᴴ3 = @constinferred svd_trunc(A; alg)
+        @test diagview(S3) ≈ S2[1:min(m, 2)]
+    end
 end

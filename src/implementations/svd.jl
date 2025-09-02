@@ -7,6 +7,8 @@ copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
 
+copy_input(::typeof(svd_full), A::Diagonal) = copy(A)
+
 # TODO: many of these checks are happening again in the LAPACK routines
 function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ, ::AbstractAlgorithm)
     m, n = size(A)
@@ -42,6 +44,32 @@ function check_input(::typeof(svd_vals!), A::AbstractMatrix, S, ::AbstractAlgori
     return nothing
 end
 
+function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    U, S, Vᴴ = USVᴴ
+    @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
+    @check_size(U, (m, m))
+    @check_scalar(U, A)
+    @check_size(S, (m, n))
+    @check_scalar(S, A, real)
+    @check_size(Vᴴ, (n, n))
+    @check_scalar(Vᴴ, A)
+    return nothing
+end
+function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ,
+                     alg::DiagonalAlgorithm)
+    return check_input(svd_full!, A, USVᴴ, alg)
+end
+function check_input(::typeof(svd_vals!), A::AbstractMatrix, S, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert S isa AbstractVector
+    @check_size(S, (m,))
+    @check_scalar(S, A, real)
+    return nothing
+end
+
 # Outputs
 # -------
 function initialize_output(::typeof(svd_full!), A::AbstractMatrix, ::AbstractAlgorithm)
@@ -64,6 +92,18 @@ function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlg
 end
 function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
     return initialize_output(svd_compact!, A, alg.alg)
+end
+
+function initialize_output(::typeof(svd_full!), A::Diagonal, ::DiagonalAlgorithm)
+    TA = eltype(A)
+    TUV = Base.promote_op(sign_safe, TA)
+    return similar(A, TUV, size(A)), similar(A, real(TA)), similar(A, TUV, size(A))
+end
+function initialize_output(::typeof(svd_compact!), A::Diagonal, alg::DiagonalAlgorithm)
+    return initialize_output(svd_full!, A, alg)
+end
+function initialize_output(::typeof(svd_vals!), A::Diagonal, ::DiagonalAlgorithm)
+    return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
 function gaugefix!(::typeof(svd_full!), U, S, Vᴴ, m::Int, n::Int)
@@ -110,7 +150,6 @@ function gaugefix!(::typeof(svd_trunc!), U, S, Vᴴ, m::Int, n::Int)
     end
     return (U, S, Vᴴ)
 end
-
 
 # Implementation
 # --------------
@@ -203,7 +242,39 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
     return truncate!(svd_trunc!, USVᴴ′, alg.trunc)
 end
 
-### GPU logic
+# Diagonal logic
+# --------------
+function svd_full!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
+    check_input(svd_full!, A, USVᴴ, alg)
+    Ad = diagview(A)
+    U, S, Vᴴ = USVᴴ
+    Sd = diagview(S)
+    Sd .= abs.(Ad)
+    p = sortperm(Sd; rev=true)
+    permute!(Sd, p)
+    T = eltype(Vᴴ)
+    zero!(U)
+    zero!(Vᴴ)
+    @inbounds for (i, pi) in enumerate(p)
+        s = Ad[pi]
+        U[pi, i] = sign_safe(s)
+        Vᴴ[i, pi] = one(T)
+    end
+    return U, S, Vᴴ
+end
+function svd_compact!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
+    return svd_full!(A, USVᴴ, alg)
+end
+function svd_vals!(A::AbstractMatrix, S, alg::DiagonalAlgorithm)
+    check_input(svd_vals!, A, S, alg)
+    Ad = diagview(A)
+    S .= abs.(Ad)
+    sort!(S; rev=true)
+    return S
+end
+
+# GPU logic
+# ---------
 # placed here to avoid code duplication since much of the logic is replicable across
 # CUDA and AMDGPU
 ###

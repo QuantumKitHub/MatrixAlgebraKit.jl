@@ -97,6 +97,9 @@ end
 function default_svd_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
     return LAPACK_DivideAndConquer(; kwargs...)
 end
+function default_svd_algorithm(::Type{T}; kwargs...) where {T<:Diagonal}
+    return DiagonalAlgorithm(; kwargs...)
+end
 
 for f in (:svd_full!, :svd_compact!, :svd_vals!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
