@@ -15,7 +15,7 @@ include(joinpath("..", "utilities.jl"))
         k = min(m, n)
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa CUSOLVER_QRIteration && continue # not supported
+            #n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             minmn = min(m, n)
             A = CuArray(randn(rng, T, m, n))
 
@@ -51,7 +51,7 @@ end
     @testset "size ($m, $n)" for n in (37, m, 63)
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa CUSOLVER_QRIteration && continue # not supported
+            #n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             A = CuArray(randn(rng, T, m, n))
             U, S, Vᴴ = svd_full(A; alg)
             @test U isa CuMatrix{T} && size(U) == (m, m)
@@ -96,7 +96,7 @@ end
         p = min(m, n) - k - 1
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi(), CUSOLVER_Randomized(; k=k, p=p, niters=100),)
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa CUSOLVER_QRIteration && continue # not supported
+            #n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             hA = randn(rng, T, m, n)
             S₀ = svd_vals(hA)
             A = CuArray(hA)
