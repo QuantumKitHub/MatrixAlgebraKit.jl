@@ -248,18 +248,25 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
     check_input(svd_full!, A, USVᴴ, alg)
     Ad = diagview(A)
     U, S, Vᴴ = USVᴴ
-    Sd = diagview(S)
-    Sd .= abs.(Ad)
-    p = sortperm(Sd; rev=true)
-    permute!(Sd, p)
-    T = eltype(Vᴴ)
+    p = sortperm(Ad; by=abs, rev=true)
     zero!(U)
     zero!(Vᴴ)
-    @inbounds for (i, pi) in enumerate(p)
-        s = Ad[pi]
-        U[pi, i] = sign_safe(s)
-        Vᴴ[i, pi] = one(T)
+    n = size(A, 1)
+
+    pV = (1:n) .+ (p .- 1) .* n
+    Vᴴ[pV] .= sign_safe.(view(Ad, p))
+
+    Sd = diagview(S)
+    if Ad === Sd
+        @. Sd = abs(Ad)
+        permute!(Sd, p)
+    else
+        Sd .= abs.(view(Ad, p))
     end
+
+    p .+= (0:(n - 1)) .* n
+    U[p] .= Ref(one(eltype(U)))
+
     return U, S, Vᴴ
 end
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
@@ -284,12 +291,13 @@ const CUSOLVER_SVDAlgorithm = Union{CUSOLVER_QRIteration,
                                     CUSOLVER_Randomized}
 const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration,
                                      ROCSOLVER_Jacobi}
-const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
+const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm,ROCSOLVER_SVDAlgorithm}
 
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
-function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized)
+function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ,
+                     alg::CUSOLVER_Randomized)
     m, n = size(A)
     minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
@@ -303,7 +311,8 @@ function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOL
     return nothing
 end
 
-function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized})
+function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix,
+                           alg::TruncatedAlgorithm{<:CUSOLVER_Randomized})
     m, n = size(A)
     minmn = min(m, n)
     U = similar(A, (m, m))
@@ -312,10 +321,22 @@ function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::Truncat
     return (U, S, Vᴴ)
 end
 
-_gpu_gesvd!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix) = throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
-_gpu_Xgesvdp!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
-_gpu_Xgesvdr!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
-_gpu_gesvdj!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
+function _gpu_gesvd!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix,
+                     Vᴴ::AbstractMatrix)
+    throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
+end
+function _gpu_Xgesvdp!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix,
+                       Vᴴ::AbstractMatrix; kwargs...)
+    throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
+end
+function _gpu_Xgesvdr!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix,
+                       Vᴴ::AbstractMatrix; kwargs...)
+    throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
+end
+function _gpu_gesvdj!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix,
+                      Vᴴ::AbstractMatrix; kwargs...)
+    throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
+end
 # GPU SVD implementation
 function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_full!, A, USVᴴ, alg)
@@ -369,7 +390,7 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...) 
+    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
     return USVᴴ
 end
 _argmaxabs(x) = reduce(_largest, x; init=zero(eltype(x)))
