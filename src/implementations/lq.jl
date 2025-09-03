@@ -83,7 +83,7 @@ end
 
 for f! in (:lq_full!, :lq_compact!)
     @eval function initialize_output(::typeof($f!), A::AbstractMatrix, ::DiagonalAlgorithm)
-        return A, similar(A)
+        return similar(A), A
     end
 end
 
@@ -253,17 +253,15 @@ end
 # --------------
 function _diagonal_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
                        positive::Bool=false)
+    # note: Ad and Qd might share memory here so order of operations is important
     Ad = diagview(A)
     Ld = diagview(L)
     Qd = diagview(Q)
     if positive
-        @inbounds @simd for i in eachindex(Ad)
-            s = sign_safe(Ad[i])
-            Qd[i] = s
-            Ld[i] = conj(s) * Ad[i]
-        end
+        @. Ld = abs(Ad)
+        @. Qd = sign_safe(Ad)
     else
-        A === L || copy!(Ld, Ad)
+        Ld .= Ad
         one!(Q)
     end
     return L, Q

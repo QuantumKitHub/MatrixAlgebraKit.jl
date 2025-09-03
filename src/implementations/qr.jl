@@ -83,7 +83,7 @@ end
 
 for f! in (:qr_full!, :qr_compact!)
     @eval function initialize_output(::typeof($f!), A::AbstractMatrix, ::DiagonalAlgorithm)
-        return similar(A), A
+        return A, similar(A)
     end
 end
 
@@ -216,17 +216,15 @@ end
 # --------------
 function _diagonal_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
                        positive::Bool=false)
+    # note: Ad and Qd might share memory here so order of operations is important
     Ad = diagview(A)
     Qd = diagview(Q)
     Rd = diagview(R)
     if positive
-        @inbounds @simd for i in eachindex(Ad)
-            s = sign_safe(Ad[i])
-            Qd[i] = s
-            Rd[i] = conj(s) * Ad[i]
-        end
+        @. Rd = abs(Ad)
+        @. Qd = sign_safe(Ad)
     else
-        A === R || copy!(Rd, Ad)
+        Rd .= Ad
         one!(Q)
     end
     return Q, R
