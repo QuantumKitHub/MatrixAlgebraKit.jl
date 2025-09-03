@@ -22,7 +22,7 @@ function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <:
     return LQViaTransposedQR(qr_alg)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T<:StridedROCMatrix}
-    return ROCSOLVER_Jacobi(; kwargs...)
+    return ROCSOLVER_QRIteration(; kwargs...)
 end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
     return ROCSOLVER_DivideAndConquer(; kwargs...)
