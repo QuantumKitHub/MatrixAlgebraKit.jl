@@ -33,6 +33,7 @@ end
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::DiagonalAlgorithm)
     m, n = size(A)
     @assert m == n && isdiag(A)
+    @assert (eltype(A) <: Real && issymmetric(A)) || ishermitian(A)
     D, V = DV
     @assert D isa Diagonal && V isa Diagonal
     @check_size(D, (m, m))
@@ -44,6 +45,7 @@ end
 function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, ::DiagonalAlgorithm)
     m, n = size(A)
     @assert m == n && isdiag(A)
+    @assert (eltype(A) <: Real && issymmetric(A)) || ishermitian(A)
     @assert D isa AbstractVector
     @check_size(D, (n,))
     @check_scalar(D, A, real)
