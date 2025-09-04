@@ -352,17 +352,16 @@ function _gpu_gesvd_maybe_transpose!(A::AbstractMatrix, S::AbstractVector, U::Ab
     # both CUSOLVER and ROCSOLVER require m ≥ n for gesvd (QR_Iteration)
     # if this condition is not met, do the SVD via adjoint
     minmn = min(m, n)
-    At = min(m, n) > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
-    Ut = similar(U')
-    Vᴴt = similar(Vᴴ')
+    Aᴴ = min(m, n) > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
+    Uᴴ = similar(U')
+    V  = similar(Vᴴ')
     if size(U) == (m, m)
-        _gpu_gesvd!(At, view(S, 1:minmn, 1), Vᴴt, Ut)
+        _gpu_gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
     else
-        _gpu_gesvd!(At, S, Vᴴt, Ut)
+        _gpu_gesvd!(Aᴴ, S, V, Uᴴ)
     end
-    length(U) > 0 ? adjoint!(U, Ut) : one!(U)
-    length(Vᴴ) > 0 ? adjoint!(Vᴴ, Vᴴt) : one!(Vᴴ)
-    conj!(S)
+    length(U) > 0 && adjoint!(U, Uᴴ)
+    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
     return U, S, Vᴴ
 end
 
