@@ -15,7 +15,6 @@ include(joinpath("..", "utilities.jl"))
         k = min(m, n)
         algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa ROCSOLVER_QRIteration && continue # not supported
             minmn = min(m, n)
             A = ROCArray(randn(rng, T, m, n))
 
@@ -51,7 +50,6 @@ end
     @testset "size ($m, $n)" for n in (37, m, 63)
         algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa ROCSOLVER_QRIteration && continue # not supported
             A = ROCArray(randn(rng, T, m, n))
             U, S, Vᴴ = svd_full(A; alg)
             @test U isa ROCMatrix{T} && size(U) == (m, m)
