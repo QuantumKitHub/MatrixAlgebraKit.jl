@@ -61,6 +61,7 @@ The `isapprox_kwargs` can be used to control the tolerances of the equality.
 
 See also [`isisometric`](@ref) and [`MatrixAlgebraKit.is_left_isometric`](@ref).
 """ is_right_isometric
+
 is_right_isometric(A; kwargs...) = is_left_isometric(A'; kwargs...)
 
 """
