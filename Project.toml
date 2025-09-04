@@ -47,5 +47,5 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras","ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote", "CUDA", "AMDGPU"]
 
 [sources]
-AMDGPU = {url = "https://github.com/kshyatt/AMDGPU.jl", rev = "ksh/lrmul"}
+AMDGPU = {url = "https://github.com/JuliaGPU/AMDGPU.jl", rev = "master"}
 CUDA = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "master"}
