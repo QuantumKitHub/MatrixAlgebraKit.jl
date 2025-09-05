@@ -3,10 +3,12 @@
 function copy_input(::typeof(eig_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
-function copy_input(::typeof(eig_vals), A::AbstractMatrix)
+function copy_input(::typeof(eig_vals), A)
     return copy_input(eig_full, A)
 end
 copy_input(::typeof(eig_trunc), A) = copy_input(eig_full, A)
+
+copy_input(::typeof(eig_full), A::Diagonal) = copy(A)
 
 function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::AbstractAlgorithm)
     m, n = size(A)
@@ -25,6 +27,28 @@ function check_input(::typeof(eig_vals!), A::AbstractMatrix, D, ::AbstractAlgori
     @assert D isa AbstractVector
     @check_size(D, (n,))
     @check_scalar(D, A, complex)
+    return nothing
+end
+
+function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    D, V = DV
+    @assert D isa Diagonal && V isa Diagonal
+    @check_size(D, (m, m))
+    @check_size(V, (m, m))
+    # Diagonal doesn't need to promote to complex scalartype since we know it is diagonalizable
+    @check_scalar(D, A)
+    @check_scalar(V, A)
+    return nothing
+end
+function check_input(::typeof(eig_vals!), A::AbstractMatrix, D, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert D isa AbstractVector
+    @check_size(D, (n,))
+    # Diagonal doesn't need to promote to complex scalartype since we know it is diagonalizable
+    @check_scalar(D, A)
     return nothing
 end
 
@@ -47,9 +71,15 @@ function initialize_output(::typeof(eig_trunc!), A::AbstractMatrix, alg::Truncat
     return initialize_output(eig_full!, A, alg.alg)
 end
 
+function initialize_output(::typeof(eig_full!), A::Diagonal, ::DiagonalAlgorithm)
+    return A, similar(A)
+end
+function initialize_output(::typeof(eig_vals!), A::Diagonal, ::DiagonalAlgorithm)
+    return diagview(A)
+end
+
 # Implementation
 # --------------
-# actual implementation
 function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
@@ -83,6 +113,24 @@ function eig_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
     return truncate!(eig_trunc!, (D, V), alg.trunc)
 end
 
+# Diagonal logic
+# --------------
+function eig_full!(A::Diagonal, (D, V)::Tuple{Diagonal,Diagonal}, alg::DiagonalAlgorithm)
+    check_input(eig_full!, A, (D, V), alg)
+    D === A || copy!(D, A)
+    one!(V)
+    return D, V
+end
+
+function eig_vals!(A::Diagonal, D::AbstractVector, alg::DiagonalAlgorithm)
+    check_input(eig_vals!, A, D, alg)
+    Ad = diagview(A)
+    D === Ad || copy!(D, Ad)
+    return D
+end
+
+# GPU logic
+# ---------
 _gpu_geev!(A::AbstractMatrix, D, V) = throw(MethodError(_gpu_geev!, (A, D, V)))
 
 function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)

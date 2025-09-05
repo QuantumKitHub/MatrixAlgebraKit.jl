@@ -75,6 +75,9 @@ end
 function default_qr_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
     return LAPACK_HouseholderQR(; kwargs...)
 end
+function default_qr_algorithm(::Type{T}; kwargs...) where {T<:Diagonal}
+    return DiagonalAlgorithm(; kwargs...)
+end
 
 for f in (:qr_full!, :qr_compact!, :qr_null!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}

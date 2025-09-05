@@ -4,8 +4,8 @@ using LinearAlgebra: LinearAlgebra
 using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!, adjoint!, rdiv!, ldiv!
 using LinearAlgebra: sylvester
-using LinearAlgebra: isposdef, ishermitian
-using LinearAlgebra: Diagonal, diag, diagind
+using LinearAlgebra: isposdef, ishermitian, issymmetric
+using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
@@ -35,7 +35,8 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ,
        LQViaTransposedQR,
        CUSOLVER_Simple,
        CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer,
-       ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi, ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection
+       ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi, ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection,
+       DiagonalAlgorithm
 export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered
 
 VERSION >= v"1.11.0-DEV.469" &&

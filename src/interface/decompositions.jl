@@ -114,6 +114,17 @@ const LAPACK_SVDAlgorithm = Union{LAPACK_QRIteration,
                                   LAPACK_Jacobi}
 
 # =========================
+# DIAGONAL ALGORITHMS
+# =========================
+"""
+    DiagonalAlgorithm(; kwargs...)
+
+Algorithm type to denote a native Julia implementation of the decompositions making use of
+the diagonal structure of the input and outputs.
+"""
+@algdef DiagonalAlgorithm
+
+# =========================
 # CUSOLVER ALGORITHMS
 # =========================
 """

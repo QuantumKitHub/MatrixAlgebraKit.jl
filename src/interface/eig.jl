@@ -82,6 +82,9 @@ default_eig_algorithm(T::Type; kwargs...) = throw(MethodError(default_eig_algori
 function default_eig_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
     return LAPACK_Expert(; kwargs...)
 end
+function default_eig_algorithm(::Type{T}; kwargs...) where {T<:Diagonal}
+    return DiagonalAlgorithm(; kwargs...)
+end
 
 for f in (:eig_full!, :eig_vals!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}

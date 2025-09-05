@@ -7,6 +7,8 @@ copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
 
+copy_input(::typeof(svd_full), A::Diagonal) = copy(A)
+
 # TODO: many of these checks are happening again in the LAPACK routines
 function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ, ::AbstractAlgorithm)
     m, n = size(A)
@@ -42,6 +44,32 @@ function check_input(::typeof(svd_vals!), A::AbstractMatrix, S, ::AbstractAlgori
     return nothing
 end
 
+function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    U, S, Vᴴ = USVᴴ
+    @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
+    @check_size(U, (m, m))
+    @check_scalar(U, A)
+    @check_size(S, (m, n))
+    @check_scalar(S, A, real)
+    @check_size(Vᴴ, (n, n))
+    @check_scalar(Vᴴ, A)
+    return nothing
+end
+function check_input(::typeof(svd_compact!), A::AbstractMatrix, USVᴴ,
+                     alg::DiagonalAlgorithm)
+    return check_input(svd_full!, A, USVᴴ, alg)
+end
+function check_input(::typeof(svd_vals!), A::AbstractMatrix, S, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert S isa AbstractVector
+    @check_size(S, (m,))
+    @check_scalar(S, A, real)
+    return nothing
+end
+
 # Outputs
 # -------
 function initialize_output(::typeof(svd_full!), A::AbstractMatrix, ::AbstractAlgorithm)
@@ -64,6 +92,18 @@ function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlg
 end
 function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
     return initialize_output(svd_compact!, A, alg.alg)
+end
+
+function initialize_output(::typeof(svd_full!), A::Diagonal, ::DiagonalAlgorithm)
+    TA = eltype(A)
+    TUV = Base.promote_op(sign_safe, TA)
+    return similar(A, TUV, size(A)), similar(A, real(TA)), similar(A, TUV, size(A))
+end
+function initialize_output(::typeof(svd_compact!), A::Diagonal, alg::DiagonalAlgorithm)
+    return initialize_output(svd_full!, A, alg)
+end
+function initialize_output(::typeof(svd_vals!), A::Diagonal, ::DiagonalAlgorithm)
+    return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
 function gaugefix!(::typeof(svd_full!), U, S, Vᴴ, m::Int, n::Int)
@@ -110,7 +150,6 @@ function gaugefix!(::typeof(svd_trunc!), U, S, Vᴴ, m::Int, n::Int)
     end
     return (U, S, Vᴴ)
 end
-
 
 # Implementation
 # --------------
@@ -203,7 +242,46 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
     return truncate!(svd_trunc!, USVᴴ′, alg.trunc)
 end
 
-### GPU logic
+# Diagonal logic
+# --------------
+function svd_full!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
+    check_input(svd_full!, A, USVᴴ, alg)
+    Ad = diagview(A)
+    U, S, Vᴴ = USVᴴ
+    p = sortperm(Ad; by=abs, rev=true)
+    zero!(U)
+    zero!(Vᴴ)
+    n = size(A, 1)
+
+    pV = (1:n) .+ (p .- 1) .* n
+    Vᴴ[pV] .= sign_safe.(view(Ad, p))
+
+    Sd = diagview(S)
+    if Ad === Sd
+        @. Sd = abs(Ad)
+        permute!(Sd, p)
+    else
+        Sd .= abs.(view(Ad, p))
+    end
+
+    p .+= (0:(n - 1)) .* n
+    U[p] .= Ref(one(eltype(U)))
+
+    return U, S, Vᴴ
+end
+function svd_compact!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
+    return svd_full!(A, USVᴴ, alg)
+end
+function svd_vals!(A::AbstractMatrix, S, alg::DiagonalAlgorithm)
+    check_input(svd_vals!, A, S, alg)
+    Ad = diagview(A)
+    S .= abs.(Ad)
+    sort!(S; rev=true)
+    return S
+end
+
+# GPU logic
+# ---------
 # placed here to avoid code duplication since much of the logic is replicable across
 # CUDA and AMDGPU
 ###
@@ -213,12 +291,13 @@ const CUSOLVER_SVDAlgorithm = Union{CUSOLVER_QRIteration,
                                     CUSOLVER_Randomized}
 const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration,
                                      ROCSOLVER_Jacobi}
-const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
+const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm,ROCSOLVER_SVDAlgorithm}
 
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
-function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized)
+function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ,
+                     alg::CUSOLVER_Randomized)
     m, n = size(A)
     minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
@@ -232,7 +311,8 @@ function check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOL
     return nothing
 end
 
-function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized})
+function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix,
+                           alg::TruncatedAlgorithm{<:CUSOLVER_Randomized})
     m, n = size(A)
     minmn = min(m, n)
     U = similar(A, (m, m))
@@ -241,10 +321,22 @@ function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::Truncat
     return (U, S, Vᴴ)
 end
 
-_gpu_gesvd!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix) = throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
-_gpu_Xgesvdp!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
-_gpu_Xgesvdr!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
-_gpu_gesvdj!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
+function _gpu_gesvd!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix,
+                     Vᴴ::AbstractMatrix)
+    throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
+end
+function _gpu_Xgesvdp!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix,
+                       Vᴴ::AbstractMatrix; kwargs...)
+    throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
+end
+function _gpu_Xgesvdr!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix,
+                       Vᴴ::AbstractMatrix; kwargs...)
+    throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
+end
+function _gpu_gesvdj!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix,
+                      Vᴴ::AbstractMatrix; kwargs...)
+    throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
+end
 # GPU SVD implementation
 function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_full!, A, USVᴴ, alg)
@@ -298,7 +390,7 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAl
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...) 
+    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
     return USVᴴ
 end
 _argmaxabs(x) = reduce(_largest, x; init=zero(eltype(x)))

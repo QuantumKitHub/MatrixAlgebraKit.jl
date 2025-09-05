@@ -8,6 +8,8 @@ function copy_input(::typeof(eigh_vals), A::AbstractMatrix)
 end
 copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
 
+copy_input(::typeof(eigh_full), A::Diagonal) = copy(A)
+
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::AbstractAlgorithm)
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected"))
@@ -21,6 +23,29 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::AbstractAlgo
 end
 function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, ::AbstractAlgorithm)
     m, n = size(A)
+    m == n || throw(DimensionMismatch("square input matrix expected"))
+    @assert D isa AbstractVector
+    @check_size(D, (n,))
+    @check_scalar(D, A, real)
+    return nothing
+end
+
+function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert (eltype(A) <: Real && issymmetric(A)) || ishermitian(A)
+    D, V = DV
+    @assert D isa Diagonal && V isa Diagonal
+    @check_size(D, (m, m))
+    @check_scalar(D, A, real)
+    @check_size(V, (m, m))
+    @check_scalar(V, A)
+    return nothing
+end
+function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert (eltype(A) <: Real && issymmetric(A)) || ishermitian(A)
     @assert D isa AbstractVector
     @check_size(D, (n,))
     @check_scalar(D, A, real)
@@ -43,6 +68,13 @@ end
 function initialize_output(::typeof(eigh_trunc!), A::AbstractMatrix,
                            alg::TruncatedAlgorithm)
     return initialize_output(eigh_full!, A, alg.alg)
+end
+
+function initialize_output(::typeof(eigh_full!), A::Diagonal, ::DiagonalAlgorithm)
+    return eltype(A) <: Real ? A : similar(A, real(eltype(A))), similar(A)
+end
+function initialize_output(::typeof(eigh_vals!), A::Diagonal, ::DiagonalAlgorithm)
+    return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
 # Implementation
@@ -85,6 +117,25 @@ function eigh_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
     return truncate!(eigh_trunc!, (D, V), alg.trunc)
 end
 
+# Diagonal logic
+# --------------
+function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
+    check_input(eigh_full!, A, DV, alg)
+    D, V = DV
+    D === A || (diagview(D) .= real.(diagview(A)))
+    one!(V)
+    return D, V
+end
+
+function eigh_vals!(A::Diagonal, D, alg::DiagonalAlgorithm)
+    check_input(eigh_vals!, A, D, alg)
+    Ad = diagview(A)
+    D === Ad || (D .= real.(Ad))
+    return D
+end
+
+# GPU logic
+# ---------
 _gpu_heevj!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heevj!, (A, Dd, V)))
 _gpu_heevd!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heevd!, (A, Dd, V)))
 _gpu_heev!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heev!, (A, Dd, V)))

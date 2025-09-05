@@ -5,7 +5,9 @@ using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
-@testset "eigh_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+
+@testset "eigh_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_MultipleRelativelyRobustRepresentations(),
@@ -29,7 +31,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm, diagview
     end
 end
 
-@testset "eigh_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+@testset "eigh_trunc! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_QRIteration(),
@@ -62,10 +64,7 @@ end
     end
 end
 
-@testset "eigh_trunc! specify truncation algorithm T = $T" for T in
-                                                               (Float32, Float64,
-                                                                ComplexF32,
-                                                                ComplexF64)
+@testset "eigh_trunc! specify truncation algorithm T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 4
     V = qr_compact(randn(rng, T, m, m))[1]
@@ -76,4 +75,26 @@ end
     D2, V2 = @constinferred eigh_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
     @test_throws ArgumentError eigh_trunc(A; alg, trunc=(; maxrank=2))
+end
+
+@testset "eigh for Diagonal{$T}" for T in BLASFloats
+    rng = StableRNG(123)
+    m = 54
+    Ad = randn(rng, T, m)
+    Ad .+= conj.(Ad)
+    A = Diagonal(Ad)
+
+    D, V = @constinferred eigh_full(A)
+    @test D isa Diagonal{real(T)} && size(D) == size(A)
+    @test V isa Diagonal{T} && size(V) == size(A)
+    @test A * V ≈ V * D
+
+    D2 = @constinferred eigh_vals(A)
+    @test D2 isa AbstractVector{real(T)} && length(D2) == m
+    @test diagview(D) ≈ D2
+
+    A2 = Diagonal(T[0.9, 0.3, 0.1, 0.01])
+    alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
+    D2, V2 = @constinferred eigh_trunc(A2; alg)
+    @test diagview(D2) ≈ diagview(A2)[1:2]
 end
