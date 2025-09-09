@@ -34,6 +34,9 @@ if !is_buildkite
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
+    @safetestset "Enzyme" begin
+        include("enzyme.jl")
+    end
     @safetestset "Mooncake" begin
         include("mooncake.jl")
     end
