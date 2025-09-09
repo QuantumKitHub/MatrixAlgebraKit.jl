@@ -989,11 +989,11 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
-            if $elty <: Real
+            #=if $elty <: Real
                 issymmetric(A) || throw(ArgumentError("A must be symmetric"))
             else
                 ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
-            end
+            end=#
             chkuplofinite(A, uplo)
             n == length(W) || throw(DimensionMismatch("length mismatch between A and W"))
             if length(V) == 0
@@ -1063,11 +1063,11 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
-            if $elty <: Real
+            #=if $elty <: Real
                 issymmetric(A) || throw(ArgumentError("A must be symmetric"))
             else
                 ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
-            end
+            end=#
             chkuplofinite(A, uplo)
             if haskey(kwargs, :irange)
                 il = first(kwargs[:irange])
@@ -1175,11 +1175,11 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
-            if $elty <: Real
+            #=if $elty <: Real
                 issymmetric(A) || throw(ArgumentError("A must be symmetric"))
             else
                 ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
-            end
+            end=#
             chkuplofinite(A, uplo)
             if haskey(kwargs, :irange)
                 il = first(irange)
@@ -1294,11 +1294,11 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
-            if $elty <: Real
+            #=if $elty <: Real
                 issymmetric(A) || throw(ArgumentError("A must be symmetric"))
             else
                 ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
-            end
+            end=#
             uplo = 'U' # shouldn't matter but 'U' seems slightly faster than 'L'
             chkuplofinite(A, uplo)
             n == length(W) || throw(DimensionMismatch("length mismatch between A and W"))

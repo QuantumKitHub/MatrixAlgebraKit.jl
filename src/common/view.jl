@@ -1,5 +1,5 @@
 # diagind: provided by LinearAlgebra.jl
-diagview(D::Diagonal) = D.diag
+diagview(D::Diagonal)       = D.diag
 diagview(D::AbstractMatrix) = view(D, diagind(D))
 
 # triangularind

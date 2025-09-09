@@ -41,6 +41,12 @@ if !is_buildkite
     @safetestset "ChainRules" begin
         include("chainrules.jl")
     end
+    @safetestset "Mooncake" begin
+        include("mooncake.jl")
+    end
+    @safetestset "Enzyme" begin
+        include("enzyme.jl")
+    end
     @safetestset "MatrixAlgebraKit.jl" begin
         @safetestset "Code quality (Aqua.jl)" begin
             using MatrixAlgebraKit
@@ -72,6 +78,12 @@ if CUDA.functional()
     @safetestset "CUDA Hermitian Eigenvalue Decomposition" begin
         include("cuda/eigh.jl")
     end
+    @safetestset "CUDA Mooncake" begin
+        include("cuda/mooncake.jl")
+    end
+    @safetestset "CUDA Enzyme" begin
+        include("cuda/enzyme.jl")
+    end
 end
 
 using AMDGPU
@@ -87,5 +99,8 @@ if AMDGPU.functional()
     end
     @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
         include("amd/eigh.jl")
+    end
+    @safetestset "AMDGPU Enzyme" begin
+        include("amd/enzyme.jl")
     end
 end
