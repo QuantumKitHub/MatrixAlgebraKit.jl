@@ -12,6 +12,8 @@ using CUDA, CUDA.CUBLAS
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
 
+using CUDA: i32
+
 include("yacusolver.jl")
 
 function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {TT<:BlasFloat, T<:StridedCuMatrix{TT}}
@@ -49,6 +51,7 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{Base.ReshapedArray{T,2,S
     return CUSOLVER_DivideAndConquer(; kwargs...)
 end
 
+MatrixAlgebraKit.ishermitian_exact(A::StridedCuMatrix) = ishermitian(A)
 
 _gpu_geev!(A::StridedCuMatrix, D::StridedCuVector, V::StridedCuMatrix) =
     YACUSOLVER.Xgeev!(A, D, V)
@@ -74,6 +77,83 @@ _gpu_heevd!(A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix; kwargs.
 
 function MatrixAlgebraKit.findtruncated_svd(values::StridedCuVector, strategy::TruncationByValue)
     return MatrixAlgebraKit.findtruncated(values, strategy)
+end
+
+
+function _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, ::Val{true})
+    m, n = size(Au)
+    j = threadIdx().x + blockIdx().x * (blockDim().x - 1i32)
+    j > n && return
+    for i in 1:m
+        @inbounds begin
+            val = (Au[i, j] - adjoint(Al[j, i])) / 2
+            Bu[i, j] = val
+            aval = adjoint(val)
+            Bl[j, i] = -aval
+        end
+    end
+    return
+end
+
+function _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, ::Val{false})
+    m, n = size(Au)
+    j = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+    j > n && return
+    for i in 1:m
+        @inbounds begin
+            val = Au[i, j] + adjoint(Al[j, i]) / 2
+            Bu[i, j] = val
+            aval = adjoint(val)
+            Bl[j, i] = aval
+        end
+    end
+    return
+end
+
+function _project_hermitian_diag_kernel(A, B, n::Int32, ::Val{true})
+    j = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+    j > n && return
+    @inbounds begin
+        for i in 1i32:(j - 1i32)
+            val = (A[i, j] - conj(A[j, i])) /2
+            B[i, j] = val * 0.5
+            aval = adjoint(val)
+            B[j, i] = -aval
+        end
+        B[j, j] = MatrixAlgebraKit._imimag(A[j, j])
+    end
+    return
+end
+
+function _project_hermitian_diag_kernel(A, B, ::Val{false})
+    n = size(A, 1)
+    j = threadIdx().x + (blockIdx().x - 1i32) * blockDim().x
+    j > n && return
+    @inbounds begin
+        for i in 1i32:(j - 1i32)
+            val = (A[i, j] + adjoint(A[j, i]))
+            B[i, j] = val * 0.5
+            aval = adjoint(val)
+            B[j, i] = aval
+        end
+        B[j, j] = real(A[j, j])
+    end
+    return
+end
+
+function MatrixAlgebraKit._project_hermitian_offdiag!(
+        Au::StridedCuMatrix, Al::StridedCuMatrix, Bu::StridedCuMatrix, Bl::StridedCuMatrix, ::Val{anti}
+    ) where {anti}
+    thread_dim = 512
+    block_dim = cld(size(Au, 1), thread_dim)
+    @cuda threads=thread_dim blocks=block_dim _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, Val(anti))
+    return nothing
+end
+function MatrixAlgebraKit._project_hermitian_diag!(A::StridedCuMatrix, B::StridedCuMatrix, ::Val{anti}) where {anti}
+    thread_dim = 512
+    block_dim = cld(size(A, 1), thread_dim)
+    @cuda threads=thread_dim blocks=block_dim _project_hermitian_diag_kernel(A, B, Int32(size(A, 1)), Val(anti))
+    return nothing
 end
 
 end

@@ -90,7 +90,7 @@ function _project_hermitian_offdiag!(
     ) where {anti}
 
     m, n = size(Au) # == reverse(size(Au))
-    return @inbounds for j in 1:n
+    @inbounds for j in 1:n
         @simd for i in 1:m
             val = anti ? (Au[i, j] - adjoint(Al[j, i])) / 2 : (Au[i, j] + adjoint(Al[j, i])) / 2
             Bu[i, j] = val
