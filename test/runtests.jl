@@ -38,6 +38,9 @@ if !is_buildkite
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
+    @safetestset "Mooncake" begin
+        include("mooncake.jl")
+    end
     @safetestset "ChainRules" begin
         include("chainrules.jl")
     end
