@@ -38,6 +38,12 @@ if !is_buildkite
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
+    @safetestset "Mooncake" begin
+        include("mooncake.jl")
+    end
+    @safetestset "Enzyme" begin
+        include("enzyme.jl")
+    end
     @safetestset "ChainRules" begin
         include("chainrules.jl")
     end
@@ -81,6 +87,12 @@ if CUDA.functional()
     @safetestset "CUDA Image and Null Space" begin
         include("cuda/orthnull.jl")
     end
+    #=@safetestset "CUDA Mooncake" begin
+        include("cuda/mooncake.jl")
+    end
+    @safetestset "CUDA Enzyme" begin
+        include("cuda/enzyme.jl")
+    end=#
 end
 
 using AMDGPU
@@ -106,6 +118,9 @@ if AMDGPU.functional()
     @safetestset "AMDGPU Image and Null Space" begin
         include("amd/orthnull.jl")
     end
+    #=@safetestset "AMDGPU Enzyme" begin
+        include("amd/enzyme.jl")
+    end=#
 end
 
 using GenericLinearAlgebra
