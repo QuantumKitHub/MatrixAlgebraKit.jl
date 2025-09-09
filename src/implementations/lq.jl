@@ -1,7 +1,7 @@
 # Inputs
 # ------
 for f in (:lq_full, :lq_compact, :lq_null)
-    @eval function copy_input(::typeof($f), A::AbstractMatrix)
+    @eval function copy_input(::typeof($f), A)
         return copy!(similar(A, float(eltype(A))), A)
     end
     @eval copy_input(::typeof($f), A::Diagonal) = copy(A)
