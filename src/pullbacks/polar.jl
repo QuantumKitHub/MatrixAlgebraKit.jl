@@ -4,7 +4,7 @@
 Adds the pullback from the left polar decomposition of `A` to `ΔA` given the output `WP` and
 cotangent `ΔWP` of `left_polar(A)`.
 """
-function left_polar_pullback!(ΔA::AbstractMatrix, A, WP, ΔWP)
+function left_polar_pullback!(ΔA::AbstractMatrix, A, WP, ΔWP; kwargs...)
     # Extract the Polar components
     W, P = WP
 
@@ -34,7 +34,7 @@ end
 Adds the pullback from the left polar decomposition of `A` to `ΔA` given the output `PWᴴ`
 and cotangent `ΔPWᴴ` of `right_polar(A)`.
 """
-function right_polar_pullback!(ΔA::AbstractMatrix, A, PWᴴ, ΔPWᴴ)
+function right_polar_pullback!(ΔA::AbstractMatrix, A, PWᴴ, ΔPWᴴ; kwargs...)
     # Extract the Polar components
     P, Wᴴ = PWᴴ
 
