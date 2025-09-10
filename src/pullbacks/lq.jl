@@ -70,11 +70,11 @@ function lq_compact_pullback!(
             # case, Q is expected to rotate smoothly (we might even be able to predict) also
             # how the full Q2 will change, but this we omit for now, and we consider
             # Q2' * ΔQ2 as a gauge dependent quantity.
-            ΔQ2Q1d = ΔQ2 * Q1'
-            Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1d, Q1, -1, 1), Inf)
+            ΔQ2Q1ᴴ = ΔQ2 * Q1'
+            Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
             Δgauge < tol ||
                 @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-            ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1d', Q2, -1, 1)
+            ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1ᴴ', Q2, -1, 1)
         end
     end
     if !iszerotangent(ΔL) && m > p

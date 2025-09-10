@@ -1,9 +1,9 @@
 """
-    svd_compact_pullback!(
-        ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ;
-        tol::Real = default_pullback_gaugetol(USVᴴ[2]),
-        rank_atol::Real = tol, degeneracy_atol::Real = tol, gauge_atol::Real = tol
-    )
+    svd_pullback!(ΔA, USVᴴ, ΔUSVᴴ, ind=nothing;
+                            tol::Real=default_pullback_gaugetol(S),
+                            rank_atol::Real = tol,
+                            degeneracy_atol::Real = tol,
+                            gauge_atol::Real = tol)
 
 Adds the pullback from the SVD of `A` to `ΔA` given the output USVᴴ of `svd_compact`
 or `svd_full` and the cotangent `ΔUSVᴴ` of `svd_compact`, `svd_full` or `svd_trunc`.
@@ -11,17 +11,23 @@ or `svd_full` and the cotangent `ΔUSVᴴ` of `svd_compact`, `svd_full` or `svd_
 In particular, it is assumed that `A ≈ U * S * Vᴴ`, or thus, that no singular values
 with magnitude less than `rank_atol` are missing from `S`.
 For the cotangents, an arbitrary number of singular vectors or singular values can
-be missing, i.e. `ΔU` and `ΔVᴴ` can have sizes `(m, pU)` and `(pV, n)` respectively,
-whereas `diagview(ΔS)` can have length `pS`.
+be missing, i.e. for a matrix `A` with size `(m, n)`, `ΔU` and `ΔVᴴ` can have sizes
+`(m, pU)` and `(pV, n)` respectively, whereas `diagview(ΔS)` can have length `pS`.
+In those cases, it is assumed that these correspond to the first `pU`, `pV` or `pS`
+singular vectors or values, unless `ind` is provided, in which case it is assumed
+that they correspond to the singular vectors or values with indices `ind`, and thus
+`length(ind) == pU == pV == pS`.
 
 A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
 anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j`
 for which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
-function svd_compact_pullback!(
-        ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ;
+function svd_pullback!(
+        ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ, ind = nothing;
         tol::Real = default_pullback_gaugetol(USVᴴ[2]),
-        rank_atol::Real = tol, degeneracy_atol::Real = tol, gauge_atol::Real = tol
+        rank_atol::Real = tol,
+        degeneracy_atol::Real = tol,
+        gauge_atol::Real = tol
     )
 
     # Extract the SVD components
@@ -43,7 +49,13 @@ function svd_compact_pullback!(
         m == size(ΔU, 1) || throw(DimensionMismatch())
         pU = size(ΔU, 2)
         pU > r && throw(DimensionMismatch())
-        UΔUp = view(UΔU, :, 1:pU)
+        if isnothing(ind)
+            indU = 1:pU # default assumption?
+        else
+            length(ind) == pU || throw(DimensionMismatch())
+            indU = ind
+        end
+        UΔUp = view(UΔU, :, indU)
         mul!(UΔUp, Ur', ΔU)
         ΔU -= Ur * UΔUp
     end
@@ -51,7 +63,13 @@ function svd_compact_pullback!(
         n == size(ΔVᴴ, 2) || throw(DimensionMismatch())
         pV = size(ΔVᴴ, 1)
         pV > r && throw(DimensionMismatch())
-        VΔVp = view(VΔV, :, 1:pV)
+        if isnothing(ind)
+            indV = 1:pV # default assumption?
+        else
+            length(ind) == pV || throw(DimensionMismatch())
+            indV = ind
+        end
+        VΔVp = view(VΔV, :, indV)
         mul!(VΔVp, Vᴴr, ΔVᴴ')
         ΔVᴴ = ΔVᴴ - VΔVp' * Vᴴr
     end
@@ -71,19 +89,25 @@ function svd_compact_pullback!(
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         pS = length(ΔS)
-        view(diagview(UdΔAV), 1:pS) .+= real.(ΔS)
+        if isnothing(ind)
+            indS = 1:pS # default assumption?
+        else
+            length(ind) == pS || throw(DimensionMismatch())
+            indS = ind
+        end
+        view(diagview(UdΔAV), indS) .+= real.(ΔS)
     end
     ΔA = mul!(ΔA, Ur, UdΔAV * Vᴴr, 1, 1) # add the contribution to ΔA
 
     # Add the remaining contributions
     if m > r && !iszerotangent(ΔU) # remaining ΔU is already orthogonal to Ur
-        Sp = view(S, 1:pU)
-        Vᴴp = view(Vᴴ, 1:pU, :)
+        Sp = view(S, indU)
+        Vᴴp = view(Vᴴ, indU, :)
         ΔA = mul!(ΔA, ΔU ./ Sp', Vᴴp, 1, 1)
     end
     if n > r && !iszerotangent(ΔVᴴ) # remaining ΔV is already orthogonal to Vᴴr
-        Sp = view(S, 1:pV)
-        Up = view(U, :, 1:pV)
+        Sp = view(S, indV)
+        Up = view(U, :, indV)
         ΔA = mul!(ΔA, Up, Sp .\ ΔVᴴ, 1, 1)
     end
     return ΔA
