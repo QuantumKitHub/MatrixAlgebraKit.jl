@@ -176,7 +176,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     elseif alg isa LAPACK_Bisection
         throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
     elseif alg isa LAPACK_Jacobi
-        throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
+        throw(ArgumentError("LAPACK_Jacobi is not supported for full SVD"))
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
