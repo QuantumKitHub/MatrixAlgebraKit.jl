@@ -28,7 +28,7 @@ for (bname, fname, elty, relty) in
         #! format: on
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
-            (m < n) && throw(ArgumentError("CUSOLVER's gesvd requires m ≥ n"))
+            (m < n) && throw(ArgumentError(lazy"CUSOLVER's gesvd requires m ($m) ≥ n ($n)"))
             minmn = min(m, n)
             if length(U) == 0
                 jobu = 'N'
@@ -183,7 +183,8 @@ for (bname, fname, elty, relty) in
                          U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
                          Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
                          tol::$relty=eps($relty),
-                         max_sweeps::Int=100)
+                         max_sweeps::Int=100,
+                         kwargs...)
         #! format: on
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
