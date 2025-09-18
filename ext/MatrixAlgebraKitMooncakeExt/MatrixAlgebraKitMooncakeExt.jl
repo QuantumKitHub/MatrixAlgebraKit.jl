@@ -1,7 +1,7 @@
 module MatrixAlgebraKitMooncakeExt
 
 using Mooncake
-using Mooncake: @from_chainrules, DefaultCtx, CoDual, Dual, NoRData, @is_primitive, rrule!!, frule!!, arrayify
+using Mooncake: @from_chainrules, DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
 using MatrixAlgebraKit
 using MatrixAlgebraKit: inv_safe, diagview
 using MatrixAlgebraKit.YALAPACK
@@ -17,17 +17,22 @@ using LinearAlgebra: BlasFloat, BlasComplex, diagind
 @from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.lq_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
 @from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.lq_compact!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
 
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eig_vals!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eig_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-
-#@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eigh_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
+@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eigh_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
 @from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eigh_vals!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
+
+#@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eig_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
+@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eig_vals!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
 
 Mooncake.@zero_adjoint Mooncake.DefaultCtx Tuple{typeof(MatrixAlgebraKit.copy_input), Any, AbstractMatrix}
 
 # TODO THIS IS BAD!!!!
 function MatrixAlgebraKit.diagview(dx::Tangent)
     if isa(dx, ChainRulesCore.Tangent)
+        if isa(dx.diag, Vector{<:Real})
+            return dx.diag
+        elseif isa(dx.diag, Vector{Tangent{<:Any, Vector{@NamedTuple{re::Float64, im::Float64}}}})
+            return [complex(dxd.re, dxd.im) for dxd in dx.diag]
+        end
         return dx.diag
     else
         hasfield(Mooncake._fields(dx), :diag) && return Mooncake._fields(dx).diag
@@ -35,9 +40,12 @@ function MatrixAlgebraKit.diagview(dx::Tangent)
     throw(ErrorException(""))
 end
 
+#Base.one(::Type{Tangent{Any, @NamedTuple{re::ComplexF64, im::ComplexF64}}}) = one(ComplexF64)
+
+
 # redo all of this because of no `one` method for Tangents... hmmmm
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.eig_full!), AbstractMatrix, Tuple{<:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eig_full!)}, A_dA::CoDual{<:AbstractMatrix}, DV_dDV::CoDual{<:Tuple{<:Diagonal, <:AbstractMatrix}}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm};
+function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eig_full!)}, A_dA::CoDual, DV_dDV::CoDual, alg_dalg::CoDual;
                  tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(Mooncake.primal(DV_dDV)[1]),
                  degeneracy_atol::Real=tol,
                  gauge_atol::Real=tol,
@@ -77,13 +85,12 @@ function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eig_full!)}, A_dA::Co
                 ∂A = mul!(∂A, PΔV, V', 1, 1)
             end
         end
-        dA .+= ∂A
+        dA .= ∂A
         return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
     end
     DV = eig_full!(A, DV, Mooncake.primal(alg_dalg); kwargs...)
     return Mooncake.CoDual(DV, dDV), deig_adjoint
 end
-
 #=
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.eigh_full!), AbstractMatrix, Tuple{<:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eigh_full!)}, A_dA::CoDual{<:AbstractMatrix}, DV_dDV::CoDual{<:Tuple{<:Diagonal, <:AbstractMatrix}}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm};

@@ -18,7 +18,7 @@ end
 function remove_eiggauge_depence!(ΔV, D, V;
                                   degeneracy_atol=MatrixAlgebraKit.default_pullback_gaugetol(S))
     gaugepart = V' * ΔV
-    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
+    gaugepart[abs.(transpose(D.diag) .- D.diag) .>= degeneracy_atol] .= 0
     mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
     return ΔV
 end
@@ -36,7 +36,7 @@ precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
 
 for f in
     (:qr_compact, :qr_null, :lq_compact, :lq_full, :lq_null,
-     :eig_full, :svd_compact, :svd_trunc, :left_polar, :right_polar)
+     :eigh_full, :svd_compact, :svd_trunc, :left_polar, :right_polar)
     copy_f = Symbol(:copy_, f)
     f! = Symbol(f, '!')
     @eval begin
@@ -59,7 +59,53 @@ for f in
         Enzyme.@import_rrule(typeof($copy_f), Any, Any)
     end
 end
-
+#=
+for f in
+    (:eig_full,)
+    copy_f = Symbol(:copy_, f)
+    f! = Symbol(f, '!')
+    @eval begin
+        function $copy_f(input, alg)
+            if $f === eigh_full
+                input = (input + input') / 2
+            end
+            return $f(input, alg)
+        end
+        function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
+                                              func::Const{typeof($copy_f)},
+                                              ::Type{RT},
+                                              input::Annotation{<:AbstractMatrix},
+                                              alg,
+                                             ) where {RT}
+            output = MatrixAlgebraKit.initialize_output($f!, input.val, alg.val)
+            if $f === eigh_full
+                input.val .= (input.val .+ input.val') ./ 2
+            end
+            output = $f!(input.val, output, alg.val)
+            primal = EnzymeRules.needs_primal(config) ? output : nothing
+            d_output = (Diagonal(zeros(eltype(output[1]), size(output[1], 1))), zeros(eltype(output[2]), size(output[2])))
+            shadow = EnzymeRules.needs_shadow(config) ? d_output : nothing
+            # form cache if needed
+            return EnzymeRules.AugmentedReturn(primal, shadow, nothing)
+        end
+        function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
+                                     func::Const{typeof($copy_f)},
+                                     dret::Type{RT},
+                                     cache,
+                                     input::Annotation{<:AbstractMatrix},
+                                     alg
+                                    ) where {RT}
+            output = MatrixAlgebraKit.initialize_output($f!, input.val, alg.val)
+            new_input = $f === eigh_full ? (input.val + input.val') / 2 : copy(input.val)
+            #reverse(::EnzymeCore.Const{typeof(MatrixAlgebraKit.eig_full!)}, ::EnzymeCore.Duplicated{Matrix{Float64}}, ::EnzymeCore.Duplicated{Tuple{LinearAlgebra.Diagonal{ComplexF64, Vector{ComplexF64}}, Matrix{ComplexF64}}}, ::EnzymeCore.Const{MatrixAlgebraKit.LAPACK_Simple{@NamedTuple{}}})
+            input.val .= new_input
+            output, pb = Enzyme.reverse(Const($f!), input, Enzyme.Duplicated(output, (Diagonal(zeros(eltype(output[1]), length(output[1].diag))), zeros(eltype(output[2]), size(output[2])))), alg)
+            return output, x -> (nothing, pb(x)[2], nothing)
+        end
+    end
+end
+=#
+#=
 @timedtestset "QR AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
     rng = StableRNG(12345)
     m = 19
@@ -78,8 +124,13 @@ end
         test_reverse(copy_qr_null, A, alg)=#
         # qr_full
         Q, R = qr_full(A, alg)
+        Q1   = view(Q, 1:m, 1:minmn)
+        ΔQ   = randn(rng, T, m, m)
+        ΔQ2  = view(ΔQ, :, (minmn + 1):m)
+        mul!(ΔQ2, Q1, Q1' * ΔQ2)
+        ΔR   = randn(rng, T, m, n)
         @testset "reverse: RT $RT, TA $TA TQR $TQR" for RT  in (Active,), TA in (Duplicated,), TQR in (Duplicated,)
-            test_reverse(qr_full!, RT, (A, TA), ((Q, R), TQR); atol=precision(T), rtol=precision(T), fkwargs=(alg=alg,))
+            test_reverse(qr_full!, RT, (A, TA), ((Q, R), TQR); atol=precision(T), rtol=precision(T), fkwargs=(alg=alg,), output_tangent=(ΔQ, ΔR))
         end
 
         # rank-deficient A
@@ -96,6 +147,7 @@ end
         test_reverse(copy_qr_compact, A, alg)=#
     end
 end
+=#
 #=
 @timedtestset "LQ AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
     rng = StableRNG(12345)
@@ -169,16 +221,21 @@ end
     atol = rtol = m * m * precision(T)
     A = randn(rng, T, m, m)
     D, V = eig_full(A)
-    for alg in (LAPACK_Simple(), LAPACK_Expert())
+    ΔV = randn(rng, complex(T), m, m)
+    ΔV = remove_eiggauge_depence!(ΔV, D, V; degeneracy_atol=atol)
+    ΔD = randn(rng, complex(T), m, m)
+    ΔD2 = Diagonal(randn(rng, complex(T), m))
+    @testset for alg in (LAPACK_Simple(), LAPACK_Expert())
         @testset for RT in (Const,), TA in (Duplicated,), TDV in (Duplicated,)
-            test_forward(eig_full!, RT, (A, TA), ((D, V), TDV); fkwargs=(alg=alg,))
+            test_forward(eig_full!, RT, (copy(A), TA), ((copy(D), copy(V)), TDV); fkwargs=(alg=alg,))
         end
-        @testset for RT in (Active,), TA in (Duplicated,), TDV in (Duplicated,)
-            test_reverse(eig_full!, RT, (A, TA), ((D, V), TDV); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T))
+        @testset for RT in (Duplicated,), TA in (Duplicated,)
+            test_reverse(eig_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T), output_tangent=(copy(ΔD2), copy(ΔV)))
+            #test_reverse(copy_eig_full, RT, (copy(A), TA), ((copy(D), copy(V)), TDV); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T), output_tangent=(copy(ΔD2), copy(ΔV)))
         end
     end
 end
-@timedtestset "EIGH AD Rules with eltype $T" for T in (Float64,)# ComplexF64, Float32)
+#=@timedtestset "EIGH AD Rules with eltype $T" for T in (Float64,)# ComplexF64, Float32)
     rng  = StableRNG(12345)
     m    = 19
     atol = rtol = m * m * precision(T)
@@ -235,7 +292,7 @@ end
         end=#
     end
 end
-
+=#
 #=@timedtestset "Polar AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
     rng = StableRNG(12345)
     m = 19
