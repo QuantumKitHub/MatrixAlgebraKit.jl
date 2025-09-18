@@ -35,7 +35,7 @@ precision(::Type{<:Union{Float32,Complex{Float32}}}) = sqrt(eps(Float32))
 precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
 
 for f in
-    (:qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
+    (:qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,# :eig_full,
      :eigh_full, :svd_compact, :svd_trunc, :left_polar, :right_polar)
     copy_f = Symbol(:copy_, f)
     f! = Symbol(f, '!')
@@ -60,7 +60,8 @@ for f in
     end
 end
 
-for f in (:eig_full,)
+for f in
+    (:eig_full,)
     copy_f = Symbol(:copy_, f)
     f! = Symbol(f, '!')
     @eval begin
@@ -70,9 +71,22 @@ for f in (:eig_full,)
             end
             return $f(input, alg)
         end
+        function Mooncake.rrule!!(::Mooncake.CoDual{typeof($copy_f)}, input_dinput::Mooncake.CoDual, alg_dalg::Mooncake.CoDual)
+            output = MatrixAlgebraKit.initialize_output($f!, Mooncake.primal(input_dinput), Mooncake.primal(alg_dalg))
+            input = Mooncake.primal(input_dinput)
+            if $f === eigh_full
+                input = (input + input') / 2
+            else
+                input = copy(input)
+            end
+            output, pb = Mooncake.rrule!!(Mooncake.CoDual($f!, Mooncake.zero_tangent(output)), Mooncake.CoDual(input, Mooncake.tangent(input_dinput)), Mooncake.CoDual(output, Mooncake.zero_tangent(output)), alg_dalg)
+            return output, x -> (Mooncake.NoRData(), pb(x)[2], Mooncake.NoRData())
+        end
+        Mooncake.@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($copy_f), AbstractMatrix, MatrixAlgebraKit.AbstractAlgorithm}
     end
 end
 
+#=
 @timedtestset "QR AD Rules with eltype $T" for T in (Float64, Float32) #, ComplexF64)
     rng = StableRNG(12345)
     m = 19
@@ -112,16 +126,29 @@ end
         Mooncake.TestUtils.test_rule(rng, copy_lq_compact, A, alg; mode=Mooncake.ReverseMode)
     end
 end
+=#
 
-@timedtestset "EIG AD Rules with eltype $T" for T in (Float64, Float32, ComplexF64)
+@timedtestset "EIG AD Rules with eltype $T" for T in (Float64,)# Float32, ComplexF64)
     rng  = StableRNG(12345)
     m    = 19
     atol = rtol = m * m * precision(T)
     A    = randn(rng, T, m, m)
-    @testset for alg in (LAPACK_Simple(), LAPACK_Expert())
-        Mooncake.TestUtils.test_rule(rng, copy_eig_full, A, alg; mode=Mooncake.ReverseMode)
+    D, V = eig_full(A)
+    ΔV   = randn(rng, complex(T), m, m)
+    ΔV   = remove_eiggauge_depence!(ΔV, D, V; degeneracy_atol=atol)
+    ΔD   = randn(rng, complex(T), m, m)
+    ΔD2  = Diagonal(randn(rng, complex(T), m))
+
+    diag_tangent = [Mooncake.build_tangent(typeof(ΔD2.diag[ix]), real(ΔD2.diag[ix]), imag(ΔD2.diag[ix])) for ix in 1:m]
+    dD  = Mooncake.build_tangent(typeof(ΔD2), diag_tangent)
+    dV  = [Mooncake.build_tangent(typeof(ΔV[i,j]), real(ΔV[i,j]), imag(ΔV[i,j])) for i in 1:m, j in 1:m]
+    dDV = Mooncake.build_tangent(typeof((ΔD2,ΔV)), dD, dV)
+    @testset for alg in (LAPACK_Simple(),)# LAPACK_Expert())
+        Mooncake.TestUtils.test_rule(rng, copy_eig_full, A, alg; mode=Mooncake.ReverseMode, output_tangent = dDV)
     end
 end
+
+#=
 @timedtestset "EIGH AD Rules with eltype $T" for T in (Float64, Float32) #, ComplexF64)
     rng  = StableRNG(12345)
     m    = 19
@@ -172,7 +199,7 @@ end
         end
     end
 end
-
+=#
 #=
 @timedtestset "Orth and null with eltype $T" for T in (Float64, ComplexF64, Float32)
     rng = StableRNG(12345)

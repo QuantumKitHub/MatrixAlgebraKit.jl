@@ -301,21 +301,22 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
                              func::Const{typeof(eig_full!)},
                              ::Type{RT},
                              A::Annotation{<:AbstractMatrix},
-                             DV::Annotation{<:Tuple{<:Diagonal, <:AbstractMatrix}};
+                             DV::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}},
+                             alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
                              kwargs...,
                             ) where {RT}
     # adapted from ChainRules
-    ret    = func.val(A.val, DV.val; kwargs...)
+    ret    = func.val(A.val, DV.val, alg.val; kwargs...)
     D, V   = ret
     tmpV   = V \ A.dval
     ∂K     = tmpV * V
     ∂Kdiag = diagview(∂K)
     ∂D     = eltype(D) <: Real ? Diagonal(real.(∂Kdiag)) : Diagonal(∂Kdiag)
 
-    ∂K    ./= transpose(D) .- D
+    ∂K    ./= transpose(diagview(D)) .- diagview(D)
     ∂Kdiag .= zero(eltype(D))
     
-    ∂V = mul!(tmpV, V, ∂K) 
+    ∂V = mul!(tmpV, V, ∂K)
 
     shadow = (∂D, ∂V)
     if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
@@ -333,14 +334,12 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       func::Const{typeof(eig_full!)},
                                       ::Type{RT},
                                       A::Annotation{<:AbstractMatrix},
-                                      DV::Annotation{<:Tuple{<:Diagonal, <:AbstractMatrix}};
+                                      DV::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}},
+                                      alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
                                       kwargs...,
                                      ) where {RT}
-    tol             = 1e-8 #default_pullback_gaugetol(DV.val[1]),
-    degeneracy_atol = tol
-    gauge_atol      = tol
     cache_DV        = nothing
-    func.val(A.val, DV.val; kwargs...)
+    func.val(A.val, DV.val, alg.val; kwargs...)
     primal = if EnzymeRules.needs_primal(config)
         DV.val
     else
@@ -352,23 +351,20 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
         nothing
     end
     # form cache if needed
-    cache_A  = (EnzymeRules.overwritten(config)[2] && !(typeof(DV) <: Const)) ? copy(A.val)  : nothing
+    cache_A = (EnzymeRules.overwritten(config)[2] && !(typeof(DV) <: Const)) ? copy(A.val)  : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_DV))
 end
-
 
 function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       func::Const{typeof(eigh_full!)},
                                       ::Type{RT},
                                       A::Annotation{<:AbstractMatrix},
-                                      DV::Annotation{<:Tuple{<:Diagonal, <:AbstractMatrix}};
+                                      DV::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}},
+                                      alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
                                       kwargs...,
                                      ) where {RT}
-    tol             = 1e-8 #default_pullback_gaugetol(DV.val[1]),
-    degeneracy_atol = tol
-    gauge_atol      = tol
     cache_DV        = DV.val 
-    func.val(A.val, DV.val; kwargs...)
+    func.val(A.val, DV.val, alg.val; kwargs...)
     primal = if EnzymeRules.needs_primal(config)
         DV.val
     else
@@ -399,7 +395,8 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
                              dret::Type{RT},
                              cache,
                              A::Annotation{<:AbstractMatrix},
-                             DV::Annotation{<:Tuple{<:Diagonal, <:AbstractMatrix}};
+                             DV::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}},
+                             alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
                              kwargs...,
                             ) where {RT}
     tol             = 1e-8 #default_pullback_gaugetol(DV.val[1]),
@@ -409,12 +406,14 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
     cache_A, cache_DV = cache
     DVval = !isnothing(cache_DV) ? cache_DV : DV.val
 
-    ∂A    = A.dval .+ dret.val 
-    ∂DV   = DV.dval
-    ∂A = if !isa(A, Const) && !isa(DV, Const) 
-        D, V   = DVval
-        ∂D, ∂V = ∂DV
-        Vd∂V   = adjoint(V) * ∂V
+    A.dval .= zero(eltype(A.dval))
+    ∂A  = A.dval
+    ∂DV = DV.dval
+    if !isa(A, Const) && !isa(DV, Const) 
+        Dmat, V   = DVval
+        D         = diagview(Dmat)
+        ∂Dmat, ∂V = ∂DV
+        Vd∂V      = V' * ∂V
 
         dDD    = transpose(D) .- D
         mask   = abs.(dDD) .< degeneracy_atol
@@ -423,21 +422,18 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
         ∂gauge < gauge_atol || @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $∂gauge)"
 
         Vd∂V .*= conj.(MatrixAlgebraKit.inv_safe.(dDD, degeneracy_atol))
-        diagview(Vd∂V) .+= diagview(∂D)
+        diagview(Vd∂V) .+= diagview(∂Dmat)
         
-        P∂V = adjoint(V) \ Vd∂V
+        P∂V = V' \ Vd∂V
         if eltype(∂A) <: Real
-            ∂Ac = mul!(Vd∂V, P∂V, adjoint(V)) # recycle VdΔV memory
-            ∂A .+= real.(∂Ac)
+            ∂Ac = mul!(Vd∂V, P∂V, V') # recycle VdΔV memory
+            A.dval .+= real.(∂Ac)
         else
-            ∂A = mul!(∂A, P∂V, adjoint(V), 1, 1)
+            A.dval = mul!(A.dval, P∂V, adjoint(V), 1, 1)
         end
-        A.dval .= ∂A
         make_zero!(DV.dval)
-    else
-        nothing
     end
-    return (nothing, nothing)
+    return (nothing, nothing, nothing)
 end
 
 # TODO support batch reverse
