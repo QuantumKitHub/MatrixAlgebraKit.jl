@@ -94,16 +94,16 @@ end
 
 Truncation strategy to discard the values that are smaller than the norm of the values.
 """
-struct TruncationKeepBelow{T<:Real,F} <: TruncationStrategy
+struct TruncationKeepBelow{T<:Real,P<:Real,F} <: TruncationStrategy
     atol::T
     rtol::T
-    p::Int
+    p::P
     by::F
 end
-function TruncationKeepBelow(; atol::Real, rtol::Real, p::Int=2, by=abs)
+function TruncationKeepBelow(; atol::Real, rtol::Real, p::Real=2, by=abs)
     return TruncationKeepBelow(atol, rtol, p, by)
 end
-function TruncationKeepBelow(atol::Real, rtol::Real, p::Int=2, by=abs)
+function TruncationKeepBelow(atol::Real, rtol::Real, p::Real=2, by=abs)
     return TruncationKeepBelow(promote(atol, rtol)..., p, by)
 end
 
