@@ -1,17 +1,3 @@
-# Utility combination
-function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
-    return TruncationIntersection((trunc1, trunc2))
-end
-function Base.:&(trunc1::TruncationIntersection, trunc2::TruncationIntersection)
-    return TruncationIntersection((trunc1.components..., trunc2.components...))
-end
-function Base.:&(trunc1::TruncationIntersection, trunc2::TruncationStrategy)
-    return TruncationIntersection((trunc1.components..., trunc2))
-end
-function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationIntersection)
-    return TruncationIntersection((trunc1, trunc2.components...))
-end
-
 # truncate!
 # ---------
 # Generic implementation: `findtruncated` followed by indexing
