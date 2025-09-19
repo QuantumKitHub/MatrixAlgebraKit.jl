@@ -89,8 +89,35 @@ function findtruncated_sorted(values::AbstractVector, strategy::TruncationInters
     return intersect(inds...)
 end
 
-# Generic fallback.
+function findtruncated(values::AbstractVector, strategy::TruncationError)
+    I = sortperm(values; by=abs, rev=true)
+    I′ = _truncerr_impl(values, I, strategy)
+    return I[I′]
+end
+function findtruncated_sorted(values::AbstractVector, strategy::TruncationError)
+    I = eachindex(values)
+    I′ = _truncerr_impl(values, I, strategy)
+    return I[I′]
+end
+function _truncerr_impl(values::AbstractVector, I, strategy::TruncationError)
+    Nᵖ = sum(Base.Fix2(^, strategy.p) ∘ abs, values)
+    ϵᵖ = max(strategy.atol^strategy.p, strategy.rtol^strategy.p * Nᵖ)
+    ϵᵖ ≥ Nᵖ && return Base.OneTo(0)
+
+    truncerrᵖ = zero(real(eltype(values)))
+    rank = length(values)
+    for i in reverse(I)
+        truncerrᵖ += abs(values[i])^strategy.p
+        if truncerrᵖ ≥ ϵᵖ
+            break
+        else
+            rank -= 1
+        end
+    end
+    return Base.OneTo(rank)
+end
+
+# Generic fallback
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationStrategy)
     return findtruncated(values, strategy)
 end
-

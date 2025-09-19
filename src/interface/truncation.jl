@@ -119,3 +119,31 @@ end
 function TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...)
     return TruncationIntersection((trunc, truncs...))
 end
+
+"""
+    TruncationError(; atol::Real, rtol::Real, p::Real)
+
+Truncation strategy to discard values until the error caused by the discarded values exceeds some tolerances.
+See also [`truncerror`](@ref).
+"""
+struct TruncationError{T<:Real,P<:Real} <: TruncationStrategy
+    atol::T
+    rtol::T
+    p::P
+end
+function TruncationError(; atol::Real, rtol::Real, p::Real=2)
+    return TruncationError(atol, rtol, p)
+end
+function TruncationError(atol::Real, rtol::Real, p::Real=2)
+    return TruncationError(promote(atol, rtol)..., p)
+end
+
+"""
+    truncerror(; atol::Real=0, rtol::Real=0, p::Real=2)
+
+Create a truncation strategy for truncating such that the error in the factorization
+is smaller than `max(atol, rtol * norm)`, where the error is determined using the `p`-norm.
+"""
+function truncerror(; atol::Real=0, rtol::Real=0, p::Real=2)
+    return TruncationError(promote(atol, rtol)..., p)
+end

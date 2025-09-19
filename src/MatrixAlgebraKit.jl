@@ -37,7 +37,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ,
        CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer,
        ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi, ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection,
        DiagonalAlgorithm
-export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered
+export truncrank, trunctol, truncabove, TruncationKeepSorted, TruncationKeepFiltered, truncerror
 
 VERSION >= v"1.11.0-DEV.469" &&
     eval(Expr(:public, :default_algorithm, :findtruncated, :findtruncated_sorted,
