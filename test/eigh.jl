@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I
-using MatrixAlgebraKit: TruncatedAlgorithm, diagview
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview, norm
 
 const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 
@@ -58,9 +58,17 @@ end
         @test isisometry(V2)
         @test A * V2 ≈ V2 * D2
 
+        s = 1 - sqrt(eps(real(T)))
+        trunc = truncerror(; atol=s * norm(@view(D₀[r:end]), 1), p=1)
+        D3, V3 = @constinferred eigh_trunc(A; alg, trunc)
+        @test length(diagview(D3)) == r
+        @test A * V3 ≈ V3 * D3
+
         # test for same subspace
         @test V1 * (V1' * V2) ≈ V2
         @test V2 * (V2' * V1) ≈ V1
+        @test V1 * (V1' * V3) ≈ V3
+        @test V3 * (V3' * V1) ≈ V1
     end
 end
 
@@ -75,6 +83,10 @@ end
     D2, V2 = @constinferred eigh_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
     @test_throws ArgumentError eigh_trunc(A; alg, trunc=(; maxrank=2))
+
+    alg = TruncatedAlgorithm(LAPACK_QRIteration(), truncerror(; atol=0.2))
+    D3, V3 = @constinferred eigh_trunc(A; alg)
+    @test diagview(D3) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
 end
 
 @testset "eigh for Diagonal{$T}" for T in BLASFloats
