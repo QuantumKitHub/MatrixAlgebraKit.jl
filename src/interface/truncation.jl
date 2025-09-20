@@ -14,14 +14,14 @@ function TruncationStrategy(; atol=nothing, rtol=nothing, maxrank=nothing)
     elseif isnothing(maxrank)
         atol = @something atol 0
         rtol = @something rtol 0
-        return TruncationKeepAbove(atol, rtol)
+        return trunctol(; atol, rtol)
     else
         if isnothing(atol) && isnothing(rtol)
             return truncrank(maxrank)
         else
             atol = @something atol 0
             rtol = @something rtol 0
-            return truncrank(maxrank) & TruncationKeepAbove(atol, rtol)
+            return truncrank(maxrank) & trunctol(; atol, rtol)
         end
     end
 end
@@ -42,78 +42,94 @@ Truncation strategy that does nothing, and keeps all the values.
 notrunc() = NoTruncation()
 
 """
-    TruncationKeepSorted(howmany::Int, by::Function, rev::Bool)
+    TruncationByOrder(howmany::Int, by::Function, rev::Bool)
 
 Truncation strategy to keep the first `howmany` values when sorted according to `by` in increasing (decreasing) order if `rev` is false (true).
+
 See also [`truncrank`](@ref).
 """
-struct TruncationKeepSorted{F} <: TruncationStrategy
+struct TruncationByOrder{F} <: TruncationStrategy
     howmany::Int
     by::F
     rev::Bool
 end
 
 """
-    truncrank(howmany::Int; by=abs, rev=true)
+    truncrank(howmany::Integer; by=abs, rev::Bool=true)
 
 Truncation strategy to keep the first `howmany` values when sorted according to `by` or the last `howmany` if `rev` is true.
 """
-truncrank(howmany::Int; by=abs, rev=true) = TruncationKeepSorted(howmany, by, rev)
+truncrank(howmany::Integer; by=abs, rev::Bool=true) = TruncationByOrder(howmany, by, rev)
 
 """
-    TruncationKeepFiltered(filter::Function)
+    TruncationByFilter(filter::Function)
 
 Truncation strategy to keep the values for which `filter` returns true.
+
+See also [`truncfilter`](@ref).
 """
-struct TruncationKeepFiltered{F} <: TruncationStrategy
+struct TruncationByFilter{F} <: TruncationStrategy
     filter::F
 end
 
 """
-    truncabove(val::Real; by=abs)
+    truncfilter(filter)
 
-Truncation strategy to discard the values that are larger than `val` according to `by`.
+Truncation strategy to keep the values for which `filter` returns true.
 """
-truncabove(val::Real; by=abs) = TruncationKeepFiltered(≤(val) ∘ by)
+truncfilter(f) = TruncationByFilter(f)
 
-struct TruncationKeepAbove{T<:Real,P<:Real,F} <: TruncationStrategy
+"""
+    TruncationByValue(atol::Real, rtol::Real, p::Real, by, rev::Bool=true)
+
+Truncation strategy to keep the values that satisfy `by(val) < max(atol, rtol * norm(values, p)`
+if `rev = true`, or discard them when `rev = false`.
+See also [`trunctol`](@ref)
+"""
+struct TruncationByValue{T<:Real,P<:Real,F} <: TruncationStrategy
     atol::T
     rtol::T
     p::P
     by::F
+    rev::Bool
 end
-function TruncationKeepAbove(; atol::Real, rtol::Real, p::Real=2, by=abs)
-    return TruncationKeepAbove(atol, rtol, p, by)
-end
-function TruncationKeepAbove(atol::Real, rtol::Real, p::Real=2, by=abs)
-    return TruncationKeepAbove(promote(atol, rtol)..., p, by)
+function TruncationByValue(atol::Real, rtol::Real, p::Real=2, by=abs, rev::Bool=true)
+    return TruncationByValue(promote(atol, rtol)..., p, by, rev)
 end
 
 """
-    TruncationKeepBelow(; atol::Real, rtol::Real, p=2, by=abs)
+    trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, )
 
-Truncation strategy to discard the values that are smaller than the norm of the values.
+Truncation strategy to keep the values that satisfy `by(val) < max(atol, rtol * norm(values, p)`
+if `rev = true`, or discard them when `rev = false`.
 """
-struct TruncationKeepBelow{T<:Real,P<:Real,F} <: TruncationStrategy
+function trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, rev::Bool=true)
+    return TruncationByValue(atol, rtol, p, by, rev)
+end
+
+"""
+    TruncationByError(; atol::Real, rtol::Real, p::Real)
+
+Truncation strategy to discard values until the error caused by the discarded values exceeds some tolerances.
+See also [`truncerror`](@ref).
+"""
+struct TruncationByError{T<:Real,P<:Real} <: TruncationStrategy
     atol::T
     rtol::T
     p::P
-    by::F
 end
-function TruncationKeepBelow(; atol::Real, rtol::Real, p::Real=2, by=abs)
-    return TruncationKeepBelow(atol, rtol, p, by)
-end
-function TruncationKeepBelow(atol::Real, rtol::Real, p::Real=2, by=abs)
-    return TruncationKeepBelow(promote(atol, rtol)..., p, by)
+function TruncationError(atol::Real, rtol::Real, p::Real=2)
+    return TruncationError(promote(atol, rtol)..., p)
 end
 
 """
-    trunctol(; atol::Real, rtol::Real, p::Real=2, by=abs)
+    truncerror(; atol::Real=0, rtol::Real=0, p::Real=2)
 
-Truncation strategy to discard all values that satisfy `by(val) < max(atol, rtol * norm(values))`.
+Create a truncation strategy for truncating such that the error in the factorization
+is smaller than `max(atol, rtol * norm)`, where the error is determined using the `p`-norm.
 """
-function trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs)
-    return TruncationKeepBelow(; atol, rtol, p, by)
+function truncerror(; atol::Real=0, rtol::Real=0, p::Real=2)
+    return TruncationByError(promote(atol, rtol)..., p)
 end
 
 """
@@ -121,8 +137,7 @@ end
 
 Composition of multiple truncation strategies, keeping values common between them.
 """
-struct TruncationIntersection{T<:Tuple{Vararg{TruncationStrategy}}} <:
-       TruncationStrategy
+struct TruncationIntersection{T<:Tuple{Vararg{TruncationStrategy}}} <: TruncationStrategy
     components::T
 end
 function TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...)
@@ -140,32 +155,4 @@ function Base.:&(trunc1::TruncationIntersection, trunc2::TruncationStrategy)
 end
 function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationIntersection)
     return TruncationIntersection((trunc1, trunc2.components...))
-end
-
-"""
-    TruncationError(; atol::Real, rtol::Real, p::Real)
-
-Truncation strategy to discard values until the error caused by the discarded values exceeds some tolerances.
-See also [`truncerror`](@ref).
-"""
-struct TruncationError{T<:Real,P<:Real} <: TruncationStrategy
-    atol::T
-    rtol::T
-    p::P
-end
-function TruncationError(; atol::Real, rtol::Real, p::Real=2)
-    return TruncationError(atol, rtol, p)
-end
-function TruncationError(atol::Real, rtol::Real, p::Real=2)
-    return TruncationError(promote(atol, rtol)..., p)
-end
-
-"""
-    truncerror(; atol::Real=0, rtol::Real=0, p::Real=2)
-
-Create a truncation strategy for truncating such that the error in the factorization
-is smaller than `max(atol, rtol * norm)`, where the error is determined using the `p`-norm.
-"""
-function truncerror(; atol::Real=0, rtol::Real=0, p::Real=2)
-    return TruncationError(promote(atol, rtol)..., p)
 end

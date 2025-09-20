@@ -28,42 +28,72 @@ end
 
 # findtruncated
 # -------------
+# Generic fallback
+function findtruncated_sorted(values::AbstractVector, strategy::TruncationStrategy)
+    return findtruncated(values, strategy)
+end
+
 # specific implementations for finding truncated values
 findtruncated(values::AbstractVector, ::NoTruncation) = Colon()
 
-function findtruncated(values::AbstractVector, strategy::TruncationKeepSorted)
+function findtruncated(values::AbstractVector, strategy::TruncationByOrder)
     howmany = min(strategy.howmany, length(values))
-    return partialsortperm(values, 1:howmany; by=strategy.by, rev=strategy.rev)
+    return partialsortperm(values, 1:howmany; strategy.by, strategy.rev)
 end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepSorted)
+function findtruncated_sorted(values::AbstractVector, strategy::TruncationByOrder)
     howmany = min(strategy.howmany, length(values))
     return 1:howmany
 end
 
-# TODO: consider if worth using that values are sorted when filter is `<` or `>`.
-function findtruncated(values::AbstractVector, strategy::TruncationKeepFiltered)
+function findtruncated(values::AbstractVector, strategy::TruncationByFilter)
     ind = findall(strategy.filter, values)
     return ind
 end
 
-function findtruncated(values::AbstractVector, strategy::TruncationKeepBelow)
+function findtruncated(values::AbstractVector, strategy::TruncationByValue)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    return findall(≤(atol) ∘ strategy.by, values)
+    filter = (strategy.rev ? ≥(atol) : ≤(atol)) ∘ strategy.by
+    return findall(filter, values)
 end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepBelow)
+function findtruncated_sorted(values::AbstractVector, strategy::TruncationByValue)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    i = searchsortedfirst(values, atol; by=strategy.by, rev=true)
-    return i:length(values)
+    @assert strategy.by === abs || strategy.by === real "sorting strategy incompatible with implementation"
+    if strategy.rev
+        i = searchsortedlast(values, atol; by=strategy.by, rev=true)
+        return 1:i
+    else
+        i = searchsortedfirst(values, atol; by=strategy.by, rev=true)
+        return i:length(values)
+    end
 end
 
-function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
-    atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    return findall(≥(atol) ∘ strategy.by, values)
+function findtruncated(values::AbstractVector, strategy::TruncationByError)
+    I = sortperm(values; by=abs, rev=true)
+    I′ = _truncerr_impl(values, I; strategy.atol, strategy.rtol, strategy.p)
+    return I[I′]
 end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationKeepAbove)
-    atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    i = searchsortedlast(values, atol; by=strategy.by, rev=true)
-    return 1:i
+function findtruncated_sorted(values::AbstractVector, strategy::TruncationByError)
+    I = eachindex(values)
+    I′ = _truncerr_impl(values, I; strategy.atol, strategy.rtol, strategy.p)
+    return I[I′]
+end
+function _truncerr_impl(values::AbstractVector, I; atol::Real=0, rtol::Real=0, p::Real=2)
+    by = Base.Fix2(^, p) ∘ abs
+    Nᵖ = sum(by, values)
+    ϵᵖ = max(atol^p, rtol^p * Nᵖ)
+
+    # fast path to avoid checking all values
+    ϵᵖ ≥ Nᵖ && return Base.OneTo(0)
+
+    truncerrᵖ = zero(real(eltype(values)))
+    rank = length(values)
+    for i in reverse(I)
+        truncerrᵖ += by(values[i])
+        truncerrᵖ ≥ ϵᵖ && break
+        rank -= 1
+    end
+
+    return Base.OneTo(rank)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
@@ -73,37 +103,4 @@ end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationIntersection)
     inds = map(Base.Fix1(findtruncated_sorted, values), strategy.components)
     return intersect(inds...)
-end
-
-function findtruncated(values::AbstractVector, strategy::TruncationError)
-    I = sortperm(values; by=abs, rev=true)
-    I′ = _truncerr_impl(values, I, strategy)
-    return I[I′]
-end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationError)
-    I = eachindex(values)
-    I′ = _truncerr_impl(values, I, strategy)
-    return I[I′]
-end
-function _truncerr_impl(values::AbstractVector, I, strategy::TruncationError)
-    Nᵖ = sum(Base.Fix2(^, strategy.p) ∘ abs, values)
-    ϵᵖ = max(strategy.atol^strategy.p, strategy.rtol^strategy.p * Nᵖ)
-    ϵᵖ ≥ Nᵖ && return Base.OneTo(0)
-
-    truncerrᵖ = zero(real(eltype(values)))
-    rank = length(values)
-    for i in reverse(I)
-        truncerrᵖ += abs(values[i])^strategy.p
-        if truncerrᵖ ≥ ϵᵖ
-            break
-        else
-            rank -= 1
-        end
-    end
-    return Base.OneTo(rank)
-end
-
-# Generic fallback
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationStrategy)
-    return findtruncated(values, strategy)
 end
