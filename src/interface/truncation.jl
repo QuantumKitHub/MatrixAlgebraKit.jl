@@ -70,13 +70,6 @@ struct TruncationKeepFiltered{F} <: TruncationStrategy
 end
 
 """
-    trunctol(val::Real; by=abs)
-
-Truncation strategy to discard the values that are smaller than `val` according to `by`.
-"""
-trunctol(val::Real; by=abs) = TruncationKeepFiltered(≥(val) ∘ by)
-
-"""
     truncabove(val::Real; by=abs)
 
 Truncation strategy to discard the values that are larger than `val` according to `by`.
@@ -112,6 +105,15 @@ function TruncationKeepBelow(; atol::Real, rtol::Real, p::Real=2, by=abs)
 end
 function TruncationKeepBelow(atol::Real, rtol::Real, p::Real=2, by=abs)
     return TruncationKeepBelow(promote(atol, rtol)..., p, by)
+end
+
+"""
+    trunctol(; atol::Real, rtol::Real, p::Real=2, by=abs)
+
+Truncation strategy to discard all values that satisfy `by(val) < max(atol, rtol * norm(values))`.
+"""
+function trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs)
+    return TruncationKeepBelow(; atol, rtol, p, by)
 end
 
 """
