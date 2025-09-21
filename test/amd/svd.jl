@@ -108,9 +108,9 @@ end
 #             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
 
 #             s = 1 + sqrt(eps(real(T)))
-#             trunc2 = trunctol(s * S₀[r + 1])
+#             trunc2 = trunctol(; atol=s * S₀[r + 1])
 
-#             U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(s * S₀[r + 1]))
+#             U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(; atol=s * S₀[r + 1]))
 #             @test length(S2.diag) == r
 #             @test U1 ≈ U2
 #             @test S1 ≈ S2
