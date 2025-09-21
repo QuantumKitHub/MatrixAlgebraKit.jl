@@ -29,8 +29,6 @@ using LinearAlgebra: Diagonal
         @test V2 === V
         @test A * V ≈ B * V * Diagonal(W)
 
-        Ac = similar(A)
-        Bc = similar(B)
         W2, V2 = @constinferred gen_eig_full!(copy!(Ac, A), copy!(Bc, B), (W, V))
         @test W2 === W
         @test V2 === V
