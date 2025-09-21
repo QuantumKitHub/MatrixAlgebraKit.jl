@@ -1,32 +1,35 @@
 using MatrixAlgebraKit
 using Test
 using TestExtras
-using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbove,
-                        TruncationKeepBelow, TruncationStrategy, findtruncated,
+using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
+                        TruncationByValue, TruncationStrategy, findtruncated,
                         findtruncated_sorted
 
 @testset "truncate" begin
     trunc = @constinferred TruncationStrategy()
     @test trunc isa NoTruncation
 
-    trunc = @constinferred TruncationStrategy(; atol=1e-2, rtol=1e-3)
-    @test trunc isa TruncationKeepAbove
-    @test trunc == TruncationKeepAbove(1e-2, 1e-3)
-    @test trunc.atol == 1e-2
-    @test trunc.rtol == 1e-3
+    atol = 1e-2
+    rtol = 1e-3
+    maxrank = 10
 
-    trunc = @constinferred TruncationStrategy(; maxrank=10)
-    @test trunc isa TruncationKeepSorted
-    @test trunc == truncrank(10)
-    @test trunc.howmany == 10
+    trunc = @constinferred TruncationStrategy(; atol, rtol)
+    @test trunc isa TruncationByValue
+    @test trunc == trunctol(; atol, rtol)
+    @test trunc.atol == atol
+    @test trunc.rtol == rtol
+    @test trunc.rev
+
+    trunc = @constinferred TruncationStrategy(; maxrank)
+    @test trunc isa TruncationByOrder
+    @test trunc == truncrank(maxrank)
+    @test trunc.howmany == maxrank
     @test trunc.by == abs
-    @test trunc.rev == true
+    @test trunc.rev
 
-    trunc = @constinferred TruncationStrategy(; atol=1e-2, rtol=1e-3, maxrank=10)
+    trunc = @constinferred TruncationStrategy(; atol, rtol, maxrank)
     @test trunc isa TruncationIntersection
-    @test trunc == truncrank(10) & TruncationKeepAbove(1e-2, 1e-3)
-    @test trunc.components[1] == truncrank(10)
-    @test trunc.components[2] == TruncationKeepAbove(1e-2, 1e-3)
+    @test trunc == truncrank(maxrank) & trunctol(; atol, rtol)
 
     values = [1, 0.9, 0.5, -0.3, 0.01]
     @test @constinferred(findtruncated(values, truncrank(2))) == 1:2
@@ -35,42 +38,32 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbov
     @test @constinferred(findtruncated_sorted(values, truncrank(2))) === 1:2
 
     values = [1, 0.9, 0.5, -0.3, 0.01]
-    for strategy in (TruncationKeepAbove(; atol=0.4, rtol=0),
-                     TruncationKeepAbove(0.4, 0))
-        @test @constinferred(findtruncated(values, strategy)) == 1:3
-        @test @constinferred(findtruncated_sorted(values, strategy)) === 1:3
-    end
-    for strategy in (TruncationKeepBelow(; atol=0.4, rtol=0),
-                     TruncationKeepBelow(0.4, 0))
-        @test @constinferred(findtruncated(values, strategy)) == 4:5
-        @test @constinferred(findtruncated_sorted(values, strategy)) === 4:5
-    end
+    strategy = trunctol(; atol=0.4)
+    @test @constinferred(findtruncated(values, strategy)) == 1:3
+    @test @constinferred(findtruncated_sorted(values, strategy)) === 1:3
+    strategy = trunctol(; atol=0.4, rev=false)
+    @test @constinferred(findtruncated(values, strategy)) == 4:5
+    @test @constinferred(findtruncated_sorted(values, strategy)) === 4:5
 
     values = [0.01, 1, 0.9, -0.3, 0.5]
-    for strategy in (TruncationKeepAbove(; atol=0.4, rtol=0),
-                     TruncationKeepAbove(; atol=0.4, rtol=0, by=abs),
-                     TruncationKeepAbove(0.4, 0),
-                     TruncationKeepAbove(; atol=0.2, rtol=0.0, by=identity))
+    for strategy in (trunctol(; atol=0.4), trunctol(; atol=0.2, by=identity))
         @test @constinferred(findtruncated(values, strategy)) == [2, 3, 5]
     end
-    for strategy in (TruncationKeepAbove(; atol=0.2, rtol=0),
-                     TruncationKeepAbove(; atol=0.2, rtol=0, by=abs),
-                     TruncationKeepAbove(0.2, 0))
-        @test @constinferred(findtruncated(values, strategy)) == [2, 3, 4, 5]
-    end
-    for strategy in (TruncationKeepBelow(; atol=0.4, rtol=0),
-                     TruncationKeepBelow(; atol=0.4, rtol=0, by=abs),
-                     TruncationKeepBelow(0.4, 0),
-                     TruncationKeepBelow(; atol=0.2, rtol=0.0, by=identity))
+    strategy = trunctol(; atol=0.2)
+    @test @constinferred(findtruncated(values, strategy)) == [2, 3, 4, 5]
+
+    for strategy in
+        (trunctol(; atol=0.4, rev=false), trunctol(; atol=0.2, by=identity, rev=false))
         @test @constinferred(findtruncated(values, strategy)) == [1, 4]
     end
-    for strategy in (TruncationKeepBelow(; atol=0.2, rtol=0),
-                     TruncationKeepBelow(; atol=0.2, rtol=0, by=abs),
-                     TruncationKeepBelow(0.2, 0))
-        @test @constinferred(findtruncated(values, strategy)) == [1]
-    end
-    for strategy in (truncerror(; atol=0.2, rtol=0),)
-        @test issetequal(@constinferred(findtruncated(values, strategy)), 2:5)
-        @test @constinferred(findtruncated_sorted(sort(values; by=abs, rev=true), strategy)) == 1:4
-    end
+    strategy = trunctol(; atol=0.2, rev=false)
+    @test @constinferred(findtruncated(values, strategy)) == [1]
+    
+    strategy = truncfilter(x -> 0.1 < x < 1)
+    @test @constinferred(findtruncated(values, strategy)) == [3, 5]
+
+    strategy = truncerror(; atol=0.2, rtol=0)
+    @test issetequal(@constinferred(findtruncated(values, strategy)), 2:5)
+    vals_sorted = sort(values; by=abs, rev=true)
+    @test @constinferred(findtruncated_sorted(vals_sorted, strategy)) == 1:4
 end

@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef, norm
-using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview, isisometry
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview, isisometry
 
 const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 
@@ -113,15 +113,15 @@ end
             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
 
             s = 1 + sqrt(eps(real(T)))
-            trunc2 = trunctol(s * S₀[r + 1])
+            trunc = trunctol(; atol=s * S₀[r + 1])
 
-            U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(s * S₀[r + 1]))
+            U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc)
             @test length(S2.diag) == r
             @test U1 ≈ U2
             @test S1 ≈ S2
             @test V1ᴴ ≈ V2ᴴ
 
-            trunc = truncerror(; atol = s * norm(@view(S₀[(r + 1):end])))
+            trunc = truncerror(; atol=s * norm(@view(S₀[(r + 1):end])))
             U3, S3, V3ᴴ = @constinferred svd_trunc(A; alg, trunc)
             @test length(S3.diag) == r
             @test U1 ≈ U3
@@ -147,7 +147,7 @@ end
         A = U * S * Vᴴ
 
         for trunc_fun in ((rtol, maxrank) -> (; rtol, maxrank),
-                          (rtol, maxrank) -> truncrank(maxrank) & TruncationKeepAbove(0, rtol))
+                          (rtol, maxrank) -> truncrank(maxrank) & trunctol(; rtol))
             U1, S1, V1ᴴ = svd_trunc(A; alg, trunc=trunc_fun(0.2, 1))
             @test length(S1.diag) == 1
             @test S1.diag ≈ S.diag[1:1] rtol = sqrt(eps(real(T)))
@@ -166,7 +166,7 @@ end
     S = Diagonal([0.9, 0.3, 0.1, 0.01])
     Vᴴ = qr_compact(randn(rng, T, m, m))[1]
     A = U * S * Vᴴ
-    alg = TruncatedAlgorithm(LAPACK_DivideAndConquer(), TruncationKeepAbove(0.2, 0.0))
+    alg = TruncatedAlgorithm(LAPACK_DivideAndConquer(), trunctol(; atol=0.2))
     U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg)
     @test diagview(S2) ≈ diagview(S)[1:2] rtol = sqrt(eps(real(T)))
     @test_throws ArgumentError svd_trunc(A; alg, trunc=(; maxrank=2))

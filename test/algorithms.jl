@@ -1,8 +1,8 @@
 using MatrixAlgebraKit
 using Test
 using TestExtras
-using MatrixAlgebraKit: LAPACK_SVDAlgorithm, NoTruncation, PolarViaSVD, TruncatedAlgorithm,
-                        TruncationKeepBelow, default_algorithm, select_algorithm
+using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
+                        default_algorithm, select_algorithm
 
 @testset "default_algorithm" begin
     A = randn(3, 3)
@@ -38,19 +38,19 @@ end
     A = randn(3, 3)
     for f in (svd_trunc!, svd_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
-              TruncatedAlgorithm(LAPACK_DivideAndConquer(), NoTruncation())
+              TruncatedAlgorithm(LAPACK_DivideAndConquer(), notrunc())
     end
     for f in (eig_trunc!, eig_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
-              TruncatedAlgorithm(LAPACK_Expert(), NoTruncation())
+              TruncatedAlgorithm(LAPACK_Expert(), notrunc())
     end
     for f in (eigh_trunc!, eigh_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
               TruncatedAlgorithm(LAPACK_MultipleRelativelyRobustRepresentations(),
-                                 NoTruncation())
+                                 notrunc())
     end
 
-    alg = TruncatedAlgorithm(LAPACK_Simple(), TruncationKeepBelow(0.1, 0.0))
+    alg = TruncatedAlgorithm(LAPACK_Simple(), trunctol(; atol=0.1, rev=false))
     for f in (eig_trunc!, eigh_trunc!, svd_trunc!)
         @test @constinferred(select_algorithm(eig_trunc!, A, alg)) === alg
         @test_throws ArgumentError select_algorithm(eig_trunc!, A, alg; trunc=(; maxrank=2))

@@ -52,7 +52,7 @@ end
         @test A * V1 ≈ V1 * D1
         @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
 
-        trunc = trunctol(s * D₀[r + 1])
+        trunc = trunctol(; atol=s * D₀[r + 1])
         D2, V2 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test isisometry(V2)
