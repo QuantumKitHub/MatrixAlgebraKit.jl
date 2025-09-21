@@ -11,7 +11,7 @@ Currently, truncations are supported through the following different methods:
 notrunc
 truncrank
 trunctol
-truncabove
+truncfilter
 truncerror
 ```
 
@@ -20,6 +20,6 @@ For example, truncating to a maximal dimension `10`, and discarding all values b
 
 ```julia
 maxdim = 10
-tol = 1e-6
-combined_trunc = truncrank(maxdim) & trunctol(tol)
+atol = 1e-6
+combined_trunc = truncrank(maxdim) & trunctol(; atol)
 ```
