@@ -174,12 +174,9 @@ standard case for SVD) see [`MatrixAlgebraKit.findtruncated_sorted`](@ref).
 @doc """
     MatrixAlgebraKit.findtruncated_sorted(values::AbstractVector, strategy::TruncationStrategy)
 
-Like [`MatrixAlgebraKit.findtruncated`](@ref) but assumes that the values are sorted in reverse order.
-They are assumed to be sorted in a way that is consistent with the truncation strategy,
-which generally means they are sorted by absolute value but some truncation strategies allow
-customizing that. However, note that this assumption is not checked, so passing values that are not sorted
-in the correct way can silently give unexpected results. This is used in the default implementation of
-[`svd_trunc!`](@ref).
+Like [`MatrixAlgebraKit.findtruncated`](@ref) but assumes that the values are real and
+sorted in descending order, as typically obtained by the SVD. This assumption is not
+checked, and this is used in the default implementation of [`svd_trunc!`](@ref).
 """ findtruncated_sorted
 
 """
