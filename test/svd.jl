@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using StableRNGs
-using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef
+using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef, norm
 using MatrixAlgebraKit: TruncatedAlgorithm, TruncationKeepAbove, diagview, isisometry
 
 const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
@@ -120,6 +120,13 @@ end
             @test U1 ≈ U2
             @test S1 ≈ S2
             @test V1ᴴ ≈ V2ᴴ
+
+            trunc = truncerror(; atol = s * norm(@view(S₀[(r + 1):end])))
+            U3, S3, V3ᴴ = @constinferred svd_trunc(A; alg, trunc)
+            @test length(S3.diag) == r
+            @test U1 ≈ U3
+            @test S1 ≈ S3
+            @test V1ᴴ ≈ V3ᴴ
         end
     end
 end

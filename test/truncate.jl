@@ -69,4 +69,8 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationKeepAbov
                      TruncationKeepBelow(0.2, 0))
         @test @constinferred(findtruncated(values, strategy)) == [1]
     end
+    for strategy in (truncerror(; atol=0.2, rtol=0),)
+        @test issetequal(@constinferred(findtruncated(values, strategy)), 2:5)
+        @test @constinferred(findtruncated_sorted(sort(values; by=abs, rev=true), strategy)) == 1:4
+    end
 end
