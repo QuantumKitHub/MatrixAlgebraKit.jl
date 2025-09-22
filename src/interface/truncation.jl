@@ -125,7 +125,7 @@ end
 """
     truncerror(; atol::Real=0, rtol::Real=0, p::Real=2)
 
-Create a truncation strategy for truncating such that the error in the factorization
+Truncation strategy for truncating values such that the error in the factorization
 is smaller than `max(atol, rtol * norm)`, where the error is determined using the `p`-norm.
 """
 function truncerror(; atol::Real=0, rtol::Real=0, p::Real=2)
@@ -135,7 +135,8 @@ end
 """
     TruncationIntersection(trunc::TruncationStrategy, truncs::TruncationStrategy...)
 
-Composition of multiple truncation strategies, keeping values common between them.
+Truncation strategy that composes multiple truncation strategies, keeping values that are
+common between them.
 """
 struct TruncationIntersection{T<:Tuple{Vararg{TruncationStrategy}}} <: TruncationStrategy
     components::T
