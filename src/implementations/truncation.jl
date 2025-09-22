@@ -42,7 +42,7 @@ function findtruncated(values::AbstractVector, strategy::TruncationByOrder)
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationByOrder)
     howmany = min(strategy.howmany, length(values))
-    return 1:howmany
+    return strategy.rev ? (1:howmany) : ((length(values) - howmany + 1):length(values))
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByFilter)
