@@ -50,7 +50,7 @@ end
                                  notrunc())
     end
 
-    alg = TruncatedAlgorithm(LAPACK_Simple(), trunctol(; atol=0.1, rev=false))
+    alg = TruncatedAlgorithm(LAPACK_Simple(), trunctol(; atol=0.1, rev=true))
     for f in (eig_trunc!, eigh_trunc!, svd_trunc!)
         @test @constinferred(select_algorithm(eig_trunc!, A, alg)) === alg
         @test_throws ArgumentError select_algorithm(eig_trunc!, A, alg; trunc=(; maxrank=2))

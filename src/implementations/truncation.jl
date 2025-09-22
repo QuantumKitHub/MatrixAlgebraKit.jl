@@ -52,18 +52,18 @@ end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByValue)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    filter = (strategy.rev ? ≥(atol) : ≤(atol)) ∘ strategy.by
+    filter = (strategy.rev ? ≤(atol) : ≥(atol)) ∘ strategy.by
     return findall(filter, values)
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationByValue)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
     @assert strategy.by === abs || strategy.by === real "sorting strategy incompatible with implementation"
     if strategy.rev
-        i = searchsortedlast(values, atol; by=strategy.by, rev=true)
-        return 1:i
-    else
         i = searchsortedfirst(values, atol; by=strategy.by, rev=true)
         return i:length(values)
+    else
+        i = searchsortedlast(values, atol; by=strategy.by, rev=true)
+        return 1:i
     end
 end
 

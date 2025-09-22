@@ -207,7 +207,7 @@ function null_truncation_strategy(; atol=nothing, rtol=nothing, maxnullity=nothi
     end
     atol = @something atol 0
     rtol = @something rtol 0
-    trunc = trunctol(; atol, rtol, rev=false)
+    trunc = trunctol(; atol, rtol, rev=true)
     return !isnothing(maxnullity) ? trunc & truncrank(maxnullity; rev=false) : trunc
 end
 

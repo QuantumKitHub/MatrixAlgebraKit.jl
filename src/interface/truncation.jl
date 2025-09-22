@@ -80,10 +80,10 @@ Truncation strategy to keep the values for which `filter` returns true.
 truncfilter(f) = TruncationByFilter(f)
 
 """
-    TruncationByValue(atol::Real, rtol::Real, p::Real, by, rev::Bool=true)
+    TruncationByValue(atol::Real, rtol::Real, p::Real, by, rev::Bool=false)
 
-Truncation strategy to keep the values that satisfy `by(val) < max(atol, rtol * norm(values, p)`
-if `rev = true`, or discard them when `rev = false`.
+Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p)`
+if `rev = false`, or discard them when `rev = true`.
 See also [`trunctol`](@ref)
 """
 struct TruncationByValue{T<:Real,P<:Real,F} <: TruncationStrategy
@@ -98,12 +98,12 @@ function TruncationByValue(atol::Real, rtol::Real, p::Real=2, by=abs, rev::Bool=
 end
 
 """
-    trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, )
+    trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, rev::Bool=false)
 
-Truncation strategy to keep the values that satisfy `by(val) < max(atol, rtol * norm(values, p)`
-if `rev = true`, or discard them when `rev = false`.
+Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p)`
+if `rev = false`, or discard them when `rev = true`.
 """
-function trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, rev::Bool=true)
+function trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, rev::Bool=false)
     return TruncationByValue(atol, rtol, p, by, rev)
 end
 

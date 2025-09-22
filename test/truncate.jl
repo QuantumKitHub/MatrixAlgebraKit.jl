@@ -18,7 +18,7 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
     @test trunc == trunctol(; atol, rtol)
     @test trunc.atol == atol
     @test trunc.rtol == rtol
-    @test trunc.rev
+    @test !trunc.rev
 
     trunc = @constinferred TruncationStrategy(; maxrank)
     @test trunc isa TruncationByOrder
@@ -41,7 +41,7 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
     strategy = trunctol(; atol=0.4)
     @test @constinferred(findtruncated(values, strategy)) == 1:3
     @test @constinferred(findtruncated_sorted(values, strategy)) === 1:3
-    strategy = trunctol(; atol=0.4, rev=false)
+    strategy = trunctol(; atol=0.4, rev=true)
     @test @constinferred(findtruncated(values, strategy)) == 4:5
     @test @constinferred(findtruncated_sorted(values, strategy)) === 4:5
 
@@ -53,10 +53,10 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
     @test @constinferred(findtruncated(values, strategy)) == [2, 3, 4, 5]
 
     for strategy in
-        (trunctol(; atol=0.4, rev=false), trunctol(; atol=0.2, by=identity, rev=false))
+        (trunctol(; atol=0.4, rev=true), trunctol(; atol=0.2, by=identity, rev=true))
         @test @constinferred(findtruncated(values, strategy)) == [1, 4]
     end
-    strategy = trunctol(; atol=0.2, rev=false)
+    strategy = trunctol(; atol=0.2, rev=true)
     @test @constinferred(findtruncated(values, strategy)) == [1]
     
     strategy = truncfilter(x -> 0.1 < x < 1)
