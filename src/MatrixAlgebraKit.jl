@@ -37,9 +37,12 @@ export ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi,
 
 export notrunc, truncrank, trunctol, truncerror, truncfilter
 
-VERSION >= v"1.11.0-DEV.469" &&
+@static if VERSION >= v"1.11.0-DEV.469"
     eval(Expr(:public, :default_algorithm, :findtruncated, :findtruncated_svd,
               :select_algorithm))
+    eval(Expr(:public, :TruncationByOrder, :TruncationByFilter, :TruncationByValue,
+              :TruncationByError, :TruncationIntersection))
+end
 
 include("common/defaults.jl")
 include("common/initialization.jl")
