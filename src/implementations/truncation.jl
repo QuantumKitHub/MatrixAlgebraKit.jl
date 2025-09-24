@@ -41,12 +41,9 @@ function findtruncated(values::AbstractVector, strategy::TruncationByOrder)
     return partialsortperm(values, 1:howmany; strategy.by, strategy.rev)
 end
 function findtruncated_svd(values::AbstractVector, strategy::TruncationByOrder)
-    if strategy.by === abs
-        howmany = min(strategy.howmany, length(values))
-        return strategy.rev ? (1:howmany) : ((length(values) - howmany + 1):length(values))
-    else
-        return findtruncated(values, strategy)
-    end
+    strategy.by === abs || return findtruncated(values, strategy)
+    howmany = min(strategy.howmany, length(values))
+    return strategy.rev ? (1:howmany) : ((length(values) - howmany + 1):length(values))
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByFilter)
@@ -60,7 +57,6 @@ function findtruncated(values::AbstractVector, strategy::TruncationByValue)
 end
 function findtruncated_svd(values::AbstractVector, strategy::TruncationByValue)
     strategy.by === abs || return findtruncated(values, strategy)
-
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
     if strategy.keep_below
         i = searchsortedfirst(values, atol; by=abs, rev=true)
