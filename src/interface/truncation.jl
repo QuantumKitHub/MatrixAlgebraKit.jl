@@ -41,6 +41,7 @@ Truncation strategy that does nothing, and keeps all the values.
 """
 notrunc() = NoTruncation()
 
+# TODO: Base.Ordering?
 """
     TruncationByOrder(howmany::Int, by::Function, rev::Bool)
 
@@ -59,7 +60,9 @@ end
 
 Truncation strategy to keep the first `howmany` values when sorted according to `by` or the last `howmany` if `rev` is true.
 """
-truncrank(howmany::Integer; by=abs, rev::Bool=true) = TruncationByOrder(howmany, by, rev)
+function truncrank(howmany::Integer; by=abs, rev::Bool=true)
+    return TruncationByOrder(howmany, by, rev)
+end
 
 """
     TruncationByFilter(filter::Function)
@@ -80,10 +83,10 @@ Truncation strategy to keep the values for which `filter` returns true.
 truncfilter(f) = TruncationByFilter(f)
 
 """
-    TruncationByValue(atol::Real, rtol::Real, p::Real, by, rev::Bool=false)
+    TruncationByValue(atol::Real, rtol::Real, p::Real, by, keep_below::Bool=false)
 
-Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p)`
-if `rev = false`, or discard them when `rev = true`.
+Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p)`.
+If `keep_below = true`, discard these values instead.
 See also [`trunctol`](@ref)
 """
 struct TruncationByValue{T<:Real,P<:Real,F} <: TruncationStrategy
@@ -91,20 +94,20 @@ struct TruncationByValue{T<:Real,P<:Real,F} <: TruncationStrategy
     rtol::T
     p::P
     by::F
-    rev::Bool
+    keep_below::Bool
 end
-function TruncationByValue(atol::Real, rtol::Real, p::Real=2, by=abs, rev::Bool=true)
-    return TruncationByValue(promote(atol, rtol)..., p, by, rev)
+function TruncationByValue(atol::Real, rtol::Real, p::Real=2, by=abs, keep_below::Bool=true)
+    return TruncationByValue(promote(atol, rtol)..., p, by, keep_below)
 end
 
 """
-    trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, rev::Bool=false)
+    trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, keep_below::Bool=false)
 
-Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p)`
-if `rev = false`, or discard them when `rev = true`.
+Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p)`.
+If `keep_below = true`, discard these values instead.
 """
-function trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, rev::Bool=false)
-    return TruncationByValue(atol, rtol, p, by, rev)
+function trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, keep_below::Bool=false)
+    return TruncationByValue(atol, rtol, p, by, keep_below)
 end
 
 """

@@ -18,7 +18,7 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
     @test trunc == trunctol(; atol, rtol)
     @test trunc.atol == atol
     @test trunc.rtol == rtol
-    @test !trunc.rev
+    @test !trunc.keep_below
 
     trunc = @constinferred TruncationStrategy(; maxrank)
     @test trunc isa TruncationByOrder
@@ -39,28 +39,28 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
 
     values = [1, 0.9, 0.5, -0.3, 0.01]
     strategy = trunctol(; atol=0.4)
-    @test @constinferred(findtruncated(values, strategy)) == 1:3
-    @test @constinferred(findtruncated_sorted(values, strategy)) === 1:3
-    strategy = trunctol(; atol=0.4, rev=true)
-    @test @constinferred(findtruncated(values, strategy)) == 4:5
-    @test @constinferred(findtruncated_sorted(values, strategy)) === 4:5
+    @test findall(@constinferred(findtruncated(values, strategy))) == 1:3
+    @test @constinferred(findtruncated_svd(values, strategy)) === 1:3
+    strategy = trunctol(; atol=0.4, keep_below=true)
+    @test findall(@constinferred(findtruncated(values, strategy))) == 4:5
+    @test @constinferred(findtruncated_svd(values, strategy)) === 4:5
 
     values = [0.01, 1, 0.9, -0.3, 0.5]
     for strategy in (trunctol(; atol=0.4), trunctol(; atol=0.2, by=identity))
-        @test @constinferred(findtruncated(values, strategy)) == [2, 3, 5]
+        @test findall(@constinferred(findtruncated(values, strategy))) == [2, 3, 5]
     end
     strategy = trunctol(; atol=0.2)
-    @test @constinferred(findtruncated(values, strategy)) == [2, 3, 4, 5]
+    @test findall(@constinferred(findtruncated(values, strategy))) == [2, 3, 4, 5]
 
     for strategy in
-        (trunctol(; atol=0.4, rev=true), trunctol(; atol=0.2, by=identity, rev=true))
-        @test @constinferred(findtruncated(values, strategy)) == [1, 4]
+        (trunctol(; atol=0.4, keep_below=true), trunctol(; atol=0.2, by=identity, keep_below=true))
+        @test findall(@constinferred(findtruncated(values, strategy))) == [1, 4]
     end
-    strategy = trunctol(; atol=0.2, rev=true)
-    @test @constinferred(findtruncated(values, strategy)) == [1]
+    strategy = trunctol(; atol=0.2, keep_below=true)
+    @test findall(@constinferred(findtruncated(values, strategy))) == [1]
     
     strategy = truncfilter(x -> 0.1 < x < 1)
-    @test @constinferred(findtruncated(values, strategy)) == [3, 5]
+    @test findall(@constinferred(findtruncated(values, strategy))) == [3, 5]
 
     strategy = truncerror(; atol=0.2, rtol=0)
     @test issetequal(@constinferred(findtruncated(values, strategy)), 2:5)

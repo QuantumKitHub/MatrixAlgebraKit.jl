@@ -125,7 +125,7 @@ end
 
         rtol = eps(real(T))
         for (trunc_orth, trunc_null) in (((; rtol=rtol), (; rtol=rtol)),
-                                         (trunctol(; rtol), trunctol(; rtol, rev=true)))
+                                         (trunctol(; rtol), trunctol(; rtol, keep_below=true)))
             V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=trunc_orth)
             N2 = @constinferred left_null!(copy!(Ac, A), N; trunc=trunc_null)
             @test V2 !== V

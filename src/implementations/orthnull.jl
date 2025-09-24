@@ -203,11 +203,11 @@ end
 # --------------------------------
 function null_truncation_strategy(; atol=nothing, rtol=nothing, maxnullity=nothing)
     if isnothing(maxnullity) && isnothing(atol) && isnothing(rtol)
-        return NoTruncation()
+        return notrunc()
     end
     atol = @something atol 0
     rtol = @something rtol 0
-    trunc = trunctol(; atol, rtol, rev=true)
+    trunc = trunctol(; atol, rtol, keep_below=true)
     return !isnothing(maxnullity) ? trunc & truncrank(maxnullity; rev=false) : trunc
 end
 

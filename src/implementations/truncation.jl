@@ -40,29 +40,36 @@ function findtruncated(values::AbstractVector, strategy::TruncationByOrder)
     howmany = min(strategy.howmany, length(values))
     return partialsortperm(values, 1:howmany; strategy.by, strategy.rev)
 end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationByOrder)
-    howmany = min(strategy.howmany, length(values))
-    return strategy.rev ? (1:howmany) : ((length(values) - howmany + 1):length(values))
+function findtruncated_svd(values::AbstractVector, strategy::TruncationByOrder)
+    if strategy.by === abs
+        howmany = min(strategy.howmany, length(values))
+        return strategy.rev ? (1:howmany) : ((length(values) - howmany + 1):length(values))
+    else
+        return findtruncated(values, strategy)
+    end
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByFilter)
-    ind = findall(strategy.filter, values)
-    return ind
+    # pre-allocate bitvector to enforce the filter function returns a Bool
+    mask = similar(BitArray, eachindex(values))
+    mask .= strategy.filter.(values)
+    return mask
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByValue)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    filter = (strategy.rev ? ≤(atol) : ≥(atol)) ∘ strategy.by
-    return findall(filter, values)
+    filter = (strategy.keep_below ? ≤(atol) : ≥(atol)) ∘ strategy.by
+    return findtruncated(values, truncfilter(filter))
 end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationByValue)
+function findtruncated_svd(values::AbstractVector, strategy::TruncationByValue)
+    strategy.by === abs || return findtruncated(values, strategy)
+
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
-    @assert strategy.by === abs || strategy.by === real "sorting strategy incompatible with implementation"
-    if strategy.rev
-        i = searchsortedfirst(values, atol; by=strategy.by, rev=true)
+    if strategy.keep_below
+        i = searchsortedfirst(values, atol; by=abs, rev=true)
         return i:length(values)
     else
-        i = searchsortedlast(values, atol; by=strategy.by, rev=true)
+        i = searchsortedlast(values, atol; by=abs, rev=true)
         return 1:i
     end
 end
@@ -97,10 +104,20 @@ function _truncerr_impl(values::AbstractVector, I; atol::Real=0, rtol::Real=0, p
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
-    inds = map(Base.Fix1(findtruncated, values), strategy.components)
-    return intersect(inds...)
+    return mapreduce(Base.Fix1(findtruncated, values), _ind_intersect, strategy.components;
+                     init=trues(length(values)))
 end
 function findtruncated_sorted(values::AbstractVector, strategy::TruncationIntersection)
-    inds = map(Base.Fix1(findtruncated_sorted, values), strategy.components)
-    return intersect(inds...)
+    return mapreduce(Base.Fix1(findtruncated_sorted, values), _ind_intersect,
+                     strategy.components; init=trues(length(values)))
 end
+
+# when one of the ind selections is a bitvector, have to handle differently
+function _ind_intersect(A::AbstractVector{Bool}, B::AbstractVector)
+    result = falses(length(A))
+    result[B] .= @view A[B]
+    return result
+end
+_ind_intersect(A::AbstractVector, B::AbstractVector{Bool}) = _ind_intersect(B, A)
+_ind_intersect(A::AbstractVector{Bool}, B::AbstractVector{Bool}) = A .& B
+_ind_intersect(A, B) = intersect(A, B)
