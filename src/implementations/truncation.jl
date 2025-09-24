@@ -50,10 +50,7 @@ function findtruncated_svd(values::AbstractVector, strategy::TruncationByOrder)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByFilter)
-    # pre-allocate bitvector to enforce the filter function returns a Bool
-    mask = similar(BitArray, eachindex(values))
-    mask .= strategy.filter.(values)
-    return mask
+    return strategy.filter.(values)::AbstractVector{Bool}
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByValue)
