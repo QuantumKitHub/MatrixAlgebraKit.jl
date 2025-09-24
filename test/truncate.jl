@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
                         TruncationByValue, TruncationStrategy, findtruncated,
-                        findtruncated_sorted
+                        findtruncated_svd
 
 @testset "truncate" begin
     trunc = @constinferred TruncationStrategy()
@@ -35,7 +35,7 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
     @test @constinferred(findtruncated(values, truncrank(2))) == 1:2
     @test @constinferred(findtruncated(values, truncrank(2; rev=false))) == [5, 4]
     @test @constinferred(findtruncated(values, truncrank(2; by=((-) ∘ abs)))) == [5, 4]
-    @test @constinferred(findtruncated_sorted(values, truncrank(2))) === 1:2
+    @test @constinferred(findtruncated_svd(values, truncrank(2))) === 1:2
 
     values = [1, 0.9, 0.5, -0.3, 0.01]
     strategy = trunctol(; atol=0.4)
@@ -65,5 +65,5 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
     strategy = truncerror(; atol=0.2, rtol=0)
     @test issetequal(@constinferred(findtruncated(values, strategy)), 2:5)
     vals_sorted = sort(values; by=abs, rev=true)
-    @test @constinferred(findtruncated_sorted(vals_sorted, strategy)) == 1:4
+    @test @constinferred(findtruncated_svd(vals_sorted, strategy)) == 1:4
 end

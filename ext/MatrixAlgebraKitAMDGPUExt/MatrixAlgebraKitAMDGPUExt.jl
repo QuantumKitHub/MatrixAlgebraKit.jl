@@ -41,7 +41,7 @@ _gpu_heevd!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwar
 _gpu_heev!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...)  = YArocSOLVER.heev!(A, Dd, V; kwargs...)
 _gpu_heevx!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) = YArocSOLVER.heevx!(A, Dd, V; kwargs...)
 
-function MatrixAlgebraKit.findtruncated_sorted(values::StridedROCVector, strategy::TruncationByValue)
+function MatrixAlgebraKit.findtruncated_svd(values::StridedROCVector, strategy::TruncationByValue)
     return MatrixAlgebraKit.findtruncated(values, strategy)
 end
 

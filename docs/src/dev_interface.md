@@ -11,5 +11,5 @@ MatrixAlgebraKit.jl provides a developer interface for specifying custom algorit
 MatrixAlgebraKit.default_algorithm
 MatrixAlgebraKit.select_algorithm
 MatrixAlgebraKit.findtruncated
-MatrixAlgebraKit.findtruncated_sorted
+MatrixAlgebraKit.findtruncated_svd
 ```

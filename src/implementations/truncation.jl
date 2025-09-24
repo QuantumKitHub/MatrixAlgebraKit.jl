@@ -2,7 +2,7 @@
 # ---------
 # Generic implementation: `findtruncated` followed by indexing
 function truncate!(::typeof(svd_trunc!), (U, S, Vᴴ), strategy::TruncationStrategy)
-    ind = findtruncated_sorted(diagview(S), strategy)
+    ind = findtruncated_svd(diagview(S), strategy)
     return U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]
 end
 function truncate!(::typeof(eig_trunc!), (D, V), strategy::TruncationStrategy)
@@ -29,7 +29,7 @@ end
 # findtruncated
 # -------------
 # Generic fallback
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationStrategy)
+function findtruncated_svd(values::AbstractVector, strategy::TruncationStrategy)
     return findtruncated(values, strategy)
 end
 
@@ -79,7 +79,7 @@ function findtruncated(values::AbstractVector, strategy::TruncationByError)
     I′ = _truncerr_impl(values, I; strategy.atol, strategy.rtol, strategy.p)
     return I[I′]
 end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationByError)
+function findtruncated_svd(values::AbstractVector, strategy::TruncationByError)
     I = eachindex(values)
     I′ = _truncerr_impl(values, I; strategy.atol, strategy.rtol, strategy.p)
     return I[I′]
@@ -107,8 +107,8 @@ function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
     return mapreduce(Base.Fix1(findtruncated, values), _ind_intersect, strategy.components;
                      init=trues(length(values)))
 end
-function findtruncated_sorted(values::AbstractVector, strategy::TruncationIntersection)
-    return mapreduce(Base.Fix1(findtruncated_sorted, values), _ind_intersect,
+function findtruncated_svd(values::AbstractVector, strategy::TruncationIntersection)
+    return mapreduce(Base.Fix1(findtruncated_svd, values), _ind_intersect,
                      strategy.components; init=trues(length(values)))
 end
 
