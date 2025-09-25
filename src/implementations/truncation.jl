@@ -47,7 +47,7 @@ function findtruncated_svd(values::AbstractVector, strategy::TruncationByOrder)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByFilter)
-    return strategy.filter.(values)::AbstractVector{Bool}
+    return findall(strategy.filter, values)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByValue)
