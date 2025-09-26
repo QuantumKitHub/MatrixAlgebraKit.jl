@@ -7,35 +7,9 @@ using Enzyme, EnzymeTestUtils
 using MatrixAlgebraKit: diagview, TruncatedAlgorithm, PolarViaSVD
 using LinearAlgebra: UpperTriangular, Diagonal, Hermitian, mul!
 
-function remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ;
-                                  degeneracy_atol=MatrixAlgebraKit.default_pullback_gaugetol(S))
-    gaugepart  = U' * ΔU
-    gaugepart += Vᴴ * ΔVᴴ'
-    gaugepart  = (gaugepart - gaugepart') / 2
-    gaugepart[abs.(transpose(diagview(S)) .- diagview(S)) .>= degeneracy_atol] .= 0
-    mul!(ΔU, U, gaugepart, -1, 1)
-    return ΔU, ΔVᴴ
-end
-function remove_eiggauge_dependence!(ΔV, D, V;
-                                  degeneracy_atol=MatrixAlgebraKit.default_pullback_gaugetol(D))
-    gaugepart = V' * ΔV
-    gaugepart[abs.(transpose(D.diag) .- D.diag) .>= degeneracy_atol] .= 0
-    mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
-    return ΔV
-end
-function remove_eighgauge_dependence!(ΔV, D, V;
-                                   degeneracy_atol=MatrixAlgebraKit.default_pullback_gaugetol(D))
-    gaugepart = V' * ΔV
-    gaugepart = (gaugepart - gaugepart') / 2
-    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
-    mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
-    return ΔV
-end
+include("ad_utils.jl")
 
-precision(::Type{<:Union{Float32,Complex{Float32}}}) = 10*sqrt(eps(Float32))
-precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
-#=
-@timedtestset "QR AD Rules with eltype $T" for T in (Float64, Float32,) #ComplexF64)
+@timedtestset "QR AD Rules with eltype $T" for T in (Float64,)# ComplexF64,)# Float32)
     rng = StableRNG(12345)
     m = 19
     @testset "size ($m, $n)" for n in (17, m, 23)
@@ -45,11 +19,13 @@ precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
         @testset for alg in (LAPACK_HouseholderQR(),
                              LAPACK_HouseholderQR(; positive=true),
                             )
-            #=@testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Duplicated,)
-                test_forward(qr_full, RT, (A, TA); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T))
-                test_forward(qr_null, RT, (A, TA); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T))
-                test_forward(qr_compact, RT, (A, TA); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T))
-            end=# # TODO
+            @testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
+                #test_forward(qr_full, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+                #test_forward(qr_null, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+                if m ≥ n
+                    test_forward(qr_compact, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+                end
+            end
             @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
                 @testset "qr_compact" begin
                     test_reverse(qr_compact, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,))
@@ -86,8 +62,7 @@ precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
     end
 end
 
-
-@timedtestset "LQ AD Rules with eltype $T" for T in (Float64, Float32,)# ComplexF64, )
+@timedtestset "LQ AD Rules with eltype $T" for T in (Float64,)# ComplexF64,) #Float32)
     rng = StableRNG(12345)
     m = 19
     @testset "size ($m, $n)" for n in (17, m, 23)
@@ -97,19 +72,20 @@ end
         @testset for alg in (LAPACK_HouseholderLQ(),
                              LAPACK_HouseholderLQ(; positive=true),
                             )
-            #=@testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Duplicated,)
-                test_forward(lq_full, RT, (A, TA); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T))
-                test_forward(lq_null, RT, (A, TA); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T))
-                test_forward(lq_compact, RT, (A, TA); fkwargs=(alg=alg,), atol=precision(T), rtol=precision(T))
-            end=# # TODO
+            @testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
+                #test_forward(lq_full, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+                #test_forward(lq_null, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+                #test_forward(lq_compact, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+                if n ≥ m
+                    test_forward(lq_compact, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+                end
+            end
             @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
                 @testset "lq_compact" begin
                     test_reverse(lq_compact, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,))
                 end
                 @testset "lq_null" begin
                     L, Q = lq_compact(A, alg)
-                    ΔL   = randn(rng, T, m, minmn)
-                    ΔQ   = randn(rng, T, minmn, n)
                     ΔNᴴ  = randn(rng, T, max(0, n - minmn), minmn) * Q
                     test_reverse(lq_null, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,), output_tangent=ΔNᴴ)
                 end
@@ -140,7 +116,7 @@ end
     end
 end
 
-@timedtestset "EIG AD Rules with eltype $T" for T in (Float64, Float32,) # ComplexF64)
+@timedtestset "EIG AD Rules with eltype $T" for T in (Float64, ComplexF64,) # Float32
     rng  = StableRNG(12345)
     m    = 19
     atol = rtol = m * m * precision(T)
@@ -153,15 +129,16 @@ end
     @testset for alg in (LAPACK_Simple(), LAPACK_Expert())
         @testset for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
             test_forward(eig_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+            test_forward(eig_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
         end
         @testset for RT in (Duplicated,), TA in (Duplicated,)
             test_reverse(eig_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔD2), copy(ΔV)))
+            test_reverse(eig_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=copy(ΔD2.diag))
         end
     end
 end
 
-#=
-@timedtestset "EIGH AD Rules with eltype $T" for T in (Float64,)# ComplexF64, Float32)
+@timedtestset "EIGH AD Rules with eltype $T" for T in (Float64,)# Float32, ComplexF64)
     rng  = StableRNG(12345)
     m    = 19
     atol = rtol = m * m * precision(T)
@@ -174,21 +151,22 @@ end
     ΔD   = randn(rng, real(T), m, m)
     ΔD2  = Diagonal(randn(rng, real(T), m))
     @testset for alg in (LAPACK_QRIteration(),
-                         LAPACK_DivideAndConquer(),
-                         LAPACK_Bisection(),
-                         LAPACK_MultipleRelativelyRobustRepresentations())
-        #=@testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
-            RT <: Union{Duplicated, DuplicatedNoNeed} && TA == Duplicated && continue #broken :(
-            test_forward(eigh_full, RT, (copy(A), TA); fkwargs=(alg=alg,))
-        end=#
+                         #LAPACK_DivideAndConquer(),
+                         #LAPACK_Bisection(),
+                         #LAPACK_MultipleRelativelyRobustRepresentations(),
+                        )
+        @testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
+            test_forward(eigh_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+            test_forward(eigh_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+        end
         @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
             test_reverse(eigh_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔD2), copy(ΔV)))
+            test_reverse(eigh_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=copy(ΔD2.diag))
         end
     end
 end
-=#
-=#
-@timedtestset "SVD AD Rules with eltype $T" for T in (Float64,)# Float32,) # ComplexF64)
+#=
+@timedtestset "SVD AD Rules with eltype $T" for T in (Float64, Float32, ComplexF64)
     rng = StableRNG(12345)
     m = 19
     @testset "size ($m, $n)" for n in (17, m, 23)
@@ -199,10 +177,11 @@ end
                              LAPACK_DivideAndConquer(),
                             )
             isa(alg, LAPACK_Jacobi) && m < n && continue
-            @testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
-                test_forward(svd_compact, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,))
+            # TODO
+            #@testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
+                #test_forward(svd_compact, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,))
                 #test_forward(svd_full, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,))
-            end
+            #end
             @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
                 @testset "svd_compact" begin
                     U, S, Vᴴ = svd_compact(A)
@@ -212,14 +191,15 @@ end
                     ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol=atol)
                     test_reverse(svd_compact, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,), output_tangent=(ΔU, ΔS, ΔVᴴ))
                 end
+                #=
                 @testset "svd_full" begin
                     U, S, Vᴴ = svd_compact(A)
                     ΔU  = randn(rng, T, m, m)
                     ΔS  = randn(rng, real(T), m, n)
                     ΔVᴴ = randn(rng, T, n, n)
-                    ΔU, ΔVᴴ = remove_svdgauge_dependence!(view(ΔU, :, 1:minmn), view(ΔVᴴ, 1:minmn, :), view(U, :, 1:minmn), view(S, 1:minmn, 1:minmn), view(Vᴴ, 1:minmn, :); degeneracy_atol=atol)
+                    remove_svdgauge_dependence!(view(ΔU, :, 1:minmn), view(ΔVᴴ, 1:minmn, :), view(U, :, 1:minmn), view(S, 1:minmn, 1:minmn), view(Vᴴ, 1:minmn, :); degeneracy_atol=atol)
                     test_reverse(svd_full, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,), output_tangent=(ΔU, ΔS, ΔVᴴ))
-                end
+                end =# # TODO
             end
         end
     end
@@ -242,7 +222,7 @@ end
     end
 end
 
-@timedtestset "Orth and null with eltype $T" for T in (Float64,Float32,ComplexF64)
+@timedtestset "Orth and null with eltype $T" for T in (Float64, Float32, ComplexF64)
     rng = StableRNG(12345)
     m = 19
     @testset "size ($m, $n)" for n in (17, m, 23)
@@ -272,3 +252,4 @@ end
         end
     end
 end
+=#

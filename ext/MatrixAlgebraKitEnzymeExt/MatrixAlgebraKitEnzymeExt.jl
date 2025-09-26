@@ -10,47 +10,7 @@ using LinearAlgebra
 
 @inline EnzymeRules.inactive_type(v::Type{<:MatrixAlgebraKit.AbstractAlgorithm}) = true
 
-Enzyme.@import_rrule(typeof(MatrixAlgebraKit.copy_input), Any, AbstractMatrix)
-
-#Enzyme.@import_rrule(typeof(MatrixAlgebraKit.eigh_vals!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm)
-#Enzyme.@import_rrule(typeof(MatrixAlgebraKit.eigh_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm)
-
-#Enzyme.@import_rrule(typeof(MatrixAlgebraKit.eig_vals!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm)
-
 #Enzyme.@import_rrule(typeof(MatrixAlgebraKit.svd_trunc!), AbstractMatrix, Any, MatrixAlgebraKit.TruncatedAlgorithm)
-
-#Enzyme.@import_rrule(typeof(MatrixAlgebraKit.left_polar!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm)
-#Enzyme.@import_rrule(typeof(MatrixAlgebraKit.right_polar!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm)
-
-#=function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
-                             func::Const{typeof(qr_full!)},
-                             ::Type{RT},
-                             A::Annotation{<:AbstractMatrix},
-                             QR::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}},
-                             alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
-                             kwargs...,
-                            ) where {RT}
-    # adapted from ChainRules
-    ret  = func.val(A.val, USVᴴ.val, alg.val; kwargs...)
-    Q, R = ret
-    m, n = size(A)
-
-    F = inv_safe.(((S.diag') .^2)  .- (S.diag .^ 2), tol)
-    invS = inv(S)
-    ∂U = U * ( F .* (∂S * S .+ S * ∂S)) .+ (diagm(ones(eltype(U), m)) - U*U') * A.dval * V * invS
-    ∂V = V * ( F .* (S * ∂S .+ ∂S * S)) .+ (diagm(ones(eltype(U), n)) - V*Vᴴ) * A.dval' * U * invS
-
-    shadow = (∂U, ∂S, ∂Vᴴ)
-    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
-        return Duplicated(ret, shadow)
-    elseif EnzymeRules.needs_shadow(config)
-        return shadow
-    elseif EnzymeRules.needs_primal(config)
-        return ret
-    else
-        return nothing
-    end
-end=#
 
 function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       func::Const{typeof(lq_null!)},
@@ -144,6 +104,42 @@ for f in (:lq_compact!, :lq_full!)
             end
             return (nothing, nothing, nothing)
         end
+        function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
+                                     func::Const{typeof($f)},
+                                     ::Type{RT},
+                                     A::Annotation{<:AbstractMatrix},
+                                     LQ::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}},
+                                     alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                                     kwargs...,
+                                    ) where {RT}
+            ret  = func.val(A.val, LQ.val, alg.val; kwargs...)
+            L, Q = ret
+            m, n = size(A.val)
+
+            if isa(LQ, Union{Duplicated, DuplicatedNoNeed}) && !isa(A, Const)
+                invL = inv(L)
+                ∂K   = invL * A.dval * Q'
+                ∂K   = ∂K + ∂K'
+                diagview(∂K) ./= 2
+                ∂K[MatrixAlgebraKit.uppertriangularind(∂K)] .= zero(eltype(∂K))
+                ∂L   = L * ∂K
+                ∂Q   = invL * A.dval - invL * ∂L * Q 
+                shadow = (∂L, ∂Q)
+            elseif isa(A, Const) && !!isa(LQ, Union{Duplicated, DuplicatedNoNeed})
+                make_zero!(LQ.dval)
+                shadow = LQ.dval
+            end
+
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return Duplicated(ret, shadow)
+            elseif EnzymeRules.needs_shadow(config)
+                return shadow
+            elseif EnzymeRules.needs_primal(config)
+                return ret
+            else
+                return nothing
+            end
+        end
     end
 end
 
@@ -155,11 +151,11 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
                                       kwargs...,
                                      ) where {RT}
-    cache_N = nothing
     # form cache if needed
-    cache_A = (EnzymeRules.overwritten(config)[2] && !(typeof(N) <: Const)) ? copy(A.val)  : nothing
+    cache_N = EnzymeRules.overwritten(config)[3] ? copy(N.val) : nothing
+    cache_A = EnzymeRules.overwritten(config)[2] ? copy(A.val) : nothing
     func.val(A.val, N.val; kwargs...)
-    primal = EnzymeRules.needs_primal(config) ? N.val : nothing
+    primal = EnzymeRules.needs_primal(config) ? N.val  : nothing
     shadow = EnzymeRules.needs_shadow(config) ? N.dval : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_N))
 end
@@ -231,85 +227,49 @@ for f in (:qr_compact!, :qr_full!)
             Aval  = !isnothing(cache_A) ? cache_A : A.val
             ∂QR   = isa(QR, Const) ? nothing : QR.dval
             if !isa(A, Const) && !isa(QR, Const)
-                Q, R = QRval
-                ∂Q, ∂R = ∂QR
-                ∂A = A.dval
-                ∂A .= zero(eltype(A.dval))
-                m = size(Q, 1)
-                n = size(R, 2)
-                minmn = min(m, n)
-                Rd = diagview(R)
-                p = findlast(>=(rank_atol) ∘ abs, Rd)
-
-                Q1 = view(Q, :, 1:p)
-                Q2 = view(Q, :, (p + 1):size(Q, 2))
-                R11 = view(R, 1:p, 1:p)
-                ∂A1 = view(∂A, :, 1:p)
-                ∂A2 = view(∂A, :, (p + 1):n)
-
-                if minmn > p # case where A is rank-deficient
-                    ∂gauge = abs(zero(eltype(Q)))
-                    #if !iszerotangent(∂Q)
-                        # in this case the number Householder reflections will
-                        # change upon small variations, and all of the remaining
-                        # columns of ∂Q should be zero for a gauge-invariant
-                        # cost function
-                    ∂Q2 = view(∂Q, :, (p + 1):size(Q, 2))
-                    ∂gauge = max(∂gauge, norm(∂Q2, Inf))
-                    #end
-                    #if !iszerotangent(∂R)
-                    ∂R22 = view(∂R, (p + 1):minmn, (p + 1):n)
-                    ∂gauge = max(∂gauge, norm(∂R22, Inf))
-                    #end
-                    ∂gauge < gauge_atol ||
-                        @warn "`$(string($f))` cotangents sensitive to gauge choice: (|∂gauge| = $∂gauge)"
-                end
-
-                ∂Q̃ = fill!(similar(Q, (m, p)), zero(eltype(Q)))
-                copy!(∂Q̃, view(∂Q, :, 1:p))
-                if p < size(Q, 2)
-                    Q2 = view(Q, :, (p + 1):size(Q, 2))
-                    ∂Q2 = view(∂Q, :, (p + 1):size(Q, 2))
-                    # in the case where A is full rank, but there are more columns in Q than in A
-                    # (the case of `qr_full`), there is gauge-invariant information in the
-                    # projection of ΔQ2 onto the column space of Q1, by virtue of Q being a unitary
-                    # matrix. As the number of Householder reflections is in fixed in the full rank
-                    # case, Q is expected to rotate smoothly (we might even be able to predict) also
-                    # how the full Q2 will change, but this we omit for now, and we consider
-                    # Q2' * ΔQ2 as a gauge dependent quantity.
-                    Q1d∂Q2 = Q1' * ∂Q2
-                    ∂gauge = norm(mul!(copy(∂Q2), Q1, Q1d∂Q2, -1, 1), Inf)
-                    ∂gauge < tol ||
-                        @warn "`$(string($f))` cotangents sensitive to gauge choice: (|∂gauge| = $∂gauge)"
-                    ∂Q̃ = mul!(∂Q̃, Q2, Q1d∂Q2', -1, 1)
-                end
-                if n > p
-                    R12  = view(R, 1:p, (p + 1):n)
-                    ∂R12 = view(∂R, 1:p, (p + 1):n)
-                    ∂Q̃   = mul!(∂Q̃, Q1, ∂R12 * R12', -1, 1)
-                    # Adding ∂A2 contribution
-                    ∂A2  = mul!(∂A2, Q1, ∂R12, 1, 1)
-                end
-
-                # construct M
-                M = fill!(similar(R, (p, p)), zero(eltype(R)))
-                ∂R11 = view(∂R, 1:p, 1:p)
-                M = mul!(M, ∂R11, R11', 1, 1)
-                M = mul!(M, Q1', ∂Q̃, -1, 1)
-                view(M, MatrixAlgebraKit.lowertriangularind(M)) .= conj.(view(M, MatrixAlgebraKit.uppertriangularind(M)))
-                if eltype(M) <: Complex
-                    Md = diagview(M)
-                    Md .= real.(Md)
-                end
-                rdiv!(M, UpperTriangular(R11)')
-                rdiv!(∂Q̃, UpperTriangular(R11)')
-                ∂A1 = mul!(∂A1, Q1, M, +1, 1)
-                ∂A1 .+= ∂Q̃
+                A.dval .= zero(eltype(Aval))
+                MatrixAlgebraKit.qr_compact_pullback!(A.dval, QRval, ∂QR; tol, rank_atol, gauge_atol)
             end
             if !isa(QR, Const)
                 make_zero!(QR.dval)
             end
             return (nothing, nothing, nothing)
+        end
+        function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
+                                     func::Const{typeof($f)},
+                                     ::Type{RT},
+                                     A::Annotation{<:AbstractMatrix},
+                                     QR::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}},
+                                     alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                                     kwargs...,
+                                    ) where {RT}
+            ret  = func.val(A.val, QR.val, alg.val; kwargs...)
+            Q, R = ret
+            m, n = size(A.val)
+
+            if isa(QR, Union{Duplicated, DuplicatedNoNeed}) && !isa(A, Const)
+                invR = inv(R)
+                tmp  = Q' * A.dval * invR
+                Rtmp = tmp + tmp'
+                diagview(Rtmp) ./= 2
+                Rtmp[MatrixAlgebraKit.lowertriangularind(Rtmp)] .= zero(eltype(Rtmp))
+                ∂R   = Rtmp * R
+                ∂Q   = A.dval * invR - Q * ∂R * invR
+                shadow = (∂Q, ∂R)
+            elseif isa(A, Const) && !!isa(QR, Union{Duplicated, DuplicatedNoNeed})
+                make_zero!(QR.dval)
+                shadow = QR.dval
+            end
+
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return Duplicated(ret, shadow)
+            elseif EnzymeRules.needs_shadow(config)
+                return shadow
+            elseif EnzymeRules.needs_primal(config)
+                return ret
+            else
+                return nothing
+            end
         end
     end
 end
@@ -413,7 +373,6 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
             @inbounds invSdiag[i] = inv(diagview(S)[i])
         end
         invS = Diagonal(invSdiag)
-        #FSdS = F .* (∂S * S .+ S * ∂S)
         ∂U = U * (F .* (U' * A.dval * V * S + S * Vᴴ * A.dval' * U)) + (diagm(ones(eltype(U), m)) - U*U') * A.dval * V * invS
         #∂Vᴴ  = (FSdS' * Vᴴ) + (invS * U' * A.dval * (diagm(ones(eltype(U), size(V, 2))) - Vᴴ*V))
         ∂V = V * (F .* (S * U' * A.dval * V + Vᴴ * A.dval' * U * S)) + (diagm(ones(eltype(V), n)) - V*Vᴴ) * A.dval' * U * invS
@@ -539,7 +498,46 @@ for f in (:svd_compact!, :svd_full!)
     end
 end
 
-#=
+function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
+                             func::Const{typeof(eigh_vals!)},
+                             ::Type{RT},
+                             A::Annotation{<:AbstractMatrix},
+                             D::Annotation{<:AbstractVector},
+                             alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                             kwargs...,
+                            ) where {RT}
+    Dmat, V = eigh_full(A.val; kwargs...)
+    if isa(D, Union{Duplicated, DuplicatedNoNeed}) && !isa(A, Const)
+        # TODO provide this as the input
+        A.dval .*= 2
+        diagview(A.dval) ./= 2
+        for i in 1:size(A.dval, 1), j in 1:size(A.dval, 2)
+            if i > j
+                A.dval[i, j] = zero(eltype(A.dval)) 
+            end
+        end
+        ∂K      = inv(V) * A.dval * V
+        ∂Kdiag  = diag(∂K)
+        D.dval .= real.(copy(∂Kdiag))
+        A.dval .= zero(eltype(A.val))
+        shadow  = D.dval 
+    elseif isa(A, Const) && !!isa(D, Union{Duplicated, DuplicatedNoNeed})
+        make_zero!(D.dval)
+        shadow = D.dval
+    end
+    eigh_vals!(A.val, zeros(real(eltype(A.val)), size(A.val, 1)))
+    D.val .= diagview(Dmat)
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return Duplicated(Dmat.diag, shadow)
+    elseif EnzymeRules.needs_shadow(config)
+        return shadow
+    elseif EnzymeRules.needs_primal(config)
+        return Dmat.diag 
+    else
+        return nothing
+    end
+end
+
 function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
                              func::Const{typeof(eigh_full!)},
                              ::Type{RT},
@@ -548,40 +546,82 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
                              alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
                              kwargs...,
                             ) where {RT}
-    # adapted from ChainRules
-    ret     = func.val(A.val, DV.val; kwargs...)
-    Dmat, V = ret
+    Dmat, V = func.val(A.val, DV.val; kwargs...)
     if isa(A, Const) || all(iszero, A.dval)
         make_zero!(DV.dval[1])
         make_zero!(DV.dval[2])
         make_zero!(A.dval)
         shadow = (DV.dval[1], DV.dval[2])
     else
-        tmpV    = V \ A.dval
-        ∂K      = tmpV * V
-        ∂Kdiag  = diag(∂K)
-        ∂Ddiag  = zeros(eltype(Dmat), size(Dmat, 1))
-        ∂Ddiag .= eltype(Dmat) <: Real ? real.(∂Kdiag) : ∂Kdiag
+        #=A.dval .*= 2
+        diagview(A.dval) ./= 2
+        for i in 1:size(A.dval, 1), j in 1:size(A.dval, 2)
+            if i > j
+                A.dval[i, j] = zero(eltype(A.dval)) 
+            end
+        end=#
+        ∂K      = inv(V) * A.dval * V
+        ∂Kdiag  = diagview(∂K)
+        ∂Ddiag  = diagview(DV.dval[1])
+        ∂Ddiag .= real.(∂Kdiag)
         D       = diagview(Dmat)
-        dDD          = transpose(D) .- D
-        F            = one(eltype(dDD)) ./ dDD
-        diagview(F) .= zero(eltype(F))
-        ∂K         .*= conj.(F)
-        ∂V           = mul!(tmpV, V, ∂K) 
-        A.dval      .= zero(eltype(A.val))
-        shadow = (Diagonal(∂Ddiag), ∂V)
+        dDD     = transpose(D) .- D
+        ∂K    ./= dDD 
+        ∂Kdiag .= zero(eltype(V))
+        mul!(DV.dval[2], V, ∂K, 1, 0)
+        shadow  = DV.dval[2]
+        println("∂K")
+        display(∂K)
+        println()
+        println("∂V after")
+        display(DV.dval[2])
+        println()
+        A.dval .= zero(eltype(A.val))
+        shadow  = (Diagonal(∂Ddiag), DV.dval[2])
     end
     if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
-        return Duplicated(ret, shadow)
+        return Duplicated((Dmat, V), shadow)
     elseif EnzymeRules.needs_shadow(config)
         return shadow
     elseif EnzymeRules.needs_primal(config)
-        return ret
+        return (Dmat, V)
     else
         return nothing
     end
 end
-=#
+
+function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
+                             func::Const{typeof(eig_vals!)},
+                             ::Type{RT},
+                             A::Annotation{<:AbstractMatrix},
+                             D::Annotation{<:AbstractVector},
+                             alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                             kwargs...,
+                            ) where {RT}
+    Dval, V = eig_full(A.val, alg.val; kwargs...)
+    if isa(D, Union{Duplicated, DuplicatedNoNeed}) && !isa(A, Const)
+        ∂K      = inv(V) * A.dval * V
+        ∂Kdiag  = diag(∂K)
+        D.dval .= copy(∂Kdiag)
+        A.dval .= zero(eltype(A.val))
+        shadow  = D.dval
+    elseif isa(A, Const) && !!isa(D, Union{Duplicated, DuplicatedNoNeed})
+        make_zero!(D.dval)
+        shadow  = D.dval
+    end
+    eig_vals!(A.val, zeros(complex(eltype(A.val)), size(A.val, 1)))
+    D.val .= diagview(Dval)
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return Duplicated(Dmat.diag, shadow)
+    elseif EnzymeRules.needs_shadow(config)
+        return shadow
+    elseif EnzymeRules.needs_primal(config)
+        return Dmat.diag 
+    else
+        return nothing
+    end
+end
+
 function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
                              func::Const{typeof(eig_full!)},
                              ::Type{RT},
@@ -593,37 +633,33 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
     tol             = MatrixAlgebraKit.default_pullback_gaugetol(DV.val[1])
     degeneracy_atol = tol
     gauge_atol      = tol
-    ret = func.val(A.val, DV.val, alg.val; kwargs...)
-
+    Dmat, V = func.val(A.val, DV.val, alg.val; kwargs...)
     if isa(A, Const) || all(iszero, A.dval)
-        make_zero!(DV.dval[1])
-        make_zero!(DV.dval[2])
-        make_zero!(A.dval)
-        shadow = (DV.dval[1], DV.dval[2])
+        if !isa(DV, Const)
+            make_zero!(DV.dval[1])
+            make_zero!(DV.dval[2])
+        end
+        if !isa(A, Const)
+            make_zero!(A.dval)
+        end
+        shadow  = !isa(DV, Const) ? DV.dval : nothing
     else
-        Dmat, V = ret
-        D            = diagview(Dmat)
-        ∂K           = inv(V) * A.dval * V
-        ∂Kdiag       = diag(∂K)
-        ∂Ddiag       = zeros(eltype(D), size(D, 1))
-        ∂Ddiag      .= eltype(D) <: Real ? real.(∂Kdiag) : ∂Kdiag
-        ∂D           = Diagonal(∂Ddiag) 
-
-        dDD          = transpose(D) .- D
-        F            = one(eltype(dDD)) ./ dDD
-        diagview(F) .= zero(eltype(F))
-        ∂K         .*= conj.(F)
-        ∂V           = V * ∂K
-        A.dval      .= zero(eltype(A.val))
-        DV.dval[2]  .= ∂V
-        shadow       = (∂D, ∂V)
+        D       = diagview(Dmat) 
+        ∂K      = inv(V) * A.dval * V
+        ∂Kdiag  = diagview(∂K)
+        DV.dval[1].diag .= ∂Kdiag
+        ∂K    ./= transpose(D) .- D
+        fill!(∂Kdiag, zero(eltype(D)))
+        DV.dval[2] .= (V * ∂K)
+        shadow  = DV.dval
+        A.dval .= zero(eltype(A.val))
     end
     if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
-        return Duplicated(ret, shadow)
+        return Duplicated(DV.val, shadow)
     elseif EnzymeRules.needs_shadow(config)
         return shadow
     elseif EnzymeRules.needs_primal(config)
-        return ret
+        return DV.val
     else
         return nothing
     end
@@ -638,22 +674,14 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       kwargs...,
                                      ) where {RT}
     cache_DV        = nothing
+    cache_A = EnzymeRules.overwritten(config)[2] ? copy(A.val)  : nothing
     func.val(A.val, DV.val, alg.val; kwargs...)
-    primal = if EnzymeRules.needs_primal(config)
-        DV.val
-    else
-        nothing
-    end
-    shadow = if EnzymeRules.needs_shadow(config)
-        DV.dval
-    else
-        nothing
-    end
+    primal = EnzymeRules.needs_primal(config) ? DV.val : nothing
+    shadow = EnzymeRules.needs_shadow(config) ? DV.dval : nothing
     # form cache if needed
-    cache_A = (EnzymeRules.overwritten(config)[2] && !(typeof(DV) <: Const)) ? copy(A.val)  : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_DV))
 end
-#=
+
 function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       func::Const{typeof(eigh_full!)},
                                       ::Type{RT},
@@ -662,23 +690,14 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
                                       kwargs...,
                                      ) where {RT}
-    cache_DV        = nothing
     # form cache if needed
-    cache_A = copy(A.val)
+    cache_DV = nothing
+    cache_A  = EnzymeRules.overwritten(config)[2] ? copy(A.val)  : nothing
     func.val(A.val, DV.val, alg.val; kwargs...)
-    primal = if EnzymeRules.needs_primal(config)
-        DV.val
-    else
-        nothing
-    end
-    shadow = if EnzymeRules.needs_shadow(config)
-        DV.dval
-    else
-        nothing
-    end
+    primal = EnzymeRules.needs_primal(config) ? DV.val : nothing
+    shadow = EnzymeRules.needs_shadow(config) ? DV.dval : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_DV))
 end
-=#
 
 function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
                              func::Const{typeof(eig_full!)},
@@ -728,7 +747,6 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
     return (nothing, nothing, nothing)
 end
 
-#=
 function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
                              func::Const{typeof(eigh_full!)},
                              ::Type{RT},
@@ -738,37 +756,123 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
                              alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
                              kwargs...,
                             ) where {RT}
-    tol             = MatrixAlgebraKit.default_pullback_gaugetol(DV.val[1])
-    degeneracy_atol = tol
-    gauge_atol      = tol
 
     cache_A, cache_DV = cache
     DVval   = !isnothing(cache_DV) ? cache_DV : DV.val
     Aval    = !isnothing(cache_A)  ? cache_A  : A.val
     ∂DV     = isa(DV, Const) ? nothing : DV.dval
-    A.dval .= zero(eltype(A.dval))
     if !isa(A, Const) && !isa(DV, Const)
         Dmat, V   = DVval
         ∂Dmat, ∂V = ∂DV
-        D      = diagview(Dmat)
-        ∂D     = diagview(∂Dmat)
-        VdΔV   = V' * ∂V
-        aVdΔV  = rmul!(VdΔV - VdΔV', 1 / 2)
-        mask   = abs.(D' .- D) .< degeneracy_atol
-        Δgauge = norm(view(aVdΔV, mask))
-        Δgauge < gauge_atol || @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-
-        aVdΔV .*= MatrixAlgebraKit.inv_safe.(D' .- D, tol)
-        diagview(aVdΔV) .+= real.(∂D)
-        # recylce VdΔV space
-        mul!(VdΔV, V, aVdΔV)
-        A.dval .+= VdΔV * V'
-        A.val .= cache_A
+        A.dval   .= zero(eltype(Aval))
+        MatrixAlgebraKit.eigh_full_pullback!(A.dval, DVval, ∂DV; kwargs...)
+        A.dval .*= 2
+        diagview(A.dval) ./= 2
+        for i in 1:size(A.dval, 1), j in 1:size(A.dval, 2)
+            if i > j
+                A.dval[i, j] = zero(eltype(A.dval)) 
+            end
+        end
     end
     if !isa(DV, Const)
         make_zero!(DV.dval)
     end
     return (nothing, nothing, nothing)
 end
-=#
+
+function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
+                                      func::Const{typeof(eig_vals!)},
+                                      ::Type{RT},
+                                      A::Annotation{<:AbstractMatrix},
+                                      D::Annotation{<:AbstractVector},
+                                      alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
+                                      kwargs...,
+                                     ) where {RT}
+    cache_D = nothing
+    cache_A = EnzymeRules.overwritten(config)[2] ? copy(A.val)  : nothing
+    func.val(A.val, D.val, alg.val; kwargs...)
+    primal = EnzymeRules.needs_primal(config) ? D.val  : nothing
+    shadow = EnzymeRules.needs_shadow(config) ? D.dval : nothing
+    # form cache if needed
+    return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_D))
+end
+function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
+                             func::Const{typeof(eig_vals!)},
+                             ::Type{RT},
+                             cache,
+                             A::Annotation{<:AbstractMatrix},
+                             D::Annotation{<:AbstractVector},
+                             alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                             kwargs...,
+                            ) where {RT}
+
+    cache_A, cache_D = cache
+    Dval = !isnothing(cache_D) ? cache_D : D.val
+    Aval = !isnothing(cache_A) ? cache_A : A.val
+    ∂D   = isa(D, Const) ? nothing : D.dval
+    if !isa(A, Const) && !isa(D, Const)
+        _, V    = eig_full(Aval, alg.val)
+        A.dval .= zero(eltype(Aval))
+        PΔV     = V' \ Diagonal(D.dval)
+        if eltype(A.dval) <: Real
+            ΔAc = PΔV * V'
+            A.dval .+= real.(ΔAc)
+        else
+            mul!(A.dval, PΔV, V', 1, 0)
+        end
+    end
+    if !isa(D, Const)
+        make_zero!(D.dval)
+    end
+    return (nothing, nothing, nothing)
+end
+
+function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
+                                      func::Const{typeof(eigh_vals!)},
+                                      ::Type{RT},
+                                      A::Annotation{<:AbstractMatrix},
+                                      D::Annotation{<:AbstractVector},
+                                      alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
+                                      kwargs...,
+                                     ) where {RT}
+    cache_D = nothing
+    cache_A = EnzymeRules.overwritten(config)[2] ? copy(A.val)  : nothing
+    func.val(A.val, D.val, alg.val; kwargs...)
+    primal = EnzymeRules.needs_primal(config) ? D.val  : nothing
+    shadow = EnzymeRules.needs_shadow(config) ? D.dval : nothing
+    # form cache if needed
+    return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_D))
+end
+function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
+                             func::Const{typeof(eigh_vals!)},
+                             ::Type{RT},
+                             cache,
+                             A::Annotation{<:AbstractMatrix},
+                             D::Annotation{<:AbstractVector},
+                             alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                             kwargs...,
+                            ) where {RT}
+
+    cache_A, cache_D = cache
+    Dval = !isnothing(cache_D) ? cache_D : D.val
+    Aval = !isnothing(cache_A) ? cache_A : A.val
+    ∂D   = isa(D, Const) ? nothing : D.dval
+    if !isa(A, Const) && !isa(D, Const)
+        _, V = eigh_full(Aval, alg.val)
+        A.dval   .= zero(eltype(Aval))
+        mul!(A.dval, V * Diagonal(real(∂D)), V', 1, 0)
+        A.dval .*= 2
+        diagview(A.dval) ./= 2
+        for i in 1:size(A.dval, 1), j in 1:size(A.dval, 2)
+            if i > j
+                A.dval[i, j] = zero(eltype(A.dval)) 
+            end
+        end
+    end
+    if !isa(D, Const)
+        make_zero!(D.dval)
+    end
+    return (nothing, nothing, nothing)
+end
+
 end
