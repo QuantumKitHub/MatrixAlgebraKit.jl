@@ -14,7 +14,7 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
         A = randn(rng, T, m, m)
         Tc = complex(T)
 
-        D, V = @constinferred eig_full(A; alg=($alg))
+        D, V = @constinferred eig_full(A; alg = ($alg))
         @test eltype(D) == eltype(V) == Tc
         @test A * V ≈ V * D
 
@@ -39,22 +39,22 @@ end
         A = randn(rng, T, m, m)
         A *= A' # TODO: deal with eigenvalue ordering etc
         # eigenvalues are sorted by ascending real component...
-        D₀ = sort!(eig_vals(A); by=abs, rev=true)
+        D₀ = sort!(eig_vals(A); by = abs, rev = true)
         rmin = findfirst(i -> abs(D₀[end - i]) != abs(D₀[end - i - 1]), 1:(m - 2))
         r = length(D₀) - rmin
 
-        D1, V1 = @constinferred eig_trunc(A; alg, trunc=truncrank(r))
+        D1, V1 = @constinferred eig_trunc(A; alg, trunc = truncrank(r))
         @test length(D1.diag) == r
         @test A * V1 ≈ V1 * D1
 
         s = 1 + sqrt(eps(real(T)))
-        trunc = trunctol(; atol=s * abs(D₀[r + 1]))
+        trunc = trunctol(; atol = s * abs(D₀[r + 1]))
         D2, V2 = @constinferred eig_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test A * V2 ≈ V2 * D2
 
         s = 1 - sqrt(eps(real(T)))
-        trunc = truncerror(; atol=s * norm(@view(D₀[r:end]), 1), p=1)
+        trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
         D3, V3 = @constinferred eig_trunc(A; alg, trunc)
         @test length(diagview(D3)) == r
         @test A * V3 ≈ V3 * D3
@@ -77,9 +77,9 @@ end
     alg = TruncatedAlgorithm(LAPACK_Simple(), truncrank(2))
     D2, V2 = @constinferred eig_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
-    @test_throws ArgumentError eig_trunc(A; alg, trunc=(; maxrank=2))
+    @test_throws ArgumentError eig_trunc(A; alg, trunc = (; maxrank = 2))
 
-    alg = TruncatedAlgorithm(LAPACK_Simple(), truncerror(; atol=0.2, p=1))
+    alg = TruncatedAlgorithm(LAPACK_Simple(), truncerror(; atol = 0.2, p = 1))
     D3, V3 = @constinferred eig_trunc(A; alg)
     @test diagview(D3) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
 end

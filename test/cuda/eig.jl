@@ -14,7 +14,7 @@ include(joinpath("..", "utilities.jl"))
         A = CuArray(randn(rng, T, m, m))
         Tc = complex(T)
 
-        D, V = @constinferred eig_full(A; alg=($alg))
+        D, V = @constinferred eig_full(A; alg = ($alg))
         @test eltype(D) == eltype(V) == Tc
         @test A * V ≈ V * D
 

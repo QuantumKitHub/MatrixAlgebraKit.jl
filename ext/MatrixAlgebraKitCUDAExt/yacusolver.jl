@@ -15,17 +15,19 @@ const ungqr! = orgqr!
 
 # Wrapper for SVD via QR Iteration
 for (bname, fname, elty, relty) in
-    ((:cusolverDnSgesvd_bufferSize, :cusolverDnSgesvd, :Float32, :Float32),
-     (:cusolverDnDgesvd_bufferSize, :cusolverDnDgesvd, :Float64, :Float64),
-     (:cusolverDnCgesvd_bufferSize, :cusolverDnCgesvd, :ComplexF32, :Float32),
-     (:cusolverDnZgesvd_bufferSize, :cusolverDnZgesvd, :ComplexF64, :Float64))
+    (
+        (:cusolverDnSgesvd_bufferSize, :cusolverDnSgesvd, :Float32, :Float32),
+        (:cusolverDnDgesvd_bufferSize, :cusolverDnDgesvd, :Float64, :Float64),
+        (:cusolverDnCgesvd_bufferSize, :cusolverDnCgesvd, :ComplexF32, :Float32),
+        (:cusolverDnZgesvd_bufferSize, :cusolverDnZgesvd, :ComplexF64, :Float64),
+    )
     @eval begin
-        #! format: off
-        function gesvd!(A::StridedCuMatrix{$elty},
-                        S::StridedCuVector{$relty}=similar(A, $relty, min(size(A)...)),
-                        U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-                        Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2)))
-        #! format: on
+        function gesvd!(
+                A::StridedCuMatrix{$elty},
+                S::StridedCuVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::StridedCuMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::StridedCuMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+            )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
             (m < n) && throw(ArgumentError("CUSOLVER's gesvd requires m ≥ n"))
@@ -79,10 +81,12 @@ for (bname, fname, elty, relty) in
             end
             rwork = CuArray{$relty}(undef, min(m, n) - 1)
             CUDA.with_workspace(dh.workspace_gpu, bufferSize) do buffer
-                return CUSOLVER.$fname(dh, jobu, jobvt, m, n,
-                                       A, lda, S, U, ldu, Vᴴ, ldv,
-                                       buffer, sizeof(buffer) ÷ sizeof($elty), rwork,
-                                       dh.info)
+                return CUSOLVER.$fname(
+                    dh, jobu, jobvt, m, n,
+                    A, lda, S, U, ldu, Vᴴ, ldv,
+                    buffer, sizeof(buffer) ÷ sizeof($elty), rwork,
+                    dh.info
+                )
             end
             CUDA.unsafe_free!(rwork)
 
@@ -94,11 +98,13 @@ for (bname, fname, elty, relty) in
     end
 end
 
-function Xgesvdp!(A::StridedCuMatrix{T},
-                  S::StridedCuVector=similar(A, real(T), min(size(A)...)),
-                  U::StridedCuMatrix{T}=similar(A, T, size(A, 1), min(size(A)...)),
-                  Vᴴ::StridedCuMatrix{T}=similar(A, T, min(size(A)...), size(A, 2));
-                  tol=norm(A) * eps(real(T))) where {T<:BlasFloat}
+function Xgesvdp!(
+        A::StridedCuMatrix{T},
+        S::StridedCuVector = similar(A, real(T), min(size(A)...)),
+        U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
+        Vᴴ::StridedCuMatrix{T} = similar(A, T, min(size(A)...), size(A, 2));
+        tol = norm(A) * eps(real(T))
+    ) where {T <: BlasFloat}
     chkstride1(A, U, S, Vᴴ)
     m, n = size(A)
     minmn = min(m, n)
@@ -137,19 +143,25 @@ function Xgesvdp!(A::StridedCuMatrix{T},
     function bufferSize()
         out_cpu = Ref{Csize_t}(0)
         out_gpu = Ref{Csize_t}(0)
-        CUSOLVER.cusolverDnXgesvdp_bufferSize(dh, params, jobz, econ, m, n,
-                                              T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
-                                              T, out_gpu, out_cpu)
+        CUSOLVER.cusolverDnXgesvdp_bufferSize(
+            dh, params, jobz, econ, m, n,
+            T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+            T, out_gpu, out_cpu
+        )
 
         return out_gpu[], out_cpu[]
     end
-    CUSOLVER.with_workspaces(dh.workspace_gpu, dh.workspace_cpu,
-                             bufferSize()...) do buffer_gpu, buffer_cpu
-        return CUSOLVER.cusolverDnXgesvdp(dh, params, jobz, econ, m, n,
-                                          T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
-                                          T, buffer_gpu, sizeof(buffer_gpu),
-                                          buffer_cpu, sizeof(buffer_cpu),
-                                          dh.info, h_err_sigma)
+    CUSOLVER.with_workspaces(
+        dh.workspace_gpu, dh.workspace_cpu,
+        bufferSize()...
+    ) do buffer_gpu, buffer_cpu
+        return CUSOLVER.cusolverDnXgesvdp(
+            dh, params, jobz, econ, m, n,
+            T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+            T, buffer_gpu, sizeof(buffer_gpu),
+            buffer_cpu, sizeof(buffer_cpu),
+            dh.info, h_err_sigma
+        )
     end
     err = h_err_sigma[]
     if err > tol
@@ -172,19 +184,21 @@ end
 
 # Wrapper for SVD via Jacobi
 for (bname, fname, elty, relty) in
-    ((:cusolverDnSgesvdj_bufferSize, :cusolverDnSgesvdj, :Float32, :Float32),
-     (:cusolverDnDgesvdj_bufferSize, :cusolverDnDgesvdj, :Float64, :Float64),
-     (:cusolverDnCgesvdj_bufferSize, :cusolverDnCgesvdj, :ComplexF32, :Float32),
-     (:cusolverDnZgesvdj_bufferSize, :cusolverDnZgesvdj, :ComplexF64, :Float64))
+    (
+        (:cusolverDnSgesvdj_bufferSize, :cusolverDnSgesvdj, :Float32, :Float32),
+        (:cusolverDnDgesvdj_bufferSize, :cusolverDnDgesvdj, :Float64, :Float64),
+        (:cusolverDnCgesvdj_bufferSize, :cusolverDnCgesvdj, :ComplexF32, :Float32),
+        (:cusolverDnZgesvdj_bufferSize, :cusolverDnZgesvdj, :ComplexF64, :Float64),
+    )
     @eval begin
-        #! format: off
-        function gesvdj!(A::StridedCuMatrix{$elty},
-                         S::StridedCuVector{$relty}=similar(A, $relty, min(size(A)...)),
-                         U::StridedCuMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-                         Vᴴ::StridedCuMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
-                         tol::$relty=eps($relty),
-                         max_sweeps::Int=100)
-        #! format: on
+        function gesvdj!(
+                A::StridedCuMatrix{$elty},
+                S::StridedCuVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::StridedCuMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::StridedCuMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100
+            )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
             minmn = min(m, n)
@@ -223,15 +237,19 @@ for (bname, fname, elty, relty) in
 
             function bufferSize()
                 out = Ref{Cint}(0)
-                CUSOLVER.$bname(dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
-                                out, params[])
+                CUSOLVER.$bname(
+                    dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
+                    out, params[]
+                )
                 return out[] * sizeof($elty)
             end
 
             CUSOLVER.with_workspace(dh.workspace_gpu, bufferSize) do buffer
-                return CUSOLVER.$fname(dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
-                                       buffer, sizeof(buffer) ÷ sizeof($elty), dh.info,
-                                       params[])
+                return CUSOLVER.$fname(
+                    dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
+                    buffer, sizeof(buffer) ÷ sizeof($elty), dh.info,
+                    params[]
+                )
             end
 
             info = @allowscalar dh.info[1]
@@ -248,13 +266,15 @@ for (bname, fname, elty, relty) in
 end
 
 # Wrapper for randomized SVD
-function Xgesvdr!(A::StridedCuMatrix{T},
-                   S::StridedCuVector=similar(A, real(T), min(size(A)...)),
-                   U::StridedCuMatrix{T}=similar(A, T, size(A, 1), min(size(A)...)),
-                   Vᴴ::StridedCuMatrix{T}=similar(A, T, min(size(A)...), size(A, 2));
-                   k::Int=length(S),
-                   p::Int=min(size(A)...)-k-1,
-                   niters::Int=1) where {T<:BlasFloat}
+function Xgesvdr!(
+        A::StridedCuMatrix{T},
+        S::StridedCuVector = similar(A, real(T), min(size(A)...)),
+        U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
+        Vᴴ::StridedCuMatrix{T} = similar(A, T, min(size(A)...), size(A, 2));
+        k::Int = length(S),
+        p::Int = min(size(A)...) - k - 1,
+        niters::Int = 1
+    ) where {T <: BlasFloat}
     chkstride1(A, U, S, Vᴴ)
     m, n = size(A)
     minmn = min(m, n)
@@ -277,19 +297,25 @@ function Xgesvdr!(A::StridedCuMatrix{T},
     function bufferSize()
         out_cpu = Ref{Csize_t}(0)
         out_gpu = Ref{Csize_t}(0)
-        CUSOLVER.cusolverDnXgesvdr_bufferSize(dh, params, jobu, jobv, m, n, k, p, niters,
-                                              T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
-                                              T, out_gpu, out_cpu)
+        CUSOLVER.cusolverDnXgesvdr_bufferSize(
+            dh, params, jobu, jobv, m, n, k, p, niters,
+            T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+            T, out_gpu, out_cpu
+        )
 
         return out_gpu[], out_cpu[]
     end
-    CUSOLVER.with_workspaces(dh.workspace_gpu, dh.workspace_cpu,
-                             bufferSize()...) do buffer_gpu, buffer_cpu
-        return CUSOLVER.cusolverDnXgesvdr(dh, params, jobu, jobv, m, n, k, p, niters,
-                                          T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
-                                          T, buffer_gpu, sizeof(buffer_gpu),
-                                          buffer_cpu, sizeof(buffer_cpu),
-                                          dh.info)
+    CUSOLVER.with_workspaces(
+        dh.workspace_gpu, dh.workspace_cpu,
+        bufferSize()...
+    ) do buffer_gpu, buffer_cpu
+        return CUSOLVER.cusolverDnXgesvdr(
+            dh, params, jobu, jobv, m, n, k, p, niters,
+            T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+            T, buffer_gpu, sizeof(buffer_gpu),
+            buffer_cpu, sizeof(buffer_cpu),
+            dh.info
+        )
     end
 
     flag = @allowscalar dh.info[1]
@@ -306,7 +332,7 @@ function Xgesvdr!(A::StridedCuMatrix{T},
     return S, U, Vᴴ
 end
 
-# Wrapper for general eigensolver 
+# Wrapper for general eigensolver
 for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:ComplexF32, :ComplexF32), (:ComplexF64, :ComplexF64))
     @eval begin
         function Xgeev!(A::StridedCuMatrix{$elty}, D::StridedCuVector{$celty}, V::StridedCuMatrix{$celty})
@@ -318,7 +344,7 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
             n == length(D) || throw(DimensionMismatch("length mismatch between A and D"))
             if length(V) == 0
                 jobvr = 'N'
-            elseif length(V) == n*n
+            elseif length(V) == n * n
                 jobvr = 'V'
             else
                 throw(DimensionMismatch("size of VR must match size of A"))
@@ -331,12 +357,12 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
             else
                 throw(DimensionMismatch("size of VL must match size of A"))
             end=#
-            VL   = similar(A, n, 0)
-            lda  = max(1, stride(A, 2))
+            VL = similar(A, n, 0)
+            lda = max(1, stride(A, 2))
             ldvl = max(1, stride(VL, 2))
             params = CUSOLVER.CuSolverParameters()
             dh = CUSOLVER.dense_handle()
-            
+
             if $elty <: Real
                 D2 = reinterpret($elty, D)
                 # reuse memory, we will have to reorder afterwards to bring real and imaginary
@@ -350,15 +376,19 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
             function bufferSize()
                 out_cpu = Ref{Csize_t}(0)
                 out_gpu = Ref{Csize_t}(0)
-                CUSOLVER.cusolverDnXgeev_bufferSize(dh, params, jobvl, jobvr, n, $elty, A,
-                                           lda, $elty, D2, $elty, VL, ldvl, $elty, VR, ldvr,
-                                           $elty, out_gpu, out_cpu)
-                out_gpu[], out_cpu[]
+                CUSOLVER.cusolverDnXgeev_bufferSize(
+                    dh, params, jobvl, jobvr, n, $elty, A,
+                    lda, $elty, D2, $elty, VL, ldvl, $elty, VR, ldvr,
+                    $elty, out_gpu, out_cpu
+                )
+                return out_gpu[], out_cpu[]
             end
             CUDA.with_workspaces(dh.workspace_gpu, dh.workspace_cpu, bufferSize()...) do buffer_gpu, buffer_cpu
-                CUSOLVER.cusolverDnXgeev(dh, params, jobvl, jobvr, n, $elty, A, lda, $elty,
-                                         D2, $elty, VL, ldvl, $elty, VR, ldvr, $elty, buffer_gpu,
-                                         sizeof(buffer_gpu), buffer_cpu, sizeof(buffer_cpu), dh.info)
+                CUSOLVER.cusolverDnXgeev(
+                    dh, params, jobvl, jobvr, n, $elty, A, lda, $elty,
+                    D2, $elty, VL, ldvl, $elty, VR, ldvr, $elty, buffer_gpu,
+                    sizeof(buffer_gpu), buffer_cpu, sizeof(buffer_cpu), dh.info
+                )
             end
             flag = @allowscalar dh.info[1]
             CUSOLVER.chkargsok(BlasInt(flag))
@@ -679,22 +709,25 @@ end
 #     return X, info
 # end
 
-for (bname, fname, elty, relty) in ((:(CUSOLVER.cusolverDnSsyevj_bufferSize), :(CUSOLVER.cusolverDnSsyevj), :Float32, :Float32),
-                                    (:(CUSOLVER.cusolverDnDsyevj_bufferSize), :(CUSOLVER.cusolverDnDsyevj), :Float64, :Float64),
-                                    (:(CUSOLVER.cusolverDnCheevj_bufferSize), :(CUSOLVER.cusolverDnCheevj), :ComplexF32, :Float32),
-                                    (:(CUSOLVER.cusolverDnZheevj_bufferSize), :(CUSOLVER.cusolverDnZheevj), :ComplexF64, :Float64))
+for (bname, fname, elty, relty) in (
+        (:(CUSOLVER.cusolverDnSsyevj_bufferSize), :(CUSOLVER.cusolverDnSsyevj), :Float32, :Float32),
+        (:(CUSOLVER.cusolverDnDsyevj_bufferSize), :(CUSOLVER.cusolverDnDsyevj), :Float64, :Float64),
+        (:(CUSOLVER.cusolverDnCheevj_bufferSize), :(CUSOLVER.cusolverDnCheevj), :ComplexF32, :Float32),
+        (:(CUSOLVER.cusolverDnZheevj_bufferSize), :(CUSOLVER.cusolverDnZheevj), :ComplexF64, :Float64),
+    )
     @eval begin
-        function heevj!(A::StridedCuMatrix{$elty},
-                        W::StridedCuVector{$relty},
-                        V::StridedCuMatrix{$elty};
-                        uplo::Char='U',
-                        tol::$relty=eps($relty),
-                        max_sweeps::Int=100
-                       )
+        function heevj!(
+                A::StridedCuMatrix{$elty},
+                W::StridedCuVector{$relty},
+                V::StridedCuMatrix{$elty};
+                uplo::Char = 'U',
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100
+            )
             chkuplo(uplo)
-            n   = checksquare(A)
+            n = checksquare(A)
             lda = max(1, stride(A, 2))
-            dh  = CUSOLVER.dense_handle()
+            dh = CUSOLVER.dense_handle()
             length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
             if length(V) == 0
                 jobz = 'N'
@@ -702,7 +735,7 @@ for (bname, fname, elty, relty) in ((:(CUSOLVER.cusolverDnSsyevj_bufferSize), :(
                 size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
                 jobz = 'V'
             end
-            params    = Ref{CUSOLVER.syevjInfo_t}(C_NULL)
+            params = Ref{CUSOLVER.syevjInfo_t}(C_NULL)
             CUSOLVER.cusolverDnCreateSyevjInfo(params)
             CUSOLVER.cusolverDnXsyevjSetTolerance(params[], tol)
             CUSOLVER.cusolverDnXsyevjSetMaxSweeps(params[], max_sweeps)
@@ -712,8 +745,10 @@ for (bname, fname, elty, relty) in ((:(CUSOLVER.cusolverDnSsyevj_bufferSize), :(
                 return out[] * sizeof($elty)
             end
             CUDA.with_workspace(dh.workspace_gpu, bufferSize) do buffer
-                $fname(dh, jobz, uplo, n, A, lda, W, buffer,
-                       sizeof(buffer) ÷ sizeof($elty), dh.info, params[])
+                $fname(
+                    dh, jobz, uplo, n, A, lda, W, buffer,
+                    sizeof(buffer) ÷ sizeof($elty), dh.info, params[]
+                )
             end
 
             info = @allowscalar dh.info[1]
@@ -727,14 +762,16 @@ for (bname, fname, elty, relty) in ((:(CUSOLVER.cusolverDnSsyevj_bufferSize), :(
     end
 end
 
-function heevd!(A::StridedCuMatrix{T},
-                W::StridedCuVector{Tr},
-                V::StridedCuMatrix{T};
-                uplo::Char='U') where {T<:BlasFloat, Tr<:BlasReal}
+function heevd!(
+        A::StridedCuMatrix{T},
+        W::StridedCuVector{Tr},
+        V::StridedCuMatrix{T};
+        uplo::Char = 'U'
+    ) where {T <: BlasFloat, Tr <: BlasReal}
     chkuplo(uplo)
-    n   = checksquare(A)
+    n = checksquare(A)
     lda = max(1, stride(A, 2))
-    dh  = CUSOLVER.dense_handle()
+    dh = CUSOLVER.dense_handle()
     length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
     if length(V) == 0
         jobz = 'N'
@@ -751,11 +788,15 @@ function heevd!(A::StridedCuMatrix{T},
         return out_gpu[], out_cpu[]
     end
 
-    CUSOLVER.with_workspaces(dh.workspace_gpu, dh.workspace_cpu,
-                             bufferSize()...) do buffer_gpu, buffer_cpu
-        return CUSOLVER.cusolverDnXsyevd(dh, params, jobz, uplo, n, T, A, lda, Tr, W,
-                                         T, buffer_gpu, sizeof(buffer_gpu), buffer_cpu,
-                                         sizeof(buffer_cpu), dh.info)
+    CUSOLVER.with_workspaces(
+        dh.workspace_gpu, dh.workspace_cpu,
+        bufferSize()...
+    ) do buffer_gpu, buffer_cpu
+        return CUSOLVER.cusolverDnXsyevd(
+            dh, params, jobz, uplo, n, T, A, lda, Tr, W,
+            T, buffer_gpu, sizeof(buffer_gpu), buffer_cpu,
+            sizeof(buffer_cpu), dh.info
+        )
     end
 
     info = @allowscalar dh.info[1]
@@ -775,7 +816,7 @@ function _reorder_kernel_real(real_ev_ixs, VR::CuDeviceArray{T}, n::Int) where {
     @inbounds if grid_idx <= length(real_ev_ixs)
         i = real_ev_ixs[grid_idx]
         for j in n:-1:1
-            VR[2 * j, i] = zero(T) 
+            VR[2 * j, i] = zero(T)
             VR[2 * j - 1, i] = VR[j, i]
         end
     end
@@ -798,24 +839,24 @@ end
 # COV_EXCL_STOP
 
 function _reorder_realeigendecomposition!(W, WR, WI, work, VR, jobvr)
-# first reorder eigenvalues and recycle work as temporary buffer to efficiently implement the permutation
+    # first reorder eigenvalues and recycle work as temporary buffer to efficiently implement the permutation
     copy!(work, WI)
     n = size(W, 1)
     @. W[1:n] = WR[1:n] + im * work[1:n]
     T = eltype(WR)
-    if jobvr == 'V' # also reorganise vectors
-        real_ev_ixs    = findall(isreal, W)
-        _cmplx_ev_ixs  = findall(!isreal, W) # these come in pairs, choose only the first of each pair
+    return if jobvr == 'V' # also reorganise vectors
+        real_ev_ixs = findall(isreal, W)
+        _cmplx_ev_ixs = findall(!isreal, W) # these come in pairs, choose only the first of each pair
         complex_ev_ixs = view(_cmplx_ev_ixs, 1:2:length(_cmplx_ev_ixs))
         if !isempty(real_ev_ixs)
             real_threads = 128
             real_blocks = max(1, div(length(real_ev_ixs), real_threads))
-            @cuda threads=real_threads blocks=real_blocks _reorder_kernel_real(real_ev_ixs, VR, n)
+            @cuda threads = real_threads blocks = real_blocks _reorder_kernel_real(real_ev_ixs, VR, n)
         end
         if !isempty(complex_ev_ixs)
             complex_threads = 128
             complex_blocks = max(1, div(length(complex_ev_ixs), complex_threads))
-            @cuda threads=complex_threads blocks=complex_blocks _reorder_kernel_complex(complex_ev_ixs, VR, n)
+            @cuda threads = complex_threads blocks = complex_blocks _reorder_kernel_complex(complex_ev_ixs, VR, n)
         end
     end
 end

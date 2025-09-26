@@ -1,9 +1,9 @@
 """
-    svd_compact_pullback!(ΔA, USVᴴ, ΔUSVᴴ;
-                            tol::Real=default_pullback_gaugetol(S),
-                            rank_atol::Real = tol,
-                            degeneracy_atol::Real = tol,
-                            gauge_atol::Real = tol)
+    svd_compact_pullback!(
+        ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ;
+        tol::Real = default_pullback_gaugetol(USVᴴ[2]),
+        rank_atol::Real = tol, degeneracy_atol::Real = tol, gauge_atol::Real = tol
+    )
 
 Adds the pullback from the SVD of `A` to `ΔA` given the output USVᴴ of `svd_compact`
 or `svd_full` and the cotangent `ΔUSVᴴ` of `svd_compact`, `svd_full` or `svd_trunc`.
@@ -18,11 +18,11 @@ A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
 anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j`
 for which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
-function svd_compact_pullback!(ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ;
-                               tol::Real=default_pullback_gaugetol(USVᴴ[2]),
-                               rank_atol::Real=tol,
-                               degeneracy_atol::Real=tol,
-                               gauge_atol::Real=tol)
+function svd_compact_pullback!(
+        ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ;
+        tol::Real = default_pullback_gaugetol(USVᴴ[2]),
+        rank_atol::Real = tol, degeneracy_atol::Real = tol, gauge_atol::Real = tol
+    )
 
     # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ
@@ -67,7 +67,7 @@ function svd_compact_pullback!(ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ;
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
     UdΔAV = (aUΔU .+ aVΔV) .* inv_safe.(Sr' .- Sr, degeneracy_atol) .+
-            (aUΔU .- aVΔV) .* inv_safe.(Sr' .+ Sr, degeneracy_atol)
+        (aUΔU .- aVΔV) .* inv_safe.(Sr' .+ Sr, degeneracy_atol)
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         pS = length(ΔS)

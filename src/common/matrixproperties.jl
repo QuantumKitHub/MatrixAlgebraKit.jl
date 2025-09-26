@@ -12,7 +12,7 @@ New specializations should overload [`is_left_isometry`](@ref) and [`is_right_is
 
 See also [`isunitary`](@ref).
 """
-function isisometry(A; side::Symbol=:left, isapprox_kwargs...)
+function isisometry(A; side::Symbol = :left, isapprox_kwargs...)
     side === :left && return is_left_isometry(A; isapprox_kwargs...)
     side === :right && return is_right_isometry(A; isapprox_kwargs...)
 
@@ -29,7 +29,7 @@ See also [`isisometry`](@ref).
 """
 function isunitary(A; isapprox_kwargs...)
     return is_left_isometry(A; isapprox_kwargs...) &&
-           is_right_isometry(A; isapprox_kwargs...)
+        is_right_isometry(A; isapprox_kwargs...)
 end
 
 @doc """

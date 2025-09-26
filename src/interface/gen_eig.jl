@@ -31,7 +31,7 @@ and the diagonal matrix `W` contains the associated generalized eigenvalues.
 
 See also [`gen_eig_vals(!)`](@ref eig_vals).
 """
-@functiondef n_args=2 gen_eig_full
+@functiondef n_args = 2 gen_eig_full
 
 """
     gen_eig_vals(A, B; kwargs...) -> W
@@ -52,15 +52,15 @@ Compute the list of generalized eigenvalues of `A` and `B`.
 
 See also [`gen_eig_full(!)`](@ref gen_eig_full).
 """
-@functiondef n_args=2 gen_eig_vals
+@functiondef n_args = 2 gen_eig_vals
 
 # Algorithm selection
 # -------------------
 default_gen_eig_algorithm(A, B; kwargs...) = default_gen_eig_algorithm(typeof(A), typeof(B); kwargs...)
-default_gen_eig_algorithm(::Type{TA}, ::Type{TB}; kwargs...) where {TA, TB} = throw(MethodError(default_gen_eig_algorithm, (TA,TB)))
-function default_gen_eig_algorithm(::Type{TA}, ::Type{TB}; kwargs...) where {TA<:YALAPACK.BlasMat,TB<:YALAPACK.BlasMat}
-    return LAPACK_Simple(; kwargs...)
-end
+default_gen_eig_algorithm(::Type{TA}, ::Type{TB}; kwargs...) where {TA, TB} =
+    throw(MethodError(default_gen_eig_algorithm, (TA, TB)))
+default_gen_eig_algorithm(::Type{TA}, ::Type{TB}; kwargs...) where {TA <: YALAPACK.BlasMat, TB <: YALAPACK.BlasMat} =
+    LAPACK_Simple(; kwargs...)
 
 for f in (:gen_eig_full!, :gen_eig_vals!)
     @eval function default_algorithm(::typeof($f), ::Tuple{A, B}; kwargs...) where {A, B}

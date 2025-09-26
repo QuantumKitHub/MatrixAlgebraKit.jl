@@ -21,7 +21,7 @@ include(joinpath("..", "utilities.jl"))
 
             U, S, Vᴴ = svd_compact(A; alg)
             @test U isa CuMatrix{T} && size(U) == (m, minmn)
-            @test S isa Diagonal{real(T),<:CuVector} && size(S) == (minmn, minmn)
+            @test S isa Diagonal{real(T), <:CuVector} && size(S) == (minmn, minmn)
             @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (minmn, n)
             @test U * S * Vᴴ ≈ A
             @test isapproxone(U' * U)
@@ -94,24 +94,24 @@ end
     @testset "size ($m, $n)" for n in (37, m, 63)
         k = min(m, n) - 20
         p = min(m, n) - k - 1
-        algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi(), CUSOLVER_Randomized(; k=k, p=p, niters=100),)
+        algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi(), CUSOLVER_Randomized(; k = k, p = p, niters = 100))
         @testset "algorithm $alg" for alg in algs
             n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             hA = randn(rng, T, m, n)
             S₀ = svd_vals(hA)
             A = CuArray(hA)
             minmn = min(m, n)
-            r = k 
+            r = k
 
-            U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc=truncrank(r))
+            U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
             @test length(S1.diag) == r
             @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
 
             if !(alg isa CUSOLVER_Randomized)
                 s = 1 + sqrt(eps(real(T)))
-                trunc2 = trunctol(; atol=s * S₀[r + 1])
+                trunc2 = trunctol(; atol = s * S₀[r + 1])
 
-                U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(; atol=s * S₀[r + 1]))
+                U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc = trunctol(; atol = s * S₀[r + 1]))
                 @test length(S2.diag) == r
                 @test U1 ≈ U2
                 @test parent(S1) ≈ parent(S2)

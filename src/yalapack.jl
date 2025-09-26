@@ -9,24 +9,27 @@ the ability to externally provide the required memory for the output objects.
 module YALAPACK # Yet another lapack wrapper
 
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, Char, LAPACK,
-                     LAPACKException, SingularException, PosDefException,
-                     checksquare, chkstride1, require_one_based_indexing, triu!,
-                     issymmetric, ishermitian, isposdef, adjoint!
+    LAPACKException, SingularException, PosDefException, checksquare, chkstride1,
+    require_one_based_indexing, triu!, issymmetric, ishermitian, isposdef, adjoint!
 
 using LinearAlgebra.BLAS: @blasfunc, libblastrampoline
 using LinearAlgebra.LAPACK: chkfinite, chktrans, chkside, chkuplofinite, chklapackerror
 
 # type alias for matrices that are definitely supported by YALAPACK
-const BlasMat{T<:BlasFloat} = StridedMatrix{T}
+const BlasMat{T <: BlasFloat} = StridedMatrix{T}
 
 # LU factorisation
-for (getrf, getrs, elty) in ((:dgetrf_, :dgetrs_, :Float64),
-                             (:sgetrf_, :sgetrs_, :Float32),
-                             (:zgetrf_, :zgetrs_, :ComplexF64),
-                             (:cgetrf_, :cgetrs_, :ComplexF32))
+for (getrf, getrs, elty) in (
+        (:dgetrf_, :dgetrs_, :Float64),
+        (:sgetrf_, :sgetrs_, :Float32),
+        (:zgetrf_, :zgetrs_, :ComplexF64),
+        (:cgetrf_, :cgetrs_, :ComplexF32),
+    )
     @eval begin
-        function getrf!(A::AbstractMatrix{$elty}, ipiv::AbstractVector{BlasInt};
-                        check::Bool=true)
+        function getrf!(
+                A::AbstractMatrix{$elty}, ipiv::AbstractVector{BlasInt};
+                check::Bool = true
+            )
             require_one_based_indexing(A, ipiv)
             chkstride1(A, ipiv)
             chkfinite(A)
@@ -34,15 +37,21 @@ for (getrf, getrs, elty) in ((:dgetrf_, :dgetrs_, :Float64),
 
             lda = max(1, stride(A, 2))
             info = Ref{BlasInt}()
-            ccall((@blasfunc($getrf), libblastrampoline), Cvoid,
-                  (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty},
-                   Ref{BlasInt}, Ptr{BlasInt}, Ptr{BlasInt}),
-                  m, n, A, lda, ipiv, info)
+            ccall(
+                (@blasfunc($getrf), libblastrampoline), Cvoid,
+                (
+                    Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty},
+                    Ref{BlasInt}, Ptr{BlasInt}, Ptr{BlasInt},
+                ),
+                m, n, A, lda, ipiv, info
+            )
             chkargsok(info[])
             return A, ipiv, info[] #Error code is stored in LU factorization type
         end
-        function getrs!(trans::AbstractChar, A::AbstractMatrix{$elty},
-                        ipiv::AbstractVector{BlasInt}, B::AbstractVecOrMat{$elty})
+        function getrs!(
+                trans::AbstractChar, A::AbstractMatrix{$elty},
+                ipiv::AbstractVector{BlasInt}, B::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(A, ipiv, B)
             chktrans(trans)
             chkstride1(A, B, ipiv)
@@ -55,11 +64,15 @@ for (getrf, getrs, elty) in ((:dgetrf_, :dgetrs_, :Float64),
             end
             nrhs = size(B, 2)
             info = Ref{BlasInt}()
-            ccall((@blasfunc($getrs), libblastrampoline), Cvoid,
-                  (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                   Ptr{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong),
-                  trans, n, size(B, 2), A, max(1, stride(A, 2)), ipiv, B,
-                  max(1, stride(B, 2)), info, 1)
+            ccall(
+                (@blasfunc($getrs), libblastrampoline), Cvoid,
+                (
+                    Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    Ptr{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong,
+                ),
+                trans, n, size(B, 2), A, max(1, stride(A, 2)), ipiv, B,
+                max(1, stride(B, 2)), info, 1
+            )
             chklapackerror(info[])
             return B
         end
@@ -72,11 +85,13 @@ default_qr_blocksize(A::AbstractMatrix) = min(size(A)..., DEFAULT_QR_BLOCKSIZE)
 
 #! format: off
 for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3, elty, relty) in
-    ((:dgeqr_, :dgelq_, :dgeqrf_, :dgelqf_, :dgeqlf_, :dgerqf_, :dgeqrt_, :dgelqt_, :dlatsqr_, :dlaswlq_, :dgeqp3_, :Float64, :Float64),
-     (:sgeqr_, :sgelq_, :sgeqrf_, :sgelqf_, :sgeqlf_, :sgerqf_, :sgeqrt_, :sgelqt_, :slatsqr_, :slaswlq_, :sgeqp3_, :Float32, :Float32),
-     (:zgeqr_, :zgelq_, :zgeqrf_, :zgelqf_, :zgeqlf_, :zgerqf_, :zgeqrt_, :zgelqt_, :zlatsqr_, :zlaswlq_, :zgeqp3_, :ComplexF64, :Float64),
-     (:cgeqr_, :cgelq_, :cgeqrf_, :cgelqf_, :cgeqlf_, :cgerqf_, :cgeqrt_, :cgelqt_, :clatsqr_, :claswlq_, :cgeqp3_, :ComplexF32, :Float32))
-#! format: on
+    (
+        (:dgeqr_, :dgelq_, :dgeqrf_, :dgelqf_, :dgeqlf_, :dgerqf_, :dgeqrt_, :dgelqt_, :dlatsqr_, :dlaswlq_, :dgeqp3_, :Float64, :Float64),
+        (:sgeqr_, :sgelq_, :sgeqrf_, :sgelqf_, :sgeqlf_, :sgerqf_, :sgeqrt_, :sgelqt_, :slatsqr_, :slaswlq_, :sgeqp3_, :Float32, :Float32),
+        (:zgeqr_, :zgelq_, :zgeqrf_, :zgelqf_, :zgeqlf_, :zgerqf_, :zgeqrt_, :zgelqt_, :zlatsqr_, :zlaswlq_, :zgeqp3_, :ComplexF64, :Float64),
+        (:cgeqr_, :cgelq_, :cgeqrf_, :cgelqf_, :cgeqlf_, :cgerqf_, :cgeqrt_, :cgelqt_, :clatsqr_, :claswlq_, :cgeqp3_, :ComplexF32, :Float32),
+    )
+    #! format: on
     @eval begin
         # Flexible QR / LQ
         function geqr!(A::AbstractMatrix{$elty})
@@ -90,13 +105,17 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2
-                ccall((@blasfunc($geqr), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{BlasInt}),
-                      m, n, A, lda,
-                      t, tsize, work, lwork,
-                      info)
+                ccall(
+                    (@blasfunc($geqr), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{BlasInt},
+                    ),
+                    m, n, A, lda,
+                    t, tsize, work, lwork,
+                    info
+                )
                 chklapackerror(info[])
                 if i == 1
                     tsize = BlasInt(real(t[1]))
@@ -118,13 +137,17 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2
-                ccall((@blasfunc($gelq), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{BlasInt}),
-                      m, n, A, lda,
-                      t, tsize, work, lwork,
-                      info)
+                ccall(
+                    (@blasfunc($gelq), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{BlasInt},
+                    ),
+                    m, n, A, lda,
+                    t, tsize, work, lwork,
+                    info
+                )
                 chklapackerror(info[])
                 if i == 1
                     tsize = BlasInt(real(t[1]))
@@ -137,8 +160,10 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
         end
 
         # Classic QR / LQ / QL / RQ
-        function geqrf!(A::AbstractMatrix{$elty},
-                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
+        function geqrf!(
+                A::AbstractMatrix{$elty},
+                tau::AbstractVector{$elty} = similar(A, $elty, min(size(A)...))
+            )
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
             m, n = size(A)
@@ -151,11 +176,15 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2                # first call returns lwork as work[1]
-                ccall((@blasfunc($geqrf), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, A, lda,
-                      tau, work, lwork, info)
+                ccall(
+                    (@blasfunc($geqrf), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                    ),
+                    m, n, A, lda,
+                    tau, work, lwork, info
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = max(BlasInt(1), BlasInt(real(work[1])))
@@ -164,8 +193,10 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             end
             return A, tau
         end
-        function gelqf!(A::AbstractMatrix{$elty},
-                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
+        function gelqf!(
+                A::AbstractMatrix{$elty},
+                tau::AbstractVector{$elty} = similar(A, $elty, min(size(A)...))
+            )
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
             m, n = size(A)
@@ -178,11 +209,15 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2                # first call returns lwork as work[1]
-                ccall((@blasfunc($gelqf), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, A, lda,
-                      tau, work, lwork, info)
+                ccall(
+                    (@blasfunc($gelqf), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                    ),
+                    m, n, A, lda,
+                    tau, work, lwork, info
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = max(BlasInt(1), BlasInt(real(work[1])))
@@ -191,8 +226,10 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             end
             return A, tau
         end
-        function geqlf!(A::AbstractMatrix{$elty},
-                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
+        function geqlf!(
+                A::AbstractMatrix{$elty},
+                tau::AbstractVector{$elty} = similar(A, $elty, min(size(A)...))
+            )
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
             m, n = size(A)
@@ -205,11 +242,15 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2                # first call returns lwork as work[1]
-                ccall((@blasfunc($geqlf), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, A, lda,
-                      tau, work, lwork, info)
+                ccall(
+                    (@blasfunc($geqlf), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                    ),
+                    m, n, A, lda,
+                    tau, work, lwork, info
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = max(BlasInt(1), BlasInt(real(work[1])))
@@ -218,8 +259,10 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             end
             return A, tau
         end
-        function gerqf!(A::AbstractMatrix{$elty},
-                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
+        function gerqf!(
+                A::AbstractMatrix{$elty},
+                tau::AbstractVector{$elty} = similar(A, $elty, min(size(A)...))
+            )
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
             m, n = size(A)
@@ -232,11 +275,15 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2                # first call returns lwork as work[1]
-                ccall((@blasfunc($gerqf), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, A, lda,
-                      tau, work, lwork, info)
+                ccall(
+                    (@blasfunc($gerqf), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                    ),
+                    m, n, A, lda,
+                    tau, work, lwork, info
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = max(BlasInt(1), BlasInt(real(work[1])))
@@ -248,9 +295,11 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
 
         # QR and LQ with block reflectors
         #! format: off
-        function geqrt!(A::AbstractMatrix{$elty},
-                        T::AbstractMatrix{$elty}=similar(A, $elty, default_qr_blocksize(A), min(size(A)...)))
-        #! format: on
+        function geqrt!(
+                A::AbstractMatrix{$elty},
+                T::AbstractMatrix{$elty} = similar(A, $elty, default_qr_blocksize(A), min(size(A)...))
+            )
+            #! format: on
             require_one_based_indexing(A, T)
             chkstride1(A, T)
             m, n = size(A)
@@ -263,20 +312,26 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             ldt = max(1, stride(T, 2))
             work = Vector{$elty}(undef, nb * n)
             info = Ref{BlasInt}()
-            ccall((@blasfunc($geqrt), libblastrampoline), Cvoid,
-                  (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                   Ptr{BlasInt}),
-                  m, n, nb, A, lda,
-                  T, ldt, work,
-                  info)
+            ccall(
+                (@blasfunc($geqrt), libblastrampoline), Cvoid,
+                (
+                    Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                    Ptr{BlasInt},
+                ),
+                m, n, nb, A, lda,
+                T, ldt, work,
+                info
+            )
             chklapackerror(info[])
             return A, T
         end
         #! format: off
-        function gelqt!(A::AbstractMatrix{$elty},
-                        T::AbstractMatrix{$elty}=similar(A, $elty, default_qr_blocksize(A), min(size(A)...)))
-        #! format: on
+        function gelqt!(
+                A::AbstractMatrix{$elty},
+                T::AbstractMatrix{$elty} = similar(A, $elty, default_qr_blocksize(A), min(size(A)...))
+            )
+            #! format: on
             require_one_based_indexing(A, T)
             chkstride1(A, T)
             m, n = size(A)
@@ -289,21 +344,27 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             ldt = max(1, stride(T, 2))
             work = Vector{$elty}(undef, mb * m)
             info = Ref{BlasInt}()
-            ccall((@blasfunc($gelqt), libblastrampoline), Cvoid,
-                  (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                   Ptr{BlasInt}),
-                  m, n, mb, A, lda,
-                  T, ldt, work,
-                  info)
+            ccall(
+                (@blasfunc($gelqt), libblastrampoline), Cvoid,
+                (
+                    Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                    Ptr{BlasInt},
+                ),
+                m, n, mb, A, lda,
+                T, ldt, work,
+                info
+            )
             chklapackerror(info[])
             return A, T
         end
 
         # QR with column pivoting
-        function geqp3!(A::AbstractMatrix{$elty},
-                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)),
-                        jpvt::AbstractVector{BlasInt}=zeros(BlasInt, size(A, 2)))
+        function geqp3!(
+                A::AbstractMatrix{$elty},
+                tau::AbstractVector{$elty} = similar(A, $elty, min(size(A)...)),
+                jpvt::AbstractVector{BlasInt} = zeros(BlasInt, size(A, 2))
+            )
             require_one_based_indexing(A, jpvt, tau)
             chkstride1(A, jpvt, tau)
             m, n = size(A)
@@ -323,25 +384,33 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
                 if cmplx
-                    ccall((@blasfunc($geqp3), libblastrampoline), Cvoid,
-                          (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{BlasInt}, Ptr{$elty},
-                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty},
-                           Ptr{BlasInt}),
-                          m, n, A, lda,
-                          jpvt, tau,
-                          work, lwork, rwork,
-                          info)
+                    ccall(
+                        (@blasfunc($geqp3), libblastrampoline), Cvoid,
+                        (
+                            Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{BlasInt}, Ptr{$elty},
+                            Ptr{$elty}, Ref{BlasInt}, Ptr{$relty},
+                            Ptr{BlasInt},
+                        ),
+                        m, n, A, lda,
+                        jpvt, tau,
+                        work, lwork, rwork,
+                        info
+                    )
                 else
-                    ccall((@blasfunc($geqp3), libblastrampoline), Cvoid,
-                          (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{BlasInt}, Ptr{$elty},
-                           Ptr{$elty}, Ref{BlasInt},
-                           Ptr{BlasInt}),
-                          m, n, A, lda,
-                          jpvt, tau,
-                          work, lwork,
-                          info)
+                    ccall(
+                        (@blasfunc($geqp3), libblastrampoline), Cvoid,
+                        (
+                            Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{BlasInt}, Ptr{$elty},
+                            Ptr{$elty}, Ref{BlasInt},
+                            Ptr{BlasInt},
+                        ),
+                        m, n, A, lda,
+                        jpvt, tau,
+                        work, lwork,
+                        info
+                    )
                 end
                 chklapackerror(info[])
                 if i == 1
@@ -358,15 +427,19 @@ end
 
 #! format: off
 for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqrt, gemlqt, elty) in
-    ((:dgemqr_, :dgemlq_, :dorgqr_, :dorglq_, :dorgql_, :dorgrq_, :dormqr_, :dormlq_, :dormql_, :dormrq_, :dgemqrt_, :dgemlqt_, :Float64),
-     (:sgemqr_, :sgemlq_, :sorgqr_, :sorglq_, :sorgql_, :sorgrq_, :sormqr_, :sormlq_, :sormql_, :sormrq_, :sgemqrt_, :sgemlqt_, :Float32),
-     (:zgemqr_, :zgemlq_, :zungqr_, :zunglq_, :zungql_, :zungrq_, :zunmqr_, :zunmlq_, :zunmql_, :zunmrq_, :zgemqrt_, :zgemlqt_, :ComplexF64),
-     (:cgemqr_, :cgemlq_, :cungqr_, :cunglq_, :cungql_, :cungrq_, :cunmqr_, :cunmlq_, :cunmql_, :cunmrq_, :cgemqrt_, :cgemlqt_, :ComplexF32))
-#! format: on
+    (
+        (:dgemqr_, :dgemlq_, :dorgqr_, :dorglq_, :dorgql_, :dorgrq_, :dormqr_, :dormlq_, :dormql_, :dormrq_, :dgemqrt_, :dgemlqt_, :Float64),
+        (:sgemqr_, :sgemlq_, :sorgqr_, :sorglq_, :sorgql_, :sorgrq_, :sormqr_, :sormlq_, :sormql_, :sormrq_, :sgemqrt_, :sgemlqt_, :Float32),
+        (:zgemqr_, :zgemlq_, :zungqr_, :zunglq_, :zungql_, :zungrq_, :zunmqr_, :zunmlq_, :zunmql_, :zunmrq_, :zgemqrt_, :zgemlqt_, :ComplexF64),
+        (:cgemqr_, :cgemlq_, :cungqr_, :cunglq_, :cungql_, :cungrq_, :cunmqr_, :cunmlq_, :cunmql_, :cunmrq_, :cgemqrt_, :cgemlqt_, :ComplexF32),
+    )
+    #! format: on
     @eval begin
         # multiply with Q factor of flexible QR / LQ
-        function gemqr!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
-                        T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty})
+        function gemqr!(
+                side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
+                T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(A, C)
             chkstride1(A, C)
             chktrans(trans)
@@ -394,15 +467,19 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($gemqr), libblastrampoline), Cvoid,
-                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
-                      side, trans, mC, nC, k,
-                      A, lda, T, tsize,
-                      C, ldc,
-                      work, lwork, info, 1, 1)
+                ccall(
+                    (@blasfunc($gemqr), libblastrampoline), Cvoid,
+                    (
+                        Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong,
+                    ),
+                    side, trans, mC, nC, k,
+                    A, lda, T, tsize,
+                    C, ldc,
+                    work, lwork, info, 1, 1
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -411,8 +488,10 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return C
         end
-        function gemlq!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
-                        T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty})
+        function gemlq!(
+                side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
+                T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(A, C)
             chkstride1(A, C)
             chktrans(trans)
@@ -440,15 +519,19 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($gemlq), libblastrampoline), Cvoid,
-                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
-                      side, trans, mC, nC, k,
-                      A, lda, T, tsize,
-                      C, ldc,
-                      work, lwork, info, 1, 1)
+                ccall(
+                    (@blasfunc($gemlq), libblastrampoline), Cvoid,
+                    (
+                        Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong,
+                    ),
+                    side, trans, mC, nC, k,
+                    A, lda, T, tsize,
+                    C, ldc,
+                    work, lwork, info, 1, 1
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -474,13 +557,17 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($ungqr), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, k,
-                      A, lda, tau,
-                      work, lwork, info)
+                ccall(
+                    (@blasfunc($ungqr), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                    ),
+                    m, n, k,
+                    A, lda, tau,
+                    work, lwork, info
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -504,13 +591,17 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($unglq), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, k,
-                      A, lda, tau,
-                      work, lwork, info)
+                ccall(
+                    (@blasfunc($unglq), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                    ),
+                    m, n, k,
+                    A, lda, tau,
+                    work, lwork, info
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -534,13 +625,17 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($ungql), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, k,
-                      A, lda, tau,
-                      work, lwork, info)
+                ccall(
+                    (@blasfunc($ungql), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                    ),
+                    m, n, k,
+                    A, lda, tau,
+                    work, lwork, info
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -564,13 +659,17 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($ungrq), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, k,
-                      A, lda, tau,
-                      work, lwork, info)
+                ccall(
+                    (@blasfunc($ungrq), libblastrampoline), Cvoid,
+                    (
+                        Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                    ),
+                    m, n, k,
+                    A, lda, tau,
+                    work, lwork, info
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -581,9 +680,11 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
         end
 
         # multiply with Q factor of classic QR / LQ / QL / RQ
-        function unmqr!(side::AbstractChar, trans::AbstractChar,
-                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
-                        C::AbstractVecOrMat{$elty})
+        function unmqr!(
+                side::AbstractChar, trans::AbstractChar,
+                A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
+                C::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(A, tau, C)
             chkstride1(A, C, tau)
             chktrans(trans)
@@ -606,15 +707,19 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($unmqr), libblastrampoline), Cvoid,
-                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                       Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
-                      side, trans, mC, nC, k,
-                      A, lda, tau,
-                      C, ldc,
-                      work, lwork, info, 1, 1)
+                ccall(
+                    (@blasfunc($unmqr), libblastrampoline), Cvoid,
+                    (
+                        Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                        Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong,
+                    ),
+                    side, trans, mC, nC, k,
+                    A, lda, tau,
+                    C, ldc,
+                    work, lwork, info, 1, 1
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -623,9 +728,11 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return C
         end
-        function unmlq!(side::AbstractChar, trans::AbstractChar,
-                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
-                        C::AbstractVecOrMat{$elty})
+        function unmlq!(
+                side::AbstractChar, trans::AbstractChar,
+                A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
+                C::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(A, tau, C)
             chkstride1(A, C, tau)
             chktrans(trans)
@@ -648,15 +755,19 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($unmlq), libblastrampoline), Cvoid,
-                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                       Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
-                      side, trans, mC, nC, k,
-                      A, lda, tau,
-                      C, ldc,
-                      work, lwork, info, 1, 1)
+                ccall(
+                    (@blasfunc($unmlq), libblastrampoline), Cvoid,
+                    (
+                        Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                        Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong,
+                    ),
+                    side, trans, mC, nC, k,
+                    A, lda, tau,
+                    C, ldc,
+                    work, lwork, info, 1, 1
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -665,9 +776,11 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return C
         end
-        function unmql!(side::AbstractChar, trans::AbstractChar,
-                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
-                        C::AbstractVecOrMat{$elty})
+        function unmql!(
+                side::AbstractChar, trans::AbstractChar,
+                A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
+                C::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(A, tau, C)
             chkstride1(A, C, tau)
             chktrans(trans)
@@ -690,15 +803,19 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($unmql), libblastrampoline), Cvoid,
-                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                       Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
-                      side, trans, mC, nC, k,
-                      A, lda, tau,
-                      C, ldc,
-                      work, lwork, info, 1, 1)
+                ccall(
+                    (@blasfunc($unmql), libblastrampoline), Cvoid,
+                    (
+                        Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                        Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong,
+                    ),
+                    side, trans, mC, nC, k,
+                    A, lda, tau,
+                    C, ldc,
+                    work, lwork, info, 1, 1
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -707,9 +824,11 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return C
         end
-        function unmrq!(side::AbstractChar, trans::AbstractChar,
-                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
-                        C::AbstractVecOrMat{$elty})
+        function unmrq!(
+                side::AbstractChar, trans::AbstractChar,
+                A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
+                C::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(A, tau, C)
             chkstride1(A, C, tau)
             chktrans(trans)
@@ -732,15 +851,19 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($unmrq), libblastrampoline), Cvoid,
-                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                       Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
-                      side, trans, mC, nC, k,
-                      A, lda, tau,
-                      C, ldc,
-                      work, lwork, info, 1, 1)
+                ccall(
+                    (@blasfunc($unmrq), libblastrampoline), Cvoid,
+                    (
+                        Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                        Ptr{$elty}, Ref{BlasInt},
+                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong,
+                    ),
+                    side, trans, mC, nC, k,
+                    A, lda, tau,
+                    C, ldc,
+                    work, lwork, info, 1, 1
+                )
                 chklapackerror(info[])
                 if i == 1
                     lwork = BlasInt(real(work[1]))
@@ -751,9 +874,11 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
         end
 
         # Multiply with blocked Q factor from QR / LQ
-        function gemqrt!(side::AbstractChar, trans::AbstractChar,
-                         V::AbstractMatrix{$elty}, T::AbstractMatrix{$elty},
-                         C::AbstractVecOrMat{$elty})
+        function gemqrt!(
+                side::AbstractChar, trans::AbstractChar,
+                V::AbstractMatrix{$elty}, T::AbstractMatrix{$elty},
+                C::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(V, T, C)
             chkstride1(V, T, C)
             chktrans(trans)
@@ -778,23 +903,29 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             ldc = max(1, stride(C, 2))
             work = Vector{$elty}(undef, nb * (side == 'L' ? nC : mC))
             info = Ref{BlasInt}()
-            ccall((@blasfunc($gemqrt), libblastrampoline), Cvoid,
-                  (Ref{UInt8}, Ref{UInt8},
-                   Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ptr{BlasInt}, Clong, Clong),
-                  side, trans,
-                  mC, nC, k, nb,
-                  V, ldv, T, ldt,
-                  C, ldc,
-                  work, info, 1, 1)
+            ccall(
+                (@blasfunc($gemqrt), libblastrampoline), Cvoid,
+                (
+                    Ref{UInt8}, Ref{UInt8},
+                    Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                    Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    Ptr{$elty}, Ref{BlasInt},
+                    Ptr{$elty}, Ptr{BlasInt}, Clong, Clong,
+                ),
+                side, trans,
+                mC, nC, k, nb,
+                V, ldv, T, ldt,
+                C, ldc,
+                work, info, 1, 1
+            )
             chklapackerror(info[])
             return C
         end
-        function gemlqt!(side::AbstractChar, trans::AbstractChar,
-                         V::AbstractMatrix{$elty}, T::AbstractMatrix{$elty},
-                         C::AbstractVecOrMat{$elty})
+        function gemlqt!(
+                side::AbstractChar, trans::AbstractChar,
+                V::AbstractMatrix{$elty}, T::AbstractMatrix{$elty},
+                C::AbstractVecOrMat{$elty}
+            )
             require_one_based_indexing(V, T, C)
             chkstride1(V, T, C)
             chktrans(trans)
@@ -819,17 +950,21 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             ldc = max(1, stride(C, 2))
             work = Vector{$elty}(undef, mb * (side == 'L' ? nC : mC))
             info = Ref{BlasInt}()
-            ccall((@blasfunc($gemlqt), libblastrampoline), Cvoid,
-                  (Ref{UInt8}, Ref{UInt8},
-                   Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ptr{BlasInt}, Clong, Clong),
-                  side, trans,
-                  mC, nC, k, mb,
-                  V, ldv, T, ldt,
-                  C, ldc,
-                  work, info, 1, 1)
+            ccall(
+                (@blasfunc($gemlqt), libblastrampoline), Cvoid,
+                (
+                    Ref{UInt8}, Ref{UInt8},
+                    Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                    Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    Ptr{$elty}, Ref{BlasInt},
+                    Ptr{$elty}, Ptr{BlasInt}, Clong, Clong,
+                ),
+                side, trans,
+                mC, nC, k, mb,
+                V, ldv, T, ldt,
+                C, ldc,
+                work, info, 1, 1
+            )
             chklapackerror(info[])
             return C
         end
@@ -838,15 +973,19 @@ end
 
 # Symmetric / Hermitian eigenvalue decomposition
 for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
-    ((:dsyev_, :dsyevx_, :dsyevr_, :dsyevd_, :dsygvd_, :Float64, :Float64),
-     (:ssyev_, :ssyevx_, :ssyevr_, :ssyevd_, :ssygvd_, :Float32, :Float32),
-     (:zheev_, :zheevx_, :zheevr_, :zheevd_, :zhegvd_, :ComplexF64, :Float64),
-     (:cheev_, :cheevx_, :cheevr_, :cheevd_, :chegvd_, :ComplexF32, :Float32))
+    (
+        (:dsyev_, :dsyevx_, :dsyevr_, :dsyevd_, :dsygvd_, :Float64, :Float64),
+        (:ssyev_, :ssyevx_, :ssyevr_, :ssyevd_, :ssygvd_, :Float32, :Float32),
+        (:zheev_, :zheevx_, :zheevr_, :zheevd_, :zhegvd_, :ComplexF64, :Float64),
+        (:cheev_, :cheevx_, :cheevr_, :cheevd_, :chegvd_, :ComplexF32, :Float32),
+    )
     @eval begin
-        function heev!(A::AbstractMatrix{$elty},
-                       W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
-                       V::AbstractMatrix{$elty}=A;
-                       uplo::AbstractChar='U') # shouldn't matter but 'U' seems slightly faster than 'L'
+        function heev!(
+                A::AbstractMatrix{$elty},
+                W::AbstractVector{$relty} = similar(A, $relty, size(A, 1)),
+                V::AbstractMatrix{$elty} = A;
+                uplo::AbstractChar = 'U'
+            ) # shouldn't matter but 'U' seems slightly faster than 'L'
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
@@ -871,13 +1010,17 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             info = Ref{BlasInt}()
             if $elty <: Real
                 for i in 1:2  # first call returns lwork as work[1]
-                    ccall((@blasfunc($heev), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong),
-                          jobz, uplo, n, A, lda,
-                          W, work, lwork,
-                          info, 1, 1)
+                    ccall(
+                        (@blasfunc($heev), libblastrampoline), Cvoid,
+                        (
+                            Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{BlasInt}, Clong, Clong,
+                        ),
+                        jobz, uplo, n, A, lda,
+                        W, work, lwork,
+                        info, 1, 1
+                    )
                     chklapackerror(info[])
                     if i == 1
                         lwork = BlasInt(real(work[1]))
@@ -887,13 +1030,17 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             else
                 rwork = Vector{$relty}(undef, max(1, 3n - 2))
                 for i in 1:2  # first call returns lwork as work[1]
-                    ccall((@blasfunc($heev), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$relty},
-                           Ptr{BlasInt}, Clong, Clong),
-                          jobz, uplo, n, A, lda,
-                          W, work, lwork, rwork,
-                          info, 1, 1)
+                    ccall(
+                        (@blasfunc($heev), libblastrampoline), Cvoid,
+                        (
+                            Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$relty},
+                            Ptr{BlasInt}, Clong, Clong,
+                        ),
+                        jobz, uplo, n, A, lda,
+                        W, work, lwork, rwork,
+                        info, 1, 1
+                    )
                     chklapackerror(info[])
                     if i == 1
                         lwork = BlasInt(real(work[1]))
@@ -906,11 +1053,13 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             end
             return W, V
         end
-        function heevx!(A::AbstractMatrix{$elty},
-                        W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
-                        V::AbstractMatrix{$elty}=similar(A);
-                        uplo::AbstractChar='U', # shouldn't matter but 'U' seems slightly faster than 'L'
-                        kwargs...)
+        function heevx!(
+                A::AbstractMatrix{$elty},
+                W::AbstractVector{$relty} = similar(A, $relty, size(A, 1)),
+                V::AbstractMatrix{$elty} = similar(A);
+                uplo::AbstractChar = 'U', # shouldn't matter but 'U' seems slightly faster than 'L'
+                kwargs...
+            )
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
@@ -961,20 +1110,24 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             info = Ref{BlasInt}()
             if $elty <: Real
                 for i in 1:2  # first call returns lwork as work[1] and liwork as iwork[1]
-                    ccall((@blasfunc($heevx), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
-                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
-                           Ptr{BlasInt},
-                           Ptr{$elty}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Ptr{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong, Clong),
-                          jobz, range, uplo,
-                          n, A, lda,
-                          vl, vu, il, iu, abstol, m,
-                          W, V, ldv,
-                          work, lwork, iwork, ifail,
-                          info, 1, 1, 1)
+                    ccall(
+                        (@blasfunc($heevx), libblastrampoline), Cvoid,
+                        (
+                            Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                            Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                            Ptr{BlasInt},
+                            Ptr{$elty}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Ptr{BlasInt},
+                            Ptr{BlasInt}, Clong, Clong, Clong,
+                        ),
+                        jobz, range, uplo,
+                        n, A, lda,
+                        vl, vu, il, iu, abstol, m,
+                        W, V, ldv,
+                        work, lwork, iwork, ifail,
+                        info, 1, 1, 1
+                    )
                     chklapackerror(info[])
                     if i == 1
                         lwork = BlasInt(real(work[1]))
@@ -984,21 +1137,25 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             else
                 rwork = Vector{$relty}(undef, 7 * n)
                 for i in 1:2  # first call returns lwork as work[1], lrwork as rwork[1] and liwork as iwork[1]
-                    ccall((@blasfunc($heevx), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
-                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
-                           Ptr{BlasInt},
-                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ptr{BlasInt},
-                           Ptr{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong, Clong),
-                          jobz, range, uplo,
-                          n, A, lda,
-                          vl, vu, il, iu, abstol, m,
-                          W, V, ldv,
-                          work, lwork, rwork, iwork, ifail,
-                          info, 1, 1, 1)
+                    ccall(
+                        (@blasfunc($heevx), libblastrampoline), Cvoid,
+                        (
+                            Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                            Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                            Ptr{BlasInt},
+                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ptr{BlasInt},
+                            Ptr{BlasInt},
+                            Ptr{BlasInt}, Clong, Clong, Clong,
+                        ),
+                        jobz, range, uplo,
+                        n, A, lda,
+                        vl, vu, il, iu, abstol, m,
+                        W, V, ldv,
+                        work, lwork, rwork, iwork, ifail,
+                        info, 1, 1, 1
+                    )
                     chklapackerror(info[])
                     if i == 1
                         lwork = BlasInt(real(work[1]))
@@ -1008,11 +1165,13 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             end
             return W, V, m[]
         end
-        function heevr!(A::AbstractMatrix{$elty},
-                        W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
-                        V::AbstractMatrix{$elty}=similar(A);
-                        uplo::AbstractChar='U', # shouldn't matter but 'U' seems slightly faster than 'L'
-                        kwargs...)
+        function heevr!(
+                A::AbstractMatrix{$elty},
+                W::AbstractVector{$relty} = similar(A, $relty, size(A, 1)),
+                V::AbstractMatrix{$elty} = similar(A);
+                uplo::AbstractChar = 'U', # shouldn't matter but 'U' seems slightly faster than 'L'
+                kwargs...
+            )
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
@@ -1064,20 +1223,24 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             info = Ref{BlasInt}()
             if $elty <: Real
                 for i in 1:2  # first call returns lwork as work[1] and liwork as iwork[1]
-                    ccall((@blasfunc($heevr), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
-                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
-                           Ptr{BlasInt},
-                           Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
-                           Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Ref{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong, Clong),
-                          jobz, range, uplo,
-                          n, A, lda,
-                          vl, vu, il, iu, abstol, m,
-                          W, V, ldv, isuppz,
-                          work, lwork, iwork, liwork,
-                          info, 1, 1, 1)
+                    ccall(
+                        (@blasfunc($heevr), libblastrampoline), Cvoid,
+                        (
+                            Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                            Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                            Ptr{BlasInt},
+                            Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                            Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Ref{BlasInt},
+                            Ptr{BlasInt}, Clong, Clong, Clong,
+                        ),
+                        jobz, range, uplo,
+                        n, A, lda,
+                        vl, vu, il, iu, abstol, m,
+                        W, V, ldv, isuppz,
+                        work, lwork, iwork, liwork,
+                        info, 1, 1, 1
+                    )
                     chklapackerror(info[])
                     if i == 1
                         lwork = BlasInt(real(work[1]))
@@ -1090,21 +1253,25 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
                 rwork = Vector{$relty}(undef, 1)
                 lrwork = BlasInt(-1)
                 for i in 1:2  # first call returns lwork as work[1], lrwork as rwork[1] and liwork as iwork[1]
-                    ccall((@blasfunc($heevr), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
-                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
-                           Ptr{BlasInt},
-                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
-                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ref{BlasInt},
-                           Ptr{BlasInt}, Ref{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong, Clong),
-                          jobz, range, uplo,
-                          n, A, lda,
-                          vl, vu, il, iu, abstol, m,
-                          W, V, ldv, isuppz,
-                          work, lwork, rwork, lrwork, iwork, liwork,
-                          info, 1, 1, 1)
+                    ccall(
+                        (@blasfunc($heevr), libblastrampoline), Cvoid,
+                        (
+                            Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                            Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                            Ptr{BlasInt},
+                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                            Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ref{BlasInt},
+                            Ptr{BlasInt}, Ref{BlasInt},
+                            Ptr{BlasInt}, Clong, Clong, Clong,
+                        ),
+                        jobz, range, uplo,
+                        n, A, lda,
+                        vl, vu, il, iu, abstol, m,
+                        W, V, ldv, isuppz,
+                        work, lwork, rwork, lrwork, iwork, liwork,
+                        info, 1, 1, 1
+                    )
                     chklapackerror(info[])
                     if i == 1
                         lwork = BlasInt(real(work[1]))
@@ -1118,10 +1285,12 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             end
             return W, V, m[]
         end
-        function heevd!(A::AbstractMatrix{$elty},
-                        W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
-                        V::AbstractMatrix{$elty}=A;
-                        uplo::AbstractChar='U') # shouldn't matter but 'U' seems slightly faster than 'L'
+        function heevd!(
+                A::AbstractMatrix{$elty},
+                W::AbstractVector{$relty} = similar(A, $relty, size(A, 1)),
+                V::AbstractMatrix{$elty} = A;
+                uplo::AbstractChar = 'U'
+            ) # shouldn't matter but 'U' seems slightly faster than 'L'
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
@@ -1149,14 +1318,18 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             info = Ref{BlasInt}()
             if $elty <: Real
                 for i in 1:2  # first call returns lwork as work[1] and liwork as iwork[1]
-                    ccall((@blasfunc($heevd), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
-                           Ref{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong),
-                          jobz, uplo, n, A, lda,
-                          W, work, lwork, iwork, liwork,
-                          info, 1, 1)
+                    ccall(
+                        (@blasfunc($heevd), libblastrampoline), Cvoid,
+                        (
+                            Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                            Ref{BlasInt},
+                            Ptr{BlasInt}, Clong, Clong,
+                        ),
+                        jobz, uplo, n, A, lda,
+                        W, work, lwork, iwork, liwork,
+                        info, 1, 1
+                    )
                     chklapackerror(info[])
                     if i == 1
                         lwork = BlasInt(real(work[1]))
@@ -1169,16 +1342,20 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
                 rwork = Vector{$relty}(undef, 1)
                 lrwork = BlasInt(-1)
                 for i in 1:2  # first call returns lwork as work[1], lrwork as rwork[1] and liwork as iwork[1]
-                    ccall((@blasfunc($heevd), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$relty},
-                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ref{BlasInt},
-                           Ptr{BlasInt}, Ref{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong),
-                          jobz, uplo, n, A, lda,
-                          W,
-                          work, lwork, rwork, lrwork, iwork, liwork,
-                          info, 1, 1)
+                    ccall(
+                        (@blasfunc($heevd), libblastrampoline), Cvoid,
+                        (
+                            Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                            Ptr{$relty},
+                            Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ref{BlasInt},
+                            Ptr{BlasInt}, Ref{BlasInt},
+                            Ptr{BlasInt}, Clong, Clong,
+                        ),
+                        jobz, uplo, n, A, lda,
+                        W,
+                        work, lwork, rwork, lrwork, iwork, liwork,
+                        info, 1, 1
+                    )
                     chklapackerror(info[])
                     if i == 1
                         lwork = BlasInt(real(work[1]))
@@ -1251,14 +1428,18 @@ end
 
 # General eigenvalue decomposition
 for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
-    ((:sgees_, :sgeesx_, :sgeev_, :sgeevx_, :sggev_, :Float32, :ComplexF32, :Float32),
-     (:dgees_, :dgeesx_, :dgeev_, :dgeevx_, :dggev_, :Float64, :ComplexF64, :Float64),
-     (:cgees_, :cgeesx_, :cgeev_, :cgeevx_, :cggev_, :ComplexF32, :ComplexF32, :Float32),
-     (:zgees_, :zgeesx_, :zgeev_, :zgeevx_, :zggev_, :ComplexF64, :ComplexF64, :Float64))
+    (
+        (:sgees_, :sgeesx_, :sgeev_, :sgeevx_, :sggev_, :Float32, :ComplexF32, :Float32),
+        (:dgees_, :dgeesx_, :dgeev_, :dgeevx_, :dggev_, :Float64, :ComplexF64, :Float64),
+        (:cgees_, :cgeesx_, :cgeev_, :cgeevx_, :cggev_, :ComplexF32, :ComplexF32, :Float32),
+        (:zgees_, :zgeesx_, :zgeev_, :zgeevx_, :zggev_, :ComplexF64, :ComplexF64, :Float64),
+    )
     @eval begin
-        function gees!(A::AbstractMatrix{$elty},
-                       V::AbstractMatrix{$elty}=similar(A),
-                       vals::AbstractVector{$celty}=similar(A, $celty, size(A, 1)))
+        function gees!(
+                A::AbstractMatrix{$elty},
+                V::AbstractMatrix{$elty} = similar(A),
+                vals::AbstractVector{$celty} = similar(A, $celty, size(A, 1))
+            )
             require_one_based_indexing(A, V)
             chkstride1(A, V)
             n = checksquare(A)
@@ -1333,9 +1514,11 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
             end
             return A, V, vals
         end
-        function geesx!(A::AbstractMatrix{$elty},
-                        V::AbstractMatrix{$elty}=similar(A),
-                        vals::AbstractVector{$celty}=similar(A, $celty, size(A, 1)))
+        function geesx!(
+                A::AbstractMatrix{$elty},
+                V::AbstractMatrix{$elty} = similar(A),
+                vals::AbstractVector{$celty} = similar(A, $celty, size(A, 1))
+            )
             require_one_based_indexing(A, V)
             chkstride1(A, V)
             n = checksquare(A)
@@ -1418,9 +1601,11 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
             end
             return A, V, vals
         end
-        function geev!(A::AbstractMatrix{$elty},
-                       W::AbstractVector{$celty}=similar(A, $celty, size(A, 1)),
-                       V::AbstractMatrix{$celty}=similar(A, $celty))
+        function geev!(
+                A::AbstractMatrix{$elty},
+                W::AbstractVector{$celty} = similar(A, $celty, size(A, 1)),
+                V::AbstractMatrix{$celty} = similar(A, $celty)
+            )
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
@@ -1502,10 +1687,12 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
             end
             return W, V
         end
-        function geevx!(A::AbstractMatrix{$elty},
-                        W::AbstractVector{$celty}=similar(A, $celty, size(A, 1)),
-                        V::AbstractMatrix{$celty}=similar(A, $celty);
-                        scale::Bool=true, permute::Bool=true)
+        function geevx!(
+                A::AbstractMatrix{$elty},
+                W::AbstractVector{$celty} = similar(A, $celty, size(A, 1)),
+                V::AbstractMatrix{$celty} = similar(A, $celty);
+                scale::Bool = true, permute::Bool = true
+            )
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
@@ -1614,10 +1801,12 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
             end
             return W, V
         end
-        function ggev!(A::AbstractMatrix{$elty}, B::AbstractMatrix{$elty},
-                       W::AbstractVector{$celty}=similar(A, $celty, size(A, 1)),
-                       V::AbstractMatrix{$celty}=similar(A, $celty),
-                       Wbeta::AbstractVector{$elty}=similar(A, $elty, size(A, 1)))
+        function ggev!(
+                A::AbstractMatrix{$elty}, B::AbstractMatrix{$elty},
+                W::AbstractVector{$celty} = similar(A, $celty, size(A, 1)),
+                V::AbstractMatrix{$celty} = similar(A, $celty),
+                Wbeta::AbstractVector{$elty} = similar(A, $elty, size(A, 1))
+            )
             require_one_based_indexing(A, B, V, W)
             chkstride1(A, B, V, W)
             n = checksquare(A)
@@ -1669,9 +1858,9 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
                     end
                 end
             else
-                VR    = V
-                ldvr  = stride(VR, 2)
-                rwork = Vector{$relty}(undef, 8*n)
+                VR = V
+                ldvr = stride(VR, 2)
+                rwork = Vector{$relty}(undef, 8 * n)
                 for i in 1:2
                     #! format: off
                     ccall((@blasfunc($ggev), libblastrampoline), Cvoid,
@@ -1715,7 +1904,7 @@ function _reorder_realeigendecomposition!(W, WR, WI, work, VR, jobvr)
     for i in n:-1:1
         W[i] = WR[i] + im * work[i]
     end
-    if jobvr == 'V' # also reorganise vectors
+    return if jobvr == 'V' # also reorganise vectors
         i = 1
         while i <= n
             if iszero(imag(W[i])) # real eigenvalue => real eigenvector
@@ -1746,7 +1935,7 @@ function _reorder_realeigendecomposition!(W, WR, WI, Wbeta, work, VR, jobvr)
     for i in n:-1:1
         W[i] = (WR[i] + im * work[i]) / Wbeta[i]
     end
-    if jobvr == 'V' # also reorganise vectors
+    return if jobvr == 'V' # also reorganise vectors
         i = 1
         while i <= n
             if iszero(imag(W[i])) # real eigenvalue => real eigenvector
@@ -1771,17 +1960,21 @@ end
 
 # SVD
 for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
-    ((:dgesvd_, :dgesdd_, :dgesvdx_, :dgejsv_, :dgesvj_, :Float64, :Float64),
-     (:sgesvd_, :sgesdd_, :sgesvdx_, :sgejsv_, :sgesvj_, :Float32, :Float32),
-     (:zgesvd_, :zgesdd_, :zgesvdx_, :zgejsv_, :zgesvj_, :ComplexF64, :Float64),
-     (:cgesvd_, :cgesdd_, :cgesvdx_, :cgejsv_, :cgesvj_, :ComplexF32, :Float32))
+    (
+        (:dgesvd_, :dgesdd_, :dgesvdx_, :dgejsv_, :dgesvj_, :Float64, :Float64),
+        (:sgesvd_, :sgesdd_, :sgesvdx_, :sgejsv_, :sgesvj_, :Float32, :Float32),
+        (:zgesvd_, :zgesdd_, :zgesvdx_, :zgejsv_, :zgesvj_, :ComplexF64, :Float64),
+        (:cgesvd_, :cgesdd_, :cgesvdx_, :cgejsv_, :cgesvj_, :ComplexF32, :Float32),
+    )
     @eval begin
         #! format: off
-        function gesvd!(A::AbstractMatrix{$elty},
-                        S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
-                        U::AbstractMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-                        Vᴴ::AbstractMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2)))
-        #! format: on
+        function gesvd!(
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::AbstractMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::AbstractMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+            )
+            #! format: on
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -1866,11 +2059,13 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             return (S, U, Vᴴ)
         end
         #! format: off
-        function gesdd!(A::AbstractMatrix{$elty},
-                        S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
-                        U::AbstractMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-                        Vᴴ::AbstractMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2)))
-        #! format: on
+        function gesdd!(
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::AbstractMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::AbstractMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+            )
+            #! format: on
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -1908,7 +2103,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             cmplx = eltype(A) <: Complex
             if cmplx
                 lrwork = job == 'N' ? 7 * minmn :
-                         minmn * max(5 * minmn + 7, 2 * max(m, n) + 2 * minmn + 1)
+                    minmn * max(5 * minmn + 7, 2 * max(m, n) + 2 * minmn + 1)
                 rwork = Vector{$relty}(undef, lrwork)
             end
             iwork = Vector{BlasInt}(undef, 8 * minmn)
@@ -1951,12 +2146,14 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             return (S, U, Vᴴ)
         end
         #! format: off
-        function gesvdx!(A::AbstractMatrix{$elty},
-                         S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
-                         U::AbstractMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-                         Vᴴ::AbstractMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
-                         kwargs...)
-        #! format: on
+        function gesvdx!(
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::AbstractMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::AbstractMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                kwargs...
+            )
+            #! format: on
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -2050,12 +2247,18 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             end
             return (S, U, Vᴴ)
         end
-        function gesvj!(A::AbstractMatrix{$elty},
-                        S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
-                        U::AbstractMatrix{$elty}=similar(A, $elty, size(A, 1),
-                                                         min(size(A)...)),
-                        Vᴴ::AbstractMatrix{$elty}=similar(A, $elty, min(size(A)...),
-                                                          size(A, 2)))
+        function gesvj!(
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::AbstractMatrix{$elty} = similar(
+                    A, $elty, size(A, 1),
+                    min(size(A)...)
+                ),
+                Vᴴ::AbstractMatrix{$elty} = similar(
+                    A, $elty, min(size(A)...),
+                    size(A, 2)
+                )
+            )
             #! format: on
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)

@@ -11,11 +11,13 @@ using MatrixAlgebraKit: PolarViaSVD
     @testset "size ($m, $n)" for n in (37, m)
         k = min(m, n)
         if LinearAlgebra.LAPACK.version() < v"3.12.0"
-            algs = PolarViaSVD.((LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
-                                 LAPACK_Bisection()))
+            algs = PolarViaSVD.(
+                (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+            )
         else
-            algs = PolarViaSVD.((LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
-                                 LAPACK_Bisection(), LAPACK_Jacobi()))
+            algs = PolarViaSVD.(
+                (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(), LAPACK_Jacobi())
+            )
         end
         @testset "algorithm $alg" for alg in algs
             A = randn(rng, T, m, n)
@@ -43,8 +45,9 @@ end
     n = 54
     @testset "size ($m, $n)" for m in (37, n)
         k = min(m, n)
-        algs = PolarViaSVD.((LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
-                             LAPACK_Bisection()))
+        algs = PolarViaSVD.(
+            (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+        )
         @testset "algorithm $alg" for alg in algs
             A = randn(rng, T, m, n)
 
@@ -52,7 +55,7 @@ end
             @test Wᴴ isa Matrix{T} && size(Wᴴ) == (m, n)
             @test P isa Matrix{T} && size(P) == (m, m)
             @test P * Wᴴ ≈ A
-            @test isisometry(Wᴴ; side=:right)
+            @test isisometry(Wᴴ; side = :right)
             @test isposdef(P)
 
             Ac = similar(A)
@@ -60,7 +63,7 @@ end
             @test P2 === P
             @test Wᴴ2 === Wᴴ
             @test P * Wᴴ ≈ A
-            @test isisometry(Wᴴ; side=:right)
+            @test isisometry(Wᴴ; side = :right)
             @test isposdef(P)
         end
     end

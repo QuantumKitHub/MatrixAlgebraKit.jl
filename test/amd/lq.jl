@@ -37,31 +37,31 @@ include(joinpath("..", "utilities.jl"))
         @test Q == Q2
 
         # positive
-        lq_compact!(copy!(Ac, A), (L, Q); positive=true)
+        lq_compact!(copy!(Ac, A), (L, Q); positive = true)
         @test L * Q ≈ A
         @test isapproxone(Q * Q')
         @test all(>=(zero(real(T))), real(diagview(L)))
-        lq_compact!(copy!(Ac, A), (noL, Q2); positive=true)
+        lq_compact!(copy!(Ac, A), (noL, Q2); positive = true)
         @test Q == Q2
 
         # explicit blocksize
-        lq_compact!(copy!(Ac, A), (L, Q); blocksize=1)
+        lq_compact!(copy!(Ac, A), (L, Q); blocksize = 1)
         @test L * Q ≈ A
         @test isapproxone(Q * Q')
-        lq_compact!(copy!(Ac, A), (noL, Q2); blocksize=1)
+        lq_compact!(copy!(Ac, A), (noL, Q2); blocksize = 1)
         @test Q == Q2
-        lq_null!(copy!(Ac, A), Nᴴ; blocksize=1)
+        lq_null!(copy!(Ac, A), Nᴴ; blocksize = 1)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
         @test isapproxone(Nᴴ * Nᴴ')
         if m <= n
-            lq_compact!(copy!(Q2, A), (noL, Q2); blocksize=1) # in-place Q
+            lq_compact!(copy!(Q2, A), (noL, Q2); blocksize = 1) # in-place Q
             @test Q ≈ Q2
             # these do not work because of the in-place Q
-            @test_throws ArgumentError lq_compact!(copy!(Q2, A), (L, Q2); blocksize=1)
-            @test_throws ArgumentError lq_compact!(copy!(Q2, A), (noL, Q2); positive=true)
+            @test_throws ArgumentError lq_compact!(copy!(Q2, A), (L, Q2); blocksize = 1)
+            @test_throws ArgumentError lq_compact!(copy!(Q2, A), (noL, Q2); positive = true)
         end
         # no blocked CUDA
-        @test_throws ArgumentError lq_compact!(copy!(Q2, A), (L, Q2); blocksize=8)
+        @test_throws ArgumentError lq_compact!(copy!(Q2, A), (L, Q2); blocksize = 8)
     end
 end
 
@@ -91,27 +91,27 @@ end
         @test Q == Q2
 
         # positive
-        lq_full!(copy!(Ac, A), (L, Q); positive=true)
+        lq_full!(copy!(Ac, A), (L, Q); positive = true)
         @test L * Q ≈ A
         @test isapproxone(Q * Q')
         @test all(>=(zero(real(T))), real(diagview(L)))
-        lq_full!(copy!(Ac, A), (noL, Q2); positive=true)
+        lq_full!(copy!(Ac, A), (noL, Q2); positive = true)
         @test Q == Q2
 
         # explicit blocksize
-        lq_full!(copy!(Ac, A), (L, Q); blocksize=1)
+        lq_full!(copy!(Ac, A), (L, Q); blocksize = 1)
         @test L * Q ≈ A
         @test isapproxone(Q * Q')
-        lq_full!(copy!(Ac, A), (noL, Q2); blocksize=1)
+        lq_full!(copy!(Ac, A), (noL, Q2); blocksize = 1)
         @test Q == Q2
         if n == m
-            lq_full!(copy!(Q2, A), (noL, Q2); blocksize=1) # in-place Q
+            lq_full!(copy!(Q2, A), (noL, Q2); blocksize = 1) # in-place Q
             @test Q ≈ Q2
             # these do not work because of the in-place Q
-            @test_throws ArgumentError lq_full!(copy!(Q2, A), (L, Q2); blocksize=1)
-            @test_throws ArgumentError lq_full!(copy!(Q2, A), (noL, Q2); positive=true)
+            @test_throws ArgumentError lq_full!(copy!(Q2, A), (L, Q2); blocksize = 1)
+            @test_throws ArgumentError lq_full!(copy!(Q2, A), (noL, Q2); positive = true)
         end
         # no blocked CUDA
-        @test_throws ArgumentError lq_full!(copy!(Ac, A), (L, Q); blocksize=8)
+        @test_throws ArgumentError lq_full!(copy!(Ac, A), (L, Q); blocksize = 8)
     end
 end

@@ -65,8 +65,7 @@ function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::AbstractAl
     D = similar(A, real(eltype(A)), n)
     return D
 end
-function initialize_output(::typeof(eigh_trunc!), A::AbstractMatrix,
-                           alg::TruncatedAlgorithm)
+function initialize_output(::typeof(eigh_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
     return initialize_output(eigh_full!, A, alg.alg)
 end
 
@@ -136,16 +135,20 @@ end
 
 # GPU logic
 # ---------
-_gpu_heevj!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heevj!, (A, Dd, V)))
-_gpu_heevd!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heevd!, (A, Dd, V)))
-_gpu_heev!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heev!, (A, Dd, V)))
-_gpu_heevx!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) = throw(MethodError(_gpu_heevx!, (A, Dd, V)))
+_gpu_heevj!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) =
+    throw(MethodError(_gpu_heevj!, (A, Dd, V)))
+_gpu_heevd!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) =
+    throw(MethodError(_gpu_heevd!, (A, Dd, V)))
+_gpu_heev!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) =
+    throw(MethodError(_gpu_heev!, (A, Dd, V)))
+_gpu_heevx!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) =
+    throw(MethodError(_gpu_heevx!, (A, Dd, V)))
 
 function eigh_full!(A::AbstractMatrix, DV, alg::GPU_EighAlgorithm)
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
     Dd = D.diag
-    if alg isa GPU_Jacobi 
+    if alg isa GPU_Jacobi
         _gpu_heevj!(A, Dd, V; alg.kwargs...)
     elseif alg isa GPU_DivideAndConquer
         _gpu_heevd!(A, Dd, V; alg.kwargs...)
@@ -164,7 +167,7 @@ end
 function eigh_vals!(A::AbstractMatrix, D, alg::GPU_EighAlgorithm)
     check_input(eigh_vals!, A, D, alg)
     V = similar(A, (size(A, 1), 0))
-    if alg isa GPU_Jacobi 
+    if alg isa GPU_Jacobi
         _gpu_heevj!(A, D, V; alg.kwargs...)
     elseif alg isa GPU_DivideAndConquer
         _gpu_heevd!(A, D, V; alg.kwargs...)

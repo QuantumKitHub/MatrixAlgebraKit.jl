@@ -4,16 +4,17 @@ using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview
-using AMDGPU 
+using AMDGPU
 
 @testset "eigh_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
-    for alg in (ROCSOLVER_DivideAndConquer(),
-                ROCSOLVER_Jacobi(),
-                ROCSOLVER_Bisection(),
-                ROCSOLVER_QRIteration(),
-                )
+    for alg in (
+            ROCSOLVER_DivideAndConquer(),
+            ROCSOLVER_Jacobi(),
+            ROCSOLVER_Bisection(),
+            ROCSOLVER_QRIteration(),
+        )
         A = ROCArray(randn(rng, T, m, m))
         A = (A + A') / 2
 

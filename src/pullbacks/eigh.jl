@@ -1,7 +1,8 @@
-function eigh_full_pullback!(ΔA::AbstractMatrix, DV, ΔDV;
-                             tol::Real=default_pullback_gaugetol(DV[1]),
-                             degeneracy_atol::Real=tol,
-                             gauge_atol::Real=tol)
+function eigh_full_pullback!(
+        ΔA::AbstractMatrix, DV, ΔDV;
+        tol::Real = default_pullback_gaugetol(DV[1]),
+        degeneracy_atol::Real = tol, gauge_atol::Real = tol
+    )
 
     # Basic size checks and determination
     Dmat, V = DV

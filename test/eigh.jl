@@ -10,10 +10,12 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 @testset "eigh_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
-    for alg in (LAPACK_MultipleRelativelyRobustRepresentations(),
-                LAPACK_DivideAndConquer(),
-                LAPACK_QRIteration(),
-                LAPACK_Bisection())
+    for alg in (
+            LAPACK_MultipleRelativelyRobustRepresentations(),
+            LAPACK_DivideAndConquer(),
+            LAPACK_QRIteration(),
+            LAPACK_Bisection(),
+        )
         A = randn(rng, T, m, m)
         A = (A + A') / 2
 
@@ -34,10 +36,12 @@ end
 @testset "eigh_trunc! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
-    for alg in (LAPACK_QRIteration(),
-                LAPACK_Bisection(),
-                LAPACK_DivideAndConquer(),
-                LAPACK_MultipleRelativelyRobustRepresentations())
+    for alg in (
+            LAPACK_QRIteration(),
+            LAPACK_Bisection(),
+            LAPACK_DivideAndConquer(),
+            LAPACK_MultipleRelativelyRobustRepresentations(),
+        )
         A = randn(rng, T, m, m)
         A = A * A'
         A = (A + A') / 2
@@ -46,20 +50,20 @@ end
         r = m - 2
         s = 1 + sqrt(eps(real(T)))
 
-        D1, V1 = @constinferred eigh_trunc(A; alg, trunc=truncrank(r))
+        D1, V1 = @constinferred eigh_trunc(A; alg, trunc = truncrank(r))
         @test length(diagview(D1)) == r
         @test isisometry(V1)
         @test A * V1 ≈ V1 * D1
         @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
 
-        trunc = trunctol(; atol=s * D₀[r + 1])
+        trunc = trunctol(; atol = s * D₀[r + 1])
         D2, V2 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test isisometry(V2)
         @test A * V2 ≈ V2 * D2
 
         s = 1 - sqrt(eps(real(T)))
-        trunc = truncerror(; atol=s * norm(@view(D₀[r:end]), 1), p=1)
+        trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
         D3, V3 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D3)) == r
         @test A * V3 ≈ V3 * D3
@@ -82,9 +86,9 @@ end
     alg = TruncatedAlgorithm(LAPACK_QRIteration(), truncrank(2))
     D2, V2 = @constinferred eigh_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
-    @test_throws ArgumentError eigh_trunc(A; alg, trunc=(; maxrank=2))
+    @test_throws ArgumentError eigh_trunc(A; alg, trunc = (; maxrank = 2))
 
-    alg = TruncatedAlgorithm(LAPACK_QRIteration(), truncerror(; atol=0.2))
+    alg = TruncatedAlgorithm(LAPACK_QRIteration(), truncerror(; atol = 0.2))
     D3, V3 = @constinferred eigh_trunc(A; alg)
     @test diagview(D3) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
 end

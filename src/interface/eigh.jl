@@ -90,10 +90,10 @@ default_eigh_algorithm(A; kwargs...) = default_eigh_algorithm(typeof(A); kwargs.
 function default_eigh_algorithm(T::Type; kwargs...)
     throw(MethodError(default_eigh_algorithm, (T,)))
 end
-function default_eigh_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
+function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.BlasMat}
     return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
 end
-function default_eigh_algorithm(::Type{T}; kwargs...) where {T<:Diagonal}
+function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)
 end
 
@@ -103,7 +103,7 @@ for f in (:eigh_full!, :eigh_vals!)
     end
 end
 
-function select_algorithm(::typeof(eigh_trunc!), A, alg; trunc=nothing, kwargs...)
+function select_algorithm(::typeof(eigh_trunc!), A, alg; trunc = nothing, kwargs...)
     if alg isa TruncatedAlgorithm
         isnothing(trunc) ||
             throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))

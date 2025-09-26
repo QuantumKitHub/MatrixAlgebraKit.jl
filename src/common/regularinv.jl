@@ -3,8 +3,8 @@
 # can be more easily be extended or configured
 
 """
-    inv_regularized(a::Number, tol=defaulttol(a))
-    inv_regularized(A::Matrix, tol=defaulttol(A); isposdef = false, kwargs...)
+    inv_regularized(a::Number, tol = defaulttol(a))
+    inv_regularized(A::Matrix, tol = defaulttol(A); isposdef = false, kwargs...)
 
 Compute a smooth regularised inverse (L2 Tikhonov regularisation) of a number or square 
 matrix a.
@@ -16,9 +16,10 @@ matrix a.
     decomposition is equivalent to the (Hermitian) eigenvalue decomposition of `A` and
     the latter is used instead.
 """
-inv_regularized(a::Number, tol=defaulttol(a)) = inv(hypot(a, tol))
-function inv_regularized(A::AbstractMatrix, tol=defaulttol(A); isposdef=isposdef(A),
-                         kwargs...)
+inv_regularized(a::Number, tol = defaulttol(a)) = inv(hypot(a, tol))
+function inv_regularized(
+        A::AbstractMatrix, tol = defaulttol(A); isposdef = isposdef(A), kwargs...
+    )
     if isposdef
         D, V = eigh(A; kwargs...)
         Dinvsqrt = Diagonal(sqrt.(inv_regularized.(D.diag, tol)))
@@ -32,8 +33,10 @@ function inv_regularized(A::AbstractMatrix, tol=defaulttol(A); isposdef=isposdef
     end
 end
 
-function sylvester_regularized(A::AbstractArray, B::AbstractMatrix, tol=defaulttol(A);
-                               ishermitian=ishermitian(A) && ishermitian(B), kwargs...)
+function sylvester_regularized(
+        A::AbstractArray, B::AbstractMatrix, tol = defaulttol(A);
+        ishermitian = ishermitian(A) && ishermitian(B), kwargs...
+    )
     if ishermitian
         D, U = eigh(A; kwargs...)
         UdCU = U' * B * U
