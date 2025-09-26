@@ -72,10 +72,10 @@ default_lq_algorithm(A; kwargs...) = default_lq_algorithm(typeof(A); kwargs...)
 function default_lq_algorithm(T::Type; kwargs...)
     throw(MethodError(default_lq_algorithm, (T,)))
 end
-function default_lq_algorithm(::Type{T}; kwargs...) where {T<:YALAPACK.BlasMat}
+function default_lq_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.BlasMat}
     return LAPACK_HouseholderLQ(; kwargs...)
 end
-function default_lq_algorithm(::Type{T}; kwargs...) where {T<:Diagonal}
+function default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)
 end
 
@@ -86,7 +86,7 @@ for f in (:lq_full!, :lq_compact!, :lq_null!)
 end
 
 # Alternative algorithm (necessary for CUDA)
-struct LQViaTransposedQR{A<:AbstractAlgorithm} <: AbstractAlgorithm
+struct LQViaTransposedQR{A <: AbstractAlgorithm} <: AbstractAlgorithm
     qr_alg::A
 end
 function Base.show(io::IO, alg::LQViaTransposedQR)

@@ -40,16 +40,16 @@ end
 # Outputs
 # -------
 function initialize_output(::typeof(gen_eig_full!), A::AbstractMatrix, B::AbstractMatrix, ::LAPACK_EigAlgorithm)
-    n  = size(A, 1) # square check will happen later
+    n = size(A, 1) # square check will happen later
     Tc = complex(eltype(A))
-    W  = Diagonal(similar(A, Tc, n))
-    V  = similar(A, Tc, (n, n))
+    W = Diagonal(similar(A, Tc, n))
+    V = similar(A, Tc, (n, n))
     return (W, V)
 end
 function initialize_output(::typeof(gen_eig_vals!), A::AbstractMatrix, B::AbstractMatrix, ::LAPACK_EigAlgorithm)
-    n  = size(A, 1) # square check will happen later
+    n = size(A, 1) # square check will happen later
     Tc = complex(eltype(A))
-    D  = similar(A, Tc, n)
+    D = similar(A, Tc, n)
     return D
 end
 

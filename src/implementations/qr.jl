@@ -128,10 +128,11 @@ end
 
 # LAPACK logic
 # ------------
-function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-                     positive=false,
-                     pivoted=false,
-                     blocksize=((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A)))
+function _lapack_qr!(
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+        positive = false, pivoted = false,
+        blocksize = ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
+    )
     m, n = size(A)
     minmn = min(m, n)
     computeR = length(R) > 0
@@ -193,10 +194,10 @@ function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
     return Q, R
 end
 
-function _lapack_qr_null!(A::AbstractMatrix, N::AbstractMatrix;
-                          positive=false,
-                          pivoted=false,
-                          blocksize=YALAPACK.default_qr_blocksize(A))
+function _lapack_qr_null!(
+        A::AbstractMatrix, N::AbstractMatrix;
+        positive = false, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
+    )
     m, n = size(A)
     minmn = min(m, n)
     fill!(N, zero(eltype(N)))
@@ -214,8 +215,9 @@ end
 
 # Diagonal logic
 # --------------
-function _diagonal_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-                       positive::Bool=false)
+function _diagonal_qr!(
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive::Bool = false
+    )
     # note: Ad and Qd might share memory here so order of operations is important
     Ad = diagview(A)
     Qd = diagview(Q)
@@ -230,31 +232,31 @@ function _diagonal_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
     return Q, R
 end
 
-_diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool=false) = N
+_diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool = false) = N
 
 ### GPU logic
 # placed here to avoid code duplication since much of the logic is replicable across
 # CUDA and AMDGPU
 ###
-function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR,
-                                   alg::Union{CUSOLVER_HouseholderQR,
-                                              ROCSOLVER_HouseholderQR})
+function MatrixAlgebraKit.qr_full!(
+        A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
+    )
     check_input(qr_full!, A, QR, alg)
     Q, R = QR
     _gpu_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
-function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR,
-                                      alg::Union{CUSOLVER_HouseholderQR,
-                                                 ROCSOLVER_HouseholderQR})
+function MatrixAlgebraKit.qr_compact!(
+        A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
+    )
     check_input(qr_compact!, A, QR, alg)
     Q, R = QR
     _gpu_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
-function MatrixAlgebraKit.qr_null!(A::AbstractMatrix, N,
-                                   alg::Union{CUSOLVER_HouseholderQR,
-                                              ROCSOLVER_HouseholderQR})
+function MatrixAlgebraKit.qr_null!(
+        A::AbstractMatrix, N, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
+    )
     check_input(qr_null!, A, N, alg)
     _gpu_qr_null!(A, N; alg.kwargs...)
     return N
@@ -262,13 +264,15 @@ end
 
 _gpu_geqrf!(A::AbstractMatrix) = throw(MethodError(_gpu_geqrf!, (A,)))
 _gpu_ungqr!(A::AbstractMatrix, τ::AbstractVector) = throw(MethodError(_gpu_ungqr!, (A, τ)))
-function _gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix,
-                     τ::AbstractVector, C)
+function _gpu_unmqr!(
+        side::AbstractChar, trans::AbstractChar, A::AbstractMatrix, τ::AbstractVector, C
+    )
     throw(MethodError(_gpu_unmqr!, (side, trans, A, τ, C)))
 end
 
-function _gpu_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-                  positive=false, blocksize=1)
+function _gpu_qr!(
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive = false, blocksize = 1
+    )
     blocksize > 1 &&
         throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
     m, n = size(A)
@@ -305,8 +309,9 @@ function _gpu_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
     return Q, R
 end
 
-function _gpu_qr_null!(A::AbstractMatrix, N::AbstractMatrix;
-                       positive=false, blocksize=1)
+function _gpu_qr_null!(
+        A::AbstractMatrix, N::AbstractMatrix; positive = false, blocksize = 1
+    )
     blocksize > 1 &&
         throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
     m, n = size(A)

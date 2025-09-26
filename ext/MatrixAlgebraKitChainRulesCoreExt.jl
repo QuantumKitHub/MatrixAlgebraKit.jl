@@ -27,7 +27,7 @@ for qr_f in (:qr_compact, :qr_full)
                 MatrixAlgebraKit.qr_compact_pullback!(ΔA, QR, unthunk.(ΔQR))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
-            function qr_pullback(::Tuple{ZeroTangent,ZeroTangent}) # is this extra definition useful?
+            function qr_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return QR, qr_pullback
@@ -65,7 +65,7 @@ for lq_f in (:lq_compact, :lq_full)
                 MatrixAlgebraKit.lq_compact_pullback!(ΔA, LQ, unthunk.(ΔLQ))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
-            function lq_pullback(::Tuple{ZeroTangent,ZeroTangent}) # is this extra definition useful?
+            function lq_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return LQ, lq_pullback
@@ -106,7 +106,7 @@ for eig in (:eig, :eigh)
                 MatrixAlgebraKit.$eig_f_pb!(ΔA, DV, unthunk.(ΔDV))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
-            function $eig_pb(::Tuple{ZeroTangent,ZeroTangent}) # is this extra definition useful?
+            function $eig_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return DV, $eig_pb
@@ -125,7 +125,7 @@ for svd_f in (:svd_compact, :svd_full)
                 MatrixAlgebraKit.svd_compact_pullback!(ΔA, USVᴴ, unthunk.(ΔUSVᴴ))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
-            function svd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent}) # is this extra definition useful?
+            function svd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return USVᴴ, svd_pullback
@@ -133,8 +133,9 @@ for svd_f in (:svd_compact, :svd_full)
     end
 end
 
-function ChainRulesCore.rrule(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ,
-                              alg::TruncatedAlgorithm)
+function ChainRulesCore.rrule(
+        ::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm
+    )
     Ac = MatrixAlgebraKit.copy_input(svd_compact, A)
     USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
     function svd_trunc_pullback(ΔUSVᴴ)
@@ -142,7 +143,7 @@ function ChainRulesCore.rrule(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ,
         MatrixAlgebraKit.svd_compact_pullback!(ΔA, USVᴴ, unthunk.(ΔUSVᴴ))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function svd_trunc_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent}) # is this extra definition useful?
+    function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return MatrixAlgebraKit.truncate!(svd_trunc!, USVᴴ, alg.trunc), svd_trunc_pullback
@@ -156,7 +157,7 @@ function ChainRulesCore.rrule(::typeof(left_polar!), A::AbstractMatrix, WP, alg)
         MatrixAlgebraKit.left_polar_pullback!(ΔA, WP, unthunk.(ΔWP))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function left_polar_pullback(::Tuple{ZeroTangent,ZeroTangent}) # is this extra definition useful?
+    function left_polar_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return WP, left_polar_pullback
@@ -170,7 +171,7 @@ function ChainRulesCore.rrule(::typeof(right_polar!), A::AbstractMatrix, PWᴴ, 
         MatrixAlgebraKit.right_polar_pullback!(ΔA, PWᴴ, unthunk.(ΔPWᴴ))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function right_polar_pullback(::Tuple{ZeroTangent,ZeroTangent}) # is this extra definition useful?
+    function right_polar_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return PWᴴ, right_polar_pullback

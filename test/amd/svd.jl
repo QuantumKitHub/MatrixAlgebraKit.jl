@@ -21,7 +21,7 @@ include(joinpath("..", "utilities.jl"))
 
             U, S, Vᴴ = svd_compact(A; alg)
             @test U isa ROCMatrix{T} && size(U) == (m, minmn)
-            @test S isa Diagonal{real(T),<:ROCVector} && size(S) == (minmn, minmn)
+            @test S isa Diagonal{real(T), <:ROCVector} && size(S) == (minmn, minmn)
             @test Vᴴ isa ROCMatrix{T} && size(Vᴴ) == (minmn, n)
             @test U * S * Vᴴ ≈ A
             @test isapproxone(U' * U)

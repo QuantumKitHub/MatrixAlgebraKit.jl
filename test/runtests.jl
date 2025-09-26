@@ -47,7 +47,7 @@ if !is_buildkite
         @safetestset "Code linting (JET.jl)" begin
             using MatrixAlgebraKit
             using JET
-            JET.test_package(MatrixAlgebraKit; target_defined_modules=true)
+            JET.test_package(MatrixAlgebraKit; target_defined_modules = true)
         end
     end
 end
@@ -71,7 +71,7 @@ if CUDA.functional()
     end
 end
 
-using AMDGPU 
+using AMDGPU
 if AMDGPU.functional()
     @safetestset "AMDGPU QR" begin
         include("amd/qr.jl")

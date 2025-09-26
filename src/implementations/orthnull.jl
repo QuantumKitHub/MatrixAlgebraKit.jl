@@ -81,9 +81,11 @@ end
 
 # Implementation of orth functions
 # --------------------------------
-function left_orth!(A, VC; trunc=nothing,
-                    kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true),
-                    alg_polar=(;), alg_svd=(;))
+function left_orth!(
+        A, VC;
+        trunc = nothing, kind = isnothing(trunc) ? :qr : :svd,
+        alg_qr = (; positive = true), alg_polar = (;), alg_svd = (;)
+    )
     if !isnothing(trunc) && kind != :svd
         throw(ArgumentError("truncation not supported for left_orth with kind=$kind"))
     end
@@ -107,14 +109,14 @@ function left_orth_polar!(A, VC, alg)
     check_input(left_orth!, A, VC, alg′)
     return left_polar!(A, VC, alg′)
 end
-function left_orth_svd!(A, VC, alg, trunc::Nothing=nothing)
+function left_orth_svd!(A, VC, alg, trunc::Nothing = nothing)
     alg′ = select_algorithm(svd_compact!, A, alg)
     check_input(left_orth!, A, VC, alg′)
     U, S, Vᴴ = svd_compact!(A, alg′)
     V, C = VC
     return copy!(V, U), mul!(C, S, Vᴴ)
 end
-function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc::Nothing=nothing)
+function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc::Nothing = nothing)
     alg′ = select_algorithm(svd_compact!, A, alg)
     check_input(left_orth!, A, VC, alg′)
     V, C = VC
@@ -140,9 +142,11 @@ function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc)
     return U, lmul!(S, Vᴴ)
 end
 
-function right_orth!(A, CVᴴ; trunc=nothing,
-                     kind=isnothing(trunc) ? :lq : :svd, alg_lq=(; positive=true),
-                     alg_polar=(;), alg_svd=(;))
+function right_orth!(
+        A, CVᴴ;
+        trunc = nothing, kind = isnothing(trunc) ? :lq : :svd,
+        alg_lq = (; positive = true), alg_polar = (;), alg_svd = (;)
+    )
     if !isnothing(trunc) && kind != :svd
         throw(ArgumentError("truncation not supported for right_orth with kind=$kind"))
     end
@@ -166,14 +170,14 @@ function right_orth_polar!(A, CVᴴ, alg)
     check_input(right_orth!, A, CVᴴ, alg′)
     return right_polar!(A, CVᴴ, alg′)
 end
-function right_orth_svd!(A, CVᴴ, alg, trunc::Nothing=nothing)
+function right_orth_svd!(A, CVᴴ, alg, trunc::Nothing = nothing)
     alg′ = select_algorithm(svd_compact!, A, alg)
     check_input(right_orth!, A, CVᴴ, alg′)
     U, S, Vᴴ′ = svd_compact!(A, alg′)
     C, Vᴴ = CVᴴ
     return mul!(C, U, S), copy!(Vᴴ, Vᴴ′)
 end
-function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc::Nothing=nothing)
+function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc::Nothing = nothing)
     alg′ = select_algorithm(svd_compact!, A, alg)
     check_input(right_orth!, A, CVᴴ, alg′)
     C, Vᴴ = CVᴴ
@@ -201,23 +205,25 @@ end
 
 # Implementation of null functions
 # --------------------------------
-function null_truncation_strategy(; atol=nothing, rtol=nothing, maxnullity=nothing)
+function null_truncation_strategy(; atol = nothing, rtol = nothing, maxnullity = nothing)
     if isnothing(maxnullity) && isnothing(atol) && isnothing(rtol)
         return notrunc()
     end
     atol = @something atol 0
     rtol = @something rtol 0
-    trunc = trunctol(; atol, rtol, keep_below=true)
-    return !isnothing(maxnullity) ? trunc & truncrank(maxnullity; rev=false) : trunc
+    trunc = trunctol(; atol, rtol, keep_below = true)
+    return !isnothing(maxnullity) ? trunc & truncrank(maxnullity; rev = false) : trunc
 end
 
-function left_null!(A, N; trunc=nothing,
-                    kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true),
-                    alg_svd=(;))
+function left_null!(
+        A, N;
+        trunc = nothing, kind = isnothing(trunc) ? :qr : :svd,
+        alg_qr = (; positive = true), alg_svd = (;)
+    )
     if !isnothing(trunc) && kind != :svd
         throw(ArgumentError("truncation not supported for left_null with kind=$kind"))
     end
-    if kind == :qr
+    return if kind == :qr
         left_null_qr!(A, N, alg_qr)
     elseif kind == :svd
         left_null_svd!(A, N, alg_svd, trunc)
@@ -230,7 +236,7 @@ function left_null_qr!(A, N, alg)
     check_input(left_null!, A, N, alg′)
     return qr_null!(A, N, alg′)
 end
-function left_null_svd!(A, N, alg, trunc::Nothing=nothing)
+function left_null_svd!(A, N, alg, trunc::Nothing = nothing)
     alg′ = select_algorithm(svd_full!, A, alg)
     check_input(left_null!, A, N, alg′)
     U, _, _ = svd_full!(A, alg′)
@@ -241,14 +247,16 @@ function left_null_svd!(A, N, alg, trunc)
     alg′ = select_algorithm(svd_full!, A, alg)
     U, S, _ = svd_full!(A, alg′)
     trunc′ = trunc isa TruncationStrategy ? trunc :
-             trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
-             throw(ArgumentError("Unknown truncation strategy: $trunc"))
+        trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
+        throw(ArgumentError("Unknown truncation strategy: $trunc"))
     return truncate!(left_null!, (U, S), trunc′)
 end
 
-function right_null!(A, Nᴴ; trunc=nothing,
-                     kind=isnothing(trunc) ? :lq : :svd, alg_lq=(; positive=true),
-                     alg_svd=(;))
+function right_null!(
+        A, Nᴴ;
+        trunc = nothing, kind = isnothing(trunc) ? :lq : :svd,
+        alg_lq = (; positive = true), alg_svd = (;)
+    )
     if !isnothing(trunc) && kind != :svd
         throw(ArgumentError("truncation not supported for right_null with kind=$kind"))
     end
@@ -265,7 +273,7 @@ function right_null_lq!(A, Nᴴ, alg)
     check_input(right_null!, A, Nᴴ, alg′)
     return lq_null!(A, Nᴴ, alg′)
 end
-function right_null_svd!(A, Nᴴ, alg, trunc::Nothing=nothing)
+function right_null_svd!(A, Nᴴ, alg, trunc::Nothing = nothing)
     alg′ = select_algorithm(svd_full!, A, alg)
     check_input(right_null!, A, Nᴴ, alg′)
     _, _, Vᴴ = svd_full!(A, alg′)
@@ -277,7 +285,7 @@ function right_null_svd!(A, Nᴴ, alg, trunc)
     check_input(right_null!, A, Nᴴ, alg′)
     _, S, Vᴴ = svd_full!(A, alg′)
     trunc′ = trunc isa TruncationStrategy ? trunc :
-             trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
-             throw(ArgumentError("Unknown truncation strategy: $trunc"))
+        trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
+        throw(ArgumentError("Unknown truncation strategy: $trunc"))
     return truncate!(right_null!, (S, Vᴴ), trunc′)
 end

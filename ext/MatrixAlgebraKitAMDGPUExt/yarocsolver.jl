@@ -16,17 +16,19 @@ const ungqr! = orgqr!
 
 # Wrapper for SVD via QR Iteration
 for (fname, elty, relty) in
-    ((:rocsolver_sgesvd, :Float32, :Float32),
-     (:rocsolver_dgesvd, :Float64, :Float64),
-     (:rocsolver_cgesvd, :ComplexF32, :Float32),
-     (:rocsolver_zgesvd, :ComplexF64, :Float64))
+    (
+        (:rocsolver_sgesvd, :Float32, :Float32),
+        (:rocsolver_dgesvd, :Float64, :Float64),
+        (:rocsolver_cgesvd, :ComplexF32, :Float32),
+        (:rocsolver_zgesvd, :ComplexF64, :Float64),
+    )
     @eval begin
-        #! format: off
-        function gesvd!(A::StridedROCMatrix{$elty},
-                        S::StridedROCVector{$relty}=similar(A, $relty, min(size(A)...)),
-                        U::StridedROCMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-                        Vᴴ::StridedROCMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2)))
-        #! format: on
+        function gesvd!(
+                A::StridedROCMatrix{$elty},
+                S::StridedROCVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::StridedROCMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+            )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
             (m < n) && throw(ArgumentError("rocSOLVER's gesvd requires m ≥ n"))
@@ -72,13 +74,15 @@ for (fname, elty, relty) in
             ldu = max(1, stride(U, 2))
             ldv = max(1, stride(Vᴴ, 2))
 
-            rwork    = ROCArray{$relty}(undef, minmn - 1)
-            dh       = rocBLAS.handle()
+            rwork = ROCArray{$relty}(undef, minmn - 1)
+            dh = rocBLAS.handle()
             dev_info = ROCVector{Cint}(undef, 1)
-            rocSOLVER.$fname(dh, jobu, jobvt, m, n,
-                             A, lda, S, U, ldu, Vᴴ, ldv,
-                             rwork, convert(rocSOLVER.rocblas_workmode, 'I'),
-                             dev_info)
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n,
+                A, lda, S, U, ldu, Vᴴ, ldv,
+                rwork, convert(rocSOLVER.rocblas_workmode, 'I'),
+                dev_info
+            )
             AMDGPU.unsafe_free!(rwork)
 
             info = @allowscalar dev_info[1]
@@ -91,20 +95,21 @@ end
 
 # Wrapper for SVD via Jacobi
 for (fname, elty, relty) in
-    ((:rocsolver_sgesvdj, :Float32, :Float32),
-     (:rocsolver_dgesvdj, :Float64, :Float64),
-     (:rocsolver_cgesvdj, :ComplexF32, :Float32),
-     (:rocsolver_zgesvdj, :ComplexF64, :Float64))
+    (
+        (:rocsolver_sgesvdj, :Float32, :Float32),
+        (:rocsolver_dgesvdj, :Float64, :Float64),
+        (:rocsolver_cgesvdj, :ComplexF32, :Float32),
+        (:rocsolver_zgesvdj, :ComplexF64, :Float64),
+    )
     @eval begin
-        #! format: off
-        function gesvdj!(A::StridedROCMatrix{$elty},
-                         S::StridedROCVector{$relty}=similar(A, $relty, min(size(A)...)),
-                         U::StridedROCMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-                         Vᴴ::StridedROCMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
-                         tol::$relty=eps($relty),
-                         max_sweeps::Int=100,
-                        )
-        #! format: on
+        function gesvdj!(
+                A::StridedROCMatrix{$elty},
+                S::StridedROCVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::StridedROCMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100,
+            )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
             minmn = min(m, n)
@@ -149,21 +154,22 @@ for (fname, elty, relty) in
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(U, 2))
             ldv = max(1, stride(Vᴴ, 2))
-            dev_info     = ROCVector{Cint}(undef, 1)
+            dev_info = ROCVector{Cint}(undef, 1)
             dev_residual = ROCVector{$relty}(undef, 1)
             dev_n_sweeps = ROCVector{Cint}(undef, 1)
 
             dh = rocBLAS.handle()
-            rocSOLVER.$fname(dh, jobu, jobvt, m, n, A, lda, tol,
-                             dev_residual, max_sweeps, dev_n_sweeps,
-                             S, U, ldu, Vᴴ, ldv, dev_info,
-                             )
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n, A, lda, tol,
+                dev_residual, max_sweeps, dev_n_sweeps,
+                S, U, ldu, Vᴴ, ldv, dev_info,
+            )
 
             info = @allowscalar dev_info[1]
             rocSOLVER.chkargsok(BlasInt(info))
 
-            AMDGPU.unsafe_free!(dev_residual) 
-            AMDGPU.unsafe_free!(dev_n_sweeps) 
+            AMDGPU.unsafe_free!(dev_residual)
+            AMDGPU.unsafe_free!(dev_n_sweeps)
             return (S, U, Vᴴ)
         end
     end
@@ -476,15 +482,19 @@ end
 # end
 
 for (heevd, heev, heevx, heevj, elty, relty) in
-    ((:(rocSOLVER.rocsolver_ssyevd), :(rocSOLVER.rocsolver_ssyev), :(rocSOLVER.rocsolver_ssyevx), :(rocSOLVER.rocsolver_ssyevj), :Float32, :Float32),
-     (:(rocSOLVER.rocsolver_dsyevd), :(rocSOLVER.rocsolver_dsyev), :(rocSOLVER.rocsolver_dsyevx), :(rocSOLVER.rocsolver_dsyevj), :Float64, :Float64),
-     (:(rocSOLVER.rocsolver_cheevd), :(rocSOLVER.rocsolver_cheev), :(rocSOLVER.rocsolver_cheevx), :(rocSOLVER.rocsolver_cheevj), :ComplexF32, :Float32),
-     (:(rocSOLVER.rocsolver_zheevd), :(rocSOLVER.rocsolver_zheev), :(rocSOLVER.rocsolver_zheevx), :(rocSOLVER.rocsolver_zheevj), :ComplexF64, :Float64))
+    (
+        (:(rocSOLVER.rocsolver_ssyevd), :(rocSOLVER.rocsolver_ssyev), :(rocSOLVER.rocsolver_ssyevx), :(rocSOLVER.rocsolver_ssyevj), :Float32, :Float32),
+        (:(rocSOLVER.rocsolver_dsyevd), :(rocSOLVER.rocsolver_dsyev), :(rocSOLVER.rocsolver_dsyevx), :(rocSOLVER.rocsolver_dsyevj), :Float64, :Float64),
+        (:(rocSOLVER.rocsolver_cheevd), :(rocSOLVER.rocsolver_cheev), :(rocSOLVER.rocsolver_cheevx), :(rocSOLVER.rocsolver_cheevj), :ComplexF32, :Float32),
+        (:(rocSOLVER.rocsolver_zheevd), :(rocSOLVER.rocsolver_zheev), :(rocSOLVER.rocsolver_zheevx), :(rocSOLVER.rocsolver_zheevj), :ComplexF64, :Float64),
+    )
     @eval begin
-        function heevd!(A::StridedROCMatrix{$elty},
-                        W::StridedROCVector{$relty},
-                        V::StridedROCMatrix{$elty};
-                        uplo::Char='U')
+        function heevd!(
+                A::StridedROCMatrix{$elty},
+                W::StridedROCVector{$relty},
+                V::StridedROCMatrix{$elty};
+                uplo::Char = 'U'
+            )
             chkuplo(uplo)
             n = checksquare(A)
             lda = max(1, stride(A, 2))
@@ -509,10 +519,12 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             end
             return W, V
         end
-        function heev!(A::StridedROCMatrix{$elty},
-                       W::StridedROCVector{$relty},
-                       V::StridedROCMatrix{$elty};
-                       uplo::Char='U')
+        function heev!(
+                A::StridedROCMatrix{$elty},
+                W::StridedROCVector{$relty},
+                V::StridedROCMatrix{$elty};
+                uplo::Char = 'U'
+            )
             chkuplo(uplo)
             n = checksquare(A)
             lda = max(1, stride(A, 2))
@@ -537,11 +549,13 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             end
             return W, V
         end
-        function heevx!(A::StridedROCMatrix{$elty},
-                        W::StridedROCVector{$relty},
-                        V::StridedROCMatrix{$elty};
-                        uplo::Char='U',
-                        kwargs...)
+        function heevx!(
+                A::StridedROCMatrix{$elty},
+                W::StridedROCVector{$relty},
+                V::StridedROCMatrix{$elty};
+                uplo::Char = 'U',
+                kwargs...
+            )
             chkuplo(uplo)
             n = checksquare(A)
             lda = max(1, stride(A, 2))
@@ -567,27 +581,29 @@ for (heevd, heev, heevx, heevj, elty, relty) in
                 size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
                 jobz = rocSOLVER.rocblas_evect_original
             end
-            dh       = rocBLAS.handle()
-            abstol   = -one($relty)
-            nev      = ROCVector{Cint}(undef, 1)
-            ldv      = max(1, stride(V, 2))
-            ifail    = ROCVector{Cint}(undef, n)
+            dh = rocBLAS.handle()
+            abstol = -one($relty)
+            nev = ROCVector{Cint}(undef, 1)
+            ldv = max(1, stride(V, 2))
+            ifail = ROCVector{Cint}(undef, n)
             dev_info = ROCVector{Cint}(undef, 1)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             $heevx(dh, jobz, range, roc_uplo, n, A, lda, vl, vu, il, iu, abstol, nev, W, V, ldv, ifail, dev_info)
 
             info = @allowscalar dev_info[1]
             chkargsok(BlasInt(info))
-            m    = @allowscalar nev[1]
+            m = @allowscalar nev[1]
             return W, V, m
         end
-        function heevj!(A::StridedROCMatrix{$elty},
-                        W::StridedROCVector{$relty},
-                        V::StridedROCMatrix{$elty};
-                        uplo::Char='U',
-                        tol::$relty=eps($relty),
-                        max_sweeps::Int=100,
-                        sort::Char='N')
+        function heevj!(
+                A::StridedROCMatrix{$elty},
+                W::StridedROCVector{$relty},
+                V::StridedROCMatrix{$elty};
+                uplo::Char = 'U',
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100,
+                sort::Char = 'N'
+            )
             chkuplo(uplo)
             n = checksquare(A)
             lda = max(1, stride(A, 2))

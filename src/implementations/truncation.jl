@@ -59,16 +59,16 @@ function findtruncated_svd(values::AbstractVector, strategy::TruncationByValue)
     strategy.by === abs || return findtruncated(values, strategy)
     atol = max(strategy.atol, strategy.rtol * norm(values, strategy.p))
     if strategy.keep_below
-        i = searchsortedfirst(values, atol; by=abs, rev=true)
+        i = searchsortedfirst(values, atol; by = abs, rev = true)
         return i:length(values)
     else
-        i = searchsortedlast(values, atol; by=abs, rev=true)
+        i = searchsortedlast(values, atol; by = abs, rev = true)
         return 1:i
     end
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationByError)
-    I = sortperm(values; by=abs, rev=true)
+    I = sortperm(values; by = abs, rev = true)
     I′ = _truncerr_impl(values, I; strategy.atol, strategy.rtol, strategy.p)
     return I[I′]
 end
@@ -77,7 +77,7 @@ function findtruncated_svd(values::AbstractVector, strategy::TruncationByError)
     I′ = _truncerr_impl(values, I; strategy.atol, strategy.rtol, strategy.p)
     return I[I′]
 end
-function _truncerr_impl(values::AbstractVector, I; atol::Real=0, rtol::Real=0, p::Real=2)
+function _truncerr_impl(values::AbstractVector, I; atol::Real = 0, rtol::Real = 0, p::Real = 2)
     by = Base.Fix2(^, p) ∘ abs
     Nᵖ = sum(by, values)
     ϵᵖ = max(atol^p, rtol^p * Nᵖ)
@@ -97,12 +97,16 @@ function _truncerr_impl(values::AbstractVector, I; atol::Real=0, rtol::Real=0, p
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
-    return mapreduce(Base.Fix1(findtruncated, values), _ind_intersect, strategy.components;
-                     init=trues(length(values)))
+    return mapreduce(
+        Base.Fix1(findtruncated, values), _ind_intersect, strategy.components;
+        init = trues(length(values))
+    )
 end
 function findtruncated_svd(values::AbstractVector, strategy::TruncationIntersection)
-    return mapreduce(Base.Fix1(findtruncated_svd, values), _ind_intersect,
-                     strategy.components; init=trues(length(values)))
+    return mapreduce(
+        Base.Fix1(findtruncated_svd, values), _ind_intersect,
+        strategy.components; init = trues(length(values))
+    )
 end
 
 # when one of the ind selections is a bitvector, have to handle differently

@@ -28,20 +28,31 @@ export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
 
-export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert, LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations, LAPACK_DivideAndConquer, LAPACK_Jacobi
+export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
+    LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
+    LAPACK_DivideAndConquer, LAPACK_Jacobi
 export LQViaTransposedQR
 export DiagonalAlgorithm
-export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer
+export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
+    CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer
 export ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi,
-       ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection
+    ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection
 
 export notrunc, truncrank, trunctol, truncerror, truncfilter
 
 @static if VERSION >= v"1.11.0-DEV.469"
-    eval(Expr(:public, :default_algorithm, :findtruncated, :findtruncated_svd,
-              :select_algorithm))
-    eval(Expr(:public, :TruncationByOrder, :TruncationByFilter, :TruncationByValue,
-              :TruncationByError, :TruncationIntersection))
+    eval(
+        Expr(
+            :public, :default_algorithm, :findtruncated, :findtruncated_svd,
+            :select_algorithm
+        )
+    )
+    eval(
+        Expr(
+            :public, :TruncationByOrder, :TruncationByFilter, :TruncationByValue,
+            :TruncationByError, :TruncationIntersection
+        )
+    )
 end
 
 include("common/defaults.jl")

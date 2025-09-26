@@ -9,9 +9,7 @@ using CUDA
 @testset "eigh_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
-    for alg in (CUSOLVER_DivideAndConquer(),
-                CUSOLVER_Jacobi(),
-                )
+    for alg in (CUSOLVER_DivideAndConquer(), CUSOLVER_Jacobi())
         A = CuArray(randn(rng, T, m, m))
         A = (A + A') / 2
 

@@ -17,7 +17,7 @@ and `KW` is typically a `NamedTuple` indicating the keyword arguments.
 
 See also [`@algdef`](@ref).
 """
-struct Algorithm{name,K} <: AbstractAlgorithm
+struct Algorithm{name, K} <: AbstractAlgorithm
     kwargs::K
 end
 name(alg::Algorithm) = name(typeof(alg))
@@ -76,7 +76,7 @@ Finally, the same behavior is obtained when the keyword arguments are
 passed as the third positional argument in the form of a `NamedTuple`. 
 """ select_algorithm
 
-function select_algorithm(f::F, A, alg::Alg=nothing; kwargs...) where {F,Alg}
+function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
     if isnothing(alg)
         return default_algorithm(f, A; kwargs...)
     elseif alg isa Symbol
@@ -108,10 +108,10 @@ New types should prefer to register their default algorithms in the type domain.
 default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
 default_algorithm(f::F, A, B; kwargs...) where {F} = default_algorithm(f, typeof(A), typeof(B); kwargs...)
 # avoid infinite recursion:
-function default_algorithm(f::F, ::Type{T}; kwargs...) where {F,T}
+function default_algorithm(f::F, ::Type{T}; kwargs...) where {F, T}
     throw(MethodError(default_algorithm, (f, T)))
 end
-function default_algorithm(f::F, ::Type{TA}, ::Type{TB}; kwargs...) where {F,TA,TB}
+function default_algorithm(f::F, ::Type{TA}, ::Type{TB}; kwargs...) where {F, TA, TB}
     throw(MethodError(default_algorithm, (f, TA, TB)))
 end
 
@@ -185,7 +185,7 @@ checked, and this is used in the default implementation of [`svd_trunc!`](@ref).
 Generic wrapper type for algorithms that consist of first using `alg`, followed by a
 truncation through `trunc`.
 """
-struct TruncatedAlgorithm{A,T} <: AbstractAlgorithm
+struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
     alg::A
     trunc::T
 end
@@ -207,8 +207,9 @@ This defines an exported alias for [`Algorithm{:AlgorithmName}`](@ref Algorithm)
 along with some utility methods.
 """
 macro algdef(name)
-    esc(quote
-            const $name{K} = Algorithm{$(QuoteNode(name)),K}
+    return esc(
+        quote
+            const $name{K} = Algorithm{$(QuoteNode(name)), K}
             function $name(; kwargs...)
                 # TODO: is this necessary/useful?
                 kw = NamedTuple(kwargs) # normalize type
@@ -219,7 +220,8 @@ macro algdef(name)
             end
 
             Core.@__doc__ $name
-        end)
+        end
+    )
 end
 
 function _arg_expr(::Val{1}, f, f!)
@@ -228,10 +230,10 @@ function _arg_expr(::Val{1}, f, f!)
         $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
 
         # fill in arguments
-        function $f!(A; alg=nothing, kwargs...)
+        function $f!(A; alg = nothing, kwargs...)
             return $f!(A, select_algorithm($f!, A, alg; kwargs...))
         end
-        function $f!(A, out; alg=nothing, kwargs...)
+        function $f!(A, out; alg = nothing, kwargs...)
             return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
         end
         function $f!(A, alg::AbstractAlgorithm)
@@ -273,10 +275,10 @@ function _arg_expr(::Val{2}, f, f!)
         $f(A, B, alg::AbstractAlgorithm) = $f!(copy_input($f, A, B)..., alg)
 
         # fill in arguments
-        function $f!(A, B; alg=nothing, kwargs...)
+        function $f!(A, B; alg = nothing, kwargs...)
             return $f!(A, B, select_algorithm($f!, (A, B), alg; kwargs...))
         end
-        function $f!(A, B, out; alg=nothing, kwargs...)
+        function $f!(A, B, out; alg = nothing, kwargs...)
             return $f!(A, B, out, select_algorithm($f!, (A, B), alg; kwargs...))
         end
         function $f!(A, B, alg::AbstractAlgorithm)
@@ -344,7 +346,7 @@ would create
 See also [`copy_input`](@ref), [`select_algorithm`](@ref) and [`initialize_output`](@ref).
 """
 macro functiondef(args...)
-    kwargs = map(args[1:end-1]) do kwarg
+    kwargs = map(args[1:(end - 1)]) do kwarg
         if kwarg isa Symbol
             :($kwarg = $kwarg)
         elseif Meta.isexpr(kwarg, :(=))
@@ -376,7 +378,7 @@ end
 Check if `eltype(x) == op(eltype(y))` and throw an error if not.
 By default `op = identity` and `eltype = eltype'.
 """
-macro check_scalar(x, y, op=:identity, eltype=:eltype)
+macro check_scalar(x, y, op = :identity, eltype = :eltype)
     error_message = "Unexpected scalar type: "
     error_message *= string(eltype) * "(" * string(x) * ")"
     if op == :identity
@@ -384,9 +386,11 @@ macro check_scalar(x, y, op=:identity, eltype=:eltype)
     else
         error_message *= " != " * string(op) * "(" * string(eltype) * "(" * string(y) * "))"
     end
-    return esc(quote
-                   $eltype($x) == $op($eltype($y)) || throw(ArgumentError($error_message))
-               end)
+    return esc(
+        quote
+            $eltype($x) == $op($eltype($y)) || throw(ArgumentError($error_message))
+        end
+    )
 end
 
 """
@@ -395,13 +399,15 @@ end
 Check if `size(x) == sz` and throw an error if not.
 By default, `size = size`.
 """
-macro check_size(x, sz, size=:size)
+macro check_size(x, sz, size = :size)
     msgstart = string(size) * "(" * string(x) * ") = "
     err = gensym()
-    return esc(quote
-                   szx = $size($x)
-                   $err = $msgstart * string(szx) * " instead of expected value " *
-                          string($sz)
-                   szx == $sz || throw(DimensionMismatch($err))
-               end)
+    return esc(
+        quote
+            szx = $size($x)
+            $err = $msgstart * string(szx) * " instead of expected value " *
+                string($sz)
+            szx == $sz || throw(DimensionMismatch($err))
+        end
+    )
 end

@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
-                        default_algorithm, select_algorithm
+    default_algorithm, select_algorithm
 
 @testset "default_algorithm" begin
     A = randn(3, 3)
@@ -14,14 +14,14 @@ using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
     end
     for f in (eigh_full!, eigh_full, eigh_vals!, eigh_vals)
         @test @constinferred(default_algorithm(f, A)) ===
-              LAPACK_MultipleRelativelyRobustRepresentations()
+            LAPACK_MultipleRelativelyRobustRepresentations()
     end
     for f in (lq_full!, lq_full, lq_compact!, lq_compact, lq_null!, lq_null)
         @test @constinferred(default_algorithm(f, A)) == LAPACK_HouseholderLQ()
     end
     for f in (left_polar!, left_polar, right_polar!, right_polar)
         @test @constinferred(default_algorithm(f, A)) ==
-              PolarViaSVD(LAPACK_DivideAndConquer())
+            PolarViaSVD(LAPACK_DivideAndConquer())
     end
     for f in (qr_full!, qr_full, qr_compact!, qr_compact, qr_null!, qr_null)
         @test @constinferred(default_algorithm(f, A)) == LAPACK_HouseholderQR()
@@ -30,37 +30,34 @@ using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
         @test @constinferred(default_algorithm(f, A)) === LAPACK_Expert()
     end
 
-    @test @constinferred(default_algorithm(qr_compact!, A; blocksize=2)) ===
-          LAPACK_HouseholderQR(; blocksize=2)
+    @test @constinferred(default_algorithm(qr_compact!, A; blocksize = 2)) ===
+        LAPACK_HouseholderQR(; blocksize = 2)
 end
 
 @testset "select_algorithm" begin
     A = randn(3, 3)
     for f in (svd_trunc!, svd_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
-              TruncatedAlgorithm(LAPACK_DivideAndConquer(), notrunc())
+            TruncatedAlgorithm(LAPACK_DivideAndConquer(), notrunc())
     end
     for f in (eig_trunc!, eig_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
-              TruncatedAlgorithm(LAPACK_Expert(), notrunc())
+            TruncatedAlgorithm(LAPACK_Expert(), notrunc())
     end
     for f in (eigh_trunc!, eigh_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
-              TruncatedAlgorithm(LAPACK_MultipleRelativelyRobustRepresentations(),
-                                 notrunc())
+            TruncatedAlgorithm(LAPACK_MultipleRelativelyRobustRepresentations(), notrunc())
     end
 
-    alg = TruncatedAlgorithm(LAPACK_Simple(), trunctol(; atol=0.1, keep_below=true))
+    alg = TruncatedAlgorithm(LAPACK_Simple(), trunctol(; atol = 0.1, keep_below = true))
     for f in (eig_trunc!, eigh_trunc!, svd_trunc!)
         @test @constinferred(select_algorithm(eig_trunc!, A, alg)) === alg
-        @test_throws ArgumentError select_algorithm(eig_trunc!, A, alg; trunc=(; maxrank=2))
+        @test_throws ArgumentError select_algorithm(eig_trunc!, A, alg; trunc = (; maxrank = 2))
     end
 
     @test @constinferred(select_algorithm(svd_compact!, A)) === LAPACK_DivideAndConquer()
-    @test @constinferred(select_algorithm(svd_compact!, A, nothing)) ===
-          LAPACK_DivideAndConquer()
+    @test @constinferred(select_algorithm(svd_compact!, A, nothing)) === LAPACK_DivideAndConquer()
     for alg in (:LAPACK_QRIteration, LAPACK_QRIteration, LAPACK_QRIteration())
-        @test @constinferred(select_algorithm(svd_compact!, A, $alg)) ===
-              LAPACK_QRIteration()
+        @test @constinferred(select_algorithm(svd_compact!, A, $alg)) === LAPACK_QRIteration()
     end
 end

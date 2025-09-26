@@ -54,7 +54,7 @@ eigenvalue decomposition of a matrix.
 """
 @algdef LAPACK_Expert
 
-const LAPACK_EigAlgorithm = Union{LAPACK_Simple,LAPACK_Expert}
+const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
 
 # Hermitian Eigenvalue Decomposition
 # ----------------------------------
@@ -93,10 +93,12 @@ Hermitian matrix using the Multiple Relatively Robust Representations algorithm.
 """
 @algdef LAPACK_MultipleRelativelyRobustRepresentations
 
-const LAPACK_EighAlgorithm = Union{LAPACK_QRIteration,
-                                   LAPACK_Bisection,
-                                   LAPACK_DivideAndConquer,
-                                   LAPACK_MultipleRelativelyRobustRepresentations}
+const LAPACK_EighAlgorithm = Union{
+    LAPACK_QRIteration,
+    LAPACK_Bisection,
+    LAPACK_DivideAndConquer,
+    LAPACK_MultipleRelativelyRobustRepresentations,
+}
 
 # Singular Value Decomposition
 # ----------------------------
@@ -108,10 +110,12 @@ a general matrix using the Jacobi algorithm.
 """
 @algdef LAPACK_Jacobi
 
-const LAPACK_SVDAlgorithm = Union{LAPACK_QRIteration,
-                                  LAPACK_Bisection,
-                                  LAPACK_DivideAndConquer,
-                                  LAPACK_Jacobi}
+const LAPACK_SVDAlgorithm = Union{
+    LAPACK_QRIteration,
+    LAPACK_Bisection,
+    LAPACK_DivideAndConquer,
+    LAPACK_Jacobi,
+}
 
 # =========================
 # DIAGONAL ALGORITHMS
@@ -250,8 +254,9 @@ const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
 const GPU_Bisection = Union{ROCSOLVER_Bisection}
-const GPU_EighAlgorithm = Union{GPU_QRIteration,
-                                GPU_Jacobi,
-                                GPU_DivideAndConquer,
-                                GPU_Bisection}
-
+const GPU_EighAlgorithm = Union{
+    GPU_QRIteration,
+    GPU_Jacobi,
+    GPU_DivideAndConquer,
+    GPU_Bisection,
+}
