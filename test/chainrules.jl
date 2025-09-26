@@ -6,32 +6,7 @@ using ChainRulesCore, ChainRulesTestUtils, Zygote
 using MatrixAlgebraKit: diagview, TruncatedAlgorithm, PolarViaSVD
 using LinearAlgebra: UpperTriangular, Diagonal, Hermitian, mul!
 
-function remove_svdgauge_depence!(ΔU, ΔVᴴ, U, S, Vᴴ;
-                                  degeneracy_atol=MatrixAlgebraKit.default_pullback_gaugetol(S))
-    gaugepart = U' * ΔU + Vᴴ * ΔVᴴ'
-    gaugepart = (gaugepart - gaugepart') / 2
-    gaugepart[abs.(transpose(diagview(S)) .- diagview(S)) .>= degeneracy_atol] .= 0
-    mul!(ΔU, U, gaugepart, -1, 1)
-    return ΔU, ΔVᴴ
-end
-function remove_eiggauge_depence!(ΔV, D, V;
-                                  degeneracy_atol=MatrixAlgebraKit.default_pullback_gaugetol(S))
-    gaugepart = V' * ΔV
-    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
-    mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
-    return ΔV
-end
-function remove_eighgauge_depence!(ΔV, D, V;
-                                   degeneracy_atol=MatrixAlgebraKit.default_pullback_gaugetol(S))
-    gaugepart = V' * ΔV
-    gaugepart = (gaugepart - gaugepart') / 2
-    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
-    mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
-    return ΔV
-end
-
-precision(::Type{<:Union{Float32,Complex{Float32}}}) = sqrt(eps(Float32))
-precision(::Type{<:Union{Float64,Complex{Float64}}}) = sqrt(eps(Float64))
+include("ad_utils.jl")
 
 for f in
     (:qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
@@ -205,7 +180,7 @@ end
     A = randn(rng, T, m, m)
     D, V = eig_full(A)
     ΔV = randn(rng, complex(T), m, m)
-    ΔV = remove_eiggauge_depence!(ΔV, D, V; degeneracy_atol=atol)
+    ΔV = remove_eiggauge_dependence!(ΔV, D, V; degeneracy_atol=atol)
     ΔD = randn(rng, complex(T), m, m)
     ΔD2 = Diagonal(randn(rng, complex(T), m))
     for alg in (LAPACK_Simple(), LAPACK_Expert())
@@ -234,7 +209,7 @@ end
     A = A + A'
     D, V = eigh_full(A)
     ΔV = randn(rng, T, m, m)
-    ΔV = remove_eighgauge_depence!(ΔV, D, V; degeneracy_atol=atol)
+    ΔV = remove_eighgauge_dependence!(ΔV, D, V; degeneracy_atol=atol)
     ΔD = randn(rng, real(T), m, m)
     ΔD2 = Diagonal(randn(rng, real(T), m))
     for alg in (LAPACK_QRIteration(), LAPACK_DivideAndConquer(), LAPACK_Bisection(),
@@ -270,7 +245,7 @@ end
         ΔS = randn(rng, real(T), minmn, minmn)
         ΔS2 = Diagonal(randn(rng, real(T), minmn))
         ΔVᴴ = randn(rng, T, minmn, n)
-        ΔU, ΔVᴴ = remove_svdgauge_depence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol=atol)
+        ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol=atol)
         for alg in (LAPACK_QRIteration(), LAPACK_DivideAndConquer())
             test_rrule(copy_svd_compact, A, alg ⊢ NoTangent();
                        output_tangent=(ΔU, ΔS, ΔVᴴ),

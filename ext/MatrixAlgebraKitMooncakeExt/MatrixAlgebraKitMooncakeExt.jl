@@ -1,46 +1,68 @@
 module MatrixAlgebraKitMooncakeExt
 
 using Mooncake
-using Mooncake: @from_chainrules, DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
+using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
 using MatrixAlgebraKit
 using MatrixAlgebraKit: inv_safe, diagview
-using MatrixAlgebraKit.YALAPACK
-using ChainRulesCore
 using LinearAlgebra
-using LinearAlgebra: BlasFloat, BlasComplex, diagind
 
-#@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.qr_null!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-#@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.qr_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-#@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.qr_compact!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
+function qr_compact_fwd(dA, QR, dQR; tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(QR[2]), rank_atol::Real=tol, gauge_atol::Real=tol)
+    Q, R  = QR
+    m     = size(Q, 1)
+    n     = size(R, 2)
+    minmn = min(m, n)
+    Rd    = diagview(R)
+    p     = findlast(>=(rank_atol) ∘ abs, Rd)
 
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.lq_null!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.lq_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.lq_compact!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
+    m1 = p
+    m2 = minmn - p
+    m3 = m - minmn
+    n1 = p
+    n2 = n - p
 
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eigh_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eigh_vals!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
+    Q1 = view(Q, 1:m, 1:m1) # full rank portion
+    Q2 = view(Q, 1:m, m1+1:m2+m1)
+    R11 = view(R, 1:m1, 1:n1)
+    R12 = view(R, 1:m1, n1+1:n)
 
-#@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eig_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-#@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.eig_vals!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
+    dA1 = view(dA, 1:m, 1:n1)
+    dA2 = view(dA, 1:m, (n1 + 1):n)
 
-Mooncake.@zero_adjoint Mooncake.DefaultCtx Tuple{typeof(MatrixAlgebraKit.copy_input), Any, AbstractMatrix}
+    dQ, dR = dQR
+    dQ1  = view(dQ, 1:m, 1:m1)
+    dQ2  = view(dQ, 1:m, m1+1:m2+m1)
+    dR11 = view(dR, 1:m1, 1:n1)
+    dR12 = view(dR, 1:m1, n1+1:n)
+    dR22 = view(dR, m1+1:m1+m2, n1+1:n)
 
-# TODO THIS IS BAD!!!!
-function MatrixAlgebraKit.diagview(dx::Tangent)
-    if isa(dx, ChainRulesCore.Tangent)
-        if isa(dx.diag, Vector{<:Real})
-            return dx.diag
-        elseif isa(dx.diag, Vector{Tangent{<:Any, Vector{@NamedTuple{re::Float64, im::Float64}}}})
-            return [complex(dxd.re, dxd.im) for dxd in dx.diag]
-        end
-        return dx.diag
-    else
-        hasfield(Mooncake._fields(dx), :diag) && return Mooncake._fields(dx).diag
+    # fwd rule for Q1 and R11 -- for a non-rank redeficient QR, this is all we need
+    invR11  = inv(R11)
+    tmp     = Q1' * dA1 * invR11
+    Rtmp    = tmp + tmp'
+    diagview(Rtmp) ./= 2
+    ltRtmp  = view(Rtmp, MatrixAlgebraKit.lowertriangularind(Rtmp))
+    ltRtmp .= zero(eltype(Rtmp))
+    dR11   .= Rtmp * R11
+    dQ1    .= dA1 * invR11 - Q1 * dR11 * invR11
+    size(Q) == (m, minmn) && size(R) == (minmn, n) && minmn == p && return (dQ, dR)
+
+    dR12  .= adjoint(Q1) * (dA2 - dQ1 * R12)
+    dQ2   .= -Q1 * adjoint(Q2'*dQ1)
+    if size(Q2, 2) > 0
+        dQ2  .+= Q2 * (Q2' * dQ2)
     end
-    throw(ErrorException(""))
+    if m > minmn && size(Q,2) == m && size(dQ2, 2) > 0
+        # only present for qr_full or rank-deficient qr_compact
+        Q3    = view(Q, 1:m, m1+m2+1:m)
+        dQ2 .+= Q3 * (Q3' * dQ2)
+    end
+    if !isempty(dR22)
+        _, r22 = qr_full(dA2 - dQ1*R12 - Q1*dR12, MatrixAlgebraKit.LAPACK_HouseholderQR(; positive=true))
+        dR22  .= view(r22, 1:size(dR22, 1), 1:size(dR22, 2))
+    end
+    return (dQ, dR)
 end
 
-Base.one(::Type{Tangent{Any, @NamedTuple{re::ComplexF64, im::ComplexF64}}}) = one(ComplexF64)
 
 for f in (qr_full!, qr_compact!)
     @eval begin
@@ -61,34 +83,111 @@ for f in (qr_full!, qr_compact!)
             dR .= zero(eltype(R))
             return Mooncake.CoDual(QR, dQR), dqr_adjoint
         end
+        @is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof($f), AbstractMatrix, Tuple{<:AbstractMatrix, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.frule!!(::Dual{typeof($f)}, A_dA::Dual{<:AbstractMatrix}, QR_dQR::Dual, alg_dalg::Dual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+            A, dA = arrayify(A_dA)
+            QR    = Mooncake.primal(QR_dQR)
+            QR    = $f(A, QR, Mooncake.primal(alg_dalg); kwargs...)
+            dQR   = Mooncake.tangent(QR_dQR)
+            Q, dQ = arrayify(QR[1], dQR[1])
+            R, dR = arrayify(QR[2], dQR[2])
+            #=invR  = inv(R)
+            tmp   = Q' * dA * invR
+            Rtmp  = tmp + tmp'
+            diagview(Rtmp) ./= 2
+            Rtmp[MatrixAlgebraKit.lowertriangularind(Rtmp)] .= zero(eltype(Rtmp))
+            dR   .= Rtmp * R
+            dQ   .= dA * invR - Q * dR * invR
+            =#
+            dQ, dR = qr_compact_fwd(dA, (Q, R), (dQ, dR))
+            dA   .= zero(eltype(A))
+            return Mooncake.Dual(QR, dQR)
+        end
     end
 end
 
-#=
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), AbstractMatrix, Tuple{<:AbstractMatrix, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual{<:AbstractMatrix}, QR_dQR::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
-    A, dA = arrayify(A_dA)
-    dA   .= zero(eltype(A))
-    N     = Mooncake.primal(QR_dQR)
-    dN    = Mooncake.tangent(QR_dQR)
-    N, dN  = arrayify(Mooncake.primal(N_dN), Mooncake.tangent(N_dN))
-    function dqr_null_adjoint(::Mooncake.NoRData)
-        Ac = MatrixAlgebraKit.copy_input(qr_full, A)
-        QR = MatrixAlgebraKit.initialize_output(qr_full!, A, Mooncake.primal(alg))
-        Q, R = qr_full!(Ac, QR, alg.val)
-        dA = MatrixAlgebraKit.qr_compact_pullback!(dA, (Q, R), (dQ, dR); kwargs...)
-        copy!(N, view(Q, 1:size(A, 1), (size(A, 2) + 1):size(A, 1)))
-        (m, n) = size(A)
-        minmn  = min(m, n)
-        ∂Q     = zeros(eltype(A), (m, m))
-        view(∂Q, 1:m, (minmn + 1):m) .= dN
-        return Mooncake.rrule!!(Mooncake.(qr_compact!, ), RT, (nothing, nothing), A, Duplicated((Q, R), (∂Q, zeros(eltype(R), size(R)))), alg)
+for f in (lq_full!, lq_compact!)
+    @eval begin
+        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), AbstractMatrix, Tuple{<:AbstractMatrix, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual{<:AbstractMatrix}, LQ_dLQ::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+            A, dA  = arrayify(A_dA)
+            dA    .= zero(eltype(A))
+            LQ     = Mooncake.primal(LQ_dLQ)
+            dLQ    = Mooncake.tangent(LQ_dLQ)
+            L, dL  = arrayify(LQ[1], dLQ[1])
+            Q, dQ  = arrayify(LQ[2], dLQ[2])
+            function dlq_adjoint(::Mooncake.NoRData)
+                dA = MatrixAlgebraKit.lq_compact_pullback!(dA, (L, Q), (dL, dQ); kwargs...)
+                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+            end
+            LQ  = $f(A, LQ, Mooncake.primal(alg_dalg); kwargs...)
+            dL .= zero(eltype(L))
+            dQ .= zero(eltype(Q))
+            return Mooncake.CoDual(LQ, dLQ), dlq_adjoint
+        end
+        @is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof($f), AbstractMatrix, Tuple{<:AbstractMatrix, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.frule!!(::Dual{typeof($f)}, A_dA::Dual{<:AbstractMatrix}, LQ_dLQ::Dual, alg_dalg::Dual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+            A, dA = arrayify(A_dA)
+            LQ    = Mooncake.primal(LQ_dLQ)
+            LQ    = $f(A, LQ, Mooncake.primal(alg_dalg); kwargs...)
+            dLQ   = Mooncake.tangent(LQ_dLQ)
+            L, dL = arrayify(LQ[1], dLQ[1])
+            Q, dQ = arrayify(LQ[2], dLQ[2])
+            invL  = inv(L)
+            ∂K    = invL * dA * Q'
+            ∂K    = ∂K + ∂K'
+            diagview(∂K) ./= 2
+            ∂K[MatrixAlgebraKit.uppertriangularind(∂K)] .= zero(eltype(∂K))
+            dL   .= L * ∂K
+            dQ   .= invL * dA - invL * dL * Q
+            dA   .= zero(eltype(A))
+            return Mooncake.Dual(LQ, dLQ)
+        end
+    end
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(lq_null!), AbstractMatrix, AbstractMatrix, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(f_df::CoDual{typeof(lq_null!)}, A_dA::CoDual{<:AbstractMatrix}, Nᴴ_dNᴴ::CoDual{<:AbstractMatrix}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+    A, dA  = arrayify(A_dA)
+    dA    .= zero(eltype(A))
+    Ac     = MatrixAlgebraKit.copy_input(lq_full, A)
+    LQ     = MatrixAlgebraKit.initialize_output(lq_full!, A, Mooncake.primal(alg_dalg))
+    L, Q   = lq_full!(Ac, LQ, Mooncake.primal(alg_dalg))
+    Nᴴ, dNᴴ  = arrayify(Mooncake.primal(Nᴴ_dNᴴ), Mooncake.tangent(Nᴴ_dNᴴ))
+    copy!(Nᴴ, view(Q, (size(A, 1) + 1):size(A, 2), 1:size(A, 2)))
+    function dlq_null_adjoint(::Mooncake.NoRData)
+        m, n = size(A)
+        minmn = min(m, n)
+        dQ = zeros(eltype(A), (n, n))
+        view(dQ, (minmn + 1):n, 1:n) .= dNᴴ
+        dL = zeros(eltype(A), (m, n))
+        MatrixAlgebraKit.lq_compact_pullback!(dA, (L, Q), (dL, dQ); kwargs...)
         return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
     end
-    N = qr_null!(A, N, Mooncake.primal(alg_dalg); kwargs...)
-    return Mooncake.CoDual(N, dN), dqr_adjoint
+    return Nᴴ_dNᴴ, dlq_null_adjoint
 end
-=#
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(qr_null!), AbstractMatrix, AbstractMatrix, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(f_df::CoDual{typeof(qr_null!)}, A_dA::CoDual{<:AbstractMatrix}, N_dN::CoDual{<:AbstractMatrix}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+    A, dA  = arrayify(A_dA)
+    dA    .= zero(eltype(A))
+    Ac     = MatrixAlgebraKit.copy_input(qr_full, A)
+    QR     = MatrixAlgebraKit.initialize_output(qr_full!, A, Mooncake.primal(alg_dalg))
+    Q, R   = qr_full!(Ac, QR, Mooncake.primal(alg_dalg))
+    N, dN  = arrayify(Mooncake.primal(N_dN), Mooncake.tangent(N_dN))
+    copy!(N, view(Q, 1:size(A, 1), (size(A, 2) + 1):size(A, 1)))
+    function dqr_null_adjoint(::Mooncake.NoRData)
+        m, n = size(A)
+        minmn = min(m, n)
+        dQ = zeros(eltype(A), (m, m))
+        view(dQ, 1:m, (minmn + 1):m) .= dN
+        dR = zeros(eltype(A), (m, n))
+        MatrixAlgebraKit.qr_compact_pullback!(dA, (Q, R), (dQ, dR); kwargs...)
+        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+    end
+    return N_dN, dqr_null_adjoint
+end
+
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.eig_full!), AbstractMatrix, Tuple{<:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eig_full!)}, A_dA::CoDual, DV_dDV::CoDual, alg_dalg::CoDual; kwargs...)
     A, dA  = arrayify(A_dA)
@@ -101,101 +200,313 @@ function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eig_full!)}, A_dA::Co
         dA = MatrixAlgebraKit.eig_full_pullback!(dA, (D, V), (dD, dV); kwargs...)
         return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
     end
-    A_copy = copy(A)
     DV = eig_full!(A, DV, Mooncake.primal(alg_dalg); kwargs...)
-    copyto!(A, A_copy)
     return Mooncake.CoDual(DV, dDV), deig_adjoint
 end
-#=
-# redo all of this because of no `one` method for Tangents... hmmmm
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.eig_full!), AbstractMatrix, Tuple{<:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eig_full!)}, A_dA::CoDual, DV_dDV::CoDual, alg_dalg::CoDual;
-                 tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(Mooncake.primal(DV_dDV)[1]),
-                 degeneracy_atol::Real=tol,
-                 gauge_atol::Real=tol,
-                 kwargs...)
-    A, dA   = arrayify(A_dA)
-    ∂A      = zero(A)
-    DV      = Mooncake.primal(DV_dDV)
-    dDV     = Mooncake.tangent(DV_dDV)
-    Dmat, dDmat = arrayify(DV[1], dDV[1])
-    V, dV       = arrayify(DV[2], dDV[2])
-    D  = diagview(Dmat)
-    dD = diagview(dDmat)
-    function deig_adjoint(::Mooncake.NoRData)
-        if !isa(dV, Mooncake.NoTangent)
-            VdΔV   = V' * dV
-            mask   = abs.(transpose(D) .- D) .< degeneracy_atol
-            Δgauge = norm(view(VdΔV, mask), Inf)
-            Δgauge < gauge_atol ||
-                @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-            VdΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
 
-            if !isa(dD, Mooncake.NoTangent)
-                VdΔV[diagind(VdΔV)] .+= dD
-            end
-            PΔV = V' \ VdΔV
-            if eltype(∂A) <: Real
-                ∂Ac = mul!(VdΔV, PΔV, V') # recycle VdΔV memory
-                ∂A .+= real.(∂Ac)
-            else
-                ∂A = mul!(∂A, PΔV, V', 1, 1)
-            end
-        elseif !isa(dD, Mooncake.NoTangent)
-            PΔV = V' \ Diagonal(dD)
-            if eltype(∂A) <: Real
-                ∂Ac = PΔV * V'
-                ∂A .+= real.(∂Ac)
-            else
-                ∂A = mul!(∂A, PΔV, V', 1, 1)
-            end
+@is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof(MatrixAlgebraKit.eig_full!), AbstractMatrix, Tuple{<:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.frule!!(::Dual{typeof(MatrixAlgebraKit.eig_full!)}, A_dA::Dual, DV_dDV::Dual, alg_dalg::Dual; kwargs...)
+    A, dA    = arrayify(A_dA)
+    DV       = Mooncake.primal(DV_dDV)
+    dDV      = Mooncake.tangent(DV_dDV)
+    D, dD    = arrayify(DV[1], dDV[1])
+    V, dV    = arrayify(DV[2], dDV[2])
+    (D, V)   = eig_full!(A, DV, Mooncake.primal(alg_dalg); kwargs...)
+    ∂K       = inv(V) * dA * V
+    ∂Kdiag   = diagview(∂K)
+    dD.diag .= ∂Kdiag
+    ∂K     ./= transpose(diagview(D)) .- diagview(D)
+    fill!(∂Kdiag, zero(eltype(D)))
+    mul!(dV, V, ∂K, 1, 0)
+    dA      .= zero(eltype(dA))
+    return Mooncake.Dual(DV, dDV)
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof(MatrixAlgebraKit.eig_vals!), AbstractMatrix, AbstractVector, MatrixAlgebraKit.AbstractAlgorithm}
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.eig_vals!), AbstractMatrix, AbstractVector, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.frule!!(::Dual{<:typeof(MatrixAlgebraKit.eig_vals!)}, A_dA::Dual, D_dD::Dual, alg_dalg::Dual; kwargs...)
+    # compute primal
+    D_    = Mooncake.primal(D_dD)
+    dD_   = Mooncake.tangent(D_dD)
+    A_    = Mooncake.primal(A_dA)
+    dA_   = Mooncake.tangent(A_dA)
+    A, dA = arrayify(A_, dA_)
+    D, dD = arrayify(D_, dD_)
+    nD, V = eig_full(A, alg_dalg.primal; kwargs...)
+
+    # update tangent
+    tmp   = V \ dA
+    dD   .= diagview(tmp * V)
+    dA   .= zero(eltype(dA))
+    return Mooncake.Dual(nD.diag, dD_)
+end
+
+function Mooncake.rrule!!(::CoDual{<:typeof(MatrixAlgebraKit.eig_vals!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual; kwargs...)
+    # compute primal
+    D_    = Mooncake.primal(D_dD)
+    dD_   = Mooncake.tangent(D_dD)
+    A_    = Mooncake.primal(A_dA)
+    dA_   = Mooncake.tangent(A_dA)
+    A, dA = arrayify(A_, dA_)
+    D, dD = arrayify(D_, dD_)
+    dA   .= zero(eltype(dA))
+    # update primal 
+    DV  = eig_full(A, Mooncake.primal(alg_dalg); kwargs...)
+    V   = DV[2]
+    dD .= zero(eltype(D))
+    function deig_vals_adjoint(::Mooncake.NoRData)
+        PΔV = V' \ Diagonal(dD)
+        if eltype(dA) <: Real
+            ΔAc = PΔV * V'
+            dA .+= real.(ΔAc)
+        else
+            mul!(dA, PΔV, V', 1, 0)
         end
-        dA .= ∂A
         return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
     end
-    DV = eig_full!(A, DV, Mooncake.primal(alg_dalg); kwargs...)
-    return Mooncake.CoDual(DV, dDV), deig_adjoint
+    return Mooncake.CoDual(DV[1].diag, dD_), deig_vals_adjoint
 end
-#=
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.eigh_full!), AbstractMatrix, Tuple{<:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eigh_full!)}, A_dA::CoDual{<:AbstractMatrix}, DV_dDV::CoDual{<:Tuple{<:Diagonal, <:AbstractMatrix}}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm};
-                 tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(Mooncake.primal(DV_dDV)[1]),
-                 degeneracy_atol::Real=tol,
-                 gauge_atol::Real=tol,
-                 kwargs...)
-    A, dA   = arrayify(A_dA)
-    ∂A      = zero(A)
-    DV      = Mooncake.primal(DV_dDV)
-    dDV     = Mooncake.tangent(DV_dDV)
-    D, V    = DV
-    D, dD   = arrayify(D, dDV[1])
-    V, dV   = arrayify(V, dDV[2])
-    function deigh_adjoint(::Mooncake.NoRData)
-        if !isa(dV, Mooncake.NoTangent)
-            VdΔV   = V' * dV
-            aVdΔV  = rmul!(VdΔV - VdΔV', 1 / 2)
-            mask   = abs.(transpose(D.diag) .- D.diag) .< degeneracy_atol
-            Δgauge = norm(view(aVdΔV, mask))
-            Δgauge < gauge_atol || @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-            VdΔV .*= conj.(inv_safe.(transpose(D.diag) .- D.diag, degeneracy_atol))
 
-            aVdΔV .*= MatrixAlgebraKit.inv_safe.(D.diag' .- D.diag, tol)
-            if !isa(dD, Mooncake.NoTangent)
-                aVdΔV[diagind(aVdΔV)] .+= real.(diagview(dD))
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.eigh_full!), AbstractMatrix, Tuple{<:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eigh_full!)}, A_dA::CoDual{<:AbstractMatrix}, DV_dDV::CoDual{<:Tuple{<:Diagonal, <:AbstractMatrix}}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+    A, dA  = arrayify(A_dA)
+    dA    .= zero(eltype(A))
+    DV     = Mooncake.primal(DV_dDV)
+    dDV    = Mooncake.tangent(DV_dDV)
+    D, dD  = arrayify(DV[1], dDV[1])
+    V, dV  = arrayify(DV[2], dDV[2])
+    function deigh_adjoint(::Mooncake.NoRData)
+        dA = MatrixAlgebraKit.eigh_full_pullback!(dA, (D, V), (dD, dV); kwargs...)
+        # Add lower triangle to upper triangle and zero out.
+        dA .*= 2
+        dA[diagind(dA)] ./= 2
+        for i in 1:size(dA, 1), j in 1:size(dA, 2)
+            if i > j
+                dA[i, j] = zero(eltype(dA)) 
             end
-            dA = mul!(dA, mul!(VdΔV, V, aVdΔV), V', 1, 1)
-        elseif !isa(dD, Mooncake.NoTangent)
-            dA = mul!(dA, V * Diagonal(real(diagview(d))), V', 1, 1)
         end
         return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
     end
     DV = eigh_full!(A, DV, Mooncake.primal(alg_dalg); kwargs...)
     return Mooncake.CoDual(DV, dDV), deigh_adjoint
 end
-=#
-=#
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.svd_full!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.svd_compact!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.svd_vals!), AbstractMatrix, Any, MatrixAlgebraKit.AbstractAlgorithm}
-@from_chainrules DefaultCtx Tuple{typeof(MatrixAlgebraKit.svd_trunc!), AbstractMatrix, Any, MatrixAlgebraKit.TruncatedAlgorithm}
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof(MatrixAlgebraKit.eigh_full!), AbstractMatrix, Tuple{<:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.frule!!(::Dual{typeof(MatrixAlgebraKit.eigh_full!)}, A_dA::Dual, DV_dDV::Dual, alg_dalg::Dual; kwargs...)
+    A, dA   = arrayify(A_dA)
+    DV      = Mooncake.primal(DV_dDV)
+    dDV     = Mooncake.tangent(DV_dDV)
+    D, dD   = arrayify(DV[1], dDV[1])
+    V, dV   = arrayify(DV[2], dDV[2])
+    (D, V)  = eigh_full!(A, DV, Mooncake.primal(alg_dalg); kwargs...)
+    dA .*= 2
+    dA[diagind(dA)] ./= 2
+    for i in 1:size(dA, 1), j in 1:size(dA, 2)
+        if i > j
+            dA[i, j] = zero(eltype(dA))
+        end
+    end
+    tmpV         = V \ dA
+    ∂K           = tmpV * V
+    ∂Kdiag       = diag(∂K)
+    dD.diag     .= real.(∂Kdiag)
+    dDD          = transpose(diagview(D)) .- diagview(D)
+    F            = one(eltype(dDD)) ./ dDD
+    diagview(F) .= zero(eltype(F))
+    ∂K         .*= F
+    ∂V           = mul!(tmpV, V, ∂K) 
+    copyto!(dV, ∂V)
+    dA          .= zero(eltype(A))
+    return Mooncake.Dual(DV, dDV)
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof(MatrixAlgebraKit.eigh_vals!), AbstractMatrix, AbstractVector, MatrixAlgebraKit.AbstractAlgorithm}
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.eigh_vals!), AbstractMatrix, AbstractVector, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.frule!!(::Dual{<:typeof(MatrixAlgebraKit.eigh_vals!)}, A_dA::Dual, D_dD::Dual, alg_dalg::Dual; kwargs...)
+    # compute primal
+    D_    = Mooncake.primal(D_dD)
+    dD_   = Mooncake.tangent(D_dD)
+    A_    = Mooncake.primal(A_dA)
+    dA_   = Mooncake.tangent(A_dA)
+    A, dA = arrayify(A_, dA_)
+    D, dD = arrayify(D_, dD_)
+    nD, V = eigh_full(A, alg_dalg.primal; kwargs...)
+
+    dA .*= 2
+    dA[diagind(dA)] ./= 2
+    for i in 1:size(dA, 1), j in 1:size(dA, 2)
+        if i > j
+            dA[i, j] = zero(eltype(dA))
+        end
+    end
+    # update tangent
+    tmp   = inv(V) * dA * V
+    dD   .= real.(diagview(tmp))
+    D    .= nD.diag
+    dA   .= zero(eltype(dA))
+    return D_dD
+end
+
+function Mooncake.rrule!!(::CoDual{<:typeof(MatrixAlgebraKit.eigh_vals!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual; kwargs...)
+    # compute primal
+    D_    = Mooncake.primal(D_dD)
+    dD_   = Mooncake.tangent(D_dD)
+    A_    = Mooncake.primal(A_dA)
+    dA_   = Mooncake.tangent(A_dA)
+    A, dA = arrayify(A_, dA_)
+    D, dD = arrayify(D_, dD_)
+    DV    = eigh_full(A, Mooncake.primal(alg_dalg); kwargs...)
+    function deigh_vals_adjoint(::Mooncake.NoRData)
+        mul!(dA, DV[2] * Diagonal(real(dD)), DV[2]', 1, 0)
+        # Add lower triangle to upper triangle and zero out.
+        dA .*= 2
+        dA[diagind(dA)] ./= 2
+        for i in 1:size(dA, 1), j in 1:size(dA, 2)
+            if i > j
+                dA[i, j] = zero(eltype(dA))
+            end
+        end
+        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+    end
+    return Mooncake.CoDual(DV[1].diag, dD_), deigh_vals_adjoint
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof(svd_compact!), AbstractMatrix, Tuple{<:AbstractMatrix, <:Diagonal, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.frule!!(::Dual{<:typeof(svd_compact!)}, A_dA::Dual, USVᴴ_dUSVᴴ::Dual, alg_dalg::Dual; kwargs...)
+    # compute primal
+    USVᴴ   = Mooncake.primal(USVᴴ_dUSVᴴ)
+    dUSVᴴ  = Mooncake.tangent(USVᴴ_dUSVᴴ)
+    A_     = Mooncake.primal(A_dA)
+    dA_    = Mooncake.tangent(A_dA)
+    A, dA  = arrayify(A_, dA_)
+    svd_compact!(A, USVᴴ, alg_dalg.primal; kwargs...)
+    
+    # update tangents
+    U_, S_, Vᴴ_    = USVᴴ
+    dU_, dS_, dVᴴ_ = dUSVᴴ
+    U, dU   = arrayify(U_, dU_) 
+    S, dS   = arrayify(S_, dS_) 
+    Vᴴ, dVᴴ = arrayify(Vᴴ_, dVᴴ_) 
+    V       = adjoint(Vᴴ)
+
+    copyto!(dS.diag, diag(real.(U' * dA * V)))
+    m, n    = size(A)
+    F       = one(eltype(S)) ./ (diagview(S)' .- diagview(S))
+    G       = one(eltype(S)) ./ (diagview(S)' .+ diagview(S))
+    diagview(F) .= zero(eltype(F))
+    invSdiag = zeros(eltype(S), length(S.diag))
+    for i in 1:length(S.diag)
+        @inbounds invSdiag[i] = inv(diagview(S)[i])
+    end
+    invS = Diagonal(invSdiag)
+    #∂U = U * (F .* (U' * dA * V * S + S * Vᴴ * dA' * U)) + (diagm(ones(eltype(U), m)) - U*U') * dA * V * invS
+    #∂V = V * (F .* (S * U' * dA * V + Vᴴ * dA' * U * S)) + (diagm(ones(eltype(V), n)) - V*Vᴴ) * dA' * U * invS
+    #copyto!(dU, ∂U)
+    #adjoint!(dVᴴ, ∂V)
+    Pᴴ = (U' * dA * V + Vᴴ * dA' * U) ./ 2
+    Pᴬ = (U' * dA * V - Vᴴ * dA' * U) ./ 2
+    ∂K = (F .* Pᴴ .+ G .* Pᴬ)
+    ∂M = (F .* Pᴴ .- G .* Pᴬ)
+    ∂L_ = (diagm(ones(eltype(U), m)) - U*U') * dA * V
+    ∂L  = ∂L_ * invS
+    ∂N_ = (diagm(ones(eltype(V), n)) - V*Vᴴ) * dA' * U
+    ∂N  = ∂N_ * invS
+    ∂U = U * ∂K + ∂L
+    ∂V = V * ∂M + ∂N 
+    copyto!(dU, ∂U)
+    adjoint!(dVᴴ, ∂V)
+    dA .= zero(eltype(A))
+    return USVᴴ_dUSVᴴ
+end
+
+for (f, St) in ((svd_full!, :AbstractMatrix), (svd_compact!, :Diagonal))
+    @eval begin
+        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), AbstractMatrix, Tuple{<:AbstractMatrix, <:$St, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual; kwargs...)
+            A, dA   = arrayify(A_dA)
+            dA     .= zero(eltype(A))
+            USVᴴ    = Mooncake.primal(USVᴴ_dUSVᴴ)
+            dUSVᴴ   = Mooncake.tangent(USVᴴ_dUSVᴴ)
+            U, dU   = arrayify(USVᴴ[1], dUSVᴴ[1])
+            S, dS   = arrayify(USVᴴ[2], dUSVᴴ[2])
+            Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
+            function dsvd_adjoint(::Mooncake.NoRData)
+                dA = MatrixAlgebraKit.svd_compact_pullback!(dA, (U, S, Vᴴ), (dU, dS, dVᴴ); kwargs...)
+                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+            end
+            USVᴴ = $f(A, USVᴴ, Mooncake.primal(alg_dalg); kwargs...)
+            return Mooncake.CoDual(USVᴴ, dUSVᴴ), dsvd_adjoint
+        end
+    end
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof(MatrixAlgebraKit.svd_vals!), AbstractMatrix, AbstractVector, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.frule!!(::Dual{<:typeof(MatrixAlgebraKit.svd_vals!)}, A_dA::Dual, S_dS::Dual, alg_dalg::Dual; kwargs...)
+    # compute primal
+    S_    = Mooncake.primal(S_dS)
+    dS_   = Mooncake.tangent(S_dS)
+    A_    = Mooncake.primal(A_dA)
+    dA_   = Mooncake.tangent(A_dA)
+    A, dA = arrayify(A_, dA_)
+    U, nS, Vᴴ = svd_compact(A, Mooncake.primal(alg_dalg); kwargs...)
+
+    # update tangent
+    S, dS   = arrayify(S_, dS_) 
+    copyto!(dS, diag(real.(Vᴴ * dA' * U)))
+    copyto!(S, diagview(nS))
+    dA .= zero(eltype(dA))
+    return Mooncake.Dual(nS.diag, dS)
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.svd_vals!), AbstractMatrix, AbstractVector, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(::CoDual{<:typeof(MatrixAlgebraKit.svd_vals!)}, A_dA::CoDual, S_dS::CoDual, alg_dalg::CoDual; kwargs...)
+    # compute primal
+    S_    = Mooncake.primal(S_dS)
+    dS_   = Mooncake.tangent(S_dS)
+    A_    = Mooncake.primal(A_dA)
+    dA_   = Mooncake.tangent(A_dA)
+    A, dA = arrayify(A_, dA_)
+    S, dS = arrayify(S_, dS_)
+    U, nS, Vᴴ = svd_compact(A, Mooncake.primal(alg_dalg); kwargs...)
+    S    .= diagview(nS)
+    dS   .= zero(eltype(S))
+    function dsvd_vals_adjoint(::Mooncake.NoRData)
+        dA   .= U * Diagonal(dS) * Vᴴ
+        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+    end
+    return S_dS, dsvd_vals_adjoint
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.left_polar!), AbstractMatrix, Tuple{<:AbstractMatrix, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.left_polar!)}, A_dA::CoDual{<:AbstractMatrix}, WP_dWP::CoDual{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+    A, dA  = arrayify(A_dA)
+    dA    .= zero(eltype(A))
+    WP     = Mooncake.primal(WP_dWP)
+    dWP    = Mooncake.tangent(WP_dWP)
+    W, dW  = arrayify(WP[1], dWP[1])
+    P, dP  = arrayify(WP[2], dWP[2])
+    function dleft_polar_adjoint(::Mooncake.NoRData)
+        dA = MatrixAlgebraKit.left_polar_pullback!(dA, (W, P), (dW, dP); kwargs...)
+        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+    end
+    WP = left_polar!(A, WP, Mooncake.primal(alg_dalg); kwargs...)
+    return Mooncake.CoDual(WP, dWP), dleft_polar_adjoint
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.right_polar!), AbstractMatrix, Tuple{<:AbstractMatrix, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.right_polar!)}, A_dA::CoDual{<:AbstractMatrix}, PWᴴ_dPWᴴ::CoDual{<:Tuple{<:AbstractMatrix, <:AbstractMatrix}}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+    A, dA   = arrayify(A_dA)
+    dA     .= zero(eltype(A))
+    PWᴴ     = Mooncake.primal(PWᴴ_dPWᴴ)
+    dPWᴴ    = Mooncake.tangent(PWᴴ_dPWᴴ)
+    P, dP   = arrayify(PWᴴ[1], dPWᴴ[1])
+    Wᴴ, dWᴴ = arrayify(PWᴴ[2], dPWᴴ[2])
+    function dright_polar_adjoint(::Mooncake.NoRData)
+        dA = MatrixAlgebraKit.right_polar_pullback!(dA, (P, Wᴴ), (dP, dWᴴ); kwargs...)
+        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+    end
+    PWᴴ = right_polar!(A, PWᴴ, Mooncake.primal(alg_dalg); kwargs...)
+    return Mooncake.CoDual(PWᴴ, dPWᴴ), dright_polar_adjoint
+end
+
 end

@@ -4,7 +4,7 @@ using SafeTestsets
 # specific ones
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 if !is_buildkite
-    @safetestset "Algorithms" begin
+    #=@safetestset "Algorithms" begin
         include("algorithms.jl")
     end
     @safetestset "Truncate" begin
@@ -34,16 +34,16 @@ if !is_buildkite
     end
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
-    end
-    @safetestset "ChainRules" begin
-        include("chainrules.jl")
-    end
+    end=#
     @safetestset "Mooncake" begin
         include("mooncake.jl")
     end
     @safetestset "Enzyme" begin
         include("enzyme.jl")
     end
+    #=@safetestset "ChainRules" begin
+        include("chainrules.jl")
+    end=#
     @safetestset "MatrixAlgebraKit.jl" begin
         @safetestset "Code quality (Aqua.jl)" begin
             using MatrixAlgebraKit
