@@ -49,7 +49,7 @@ end
         @test A * V1 ≈ V1 * D1
 
         s = 1 + sqrt(eps(real(T)))
-        trunc = trunctol(s * abs(D₀[r + 1]))
+        trunc = trunctol(; atol=s * abs(D₀[r + 1]))
         D2, V2 = @constinferred eig_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test A * V2 ≈ V2 * D2

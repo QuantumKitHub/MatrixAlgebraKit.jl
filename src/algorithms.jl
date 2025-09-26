@@ -168,16 +168,16 @@ based on the `strategy`. The output should be a collection of indices specifying
 which values to keep. `MatrixAlgebraKit.findtruncated` is used inside of the default
 implementation of [`truncate!`](@ref) to perform the truncation. It does not assume that the
 values are sorted. For a version that assumes the values are reverse sorted (which is the
-standard case for SVD) see [`MatrixAlgebraKit.findtruncated_sorted`](@ref).
+standard case for SVD) see [`MatrixAlgebraKit.findtruncated_svd`](@ref).
 """ findtruncated
 
 @doc """
-    MatrixAlgebraKit.findtruncated_sorted(values::AbstractVector, strategy::TruncationStrategy)
+    MatrixAlgebraKit.findtruncated_svd(values::AbstractVector, strategy::TruncationStrategy)
 
 Like [`MatrixAlgebraKit.findtruncated`](@ref) but assumes that the values are real and
 sorted in descending order, as typically obtained by the SVD. This assumption is not
 checked, and this is used in the default implementation of [`svd_trunc!`](@ref).
-""" findtruncated_sorted
+""" findtruncated_svd
 
 """
     TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationAlgorithm)

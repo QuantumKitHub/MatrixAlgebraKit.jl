@@ -284,7 +284,7 @@ end
                            output_tangent=(ΔU[:, 1:r], ΔS[1:r, 1:r], ΔVᴴ[1:r, :]),
                            atol=atol, rtol=rtol)
             end
-            truncalg = TruncatedAlgorithm(alg, trunctol(S[1, 1] / 2))
+            truncalg = TruncatedAlgorithm(alg, trunctol(; atol=S[1, 1] / 2))
             r = findlast(>=(S[1, 1] / 2), diagview(S))
             test_rrule(copy_svd_trunc, A, truncalg ⊢ NoTangent();
                        output_tangent=(ΔU[:, 1:r], ΔS[1:r, 1:r], ΔVᴴ[1:r, :]),
@@ -302,7 +302,7 @@ end
                        atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
         end
         r = findlast(>=(S[1, 1] / 2), diagview(S))
-        test_rrule(config, svd_trunc, A; fkwargs=(; trunc=trunctol(S[1, 1] / 2)),
+        test_rrule(config, svd_trunc, A; fkwargs=(; trunc=trunctol(; atol=S[1, 1] / 2)),
                    output_tangent=(ΔU[:, 1:r], ΔS[1:r, 1:r], ΔVᴴ[1:r, :]),
                    atol=atol, rtol=rtol, rrule_f=rrule_via_ad, check_inferred=false)
     end
