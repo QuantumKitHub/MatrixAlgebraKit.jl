@@ -1,11 +1,10 @@
 # TODO: we should somewhere check that we only call this when performing a positive LQ
 
 """
-    lq_compact_pullback!(
-        ΔA, (L, Q), (ΔL, ΔQ);
-        tol::Real = default_pullback_gaugetol(R),
-        rank_atol::Real = tol, gauge_atol::Real = tol
-    )
+    lq_compact_pullback!(ΔA, A, (L, Q), (ΔL, ΔQ);
+                            tol::Real=default_pullback_gaugetol(R),
+                            rank_atol::Real=tol,
+                            gauge_atol::Real=tol)
 
 Adds the pullback from the LQ decomposition of `A` to `ΔA` given the output `(L, Q)` and
 cotangent `(ΔL, ΔQ)` of `lq_compact(A; positive = true)` or `lq_full(A; positive = true)`.
@@ -18,9 +17,10 @@ values only in the first `r` columns and rows respectively. If nonzero values in
 remaining columns or rows exceed `gauge_atol`, a warning will be printed.
 """
 function lq_compact_pullback!(
-        ΔA::AbstractMatrix, LQ, ΔLQ;
+        ΔA::AbstractMatrix, A, LQ, ΔLQ;
         tol::Real = default_pullback_gaugetol(LQ[1]),
-        rank_atol::Real = tol, gauge_atol::Real = tol
+        rank_atol::Real = tol,
+        gauge_atol::Real = tol
     )
     # process
     L, Q = LQ

@@ -1,5 +1,5 @@
 """
-    svd_pullback!(ΔA, USVᴴ, ΔUSVᴴ, ind=nothing;
+    svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, ind=nothing;
                             tol::Real=default_pullback_gaugetol(S),
                             rank_atol::Real = tol,
                             degeneracy_atol::Real = tol,
@@ -23,7 +23,7 @@ anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and c
 for which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
 function svd_pullback!(
-        ΔA::AbstractMatrix, USVᴴ, ΔUSVᴴ, ind = nothing;
+        ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ, ind = nothing;
         tol::Real = default_pullback_gaugetol(USVᴴ[2]),
         rank_atol::Real = tol,
         degeneracy_atol::Real = tol,
@@ -33,6 +33,7 @@ function svd_pullback!(
     # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ
     m, n = size(U, 1), size(Vᴴ, 2)
+    (m, n) == size(ΔA) || throw(DimensionMismatch())
     minmn = min(m, n)
     S = diagview(Smat)
     length(S) == minmn || throw(DimensionMismatch())
@@ -110,5 +111,107 @@ function svd_pullback!(
         Up = view(U, :, indV)
         ΔA = mul!(ΔA, Up, Sp .\ ΔVᴴ, 1, 1)
     end
+    return ΔA
+end
+
+"""
+    svd_trunc_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, ind=nothing;
+                            tol::Real=default_pullback_gaugetol(S),
+                            rank_atol::Real = tol,
+                            degeneracy_atol::Real = tol,
+                            gauge_atol::Real = tol)
+
+Adds the pullback from the truncated SVD of `A` to `ΔA`, given the output `USVᴴ``
+and the cotangent `ΔUSVᴴ` of `svd_trunc`.
+
+In particular, it is assumed that `A * Vᴴ' ≈ U * S` and `U' * A = S * Vᴴ`, with
+`U` and `Vᴴ` rectangular matrices of left and right singular vectors, and `S`
+diagonal. For the cotangents, it is assumed that if `ΔU` and `ΔVᴴ` are not zero,
+then they have the same size as `U` and `Vᴴ` (respectively), and if `ΔS` is not zero,
+then it is a diagonal matrix of the same size as `S`. For this method to work correctly,
+it is also assumed that the remaining singular values (not included in `S`) are
+(sufficiently) separated from those in `S`.
+
+A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
+anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j`
+for which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
+"""
+function svd_trunc_pullback!(
+        ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
+        tol::Real = default_pullback_gaugetol(USVᴴ[2]),
+        rank_atol::Real = tol,
+        degeneracy_atol::Real = tol,
+        gauge_atol::Real = tol
+    )
+
+    # Extract the SVD components
+    U, Smat, Vᴴ = USVᴴ
+    m, n = size(U, 1), size(Vᴴ, 2)
+    (m, n) == size(ΔA) || throw(DimensionMismatch())
+    p = size(U, 2)
+    p == size(Vᴴ, 1) || throw(DimensionMismatch())
+    S = diagview(Smat)
+    p == length(S) || throw(DimensionMismatch())
+
+    # Extract and check the cotangents
+    ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
+    UΔU = fill!(similar(U, (p, p)), 0)
+    VΔV = fill!(similar(Vᴴ, (p, p)), 0)
+    if !iszerotangent(ΔU)
+        (m, p) == size(ΔU) || throw(DimensionMismatch())
+        mul!(UΔU, U', ΔU)
+    end
+    if !iszerotangent(ΔVᴴ)
+        (p, n) == size(ΔVᴴ) || throw(DimensionMismatch())
+        mul!(VΔV, Vᴴ, ΔVᴴ')
+        ΔVᴴ = ΔVᴴ - VΔV' * Vᴴ
+    end
+
+    # Project onto antihermitian part; hermitian part outside of Grassmann tangent space
+    aUΔU = rmul!(UΔU - UΔU', 1 / 2)
+    aVΔV = rmul!(VΔV - VΔV', 1 / 2)
+
+    # check whether cotangents arise from gauge-invariance objective function
+    mask = abs.(S' .- S) .< degeneracy_atol
+    Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
+    Δgauge < gauge_atol ||
+        @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+
+    UdΔAV = (aUΔU .+ aVΔV) .* inv_safe.(S' .- S, degeneracy_atol) .+
+        (aUΔU .- aVΔV) .* inv_safe.(S' .+ S, degeneracy_atol)
+    if !iszerotangent(ΔSmat)
+        ΔS = diagview(ΔSmat)
+        p == length(ΔS) || throw(DimensionMismatch())
+        diagview(UdΔAV) .+= real.(ΔS)
+    end
+    ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
+
+    # add contribution from orthogonal complement
+    Ũ = qr_null(U)
+    Ṽᴴ = lq_null(Vᴴ)
+    m̃ = m - p
+    ñ = n - p
+    Ã = Ũ' * A * Ṽᴴ'
+    ÃÃ = similar(A, (m̃ + ñ, m̃ + ñ))
+    fill!(ÃÃ, 0)
+    view(ÃÃ, (1:m̃), m̃ .+ (1:ñ)) .= Ã
+    view(ÃÃ, m̃ .+ (1:ñ), 1:m̃) .= Ã'
+
+    rhs = similar(Ũ, (m̃ + ñ, p))
+    if !iszerotangent(ΔU)
+        mul!(view(rhs, 1:m̃, :), Ũ', ΔU)
+    else
+        fill!(view(rhs, 1:m̃, :), 0)
+    end
+    if !iszerotangent(ΔVᴴ)
+        mul!(view(rhs, m̃ .+ (1:ñ), :), Ṽᴴ, ΔVᴴ')
+    else
+        fill!(view(rhs, m̃ .+ (1:ñ), :), 0)
+    end
+    XY = sylvester(ÃÃ, -S, -rhs)
+    X = view(XY, 1:m̃, :)
+    Y = view(XY, m̃ .+ (1:ñ), :)
+    ΔA = mul!(ΔA, Ũ, X * Vᴴ, 1, 1)
+    ΔA = mul!(ΔA, U, Y' * Ṽᴴ, 1, 1)
     return ΔA
 end

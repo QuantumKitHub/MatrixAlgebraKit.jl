@@ -2,7 +2,7 @@ module MatrixAlgebraKitChainRulesCoreExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: copy_input, initialize_output, zero!, diagview,
-    TruncatedAlgorithm, findtruncated, findtruncated_sorted
+    TruncatedAlgorithm, findtruncated, findtruncated_svd
 using ChainRulesCore
 using LinearAlgebra
 
@@ -25,7 +25,7 @@ for qr_f in (:qr_compact, :qr_full)
             QR = $(qr_f!)(Ac, QR, alg)
             function qr_pullback(ΔQR)
                 ΔA = zero(A)
-                MatrixAlgebraKit.qr_compact_pullback!(ΔA, QR, unthunk.(ΔQR))
+                MatrixAlgebraKit.qr_compact_pullback!(ΔA, A, QR, unthunk.(ΔQR))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function qr_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -46,7 +46,7 @@ function ChainRulesCore.rrule(::typeof(qr_null!), A::AbstractMatrix, N, alg)
         minmn = min(m, n)
         ΔQ = zero!(similar(A, (m, m)))
         view(ΔQ, 1:m, (minmn + 1):m) .= unthunk.(ΔN)
-        MatrixAlgebraKit.qr_compact_pullback!(ΔA, (Q, R), (ΔQ, ZeroTangent()))
+        MatrixAlgebraKit.qr_compact_pullback!(ΔA, A, (Q, R), (ΔQ, ZeroTangent()))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function qr_null_pullback(::ZeroTangent) # is this extra definition useful?
@@ -63,7 +63,7 @@ for lq_f in (:lq_compact, :lq_full)
             LQ = $(lq_f!)(Ac, LQ, alg)
             function lq_pullback(ΔLQ)
                 ΔA = zero(A)
-                MatrixAlgebraKit.lq_compact_pullback!(ΔA, LQ, unthunk.(ΔLQ))
+                MatrixAlgebraKit.lq_compact_pullback!(ΔA, A, LQ, unthunk.(ΔLQ))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function lq_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -84,7 +84,7 @@ function ChainRulesCore.rrule(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, alg)
         minmn = min(m, n)
         ΔQ = zero!(similar(A, (n, n)))
         view(ΔQ, (minmn + 1):n, 1:n) .= unthunk.(ΔNᴴ)
-        MatrixAlgebraKit.lq_compact_pullback!(ΔA, (L, Q), (ZeroTangent(), ΔQ))
+        MatrixAlgebraKit.lq_compact_pullback!(ΔA, A, (L, Q), (ZeroTangent(), ΔQ))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function lq_null_pullback(::ZeroTangent) # is this extra definition useful?
@@ -107,7 +107,7 @@ for eig in (:eig, :eigh)
             DV = $(eig_f!)(Ac, DV, alg)
             function $eig_pb(ΔDV)
                 ΔA = zero(A)
-                MatrixAlgebraKit.$eig_pb!(ΔA, DV, unthunk.(ΔDV))
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, unthunk.(ΔDV))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function $eig_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -120,15 +120,15 @@ for eig in (:eig, :eigh)
                 alg::TruncatedAlgorithm
             )
             Ac = copy_input($eig_f, A)
-            D, V = $(eig_f!)(Ac, DV, alg)
+            D, V = $(eig_f!)(Ac, DV, alg.alg)
             ind = findtruncated(diagview(D), alg.trunc)
             return (Diagonal(diagview(D)[ind]), V[:, ind]),
-                _make_eig_t_pb(A, (D, V), ind)
+                $(_make_eig_t_pb)(A, (D, V), ind)
         end
         function $(_make_eig_t_pb)(A, DV, ind)
             function $eig_t_pb(ΔDV)
                 ΔA = zero(A)
-                MatrixAlgebraKit.$eig_pb!(ΔA, DV, unthunk.(ΔDV), ind)
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, unthunk.(ΔDV), ind)
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function $eig_t_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -147,7 +147,7 @@ for svd_f in (:svd_compact, :svd_full)
             USVᴴ = $(svd_f!)(Ac, USVᴴ, alg)
             function svd_pullback(ΔUSVᴴ)
                 ΔA = zero(A)
-                MatrixAlgebraKit.svd_pullback!(ΔA, USVᴴ, unthunk.(ΔUSVᴴ))
+                MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.(ΔUSVᴴ))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function svd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -164,14 +164,14 @@ function ChainRulesCore.rrule(
     )
     Ac = copy_input(svd_compact, A)
     U, S, Vᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
-    ind = findtruncated_sorted(diagview(S), alg.trunc)
+    ind = findtruncated_svd(diagview(S), alg.trunc)
     return (U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]),
         _make_svd_trunc_pullback(A, (U, S, Vᴴ), ind)
 end
 function _make_svd_trunc_pullback(A, USVᴴ, ind)
     function svd_trunc_pullback(ΔUSVᴴ)
         ΔA = zero(A)
-        MatrixAlgebraKit.svd_pullback!(ΔA, USVᴴ, unthunk.(ΔUSVᴴ), ind)
+        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.(ΔUSVᴴ), ind)
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -185,7 +185,7 @@ function ChainRulesCore.rrule(::typeof(left_polar!), A::AbstractMatrix, WP, alg)
     WP = left_polar!(Ac, WP, alg)
     function left_polar_pullback(ΔWP)
         ΔA = zero(A)
-        MatrixAlgebraKit.left_polar_pullback!(ΔA, WP, unthunk.(ΔWP))
+        MatrixAlgebraKit.left_polar_pullback!(ΔA, A, WP, unthunk.(ΔWP))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function left_polar_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -199,7 +199,7 @@ function ChainRulesCore.rrule(::typeof(right_polar!), A::AbstractMatrix, PWᴴ, 
     PWᴴ = right_polar!(Ac, PWᴴ, alg)
     function right_polar_pullback(ΔPWᴴ)
         ΔA = zero(A)
-        MatrixAlgebraKit.right_polar_pullback!(ΔA, PWᴴ, unthunk.(ΔPWᴴ))
+        MatrixAlgebraKit.right_polar_pullback!(ΔA, A, PWᴴ, unthunk.(ΔPWᴴ))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function right_polar_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?

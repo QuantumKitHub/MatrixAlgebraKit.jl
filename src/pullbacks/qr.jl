@@ -1,11 +1,9 @@
 # TODO: we should somewhere check that we only call this when performing a positive QR without pivoting
 """
-    qr_compact_pullback!(
-        ΔA, (Q, R), (ΔQ, ΔR);
-        tol::Real = default_pullback_gaugetol(R),
-        rank_atol::Real = tol,
-        gauge_atol::Real = tol
-    )
+    qr_compact_pullback!(ΔA, A, (Q, R), (ΔQ, ΔR);
+                            tol::Real=default_pullback_gaugetol(R),
+                            rank_atol::Real=tol,
+                            gauge_atol::Real=tol)
 
 Adds the pullback from the QR decomposition of `A` to `ΔA` given the output `(Q,R)` and
 cotangent `(ΔQ, ΔR)` of `qr_compact(A; positive = true)` or `qr_full(A; positive = true)`.
@@ -18,9 +16,10 @@ only in the first `r` columns and rows respectively. If nonzero values in the re
 columns or rows exceed `gauge_atol`, a warning will be printed.
 """
 function qr_compact_pullback!(
-        ΔA::AbstractMatrix, QR, ΔQR;
+        ΔA::AbstractMatrix, A, QR, ΔQR;
         tol::Real = default_pullback_gaugetol(QR[2]),
-        rank_atol::Real = tol, gauge_atol::Real = tol
+        rank_atol::Real = tol,
+        gauge_atol::Real = tol
     )
     # process
     Q, R = QR

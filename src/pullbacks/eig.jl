@@ -1,11 +1,11 @@
 """
-    eig_pullback!(ΔA, DV, ΔDV, ind=nothing;
+    eig_pullback!(ΔA::AbstractMatrix, A, DV, ΔDV, ind = nothing;
                     tol=default_pullback_gaugetol(DV[1]),
                     degeneracy_atol=tol,
                     gauge_atol=tol)
 
-Adds the pullback from the Hermitian eigenvalue decomposition of `A` to `ΔA`,
-given the output `DV` of `eigh_full` and the cotangent `ΔDV` of `eig_full` or `eig_trunc`.
+Adds the pullback from the full eigenvalue decomposition of `A` to `ΔA`,
+given the output `DV` of `eig_full` and the cotangent `ΔDV` of `eig_full` or `eig_trunc`.
 
 In particular, it is assumed that `A ≈ V * D * inv(V)` with thus `size(A) == size(V) == size(D)`
 and `D` diagonal. For the cotangents, an arbitrary number of eigenvectors or eigenvalues can
@@ -20,7 +20,7 @@ restriction of `V' * ΔV` to rows `i` and columns `j` for which
 `abs(D[i] - D[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
 function eig_pullback!(
-        ΔA::AbstractMatrix, DV, ΔDV, ind = nothing;
+        ΔA::AbstractMatrix, A, DV, ΔDV, ind = nothing;
         tol::Real = default_pullback_gaugetol(DV[1]),
         degeneracy_atol::Real = tol,
         gauge_atol::Real = tol
@@ -32,6 +32,7 @@ function eig_pullback!(
     ΔDmat, ΔV = ΔDV
     n = LinearAlgebra.checksquare(V)
     n == length(D) || throw(DimensionMismatch())
+    (n, n) == size(ΔA) || throw(DimensionMismatch())
 
     if !iszerotangent(ΔV)
         n == size(ΔV, 1) || throw(DimensionMismatch())
@@ -81,6 +82,89 @@ function eig_pullback!(
         end
         Vp = view(V, :, indD)
         PΔV = Vp' \ Diagonal(ΔDvec)
+        if eltype(ΔA) <: Real
+            ΔAc = PΔV * Vp'
+            ΔA .+= real.(ΔAc)
+        else
+            ΔA = mul!(ΔA, PΔV, V', 1, 1)
+        end
+    end
+    return ΔA
+end
+
+"""
+    eig_trunc_pullback!(ΔA::AbstractMatrix, ΔDV, A, DV;
+                    tol=default_pullback_gaugetol(DV[1]),
+                    degeneracy_atol=tol,
+                    gauge_atol=tol)
+
+Adds the pullback from the truncated eigenvalue decomposition of `A` to `ΔA`,
+given the output `DV` and the cotangent `ΔDV` of `eig_trunc`.
+
+In particular, it is assumed that `A * V ≈ V * D` with `V` a rectangular matrix of
+eigenvectors and `D` diagonal. For the cotangents, it is assumed that if `ΔV` is not zero,
+then it has the same number of columns as `V`, and if `ΔD` is not zero, then it is a
+diagonal matrix of the same size as `D`.
+
+For this method to work correctly, it is also assumed that the remaining eigenvalues
+(not included in `D`) are (sufficiently) separated from those in `D`.
+
+A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
+restriction of `V' * ΔV` to rows `i` and columns `j` for which
+`abs(D[i] - D[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
+"""
+function eig_trunc_pullback!(
+        ΔA::AbstractMatrix, A, DV, ΔDV;
+        tol::Real = default_pullback_gaugetol(DV[1]),
+        degeneracy_atol::Real = tol,
+        gauge_atol::Real = tol
+    )
+
+    # Basic size checks and determination
+    Dmat, V = DV
+    D = diagview(Dmat)
+    ΔDmat, ΔV = ΔDV
+    (n, p) = size(V)
+    p == length(D) || throw(DimensionMismatch())
+    (n, n) == size(ΔA) || throw(DimensionMismatch())
+
+    if !iszerotangent(ΔV)
+        (n, p) == size(ΔV) || throw(DimensionMismatch())
+        VᴴΔV = V' * ΔV
+        mask = abs.(transpose(D) .- D) .< degeneracy_atol
+        Δgauge = norm(view(VᴴΔV, mask), Inf)
+        Δgauge < gauge_atol ||
+            @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+
+        ΔVperp = ΔV - V * VᴴΔV
+        VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
+
+        if !iszerotangent(ΔDmat)
+            ΔDvec = diagview(ΔDmat)
+            p == length(ΔDvec) || throw(DimensionMismatch())
+            diagview(VᴴΔV) .+= ΔDvec
+        end
+        Z = V' \ VᴴΔV
+
+        # add contribution from orthogonal complement
+        VᴴA = V' * A
+        PA = A - V' \ VᴴA
+
+        X = sylvester(PA', -Dmat', ΔVperp)
+        VᴴX = V' * X
+        X = mul!(X, V, VᴴX, 1, -1)
+        Z .+= X
+
+        if eltype(ΔA) <: Real
+            ΔAc = Z * V'
+            ΔA .+= real.(ΔAc)
+        else
+            ΔA = mul!(ΔA, Z, V', 1, 1)
+        end
+
+    elseif !iszerotangent(ΔDmat)
+        ΔDvec = diagview(ΔDmat)
+        Z = V' \ Diagonal(ΔDvec)
         if eltype(ΔA) <: Real
             ΔAc = PΔV * Vp'
             ΔA .+= real.(ΔAc)
