@@ -1,10 +1,10 @@
 """
-    left_polar_pullback!(ΔA, (W, P), (ΔW, ΔP))
+    left_polar_pullback!(ΔA, A, (W, P), (ΔW, ΔP))
 
 Adds the pullback from the left polar decomposition of `A` to `ΔA` given the output `(W, P)` and
 cotangent `(ΔW, ΔP)` of `left_polar(A)`.                        
 """
-function left_polar_pullback!(ΔA::AbstractMatrix, WP, ΔWP)
+function left_polar_pullback!(ΔA::AbstractMatrix, A, WP, ΔWP)
 
     # Extract the Polar components
     W, P = WP
@@ -30,12 +30,12 @@ function left_polar_pullback!(ΔA::AbstractMatrix, WP, ΔWP)
 end
 
 """
-    right_polar_pullback!(ΔA, (P, Wᴴ), (ΔP, ΔWᴴ))
+    right_polar_pullback!(ΔA, A, (P, Wᴴ), (ΔP, ΔWᴴ))
 
 Adds the pullback from the left polar decomposition of `A` to `ΔA` given the output `(P, Wᴴ)` and
 cotangent `(ΔP, ΔWᴴ)` of `right_polar(A)`.                        
 """
-function right_polar_pullback!(ΔA::AbstractMatrix, PWᴴ, ΔPWᴴ)
+function right_polar_pullback!(ΔA::AbstractMatrix, A, PWᴴ, ΔPWᴴ)
 
     # Extract the Polar components
     P, Wᴴ = PWᴴ
