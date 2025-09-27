@@ -73,7 +73,7 @@ function lq_compact_pullback!(
             ΔQ2Q1ᴴ = ΔQ2 * Q1'
             Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
             Δgauge < tol ||
-                @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+                @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
             ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1ᴴ', Q2, -1, 1)
         end
     end

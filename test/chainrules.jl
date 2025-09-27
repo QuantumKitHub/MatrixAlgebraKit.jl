@@ -6,7 +6,7 @@ using ChainRulesCore, ChainRulesTestUtils, Zygote
 using MatrixAlgebraKit: diagview, TruncatedAlgorithm, PolarViaSVD
 using LinearAlgebra: UpperTriangular, Diagonal, Hermitian, mul!
 
-function remove_svdgauge_depence!(
+function remove_svdgauge_dependence!(
         ΔU, ΔVᴴ, U, S, Vᴴ;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gaugetol(S)
     )
@@ -16,7 +16,7 @@ function remove_svdgauge_depence!(
     mul!(ΔU, U, gaugepart, -1, 1)
     return ΔU, ΔVᴴ
 end
-function remove_eiggauge_depence!(
+function remove_eiggauge_dependence!(
         ΔV, D, V;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gaugetol(D)
     )
@@ -25,7 +25,7 @@ function remove_eiggauge_depence!(
     mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
     return ΔV
 end
-function remove_eighgauge_depence!(
+function remove_eighgauge_dependence!(
         ΔV, D, V;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gaugetol(D)
     )
@@ -253,7 +253,7 @@ end
     A = randn(rng, T, m, m)
     D, V = eig_full(A)
     ΔV = randn(rng, complex(T), m, m)
-    ΔV = remove_eiggauge_depence!(ΔV, D, V; degeneracy_atol = atol)
+    ΔV = remove_eiggauge_dependence!(ΔV, D, V; degeneracy_atol = atol)
     ΔD = randn(rng, complex(T), m, m)
     ΔD2 = Diagonal(randn(rng, complex(T), m))
     for alg in (LAPACK_Simple(), LAPACK_Expert())
@@ -295,7 +295,7 @@ end
     D, V = eigh_full(A)
     Ddiag = diagview(D)
     ΔV = randn(rng, T, m, m)
-    ΔV = remove_eighgauge_depence!(ΔV, D, V; degeneracy_atol = atol)
+    ΔV = remove_eighgauge_dependence!(ΔV, D, V; degeneracy_atol = atol)
     ΔD = randn(rng, real(T), m, m)
     ΔD2 = Diagonal(randn(rng, real(T), m))
     for alg in (
@@ -380,7 +380,7 @@ end
         ΔS = randn(rng, real(T), minmn, minmn)
         ΔS2 = Diagonal(randn(rng, real(T), minmn))
         ΔVᴴ = randn(rng, T, minmn, n)
-        ΔU, ΔVᴴ = remove_svdgauge_depence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol = atol)
+        ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol = atol)
         for alg in (LAPACK_QRIteration(), LAPACK_DivideAndConquer())
             test_rrule(
                 copy_svd_compact, A, alg ⊢ NoTangent();
