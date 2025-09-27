@@ -314,19 +314,33 @@ end
         for r in 1:4:m
             truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
             r = MatrixAlgebraKit.findtruncated(Ddiag, truncalg.trunc)
+            Dtrunc = Diagonal(diagview(D)[r])
+            Vtrunc = V[:, r]
+            ΔDtrunc = Diagonal(diagview(ΔD2)[r])
+            ΔVtrunc = ΔV[:, r]
             test_rrule(
                 copy_eigh_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔD2[r, r], ΔV[:, r]),
                 atol = atol, rtol = rtol
             )
+            dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), r)
+            dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
+            @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
         end
         truncalg = TruncatedAlgorithm(alg, trunctol(; atol = maximum(abs, Ddiag) / 2))
         r = MatrixAlgebraKit.findtruncated(Ddiag, truncalg.trunc)
+        Dtrunc = Diagonal(diagview(D)[r])
+        Vtrunc = V[:, r]
+        ΔDtrunc = Diagonal(diagview(ΔD2)[r])
+        ΔVtrunc = ΔV[:, r]
         test_rrule(
             copy_eigh_trunc, A, truncalg ⊢ NoTangent();
             output_tangent = (ΔD2[r, r], ΔV[:, r]),
             atol = atol, rtol = rtol
         )
+        dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), r)
+        dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
+        @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
     end
     # Zygote part
     config = Zygote.ZygoteRuleConfig()
@@ -393,19 +407,37 @@ end
             for r in 1:4:minmn
                 truncalg = TruncatedAlgorithm(alg, truncrank(r))
                 r = MatrixAlgebraKit.findtruncated(diagview(S), truncalg.trunc)
+                Strunc = Diagonal(diagview(S)[r])
+                Utrunc = U[:, r]
+                Vᴴtrunc = Vᴴ[r, :]
+                ΔStrunc = Diagonal(diagview(ΔS2)[r])
+                ΔUtrunc = ΔU[:, r]
+                ΔVᴴtrunc = ΔVᴴ[r, :]
                 test_rrule(
                     copy_svd_trunc, A, truncalg ⊢ NoTangent();
-                    output_tangent = (ΔU[:, r], ΔS[r, r], ΔVᴴ[r, :]),
+                    output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc),
                     atol = atol, rtol = rtol
                 )
+                dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, (U, S, Vᴴ), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc), r)
+                dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), A, (Utrunc, Strunc, Vᴴtrunc), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc))
+                @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
             end
             truncalg = TruncatedAlgorithm(alg, trunctol(atol = S[1, 1] / 2))
             r = MatrixAlgebraKit.findtruncated(diagview(S), truncalg.trunc)
+            Strunc = Diagonal(diagview(S)[r])
+            Utrunc = U[:, r]
+            Vᴴtrunc = Vᴴ[r, :]
+            ΔStrunc = Diagonal(diagview(ΔS2)[r])
+            ΔUtrunc = ΔU[:, r]
+            ΔVᴴtrunc = ΔVᴴ[r, :]
             test_rrule(
                 copy_svd_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔU[:, r], ΔS[r, r], ΔVᴴ[r, :]),
                 atol = atol, rtol = rtol
             )
+            dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, (U, S, Vᴴ), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc), r)
+            dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), A, (Utrunc, Strunc, Vᴴtrunc), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc))
+            @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
         end
         # Zygote part
         config = Zygote.ZygoteRuleConfig()

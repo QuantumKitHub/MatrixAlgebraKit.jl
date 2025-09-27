@@ -208,7 +208,7 @@ function svd_trunc_pullback!(
     else
         fill!(view(rhs, m̃ .+ (1:ñ), :), 0)
     end
-    XY = sylvester(ÃÃ, -S, -rhs)
+    XY = sylvester(ÃÃ, -Smat, rhs)
     X = view(XY, 1:m̃, :)
     Y = view(XY, m̃ .+ (1:ñ), :)
     ΔA = mul!(ΔA, Ũ, X * Vᴴ, 1, 1)
