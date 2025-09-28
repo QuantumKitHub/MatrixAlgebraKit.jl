@@ -20,7 +20,7 @@ anti-hermitian part of `V' * ΔV`, restricted to rows `i` and columns `j`
 for which `abs(D[i] - D[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
 function eigh_pullback!(
-        ΔA::AbstractMatrix, A, DV, ΔDV, ind = nothing;
+        ΔA::AbstractMatrix, A, DV, ΔDV, ind = Colon();
         tol::Real = default_pullback_gaugetol(DV[1]),
         degeneracy_atol::Real = tol,
         gauge_atol::Real = tol
@@ -38,12 +38,8 @@ function eigh_pullback!(
         n == size(ΔV, 1) || throw(DimensionMismatch())
         pV = size(ΔV, 2)
         VᴴΔV = fill!(similar(V), 0)
-        if isnothing(ind)
-            indV = 1:pV # default assumption?
-        else
-            length(ind) == pV || throw(DimensionMismatch())
-            indV = ind
-        end
+        indV = axes(V, 2)[ind]
+        length(indV) == pV || throw(DimensionMismatch())
         mul!(view(VᴴΔV, :, indV), V', ΔV)
         aVᴴΔV = rmul!(VᴴΔV - VᴴΔV', 1 / 2)
 
@@ -57,12 +53,8 @@ function eigh_pullback!(
         if !iszerotangent(ΔDmat)
             ΔDvec = diagview(ΔDmat)
             pD = length(ΔDvec)
-            if isnothing(ind)
-                indD = 1:pD # default assumption?
-            else
-                length(ind) == pD || throw(DimensionMismatch())
-                indD = ind
-            end
+            indD = axes(D, 1)[ind]
+            length(indD) == pD || throw(DimensionMismatch())
             view(diagview(aVᴴΔV), indD) .+= real.(ΔDvec)
         end
         # recylce VdΔV space
@@ -70,12 +62,8 @@ function eigh_pullback!(
     elseif !iszerotangent(ΔDmat)
         ΔDvec = diagview(ΔDmat)
         pD = length(ΔDvec)
-        if isnothing(ind)
-            indD = 1:pD # default assumption?
-        else
-            length(ind) == pD || throw(DimensionMismatch())
-            indD = ind
-        end
+        indD = axes(D, 1)[ind]
+        length(indD) == pD || throw(DimensionMismatch())
         Vp = view(V, :, indD)
         ΔA = mul!(ΔA, Vp * Diagonal(real(ΔDvec)), Vp', 1, 1)
     end

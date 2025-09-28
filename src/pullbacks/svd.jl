@@ -23,7 +23,7 @@ anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and c
 for which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
 function svd_pullback!(
-        ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ, ind = nothing;
+        ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ, ind = Colon();
         tol::Real = default_pullback_gaugetol(USVᴴ[2]),
         rank_atol::Real = tol,
         degeneracy_atol::Real = tol,
@@ -50,12 +50,8 @@ function svd_pullback!(
         m == size(ΔU, 1) || throw(DimensionMismatch())
         pU = size(ΔU, 2)
         pU > r && throw(DimensionMismatch())
-        if isnothing(ind)
-            indU = 1:pU # default assumption?
-        else
-            length(ind) == pU || throw(DimensionMismatch())
-            indU = ind
-        end
+        indU = axes(U, 2)[ind]
+        length(indU) == pU || throw(DimensionMismatch())
         UΔUp = view(UΔU, :, indU)
         mul!(UΔUp, Ur', ΔU)
         ΔU -= Ur * UΔUp
@@ -64,12 +60,8 @@ function svd_pullback!(
         n == size(ΔVᴴ, 2) || throw(DimensionMismatch())
         pV = size(ΔVᴴ, 1)
         pV > r && throw(DimensionMismatch())
-        if isnothing(ind)
-            indV = 1:pV # default assumption?
-        else
-            length(ind) == pV || throw(DimensionMismatch())
-            indV = ind
-        end
+        indV = axes(Vᴴ, 1)[ind]
+        length(indV) == pV || throw(DimensionMismatch())
         VΔVp = view(VΔV, :, indV)
         mul!(VΔVp, Vᴴr, ΔVᴴ')
         ΔVᴴ = ΔVᴴ - VΔVp' * Vᴴr
@@ -90,12 +82,8 @@ function svd_pullback!(
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         pS = length(ΔS)
-        if isnothing(ind)
-            indS = 1:pS # default assumption?
-        else
-            length(ind) == pS || throw(DimensionMismatch())
-            indS = ind
-        end
+        indS = axes(S, 1)[ind]
+        length(indS) == pS || throw(DimensionMismatch())
         view(diagview(UdΔAV), indS) .+= real.(ΔS)
     end
     ΔA = mul!(ΔA, Ur, UdΔAV * Vᴴr, 1, 1) # add the contribution to ΔA
