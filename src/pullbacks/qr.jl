@@ -1,19 +1,20 @@
-# TODO: we should somewhere check that we only call this when performing a positive QR without pivoting
 """
-    qr_compact_pullback!(ΔA, A, (Q, R), (ΔQ, ΔR);
-                            tol::Real=default_pullback_gaugetol(R),
-                            rank_atol::Real=tol,
-                            gauge_atol::Real=tol)
+    qr_compact_pullback!(
+        ΔA, A, QR, ΔQR;
+        tol::Real=default_pullback_gaugetol(QR[2]),
+        rank_atol::Real=tol,
+        gauge_atol::Real=tol
+    )
 
-Adds the pullback from the QR decomposition of `A` to `ΔA` given the output `(Q,R)` and
-cotangent `(ΔQ, ΔR)` of `qr_compact(A; positive = true)` or `qr_full(A; positive = true)`.
+Adds the pullback from the QR decomposition of `A` to `ΔA` given the output `QR` and
+cotangent `ΔQR` of `qr_compact(A; positive = true)` or `qr_full(A; positive = true)`.
 
 In the case where the rank `r` of the original matrix `A ≈ Q * R` (as determined by
-`rank_atol`) is less then the minimum of the number of rows and columns, the cotangents
-`ΔQ` and `ΔR`, only the first `r` columns of `Q` and the first `r` rows of `R` are
-well-defined, and also the adjoint variables `ΔQ` and `ΔR` should have nonzero values
-only in the first `r` columns and rows respectively. If nonzero values in the remaining
-columns or rows exceed `gauge_atol`, a warning will be printed.
+`rank_atol`) is less then the minimum of the number of rows and columns, the cotangents `ΔQ`
+and `ΔR`, only the first `r` columns of `Q` and the first `r` rows of `R` are well-defined,
+and also the adjoint variables `ΔQ` and `ΔR` should have nonzero values only in the first
+`r` columns and rows respectively. If nonzero values in the remaining columns or rows exceed
+`gauge_atol`, a warning will be printed.
 """
 function qr_compact_pullback!(
         ΔA::AbstractMatrix, A, QR, ΔQR;

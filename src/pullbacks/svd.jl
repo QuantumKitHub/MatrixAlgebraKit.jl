@@ -1,26 +1,25 @@
 """
-    svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, ind=nothing;
-                            tol::Real=default_pullback_gaugetol(S),
-                            rank_atol::Real = tol,
-                            degeneracy_atol::Real = tol,
-                            gauge_atol::Real = tol)
+    svd_pullback!(
+        ΔA, A, USVᴴ, ΔUSVᴴ, [ind];
+        tol::Real=default_pullback_gaugetol(USVᴴ[2]),
+        rank_atol::Real = tol,
+        degeneracy_atol::Real = tol,
+        gauge_atol::Real = tol
+    )
 
-Adds the pullback from the SVD of `A` to `ΔA` given the output USVᴴ of `svd_compact`
-or `svd_full` and the cotangent `ΔUSVᴴ` of `svd_compact`, `svd_full` or `svd_trunc`.
+Adds the pullback from the SVD of `A` to `ΔA` given the output USVᴴ of `svd_compact` or
+`svd_full` and the cotangent `ΔUSVᴴ` of `svd_compact`, `svd_full` or `svd_trunc`.
 
-In particular, it is assumed that `A ≈ U * S * Vᴴ`, or thus, that no singular values
-with magnitude less than `rank_atol` are missing from `S`.
-For the cotangents, an arbitrary number of singular vectors or singular values can
-be missing, i.e. for a matrix `A` with size `(m, n)`, `ΔU` and `ΔVᴴ` can have sizes
-`(m, pU)` and `(pV, n)` respectively, whereas `diagview(ΔS)` can have length `pS`.
-In those cases, it is assumed that these correspond to the first `pU`, `pV` or `pS`
-singular vectors or values, unless `ind` is provided, in which case it is assumed
-that they correspond to the singular vectors or values with indices `ind`, and thus
-`length(ind) == pU == pV == pS`.
+In particular, it is assumed that `A ≈ U * S * Vᴴ`, or thus, that no singular values with
+magnitude less than `rank_atol` are missing from `S`.  For the cotangents, an arbitrary
+number of singular vectors or singular values can be missing, i.e. for a matrix `A` with
+size `(m, n)`, `ΔU` and `ΔVᴴ` can have sizes `(m, pU)` and `(pV, n)` respectively, whereas
+`diagview(ΔS)` can have length `pS`. In those cases, additionally `ind` is required to
+specify which singular vectors and values are present in `ΔU`, `ΔS` and `ΔVᴴ`.
 
 A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
-anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j`
-for which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
+anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j` for
+which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
 function svd_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ, ind = Colon();
@@ -103,26 +102,27 @@ function svd_pullback!(
 end
 
 """
-    svd_trunc_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, ind=nothing;
-                            tol::Real=default_pullback_gaugetol(S),
-                            rank_atol::Real = tol,
-                            degeneracy_atol::Real = tol,
-                            gauge_atol::Real = tol)
+    svd_trunc_pullback!(
+        ΔA, A, USVᴴ, ΔUSVᴴ;
+        tol::Real=default_pullback_gaugetol(S),
+        rank_atol::Real = tol,
+        degeneracy_atol::Real = tol,
+        gauge_atol::Real = tol
+    )
 
-Adds the pullback from the truncated SVD of `A` to `ΔA`, given the output `USVᴴ``
-and the cotangent `ΔUSVᴴ` of `svd_trunc`.
+Adds the pullback from the truncated SVD of `A` to `ΔA`, given the output `USVᴴ` and the
+cotangent `ΔUSVᴴ` of `svd_trunc`.
 
-In particular, it is assumed that `A * Vᴴ' ≈ U * S` and `U' * A = S * Vᴴ`, with
-`U` and `Vᴴ` rectangular matrices of left and right singular vectors, and `S`
-diagonal. For the cotangents, it is assumed that if `ΔU` and `ΔVᴴ` are not zero,
-then they have the same size as `U` and `Vᴴ` (respectively), and if `ΔS` is not zero,
-then it is a diagonal matrix of the same size as `S`. For this method to work correctly,
-it is also assumed that the remaining singular values (not included in `S`) are
-(sufficiently) separated from those in `S`.
+In particular, it is assumed that `A * Vᴴ' ≈ U * S` and `U' * A = S * Vᴴ`, with `U` and `Vᴴ`
+rectangular matrices of left and right singular vectors, and `S` diagonal. For the
+cotangents, it is assumed that if `ΔU` and `ΔVᴴ` are not zero, then they have the same size
+as `U` and `Vᴴ` (respectively), and if `ΔS` is not zero, then it is a diagonal matrix of the
+same size as `S`. For this method to work correctly, it is also assumed that the remaining
+singular values (not included in `S`) are (sufficiently) separated from those in `S`.
 
 A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
-anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j`
-for which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
+anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j` for
+which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
 function svd_trunc_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;

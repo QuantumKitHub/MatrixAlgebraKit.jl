@@ -1,23 +1,24 @@
 """
-    eig_pullback!(ΔA::AbstractMatrix, A, DV, ΔDV, ind = nothing;
-                    tol=default_pullback_gaugetol(DV[1]),
-                    degeneracy_atol=tol,
-                    gauge_atol=tol)
+    eig_pullback!(
+        ΔA::AbstractMatrix, A, DV, ΔDV, [ind];
+        tol = default_pullback_gaugetol(DV[1]),
+        degeneracy_atol = tol,
+        gauge_atol = tol
+    )
 
-Adds the pullback from the full eigenvalue decomposition of `A` to `ΔA`,
-given the output `DV` of `eig_full` and the cotangent `ΔDV` of `eig_full` or `eig_trunc`.
+Adds the pullback from the full eigenvalue decomposition of `A` to `ΔA`, given the output
+`DV` of `eig_full` and the cotangent `ΔDV` of `eig_full` or `eig_trunc`.
 
-In particular, it is assumed that `A ≈ V * D * inv(V)` with thus `size(A) == size(V) == size(D)`
-and `D` diagonal. For the cotangents, an arbitrary number of eigenvectors or eigenvalues can
-be missing, i.e. for a matrix `A` of size `(n, n)`, `ΔV` can have size `(n, pV)` and
-`diagview(ΔD)` can have length `pD`. In those cases, it is assumed that these
-correspond to the first `pV` or `pD` eigenvectors or values, unless `ind` is provided,
-in which case it is assumed that they correspond to the eigenvectors or values with
-indices `ind`, and thus `length(ind) == pV == pD`.
+In particular, it is assumed that `A ≈ V * D * inv(V)` with thus
+`size(A) == size(V) == size(D)` and `D` diagonal. For the cotangents, an arbitrary number of
+eigenvectors or eigenvalues can be missing, i.e. for a matrix `A` of size `(n, n)`, `ΔV` can
+have size `(n, pV)` and `diagview(ΔD)` can have length `pD`. In those cases, additionally
+`ind` is required to specify which eigenvectors or eigenvalues are present in `ΔV` or `ΔD`.
+By default, it is assumed that all eigenvectors and eigenvalues are present.
 
-A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
-restriction of `V' * ΔV` to rows `i` and columns `j` for which
-`abs(D[i] - D[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
+A warning will be printed if the cotangents are not gauge-invariant, i.e. if the restriction
+of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degeneracy_atol`, is
+not small compared to `gauge_atol`.
 """
 function eig_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, ind = Colon();
@@ -81,13 +82,15 @@ function eig_pullback!(
 end
 
 """
-    eig_trunc_pullback!(ΔA::AbstractMatrix, ΔDV, A, DV;
-                    tol=default_pullback_gaugetol(DV[1]),
-                    degeneracy_atol=tol,
-                    gauge_atol=tol)
+    eig_trunc_pullback!(
+        ΔA::AbstractMatrix, ΔDV, A, DV;
+        tol = default_pullback_gaugetol(DV[1]),
+        degeneracy_atol = tol,
+        gauge_atol = tol
+    )
 
-Adds the pullback from the truncated eigenvalue decomposition of `A` to `ΔA`,
-given the output `DV` and the cotangent `ΔDV` of `eig_trunc`.
+Adds the pullback from the truncated eigenvalue decomposition of `A` to `ΔA`, given the
+output `DV` and the cotangent `ΔDV` of `eig_trunc`.
 
 In particular, it is assumed that `A * V ≈ V * D` with `V` a rectangular matrix of
 eigenvectors and `D` diagonal. For the cotangents, it is assumed that if `ΔV` is not zero,
@@ -97,9 +100,9 @@ diagonal matrix of the same size as `D`.
 For this method to work correctly, it is also assumed that the remaining eigenvalues
 (not included in `D`) are (sufficiently) separated from those in `D`.
 
-A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
-restriction of `V' * ΔV` to rows `i` and columns `j` for which
-`abs(D[i] - D[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
+A warning will be printed if the cotangents are not gauge-invariant, i.e. if the restriction
+of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degeneracy_atol`, is
+not small compared to `gauge_atol`.
 """
 function eig_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
