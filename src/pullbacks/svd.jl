@@ -37,7 +37,7 @@ function svd_pullback!(
     minmn = min(m, n)
     S = diagview(Smat)
     length(S) == minmn || throw(DimensionMismatch())
-    r = findlast(>=(rank_atol), S) # rank
+    r = searchsortedlast(S, tol; rev = true) # rank
     Ur = view(U, :, 1:r)
     Vᴴr = view(Vᴴ, 1:r, :)
     Sr = view(S, 1:r)
