@@ -127,6 +127,7 @@ function eig_trunc_pullback!(
     (n, p) = size(V)
     p == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    G = V' * V
 
     if !iszerotangent(ΔV)
         (n, p) == size(ΔV) || throw(DimensionMismatch())
@@ -136,41 +137,30 @@ function eig_trunc_pullback!(
         Δgauge < gauge_atol ||
             @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-        ΔVperp = ΔV - V * VᴴΔV
+        ΔVperp = ΔV - V * inv(G) * VᴴΔV
         VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
+    else
+        VᴴΔV = zero(G)
+    end
 
-        if !iszerotangent(ΔDmat)
-            ΔDvec = diagview(ΔDmat)
-            p == length(ΔDvec) || throw(DimensionMismatch())
-            diagview(VᴴΔV) .+= ΔDvec
-        end
-        Z = V' \ VᴴΔV
-
-        # add contribution from orthogonal complement
-        VᴴA = V' * A
-        PA = A - V' \ VᴴA
-
-        X = sylvester(PA', -Dmat', ΔVperp)
-        VᴴX = V' * X
-        X = mul!(X, V, VᴴX, 1, -1)
-        Z .+= X
-
-        if eltype(ΔA) <: Real
-            ΔAc = Z * V'
-            ΔA .+= real.(ΔAc)
-        else
-            ΔA = mul!(ΔA, Z, V', 1, 1)
-        end
-
-    elseif !iszerotangent(ΔDmat)
+    if !iszerotangent(ΔDmat)
         ΔDvec = diagview(ΔDmat)
-        Z = V' \ Diagonal(ΔDvec)
-        if eltype(ΔA) <: Real
-            ΔAc = PΔV * Vp'
-            ΔA .+= real.(ΔAc)
-        else
-            ΔA = mul!(ΔA, PΔV, V', 1, 1)
-        end
+        p == length(ΔDvec) || throw(DimensionMismatch())
+        diagview(VᴴΔV) .+= ΔDvec
+    end
+    Z = V' \ VᴴΔV
+
+    # add contribution from orthogonal complement
+    PA = A - (A * V) / V
+    Y = mul!(ΔVperp, PA', Z, 1, 1)
+    X = sylvester(PA', -Dmat', Y)
+    Z .+= X
+
+    if eltype(ΔA) <: Real
+        ΔAc = Z * V'
+        ΔA .+= real.(ΔAc)
+    else
+        ΔA = mul!(ΔA, Z, V', 1, 1)
     end
     return ΔA
 end
