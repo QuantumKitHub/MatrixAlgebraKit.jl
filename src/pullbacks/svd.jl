@@ -53,7 +53,7 @@ function svd_pullback!(
         length(indU) == pU || throw(DimensionMismatch())
         UΔUp = view(UΔU, :, indU)
         mul!(UΔUp, Ur', ΔU)
-        ΔU -= Ur * UΔUp
+        mul!(ΔU, Ur, UΔUp, -1, 1)
     end
     if !iszerotangent(ΔVᴴ)
         n == size(ΔVᴴ, 2) || throw(DimensionMismatch())
@@ -63,7 +63,7 @@ function svd_pullback!(
         length(indV) == pV || throw(DimensionMismatch())
         VΔVp = view(VΔV, :, indV)
         mul!(VΔVp, Vᴴr, ΔVᴴ')
-        ΔVᴴ = ΔVᴴ - VΔVp' * Vᴴr
+        mul!(ΔVᴴ, VΔVp', Vᴴr, -1, 1)
     end
 
     # Project onto antihermitian part; hermitian part outside of Grassmann tangent space
@@ -152,7 +152,7 @@ function svd_trunc_pullback!(
     if !iszerotangent(ΔVᴴ)
         (p, n) == size(ΔVᴴ) || throw(DimensionMismatch())
         mul!(VΔV, Vᴴ, ΔVᴴ')
-        ΔVᴴ = ΔVᴴ - VΔV' * Vᴴ
+        mul!(ΔVᴴ, VΔV', Vᴴ, -1, 1)
     end
 
     # Project onto antihermitian part; hermitian part outside of Grassmann tangent space
