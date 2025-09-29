@@ -1,26 +1,26 @@
-# TODO: we should somewhere check that we only call this when performing a positive LQ
-
 """
     lq_compact_pullback!(
-        ΔA, (L, Q), (ΔL, ΔQ);
-        tol::Real = default_pullback_gaugetol(R),
-        rank_atol::Real = tol, gauge_atol::Real = tol
+        ΔA, A, LQ, ΔLQ;
+        tol::Real=default_pullback_gaugetol(LQ[1]),
+        rank_atol::Real=tol,
+        gauge_atol::Real=tol
     )
 
-Adds the pullback from the LQ decomposition of `A` to `ΔA` given the output `(L, Q)` and
-cotangent `(ΔL, ΔQ)` of `lq_compact(A; positive = true)` or `lq_full(A; positive = true)`.
+Adds the pullback from the LQ decomposition of `A` to `ΔA` given the output `LQ` and
+cotangent `ΔLQ` of `lq_compact(A; positive = true)` or `lq_full(A; positive = true)`.
 
-In the case where the rank `r` of the original matrix `A ≈ L * Q` (as determined
-by `rank_atol`) is less then the  minimum of the number of rows and columns ,
-the cotangents `ΔL` and `ΔQ`, only the first `r` columns of `L` and the first `r` rows
-of `Q` are well-defined, and also the adjoint variables `ΔL` and `ΔQ` should have nonzero
-values only in the first `r` columns and rows respectively. If nonzero values in the
-remaining columns or rows exceed `gauge_atol`, a warning will be printed.
+In the case where the rank `r` of the original matrix `A ≈ L * Q` (as determined by
+`rank_atol`) is less then the minimum of the number of rows and columns of the cotangents
+`ΔL` and `ΔQ`, only the first `r` columns of `L` and the first `r` rows of `Q` are
+well-defined, and also the adjoint variables `ΔL` and `ΔQ` should have nonzero values only
+in the first `r` columns and rows respectively. If nonzero values in the remaining columns
+or rows exceed `gauge_atol`, a warning will be printed.
 """
 function lq_compact_pullback!(
-        ΔA::AbstractMatrix, LQ, ΔLQ;
+        ΔA::AbstractMatrix, A, LQ, ΔLQ;
         tol::Real = default_pullback_gaugetol(LQ[1]),
-        rank_atol::Real = tol, gauge_atol::Real = tol
+        rank_atol::Real = tol,
+        gauge_atol::Real = tol
     )
     # process
     L, Q = LQ
@@ -70,11 +70,11 @@ function lq_compact_pullback!(
             # case, Q is expected to rotate smoothly (we might even be able to predict) also
             # how the full Q2 will change, but this we omit for now, and we consider
             # Q2' * ΔQ2 as a gauge dependent quantity.
-            ΔQ2Q1d = ΔQ2 * Q1'
-            Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1d, Q1, -1, 1), Inf)
+            ΔQ2Q1ᴴ = ΔQ2 * Q1'
+            Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
             Δgauge < tol ||
-                @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-            ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1d', Q2, -1, 1)
+                @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+            ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1ᴴ', Q2, -1, 1)
         end
     end
     if !iszerotangent(ΔL) && m > p

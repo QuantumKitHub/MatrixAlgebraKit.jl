@@ -53,6 +53,13 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
             :TruncationByError, :TruncationIntersection
         )
     )
+    eval(
+        Expr(
+            :public, :qr_compact_pullback!, :lq_compact_pullback!, :left_polar_pullback!,
+            :right_polar_pullback!, :eig_pullback!, :eig_trunc_pullback!, :eigh_pullback!,
+            :eigh_trunc_pullback!, :svd_pullback!, :svd_trunc_pullback!
+        )
+    )
 end
 
 include("common/defaults.jl")
