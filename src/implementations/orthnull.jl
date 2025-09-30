@@ -249,7 +249,7 @@ function left_null_svd!(A, N, alg, trunc)
     trunc′ = trunc isa TruncationStrategy ? trunc :
         trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
         throw(ArgumentError("Unknown truncation strategy: $trunc"))
-    return truncate!(left_null!, (U, S), trunc′)
+    return first(truncate(left_null!, (U, S), trunc′))
 end
 
 function right_null!(
@@ -287,5 +287,5 @@ function right_null_svd!(A, Nᴴ, alg, trunc)
     trunc′ = trunc isa TruncationStrategy ? trunc :
         trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
         throw(ArgumentError("Unknown truncation strategy: $trunc"))
-    return truncate!(right_null!, (S, Vᴴ), trunc′)
+    return first(truncate(right_null!, (S, Vᴴ), trunc′))
 end
