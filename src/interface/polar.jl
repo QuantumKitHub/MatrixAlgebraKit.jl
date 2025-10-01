@@ -1,12 +1,3 @@
-# Polar API
-# ---------
-function polar!(A::AbstractMatrix, args...; kwargs...)
-    return left_polar!(A, args...; kwargs...)
-end
-function polar(A::AbstractMatrix, args...; kwargs...)
-    return left_polar(A, args...; kwargs...)
-end
-
 # Polar functions
 # ---------------
 """

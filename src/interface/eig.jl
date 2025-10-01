@@ -1,6 +1,5 @@
 # Eig functions
 # -------------
-
 # TODO: kwargs for sorting eigenvalues?
 
 docs_eig_note = """
@@ -9,7 +8,6 @@ and therefore will always return complex eigenvalues and eigenvectors. For the r
 eigenvalue decomposition of symmetric or hermitian operators, see [`eigh_full`](@ref).
 """
 
-# TODO: do we need "full"?
 """
     eig_full(A; kwargs...) -> D, V
     eig_full(A, alg::AbstractAlgorithm) -> D, V

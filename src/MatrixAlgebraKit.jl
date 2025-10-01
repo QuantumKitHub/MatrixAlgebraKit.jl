@@ -55,9 +55,9 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
     )
     eval(
         Expr(
-            :public, :qr_compact_pullback!, :lq_compact_pullback!, :left_polar_pullback!,
-            :right_polar_pullback!, :eig_pullback!, :eig_trunc_pullback!, :eigh_pullback!,
-            :eigh_trunc_pullback!, :svd_pullback!, :svd_trunc_pullback!
+            :public, :qr_pullback!, :lq_pullback!, :svd_pullback!, :svd_trunc_pullback!,
+            :eig_pullback!, :eig_trunc_pullback!, :eigh_pullback!, :eigh_trunc_pullback!,
+            :left_polar_pullback!, :right_polar_pullback!
         )
     )
 end

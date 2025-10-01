@@ -1,6 +1,5 @@
 # Gen Eig functions
 # -------------
-
 # TODO: kwargs for sorting eigenvalues?
 
 docs_gen_eig_note = """

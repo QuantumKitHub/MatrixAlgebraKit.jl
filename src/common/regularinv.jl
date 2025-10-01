@@ -21,7 +21,7 @@ function inv_regularized(
         A::AbstractMatrix, tol = defaulttol(A); isposdef = isposdef(A), kwargs...
     )
     if isposdef
-        D, V = eigh(A; kwargs...)
+        D, V = eigh_full(A; kwargs...)
         Dinvsqrt = Diagonal(sqrt.(inv_regularized.(D.diag, tol)))
         VDinvsqrt = rmul!(V, Dinvsqrt)
         return VDinvsqrt * VDinvsqrt'
@@ -38,7 +38,7 @@ function sylvester_regularized(
         ishermitian = ishermitian(A) && ishermitian(B), kwargs...
     )
     if ishermitian
-        D, U = eigh(A; kwargs...)
+        D, U = eigh_full(A; kwargs...)
         UdCU = U' * B * U
         UdCU .*= inv_regularized.(D.diag .+ transpose(D.diag), tol)
         C = U * UdCU * U'
