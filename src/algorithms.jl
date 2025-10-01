@@ -186,7 +186,8 @@ Given a factorization function `f` and truncation `strategy`, truncate the facto
 that the rows or columns at the indices `ind` are kept.
 
 See also [`findtruncated`](@ref) and [`findtruncated_svd`](@ref) for determining the indices.
-""" truncate
+"""
+function truncate end
 
 @deprecate truncate!(args...) first(truncate(args...))
 
