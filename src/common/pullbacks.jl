@@ -9,3 +9,4 @@ ecosystems
 function iszerotangent end
 
 iszerotangent(::Any) = false
+iszerotangent(::Nothing) = true

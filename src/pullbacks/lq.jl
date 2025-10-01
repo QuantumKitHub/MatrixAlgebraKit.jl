@@ -103,3 +103,20 @@ function lq_pullback!(
     ΔA1 .+= ΔQ̃
     return ΔA
 end
+
+"""
+    lq_null_pullback(ΔA, A, LQ, ΔNᴴ)
+
+Adds the pullback from the nullspace of the LQ decomposition of `A` to `ΔA` given the
+factorization `LQ` and cotangent `ΔNᴴ` of `lq_null(A)`.
+
+See also [`lq_pullback!`](@ref).
+"""
+function lq_null_pullback!(ΔA::AbstractMatrix, A, LQ, ΔNᴴ)
+    (m, n) = size(A)
+    minmn = min(m, n)
+    ΔQ = zero!(similar(A, (n, n)))
+    view(ΔQ, (minmn + 1):n, 1:n) .= ΔNᴴ
+    lq_compact_pullback!(ΔA, A, LQ, (nothing, ΔQ))
+    return ΔA
+end

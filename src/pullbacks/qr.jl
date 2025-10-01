@@ -102,3 +102,19 @@ function qr_pullback!(
     ΔA1 .+= ΔQ̃
     return ΔA
 end
+
+"""
+    qr_null_pullback(ΔA, A, QR, ΔNᴴ)
+
+Adds the pullback from the nullspace of the QR decomposition of `A` to `ΔA` given the
+factorization `QR` and cotangent `ΔN` of `qr_null(A)`.
+
+See also [`qr_pullback!`](@ref).
+"""
+function qr_null_pullback!(ΔA::AbstractMatrix, A, QR, ΔN)
+    m, n = size(A)
+    minmn = min(m, n)
+    ΔQ = zero!(similar(A, (m, m)))
+    view(ΔQ, 1:m, (minmn + 1):m) .= ΔN
+    return qr_compact_pullback!(ΔA, A, QR, (ΔQ, nothing))
+end
