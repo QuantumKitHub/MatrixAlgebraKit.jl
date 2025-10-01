@@ -103,3 +103,28 @@ function lq_pullback!(
     ΔA1 .+= ΔQ̃
     return ΔA
 end
+
+"""
+    lq_null_pullback(ΔA, A, Nᴴ, ΔNᴴ)
+
+Adds the pullback from the left nullspace of `A` to `ΔA`, given the nullspace basis
+ `Nᴴ` and its cotangent `ΔNᴴ` of `lq_null(A)`.
+
+See also [`lq_pullback!`](@ref).
+"""
+function lq_null_pullback!(
+        ΔA::AbstractMatrix, A, Nᴴ, ΔNᴴ;
+        tol::Real = default_pullback_gaugetol(A),
+        gauge_atol::Real = tol
+    )
+    if !iszerotangent(ΔNᴴ) && size(Nᴴ, 1) > 0
+        NᴴΔN = Nᴴ * ΔNᴴ'
+        Δgauge = norm((NᴴΔN .- NᴴΔN') ./ 2)
+        Δgauge < tol ||
+            @warn "`lq_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        L, Q = lq_compact(A; positive = true) # should we be able to provide algorithm here?
+        X = ldiv!(LowerTriangular(L)', Q * ΔNᴴ')
+        ΔA = mul!(ΔA, X, Nᴴ, -1, 1)
+    end
+    return ΔA
+end

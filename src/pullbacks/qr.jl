@@ -102,3 +102,29 @@ function qr_pullback!(
     ΔA1 .+= ΔQ̃
     return ΔA
 end
+
+"""
+    qr_null_pullback(ΔA, A, N, ΔN)
+
+Adds the pullback from the right nullspace of `A` to `ΔA`, given the nullspace basis
+`N` and its cotangent `ΔN` of `qr_null(A)`.
+
+See also [`qr_pullback!`](@ref).
+"""
+function qr_null_pullback!(
+        ΔA::AbstractMatrix, A, N, ΔN;
+        tol::Real = default_pullback_gaugetol(A),
+        gauge_atol::Real = tol
+    )
+    if !iszerotangent(ΔN) && size(N, 2) > 0
+        NᴴΔN = N' * ΔN
+        Δgauge = norm((NᴴΔN .- NᴴΔN') ./ 2)
+        Δgauge < tol ||
+            @warn "`qr_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+
+        Q, R = qr_compact(A; positive = true)
+        X = rdiv!(ΔN' * Q, UpperTriangular(R)')
+        ΔA = mul!(ΔA, N, X, -1, 1)
+    end
+    return ΔA
+end

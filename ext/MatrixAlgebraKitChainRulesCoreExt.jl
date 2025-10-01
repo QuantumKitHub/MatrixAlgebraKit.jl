@@ -11,6 +11,12 @@ using LinearAlgebra
 
 MatrixAlgebraKit.iszerotangent(::AbstractZero) = true
 
+@non_differentiable MatrixAlgebraKit.select_algorithm(args...)
+@non_differentiable MatrixAlgebraKit.initialize_output(args...)
+@non_differentiable MatrixAlgebraKit.check_input(args...)
+@non_differentiable MatrixAlgebraKit.isisometry(args...)
+@non_differentiable MatrixAlgebraKit.isunitary(args...)
+
 function ChainRulesCore.rrule(::typeof(copy_input), f, A)
     project = ProjectTo(A)
     copy_input_pullback(ΔA) = (NoTangent(), NoTangent(), project(unthunk(ΔA)))
@@ -35,18 +41,12 @@ for qr_f in (:qr_compact, :qr_full)
         end
     end
 end
-function ChainRulesCore.rrule(::typeof(qr_null!), A::AbstractMatrix, N, alg)
+function ChainRulesCore.rrule(::typeof(qr_null!), A, N, alg)
     Ac = copy_input(qr_full, A)
-    QR = initialize_output(qr_full!, A, alg)
-    Q, R = qr_full!(Ac, QR, alg)
-    N = copy!(N, view(Q, 1:size(A, 1), (size(A, 2) + 1):size(A, 1)))
+    N = qr_null!(Ac, N, alg)
     function qr_null_pullback(ΔN)
         ΔA = zero(A)
-        (m, n) = size(A)
-        minmn = min(m, n)
-        ΔQ = zero!(similar(A, (m, m)))
-        view(ΔQ, 1:m, (minmn + 1):m) .= unthunk.(ΔN)
-        MatrixAlgebraKit.qr_pullback!(ΔA, A, (Q, R), (ΔQ, ZeroTangent()))
+        MatrixAlgebraKit.qr_null_pullback!(ΔA, A, N, unthunk(ΔN))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function qr_null_pullback(::ZeroTangent) # is this extra definition useful?
@@ -73,18 +73,12 @@ for lq_f in (:lq_compact, :lq_full)
         end
     end
 end
-function ChainRulesCore.rrule(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, alg)
+function ChainRulesCore.rrule(::typeof(lq_null!), A, Nᴴ, alg)
     Ac = copy_input(lq_full, A)
-    LQ = initialize_output(lq_full!, A, alg)
-    L, Q = lq_full!(Ac, LQ, alg)
-    Nᴴ = copy!(Nᴴ, view(Q, (size(A, 1) + 1):size(A, 2), 1:size(A, 2)))
+    Nᴴ = lq_null!(Ac, Nᴴ, alg)
     function lq_null_pullback(ΔNᴴ)
         ΔA = zero(A)
-        (m, n) = size(A)
-        minmn = min(m, n)
-        ΔQ = zero!(similar(A, (n, n)))
-        view(ΔQ, (minmn + 1):n, 1:n) .= unthunk.(ΔNᴴ)
-        MatrixAlgebraKit.lq_pullback!(ΔA, A, (L, Q), (ZeroTangent(), ΔQ))
+        MatrixAlgebraKit.lq_null_pullback!(ΔA, A, Nᴴ, unthunk(ΔNᴴ))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function lq_null_pullback(::ZeroTangent) # is this extra definition useful?
