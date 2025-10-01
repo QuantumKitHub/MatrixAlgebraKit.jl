@@ -1,21 +1,3 @@
-# Simplified API
-# --------------
-function orth(A::AbstractMatrix; kwargs...)
-    return left_orth(A; kwargs...)
-end
-function null(A::AbstractMatrix; kwargs...)
-    return adjoint(right_null(A; kwargs...))
-end
-
-# TODO: do we need an advanced interface for the simplified API
-function orth!(A::AbstractMatrix, args...; kwargs...)
-    return left_orth!(A, args...; kwargs...)
-end
-
-function null!(A::AbstractMatrix, args...; kwargs...)
-    return right_null!(A, args...; kwargs...)
-end
-
 # Orth functions
 # --------------
 """

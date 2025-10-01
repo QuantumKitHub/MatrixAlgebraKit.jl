@@ -1,13 +1,3 @@
-# Eigh API
-# --------
-# TODO: export? or not export but mark as public ?
-function eigh!(A::AbstractMatrix, args...; kwargs...)
-    return eigh_full!(A, args...; kwargs...)
-end
-function eigh(A::AbstractMatrix, args...; kwargs...)
-    return eigh_full(A, args...; kwargs...)
-end
-
 # Eigh functions
 # --------------
 # TODO: kwargs for sorting eigenvalues?
@@ -18,7 +8,6 @@ and therefore will retain the `eltype` of the input for the eigenvalues and eige
 For generic eigenvalue decompositions, see [`eig_full`](@ref).
 """
 
-# TODO: do we need "full"?
 """
     eigh_full(A; kwargs...) -> D, V
     eigh_full(A, alg::AbstractAlgorithm) -> D, V

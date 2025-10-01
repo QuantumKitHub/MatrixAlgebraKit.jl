@@ -1,13 +1,3 @@
-# Schur API
-# ---------
-# TODO: export? or not export but mark as public ?
-function schur!(A::AbstractMatrix, args...; kwargs...)
-    return schur_full!(A, args...; kwargs...)
-end
-function schur(A::AbstractMatrix, args...; kwargs...)
-    return schur_full(A, args...; kwargs...)
-end
-
 # Schur functions
 # -------------
 """

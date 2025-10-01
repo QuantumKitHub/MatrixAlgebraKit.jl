@@ -1,13 +1,3 @@
-# SVD API
-# -------
-# TODO: export? or not export but mark as public ?
-function svd!(A::AbstractMatrix, args...; kwargs...)
-    return svd_compact!(A, args...; kwargs...)
-end
-function svd(A::AbstractMatrix, args...; kwargs...)
-    return svd_compact(A, args...; kwargs...)
-end
-
 # SVD functions
 # -------------
 """
