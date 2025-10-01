@@ -43,11 +43,10 @@ for qr_f in (:qr_compact, :qr_full)
 end
 function ChainRulesCore.rrule(::typeof(qr_null!), A::AbstractMatrix, N, alg)
     Ac = copy_input(qr_full, A)
-    QR = qr_full!(Ac, initialize_output(qr_full!, A, alg), alg)
-    N = copy!(N, view(QR[1], 1:size(A, 1), (size(A, 2) + 1):size(A, 1)))
+    N = qr_null!(Ac, N, alg)
     function qr_null_pullback(ΔN)
         ΔA = zero(A)
-        MatrixAlgebraKit.qr_null_pullback!(ΔA, A, QR, unthunk(ΔN))
+        MatrixAlgebraKit.qr_null_pullback!(ΔA, A, N, unthunk(ΔN))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function qr_null_pullback(::ZeroTangent) # is this extra definition useful?
@@ -76,11 +75,10 @@ for lq_f in (:lq_compact, :lq_full)
 end
 function ChainRulesCore.rrule(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, alg)
     Ac = copy_input(lq_full, A)
-    LQ = lq_full!(Ac, initialize_output(lq_full!, A, alg), alg)
-    Nᴴ = copy!(Nᴴ, view(LQ[2], (size(A, 1) + 1):size(A, 2), 1:size(A, 2)))
+    Nᴴ = lq_null!(Ac, Nᴴ, alg)
     function lq_null_pullback(ΔNᴴ)
         ΔA = zero(A)
-        MatrixAlgebraKit.lq_null_pullback!(ΔA, A, LQ, unthunk(ΔNᴴ))
+        MatrixAlgebraKit.lq_null_pullback!(ΔA, A, Nᴴ, unthunk(ΔNᴴ))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function lq_null_pullback(::ZeroTangent) # is this extra definition useful?

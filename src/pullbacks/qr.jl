@@ -104,17 +104,27 @@ function qr_pullback!(
 end
 
 """
-    qr_null_pullback(ΔA, A, QR, ΔNᴴ)
+    qr_null_pullback(ΔA, A, N, ΔN)
 
-Adds the pullback from the nullspace of the QR decomposition of `A` to `ΔA` given the
-factorization `QR` and cotangent `ΔN` of `qr_null(A)`.
+Adds the pullback from the right nullspace of `A` to `ΔA`, given the nullspace basis
+`N` and its cotangent `ΔN` of `qr_null(A)`.
 
 See also [`qr_pullback!`](@ref).
 """
-function qr_null_pullback!(ΔA::AbstractMatrix, A, QR, ΔN)
-    m, n = size(A)
-    minmn = min(m, n)
-    ΔQ = zero!(similar(A, (m, m)))
-    view(ΔQ, 1:m, (minmn + 1):m) .= ΔN
-    return qr_compact_pullback!(ΔA, A, QR, (ΔQ, nothing))
+function qr_null_pullback!(
+        ΔA::AbstractMatrix, A, N, ΔN;
+        tol::Real = default_pullback_gaugetol(A),
+        gauge_atol::Real = tol
+    )
+    if !iszerotangent(ΔN) && size(N, 2) > 0
+        NᴴΔN = N' * ΔN
+        Δgauge = norm((NᴴΔN .- NᴴΔN') ./ 2)
+        Δgauge < tol ||
+            @warn "`qr_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+
+        Q, R = qr_compact(A; positive = true)
+        X = rdiv!(ΔN' * Q, UpperTriangular(R)')
+        ΔA = mul!(ΔA, N, X, -1, 1)
+    end
+    return ΔA
 end
