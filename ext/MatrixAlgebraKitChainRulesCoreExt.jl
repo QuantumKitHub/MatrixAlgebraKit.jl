@@ -41,7 +41,7 @@ for qr_f in (:qr_compact, :qr_full)
         end
     end
 end
-function ChainRulesCore.rrule(::typeof(qr_null!), A::AbstractMatrix, N, alg)
+function ChainRulesCore.rrule(::typeof(qr_null!), A, N, alg)
     Ac = copy_input(qr_full, A)
     N = qr_null!(Ac, N, alg)
     function qr_null_pullback(ΔN)
@@ -73,7 +73,7 @@ for lq_f in (:lq_compact, :lq_full)
         end
     end
 end
-function ChainRulesCore.rrule(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, alg)
+function ChainRulesCore.rrule(::typeof(lq_null!), A, Nᴴ, alg)
     Ac = copy_input(lq_full, A)
     Nᴴ = lq_null!(Ac, Nᴴ, alg)
     function lq_null_pullback(ΔNᴴ)
