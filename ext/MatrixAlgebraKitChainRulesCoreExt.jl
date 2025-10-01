@@ -11,7 +11,7 @@ using LinearAlgebra
 
 MatrixAlgebraKit.iszerotangent(::AbstractZero) = true
 
-function ChainRulesCore.rrule(::typeof(copy_input), f, A::AbstractMatrix)
+function ChainRulesCore.rrule(::typeof(copy_input), f, A)
     project = ProjectTo(A)
     copy_input_pullback(ΔA) = (NoTangent(), NoTangent(), project(unthunk(ΔA)))
     return copy_input(f, A), copy_input_pullback
@@ -20,7 +20,7 @@ end
 for qr_f in (:qr_compact, :qr_full)
     qr_f! = Symbol(qr_f, '!')
     @eval begin
-        function ChainRulesCore.rrule(::typeof($qr_f!), A::AbstractMatrix, QR, alg)
+        function ChainRulesCore.rrule(::typeof($qr_f!), A, QR, alg)
             Ac = copy_input($qr_f, A)
             QR = $(qr_f!)(Ac, QR, alg)
             function qr_pullback(ΔQR)
@@ -58,7 +58,7 @@ end
 for lq_f in (:lq_compact, :lq_full)
     lq_f! = Symbol(lq_f, '!')
     @eval begin
-        function ChainRulesCore.rrule(::typeof($lq_f!), A::AbstractMatrix, LQ, alg)
+        function ChainRulesCore.rrule(::typeof($lq_f!), A, LQ, alg)
             Ac = copy_input($lq_f, A)
             LQ = $(lq_f!)(Ac, LQ, alg)
             function lq_pullback(ΔLQ)
@@ -102,7 +102,7 @@ for eig in (:eig, :eigh)
     eig_t_pb = Symbol(eig, "_trunc_pullback")
     _make_eig_t_pb = Symbol("_make_", eig_t_pb)
     @eval begin
-        function ChainRulesCore.rrule(::typeof($eig_f!), A::AbstractMatrix, DV, alg)
+        function ChainRulesCore.rrule(::typeof($eig_f!), A, DV, alg)
             Ac = copy_input($eig_f, A)
             DV = $(eig_f!)(Ac, DV, alg)
             function $eig_pb(ΔDV)
@@ -115,10 +115,7 @@ for eig in (:eig, :eigh)
             end
             return DV, $eig_pb
         end
-        function ChainRulesCore.rrule(
-                ::typeof($eig_t!), A::AbstractMatrix, DV,
-                alg::TruncatedAlgorithm
-            )
+        function ChainRulesCore.rrule(::typeof($eig_t!), A, DV, alg::TruncatedAlgorithm)
             Ac = copy_input($eig_f, A)
             DV = $(eig_f!)(Ac, DV, alg.alg)
             DV′, ind = MatrixAlgebraKit.truncate($eig_t!, DV, alg.trunc)
@@ -141,7 +138,7 @@ end
 for svd_f in (:svd_compact, :svd_full)
     svd_f! = Symbol(svd_f, "!")
     @eval begin
-        function ChainRulesCore.rrule(::typeof($svd_f!), A::AbstractMatrix, USVᴴ, alg)
+        function ChainRulesCore.rrule(::typeof($svd_f!), A, USVᴴ, alg)
             Ac = copy_input($svd_f, A)
             USVᴴ = $(svd_f!)(Ac, USVᴴ, alg)
             function svd_pullback(ΔUSVᴴ)
@@ -157,10 +154,7 @@ for svd_f in (:svd_compact, :svd_full)
     end
 end
 
-function ChainRulesCore.rrule(
-        ::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ,
-        alg::TruncatedAlgorithm
-    )
+function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlgorithm)
     Ac = copy_input(svd_compact, A)
     USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
     USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
@@ -178,7 +172,7 @@ function _make_svd_trunc_pullback(A, USVᴴ, ind)
     return svd_trunc_pullback
 end
 
-function ChainRulesCore.rrule(::typeof(left_polar!), A::AbstractMatrix, WP, alg)
+function ChainRulesCore.rrule(::typeof(left_polar!), A, WP, alg)
     Ac = copy_input(left_polar, A)
     WP = left_polar!(Ac, WP, alg)
     function left_polar_pullback(ΔWP)
@@ -192,7 +186,7 @@ function ChainRulesCore.rrule(::typeof(left_polar!), A::AbstractMatrix, WP, alg)
     return WP, left_polar_pullback
 end
 
-function ChainRulesCore.rrule(::typeof(right_polar!), A::AbstractMatrix, PWᴴ, alg)
+function ChainRulesCore.rrule(::typeof(right_polar!), A, PWᴴ, alg)
     Ac = copy_input(left_polar, A)
     PWᴴ = right_polar!(Ac, PWᴴ, alg)
     function right_polar_pullback(ΔPWᴴ)

@@ -3,9 +3,7 @@
 function copy_input(::typeof(eig_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
-function copy_input(::typeof(eig_vals), A)
-    return copy_input(eig_full, A)
-end
+copy_input(::typeof(eig_vals), A) = copy_input(eig_full, A)
 copy_input(::typeof(eig_trunc), A) = copy_input(eig_full, A)
 
 copy_input(::typeof(eig_full), A::Diagonal) = copy(A)
@@ -67,7 +65,7 @@ function initialize_output(::typeof(eig_vals!), A::AbstractMatrix, ::AbstractAlg
     D = similar(A, Tc, n)
     return D
 end
-function initialize_output(::typeof(eig_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
+function initialize_output(::typeof(eig_trunc!), A, alg::TruncatedAlgorithm)
     return initialize_output(eig_full!, A, alg.alg)
 end
 
@@ -108,7 +106,7 @@ function eig_vals!(A::AbstractMatrix, D, alg::LAPACK_EigAlgorithm)
     return D
 end
 
-function eig_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
+function eig_trunc!(A, DV, alg::TruncatedAlgorithm)
     D, V = eig_full!(A, DV, alg.alg)
     return first(truncate(eig_trunc!, (D, V), alg.trunc))
 end
@@ -131,7 +129,7 @@ end
 
 # GPU logic
 # ---------
-_gpu_geev!(A::AbstractMatrix, D, V) = throw(MethodError(_gpu_geev!, (A, D, V)))
+_gpu_geev!(A, D, V) = throw(MethodError(_gpu_geev!, (A, D, V)))
 
 function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)

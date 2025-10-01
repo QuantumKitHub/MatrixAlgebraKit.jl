@@ -29,9 +29,7 @@ end
 # findtruncated
 # -------------
 # Generic fallback
-function findtruncated_svd(values::AbstractVector, strategy::TruncationStrategy)
-    return findtruncated(values, strategy)
-end
+findtruncated_svd(values, strategy::TruncationStrategy) = findtruncated(values, strategy)
 
 # specific implementations for finding truncated values
 findtruncated(values::AbstractVector, ::NoTruncation) = Colon()
