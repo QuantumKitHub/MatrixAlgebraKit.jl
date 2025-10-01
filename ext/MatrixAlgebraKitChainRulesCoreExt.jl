@@ -120,10 +120,9 @@ for eig in (:eig, :eigh)
                 alg::TruncatedAlgorithm
             )
             Ac = copy_input($eig_f, A)
-            D, V = $(eig_f!)(Ac, DV, alg.alg)
-            ind = findtruncated(diagview(D), alg.trunc)
-            return (Diagonal(diagview(D)[ind]), V[:, ind]),
-                $(_make_eig_t_pb)(A, (D, V), ind)
+            DV = $(eig_f!)(Ac, DV, alg.alg)
+            DV′, ind = MatrixAlgebraKit.truncate($eig_t!, DV, alg.trunc)
+            return DV′, $(_make_eig_t_pb)(A, DV, ind)
         end
         function $(_make_eig_t_pb)(A, DV, ind)
             function $eig_t_pb(ΔDV)
@@ -163,10 +162,9 @@ function ChainRulesCore.rrule(
         alg::TruncatedAlgorithm
     )
     Ac = copy_input(svd_compact, A)
-    U, S, Vᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
-    ind = findtruncated_svd(diagview(S), alg.trunc)
-    return (U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]),
-        _make_svd_trunc_pullback(A, (U, S, Vᴴ), ind)
+    USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
+    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+    return USVᴴ′, _make_svd_trunc_pullback(A, USVᴴ, ind)
 end
 function _make_svd_trunc_pullback(A, USVᴴ, ind)
     function svd_trunc_pullback(ΔUSVᴴ)
