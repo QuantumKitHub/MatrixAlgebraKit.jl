@@ -69,8 +69,8 @@ function svd_pullback!(
     end
 
     # Project onto antihermitian part; hermitian part outside of Grassmann tangent space
-    aUΔU = rmul!(UΔU - UΔU', 1 / 2)
-    aVΔV = rmul!(VΔV - VΔV', 1 / 2)
+    aUΔU = antihermitianpart!(UΔU)
+    aVΔV = antihermitianpart!(VΔV)
 
     # check whether cotangents arise from gauge-invariance objective function
     mask = abs.(Sr' .- Sr) .< degeneracy_atol
@@ -159,8 +159,8 @@ function svd_trunc_pullback!(
     end
 
     # Project onto antihermitian part; hermitian part outside of Grassmann tangent space
-    aUΔU = rmul!(UΔU - UΔU', 1 / 2)
-    aVΔV = rmul!(VΔV - VΔV', 1 / 2)
+    aUΔU = antihermitianpart!(UΔU)
+    aVΔV = antihermitianpart!(VΔV)
 
     # check whether cotangents arise from gauge-invariance objective function
     mask = abs.(S' .- S) .< degeneracy_atol
