@@ -103,4 +103,6 @@ include("pullbacks/eigh.jl")
 include("pullbacks/svd.jl")
 include("pullbacks/polar.jl")
 
+include("deprecate.jl")
+
 end
