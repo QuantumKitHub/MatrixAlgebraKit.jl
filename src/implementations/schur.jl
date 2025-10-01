@@ -1,7 +1,7 @@
 # Inputs
 # ------
-copy_input(::typeof(schur_full), A::AbstractMatrix) = copy_input(eig_full, A)
-copy_input(::typeof(schur_vals), A::AbstractMatrix) = copy_input(eig_vals, A)
+copy_input(::typeof(schur_full), A) = copy_input(eig_full, A)
+copy_input(::typeof(schur_vals), A) = copy_input(eig_vals, A)
 
 # check input
 function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::AbstractAlgorithm)

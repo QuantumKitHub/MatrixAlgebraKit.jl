@@ -3,9 +3,7 @@
 function copy_input(::typeof(gen_eig_full), A::AbstractMatrix, B::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A), copy!(similar(B, float(eltype(B))), B)
 end
-function copy_input(::typeof(gen_eig_vals), A::AbstractMatrix, B::AbstractMatrix)
-    return copy_input(gen_eig_full, A, B)
-end
+copy_input(::typeof(gen_eig_vals), A, B) = copy_input(gen_eig_full, A, B)
 
 function check_input(::typeof(gen_eig_full!), A::AbstractMatrix, B::AbstractMatrix, WV, ::AbstractAlgorithm)
     ma, na = size(A)

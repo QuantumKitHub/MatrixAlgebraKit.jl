@@ -3,9 +3,7 @@
 function copy_input(::typeof(eigh_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
-function copy_input(::typeof(eigh_vals), A::AbstractMatrix)
-    return copy_input(eigh_full, A)
-end
+copy_input(::typeof(eigh_vals), A) = copy_input(eigh_full, A)
 copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
 
 copy_input(::typeof(eigh_full), A::Diagonal) = copy(A)
@@ -65,7 +63,7 @@ function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::AbstractAl
     D = similar(A, real(eltype(A)), n)
     return D
 end
-function initialize_output(::typeof(eigh_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
+function initialize_output(::typeof(eigh_trunc!), A, alg::TruncatedAlgorithm)
     return initialize_output(eigh_full!, A, alg.alg)
 end
 
@@ -111,7 +109,7 @@ function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
     return D
 end
 
-function eigh_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
+function eigh_trunc!(A, DV, alg::TruncatedAlgorithm)
     D, V = eigh_full!(A, DV, alg.alg)
     return first(truncate(eigh_trunc!, (D, V), alg.trunc))
 end

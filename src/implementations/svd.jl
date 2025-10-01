@@ -1,8 +1,6 @@
 # Inputs
 # ------
-function copy_input(::typeof(svd_full), A)
-    return copy!(similar(A, float(eltype(A))), A)
-end
+copy_input(::typeof(svd_full), A::AbstractMatrix) = copy!(similar(A, float(eltype(A))), A)
 copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
@@ -238,7 +236,7 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
-function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
+function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
     USVᴴ′ = svd_compact!(A, USVᴴ, alg.alg)
     return first(truncate(svd_trunc!, USVᴴ′, alg.trunc))
 end
@@ -270,7 +268,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
 
     return U, S, Vᴴ
 end
-function svd_compact!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
+function svd_compact!(A, USVᴴ, alg::DiagonalAlgorithm)
     return svd_full!(A, USVᴴ, alg)
 end
 function svd_vals!(A::AbstractMatrix, S, alg::DiagonalAlgorithm)
