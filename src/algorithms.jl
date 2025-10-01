@@ -138,7 +138,7 @@ this function may return `nothing`.
 
 Supertype to denote different strategies for truncated decompositions that are implemented via post-truncation.
 
-See also [`truncate!`](@ref)
+See also [`truncate`](@ref)
 """
 abstract type TruncationStrategy end
 
@@ -166,7 +166,7 @@ end
 Generic interface for finding truncated values of the spectrum of a decomposition
 based on the `strategy`. The output should be a collection of indices specifying
 which values to keep. `MatrixAlgebraKit.findtruncated` is used inside of the default
-implementation of [`truncate!`](@ref) to perform the truncation. It does not assume that the
+implementation of [`truncate`](@ref) to perform the truncation. It does not assume that the
 values are sorted. For a version that assumes the values are reverse sorted (which is the
 standard case for SVD) see [`MatrixAlgebraKit.findtruncated_svd`](@ref).
 """ findtruncated
@@ -179,6 +179,16 @@ sorted in descending order, as typically obtained by the SVD. This assumption is
 checked, and this is used in the default implementation of [`svd_trunc!`](@ref).
 """ findtruncated_svd
 
+@doc """
+    truncate(::typeof(f), F, strategy::TruncationStrategy) -> F′, ind
+
+Given a factorization function `f` and truncation `strategy`, truncate the factors `F` such
+that the rows or columns at the indices `ind` are kept.
+
+See also [`findtruncated`](@ref) and [`findtruncated_svd`](@ref) for determining the indices.
+"""
+function truncate end
+
 """
     TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationAlgorithm)
 
@@ -189,12 +199,6 @@ struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
     alg::A
     trunc::T
 end
-
-@doc """
-    truncate!(f, out, strategy::TruncationStrategy)
-
-Generic interface for post-truncating a decomposition, specified in `out`.
-""" truncate!
 
 # Utility macros
 # --------------

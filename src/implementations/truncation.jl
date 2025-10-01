@@ -1,29 +1,29 @@
-# truncate!
-# ---------
+# truncate
+# --------
 # Generic implementation: `findtruncated` followed by indexing
-function truncate!(::typeof(svd_trunc!), (U, S, Vᴴ), strategy::TruncationStrategy)
+function truncate(::typeof(svd_trunc!), (U, S, Vᴴ), strategy::TruncationStrategy)
     ind = findtruncated_svd(diagview(S), strategy)
-    return U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]
+    return (U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]), ind
 end
-function truncate!(::typeof(eig_trunc!), (D, V), strategy::TruncationStrategy)
+function truncate(::typeof(eig_trunc!), (D, V), strategy::TruncationStrategy)
     ind = findtruncated(diagview(D), strategy)
-    return Diagonal(diagview(D)[ind]), V[:, ind]
+    return (Diagonal(diagview(D)[ind]), V[:, ind]), ind
 end
-function truncate!(::typeof(eigh_trunc!), (D, V), strategy::TruncationStrategy)
+function truncate(::typeof(eigh_trunc!), (D, V), strategy::TruncationStrategy)
     ind = findtruncated(diagview(D), strategy)
-    return Diagonal(diagview(D)[ind]), V[:, ind]
+    return (Diagonal(diagview(D)[ind]), V[:, ind]), ind
 end
-function truncate!(::typeof(left_null!), (U, S), strategy::TruncationStrategy)
+function truncate(::typeof(left_null!), (U, S), strategy::TruncationStrategy)
     # TODO: avoid allocation?
     extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 1) - size(S, 2))))
     ind = findtruncated(extended_S, strategy)
-    return U[:, ind]
+    return U[:, ind], ind
 end
-function truncate!(::typeof(right_null!), (S, Vᴴ), strategy::TruncationStrategy)
+function truncate(::typeof(right_null!), (S, Vᴴ), strategy::TruncationStrategy)
     # TODO: avoid allocation?
     extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 2) - size(S, 1))))
     ind = findtruncated(extended_S, strategy)
-    return Vᴴ[ind, :]
+    return Vᴴ[ind, :], ind
 end
 
 # findtruncated

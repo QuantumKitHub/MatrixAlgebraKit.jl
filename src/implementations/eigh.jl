@@ -113,7 +113,7 @@ end
 
 function eigh_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
     D, V = eigh_full!(A, DV, alg.alg)
-    return truncate!(eigh_trunc!, (D, V), alg.trunc)
+    return first(truncate(eigh_trunc!, (D, V), alg.trunc))
 end
 
 # Diagonal logic
