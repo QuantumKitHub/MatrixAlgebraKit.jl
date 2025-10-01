@@ -42,7 +42,7 @@ function eigh_pullback!(
         indV = axes(V, 2)[ind]
         length(indV) == pV || throw(DimensionMismatch())
         mul!(view(VᴴΔV, :, indV), V', ΔV)
-        aVᴴΔV = rmul!(VᴴΔV - VᴴΔV', 1 / 2)
+        aVᴴΔV = antihermitianpart(VᴴΔV) # can't use in-place or recycling doesn't work
 
         mask = abs.(D' .- D) .< degeneracy_atol
         Δgauge = norm(view(aVᴴΔV, mask))
@@ -58,7 +58,7 @@ function eigh_pullback!(
             length(indD) == pD || throw(DimensionMismatch())
             view(diagview(aVᴴΔV), indD) .+= real.(ΔDvec)
         end
-        # recylce VdΔV space
+        # recycle VdΔV space
         ΔA = mul!(ΔA, mul!(VᴴΔV, V, aVᴴΔV), V', 1, 1)
     elseif !iszerotangent(ΔDmat)
         ΔDvec = diagview(ΔDmat)
@@ -112,7 +112,7 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV)
         (n, p) == size(ΔV) || throw(DimensionMismatch())
         VᴴΔV = V' * ΔV
-        aVᴴΔV = rmul!(VᴴΔV - VᴴΔV', 1 / 2)
+        aVᴴΔV = antihermitianpart!(VᴴΔV)
 
         mask = abs.(D' .- D) .< degeneracy_atol
         Δgauge = norm(view(aVᴴΔV, mask))

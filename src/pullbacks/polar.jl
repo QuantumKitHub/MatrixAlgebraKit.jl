@@ -11,7 +11,7 @@ function left_polar_pullback!(ΔA::AbstractMatrix, A, WP, ΔWP)
     # Extract and check the cotangents
     ΔW, ΔP = ΔWP
     if !iszerotangent(ΔP)
-        ΔP = (ΔP + ΔP') / 2
+        ΔP = hermitianpart(ΔP)
     end
     M = zero(P)
     !iszerotangent(ΔW) && mul!(M, W', ΔW, 1, 1)
@@ -41,7 +41,7 @@ function right_polar_pullback!(ΔA::AbstractMatrix, A, PWᴴ, ΔPWᴴ)
     # Extract and check the cotangents
     ΔP, ΔWᴴ = ΔPWᴴ
     if !iszerotangent(ΔP)
-        ΔP = (ΔP + ΔP') / 2
+        ΔP = hermitianpart(ΔP)
     end
     M = zero(P)
     !iszerotangent(ΔWᴴ) && mul!(M, ΔWᴴ, Wᴴ', 1, 1)
