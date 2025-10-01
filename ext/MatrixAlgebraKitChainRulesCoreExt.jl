@@ -25,7 +25,7 @@ for qr_f in (:qr_compact, :qr_full)
             QR = $(qr_f!)(Ac, QR, alg)
             function qr_pullback(ΔQR)
                 ΔA = zero(A)
-                MatrixAlgebraKit.qr_compact_pullback!(ΔA, A, QR, unthunk.(ΔQR))
+                MatrixAlgebraKit.qr_pullback!(ΔA, A, QR, unthunk.(ΔQR))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function qr_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -46,7 +46,7 @@ function ChainRulesCore.rrule(::typeof(qr_null!), A::AbstractMatrix, N, alg)
         minmn = min(m, n)
         ΔQ = zero!(similar(A, (m, m)))
         view(ΔQ, 1:m, (minmn + 1):m) .= unthunk.(ΔN)
-        MatrixAlgebraKit.qr_compact_pullback!(ΔA, A, (Q, R), (ΔQ, ZeroTangent()))
+        MatrixAlgebraKit.qr_pullback!(ΔA, A, (Q, R), (ΔQ, ZeroTangent()))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function qr_null_pullback(::ZeroTangent) # is this extra definition useful?
@@ -63,7 +63,7 @@ for lq_f in (:lq_compact, :lq_full)
             LQ = $(lq_f!)(Ac, LQ, alg)
             function lq_pullback(ΔLQ)
                 ΔA = zero(A)
-                MatrixAlgebraKit.lq_compact_pullback!(ΔA, A, LQ, unthunk.(ΔLQ))
+                MatrixAlgebraKit.lq_pullback!(ΔA, A, LQ, unthunk.(ΔLQ))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function lq_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -84,7 +84,7 @@ function ChainRulesCore.rrule(::typeof(lq_null!), A::AbstractMatrix, Nᴴ, alg)
         minmn = min(m, n)
         ΔQ = zero!(similar(A, (n, n)))
         view(ΔQ, (minmn + 1):n, 1:n) .= unthunk.(ΔNᴴ)
-        MatrixAlgebraKit.lq_compact_pullback!(ΔA, A, (L, Q), (ZeroTangent(), ΔQ))
+        MatrixAlgebraKit.lq_pullback!(ΔA, A, (L, Q), (ZeroTangent(), ΔQ))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function lq_null_pullback(::ZeroTangent) # is this extra definition useful?

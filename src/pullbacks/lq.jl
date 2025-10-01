@@ -1,9 +1,9 @@
 """
-    lq_compact_pullback!(
+    lq_pullback!(
         ΔA, A, LQ, ΔLQ;
-        tol::Real=default_pullback_gaugetol(LQ[1]),
-        rank_atol::Real=tol,
-        gauge_atol::Real=tol
+        tol::Real = default_pullback_gaugetol(LQ[1]),
+        rank_atol::Real = tol,
+        gauge_atol::Real = tol
     )
 
 Adds the pullback from the LQ decomposition of `A` to `ΔA` given the output `LQ` and
@@ -16,7 +16,7 @@ well-defined, and also the adjoint variables `ΔL` and `ΔQ` should have nonzero
 in the first `r` columns and rows respectively. If nonzero values in the remaining columns
 or rows exceed `gauge_atol`, a warning will be printed.
 """
-function lq_compact_pullback!(
+function lq_pullback!(
         ΔA::AbstractMatrix, A, LQ, ΔLQ;
         tol::Real = default_pullback_gaugetol(LQ[1]),
         rank_atol::Real = tol,

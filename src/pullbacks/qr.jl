@@ -1,9 +1,9 @@
 """
-    qr_compact_pullback!(
+    qr_pullback!(
         ΔA, A, QR, ΔQR;
-        tol::Real=default_pullback_gaugetol(QR[2]),
-        rank_atol::Real=tol,
-        gauge_atol::Real=tol
+        tol::Real = default_pullback_gaugetol(QR[2]),
+        rank_atol::Real = tol,
+        gauge_atol::Real = tol
     )
 
 Adds the pullback from the QR decomposition of `A` to `ΔA` given the output `QR` and
@@ -16,7 +16,7 @@ and also the adjoint variables `ΔQ` and `ΔR` should have nonzero values only i
 `r` columns and rows respectively. If nonzero values in the remaining columns or rows exceed
 `gauge_atol`, a warning will be printed.
 """
-function qr_compact_pullback!(
+function qr_pullback!(
         ΔA::AbstractMatrix, A, QR, ΔQR;
         tol::Real = default_pullback_gaugetol(QR[2]),
         rank_atol::Real = tol,
