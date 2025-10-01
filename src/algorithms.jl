@@ -189,8 +189,6 @@ See also [`findtruncated`](@ref) and [`findtruncated_svd`](@ref) for determining
 """
 function truncate end
 
-@deprecate truncate!(args...) first(truncate(args...))
-
 """
     TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationAlgorithm)
 
