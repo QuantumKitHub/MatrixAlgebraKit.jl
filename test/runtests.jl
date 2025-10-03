@@ -69,6 +69,15 @@ if CUDA.functional()
     @safetestset "CUDA Hermitian Eigenvalue Decomposition" begin
         include("cuda/eigh.jl")
     end
+    #=@safetestset "CUDA Schur Decomposition" begin
+        include("cuda/schur.jl")
+    end=# #TODO
+    @safetestset "CUDA Polar Decomposition" begin
+        include("cuda/polar.jl")
+    end
+    @safetestset "CUDA Image and Null Space" begin
+        include("cuda/orthnull.jl")
+    end
 end
 
 using AMDGPU
@@ -84,5 +93,14 @@ if AMDGPU.functional()
     end
     @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
         include("amd/eigh.jl")
+    end
+    #=@safetestset "AMDGPU Schur Decomposition" begin
+        include("amd/schur.jl")
+    end=# #TODO
+    @safetestset "AMDGPU Polar Decomposition" begin
+        include("amd/polar.jl")
+    end
+    @safetestset "AMDGPU Image and Null Space" begin
+        include("amd/orthnull.jl")
     end
 end
