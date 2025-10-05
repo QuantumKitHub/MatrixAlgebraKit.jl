@@ -42,7 +42,7 @@ function eigh_pullback!(
         indV = axes(V, 2)[ind]
         length(indV) == pV || throw(DimensionMismatch())
         mul!(view(VᴴΔV, :, indV), V', ΔV)
-        aVᴴΔV = antihermitianpart(VᴴΔV) # can't use in-place or recycling doesn't work
+        aVᴴΔV = project_antihermitian(VᴴΔV) # can't use in-place or recycling doesn't work
 
         mask = abs.(D' .- D) .< degeneracy_atol
         Δgauge = norm(view(aVᴴΔV, mask))
@@ -112,7 +112,7 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV)
         (n, p) == size(ΔV) || throw(DimensionMismatch())
         VᴴΔV = V' * ΔV
-        aVᴴΔV = antihermitianpart!(VᴴΔV)
+        aVᴴΔV = project_antihermitian!(VᴴΔV)
 
         mask = abs.(D' .- D) .< degeneracy_atol
         Δgauge = norm(view(aVᴴΔV, mask))

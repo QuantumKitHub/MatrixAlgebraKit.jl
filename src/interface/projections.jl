@@ -1,28 +1,28 @@
 @doc """
-    hermitianpart(A; kwargs...)
-    hermitianpart(A, alg)
-    hermitianpart!(A; kwargs...)
-    hermitianpart!(A, alg)
+    project_hermitian(A; kwargs...)
+    project_hermitian(A, alg)
+    project_hermitian!(A; kwargs...)
+    project_hermitian!(A, alg)
 
 Compute the hermitian part of a (square) matrix `A`, defined as `(A + A') / 2`.
 For real matrices this corresponds to the symmetric part of `A`.
 
-See also [`antihermitianpart`](@ref).
+See also [`project_antihermitian`](@ref).
 """
-@functiondef hermitianpart
+@functiondef project_hermitian
 
 @doc """
-    antihermitianpart(A; kwargs...)
-    antihermitianpart(A, alg)
-    antihermitianpart!(A; kwargs...)
-    antihermitianpart!(A, alg)
+    project_antihermitian(A; kwargs...)
+    project_antihermitian(A, alg)
+    project_antihermitian!(A; kwargs...)
+    project_antihermitian!(A, alg)
 
 Compute the anti-hermitian part of a (square) matrix `A`, defined as `(A - A') / 2`.
 For real matrices this corresponds to the antisymmetric part of `A`.
 
-See also [`hermitianpart`](@ref).
+See also [`project_hermitian`](@ref).
 """
-@functiondef antihermitianpart
+@functiondef project_antihermitian
 
 """
 NativeBlocked(; blocksize = 32)
@@ -38,7 +38,7 @@ function default_hermitian_algorithm(::Type{A}; kwargs...) where {A <: AbstractM
     return NativeBlocked(; kwargs...)
 end
 
-for f in (:hermitianpart!, :antihermitianpart!)
+for f in (:project_hermitian!, :project_antihermitian!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
         return default_hermitian_algorithm(A; kwargs...)
     end

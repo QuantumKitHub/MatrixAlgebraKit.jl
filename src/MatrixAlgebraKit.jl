@@ -11,8 +11,8 @@ using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
 export isisometry, isunitary, ishermitian, isantihermitian
 
-export hermitianpart, antihermitianpart
-export hermitianpart!, antihermitianpart!
+export project_hermitian, project_antihermitian
+export project_hermitian!, project_antihermitian!
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
 export svd_compact, svd_full, svd_vals, svd_trunc
