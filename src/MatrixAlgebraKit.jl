@@ -9,8 +9,10 @@ using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
-export isisometry, isunitary
+export isisometry, isunitary, ishermitian, isantihermitian
 
+export hermitianpart, antihermitianpart
+export hermitianpart!, antihermitianpart!
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
 export svd_compact, svd_full, svd_vals, svd_trunc
@@ -33,6 +35,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_DivideAndConquer, LAPACK_Jacobi
 export LQViaTransposedQR
 export DiagonalAlgorithm
+export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
     CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer
 export ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi,
@@ -74,6 +77,7 @@ include("common/gauge.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
+include("interface/hermitian.jl")
 include("interface/decompositions.jl")
 include("interface/truncation.jl")
 include("interface/qr.jl")
@@ -86,6 +90,7 @@ include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
 
+include("implementations/hermitian.jl")
 include("implementations/truncation.jl")
 include("implementations/qr.jl")
 include("implementations/lq.jl")
