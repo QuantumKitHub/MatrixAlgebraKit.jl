@@ -34,6 +34,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
     LAPACK_DivideAndConquer, LAPACK_Jacobi
 export LQViaTransposedQR
+export PolarViaSVD, PolarNewton
 export DiagonalAlgorithm
 export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
