@@ -31,7 +31,10 @@ function isunitary(A; isapprox_kwargs...)
     return is_left_isometry(A; isapprox_kwargs...) &&
         is_right_isometry(A; isapprox_kwargs...)
 end
-# TODO: for matrices, isunitary corresponds to is_left_isometry + square.
+function isunitary(A::AbstractMatrix; isapprox_kwargs...)
+    size(A, 1) == size(A, 2) || return false
+    return is_left_isometry(A; isapprox_kwargs...)
+end
 
 @doc """
     is_left_isometry(A; isapprox_kwargs...) -> Bool
@@ -42,8 +45,11 @@ The `isapprox_kwargs` can be used to control the tolerances of the equality.
 See also [`isisometry`](@ref) and [`is_right_isometry`](@ref).
 """ is_left_isometry
 
-function is_left_isometry(A::AbstractMatrix; isapprox_kwargs...)
-    return isapprox(A' * A, LinearAlgebra.I; isapprox_kwargs...)
+function is_left_isometry(A::AbstractMatrix; atol::Real = 0, rtol::Real = defaulttol(A), norm = LinearAlgebra.norm)
+    P = A' * A
+    nP = norm(P) # isapprox would use `rtol * max(norm(P), norm(I))`
+    diagview(P) .-= 1
+    return norm(P) <= max(atol, rtol * nP) # assume that the norm of I is `sqrt(n)`
 end
 
 @doc """
@@ -55,8 +61,11 @@ The `isapprox_kwargs` can be used to control the tolerances of the equality.
 See also [`isisometry`](@ref) and [`is_left_isometry`](@ref).
 """ is_right_isometry
 
-function is_right_isometry(A::AbstractMatrix; isapprox_kwargs...)
-    return isapprox(A * A', LinearAlgebra.I; isapprox_kwargs...)
+function is_right_isometry(A::AbstractMatrix; atol::Real = 0, rtol::Real = defaulttol(A), norm = LinearAlgebra.norm)
+    P = A * A'
+    nP = norm(P) # isapprox would use `rtol * max(norm(P), norm(I))`
+    diagview(P) .-= 1
+    return norm(P) <= max(atol, rtol * nP) # assume that the norm of I is `sqrt(n)`
 end
 
 """
@@ -75,7 +84,7 @@ end
 function ishermitian_exact(A)
     return A == A'
 end
-function ishermitian_exact(A::AbstractMatrix; kwargs...)
+function ishermitian_exact(A::StridedMatrix; kwargs...)
     return _ishermitian_exact(A, Val(false); kwargs...)
 end
 
@@ -95,11 +104,12 @@ end
 function isantihermitian_exact(A)
     return A == -A'
 end
-function isantihermitian_exact(A::AbstractMatrix; kwargs...)
+function isantihermitian_exact(A::StridedMatrix; kwargs...)
     return _ishermitian_exact(A, Val(true); kwargs...)
 end
 
-# block implementation of exact checks
+# blocked implementation of exact checks for strided matrices
+# -----------------------------------------------------------
 function _ishermitian_exact(A::AbstractMatrix, anti::Val; blocksize = 32)
     n = size(A, 1)
     for j in 1:blocksize:n
