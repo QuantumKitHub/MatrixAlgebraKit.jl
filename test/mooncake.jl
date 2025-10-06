@@ -17,13 +17,13 @@ include("ad_utils.jl")
         A     = randn(rng, T, m, n)
         minmn = min(m, n)
         @testset for alg in (LAPACK_HouseholderQR(),
-                             #LAPACK_HouseholderQR(; positive=true),
+                             LAPACK_HouseholderQR(; positive=true),
                             )
             @testset "qr_compact" begin 
                 Q = randn(rng, T, m, minmn)
                 R = randn(rng, T, minmn, n)
-                Mooncake.TestUtils.test_rule(rng, qr_compact, copy(A), alg; is_primitive=false, atol=atol, rtol=rtol)
-            end 
+                Mooncake.TestUtils.test_rule(rng, qr_compact, A, alg; test_rewind=true, is_primitive=false, atol=atol, rtol=rtol)
+            end
             @testset "qr_null" begin
                 Q, R = qr_compact(A, alg)
                 ΔN   = Q * randn(rng, T, minmn, max(0, m - minmn))
@@ -32,7 +32,7 @@ include("ad_utils.jl")
                 else
                     dN   = [Mooncake.build_tangent(typeof(ΔN[i,j]), real(ΔN[i,j]), imag(ΔN[i,j])) for i in 1:size(ΔN, 1), j in 1:size(ΔN, 2)]
                 end
-                Mooncake.TestUtils.test_rule(rng, qr_null, A, alg; mode=Mooncake.ReverseMode, output_tangent = dN, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, qr_null, A, alg; test_rewind=true, output_tangent = dN, is_primitive=false, atol=atol, rtol=rtol)
             end
             @testset "qr_full" begin
                 Q, R = qr_full(A, alg)
@@ -49,18 +49,18 @@ include("ad_utils.jl")
                     dR   = [Mooncake.build_tangent(typeof(ΔR[i,j]), real(ΔR[i,j]), imag(ΔR[i,j])) for i in 1:size(ΔR, 1), j in 1:size(ΔR, 2)]
                 end
                 dQR = Mooncake.build_tangent(typeof((ΔQ,ΔR)), dQ, dR)
-                Mooncake.TestUtils.test_rule(rng, qr_full, copy(A), alg; output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, qr_full, A, alg; test_rewind=true, output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
             end
             @testset "qr_compact - rank-deficient A" begin
-                r = minmn - 5
-                Ard = randn(rng, T, m, r) * randn(rng, T, r, n)
+                r    = minmn - 5
+                Ard  = randn(rng, T, m, r) * randn(rng, T, r, n)
                 Q, R = qr_compact(Ard, alg)
-                ΔQ = randn(rng, T, m, minmn)
-                Q1 = view(Q, 1:m, 1:r)
-                Q2 = view(Q, 1:m, (r + 1):minmn)
-                ΔQ2 = view(ΔQ, 1:m, (r + 1):minmn)
+                ΔQ   = randn(rng, T, m, minmn)
+                Q1   = view(Q, 1:m, 1:r)
+                Q2   = view(Q, 1:m, (r + 1):minmn)
+                ΔQ2  = view(ΔQ, 1:m, (r + 1):minmn)
                 ΔQ2 .= 0
-                ΔR = randn(rng, T, minmn, n)
+                ΔR   = randn(rng, T, minmn, n)
                 view(ΔR, (r + 1):minmn, :) .= 0
                 if T <: Real
                     dQ   = ΔQ
@@ -70,7 +70,7 @@ include("ad_utils.jl")
                     dR   = [Mooncake.build_tangent(typeof(ΔR[i,j]), real(ΔR[i,j]), imag(ΔR[i,j])) for i in 1:size(ΔR, 1), j in 1:size(ΔR, 2)]
                 end
                 dQR = Mooncake.build_tangent(typeof((ΔQ,ΔR)), dQ, dR)
-                Mooncake.TestUtils.test_rule(rng, qr_compact, copy(Ard), alg; output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, qr_compact, copy(Ard), alg; test_rewind=true, output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
             end
         end
     end
@@ -150,7 +150,8 @@ end
     m    = 19
     atol = rtol = m * m * precision(T)
     A    = randn(rng, T, m, m)
-    D, V = eig_full(A)
+    DV   = eig_full(A)
+    D, V = DV
     ΔV   = randn(rng, complex(T), m, m)
     ΔV   = remove_eiggauge_dependence!(ΔV, D, V; degeneracy_atol=atol)
     ΔD   = randn(rng, complex(T), m, m)
@@ -160,9 +161,17 @@ end
     dD  = Mooncake.build_tangent(typeof(ΔD2), diag_tangent)
     dV  = [Mooncake.build_tangent(typeof(ΔV[i,j]), real(ΔV[i,j]), imag(ΔV[i,j])) for i in 1:m, j in 1:m]
     dDV = Mooncake.build_tangent(typeof((ΔD2,ΔV)), dD, dV)
+    # compute the dA corresponding to the above dD, dV
+    dA_ = zeros(T, m, m)
+    dA_ = MatrixAlgebraKit.eig_full_pullback!(dA_, DV, (ΔD2, ΔV))
+    dA  = if T <: Real
+        dA_
+    else
+        [Mooncake.build_tangent(typeof(dA_[i,j]), real(dA_[i,j]), imag(dA_[i,j])) for i in 1:m, j in 1:m]
+    end
     @testset for alg in (LAPACK_Simple(), LAPACK_Expert())
         @testset "eig_full" begin
-            Mooncake.TestUtils.test_rule(rng, eig_full, A, alg; output_tangent = dDV, is_primitive=false, atol=atol, rtol=rtol)
+            Mooncake.TestUtils.test_rule(rng, eig_full, A, alg; test_rewind=true, output_tangent = dDV, is_primitive=false, atol=atol, rtol=rtol)
         end
         @testset "eig_vals" begin
             Mooncake.TestUtils.test_rule(rng, eig_vals, A, alg; atol=atol, rtol=rtol, is_primitive=false)
@@ -188,10 +197,13 @@ end
         dV  = [Mooncake.build_tangent(typeof(ΔV[i,j]), real(ΔV[i,j]), imag(ΔV[i,j])) for i in 1:m, j in 1:m]
     end
     dDV = Mooncake.build_tangent(typeof((ΔD2,ΔV)), dD, dV)
-    @testset for alg in (LAPACK_QRIteration(), LAPACK_DivideAndConquer(), LAPACK_Bisection(),
-                         LAPACK_MultipleRelativelyRobustRepresentations())
+    @testset for alg in (LAPACK_QRIteration(),
+                         LAPACK_DivideAndConquer(),
+                         LAPACK_Bisection(),
+                         LAPACK_MultipleRelativelyRobustRepresentations(),
+                        )
         @testset "eigh_full" begin
-            Mooncake.TestUtils.test_rule(rng, eigh_full, A, alg; output_tangent=dDV, is_primitive=false, atol=atol, rtol=rtol)
+            Mooncake.TestUtils.test_rule(rng, eigh_full, A, alg; test_rewind=true, output_tangent=dDV, is_primitive=false, atol=atol, rtol=rtol)
         end
         @testset "eigh_vals" begin
             Mooncake.TestUtils.test_rule(rng, eigh_vals, A, alg; is_primitive=false, atol=atol, rtol=rtol)
@@ -208,6 +220,7 @@ end
         minmn    = min(m, n)
         @testset for alg in (LAPACK_QRIteration(), LAPACK_DivideAndConquer())
             #=@testset "svd_full" begin
+                U, S, Vᴴ = svd_full(A; alg=alg)
                 ΔU  = randn(rng, T, m, m)
                 ΔS  = randn(rng, real(T), m, n)
                 ΔVᴴ = randn(rng, T, n, n)
@@ -222,7 +235,7 @@ end
                     dVᴴ  = [Mooncake.build_tangent(typeof(ΔVᴴ[i,j]), real(ΔVᴴ[i,j]), imag(ΔVᴴ[i,j])) for i in 1:size(ΔVᴴ, 1), j in 1:size(ΔVᴴ, 2)]
                 end
                 dUSVᴴ = Mooncake.build_tangent(typeof((ΔU,ΔS,ΔVᴴ)), dU, dS, dVᴴ)
-                Mooncake.TestUtils.test_rule(rng, svd_full, A, alg; mode=Mooncake.ReverseMode, output_tangent=dUSVᴴ, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, svd_full, A, alg; test_fwd_from_rvs=true, output_tangent=dUSVᴴ, is_primitive=false, atol=atol, rtol=rtol)
             end=# # TODO
             @testset "svd_compact" begin
                 ΔU  = randn(rng, T, m, minmn)
@@ -240,7 +253,7 @@ end
                     dVᴴ  = [Mooncake.build_tangent(typeof(ΔVᴴ[i,j]), real(ΔVᴴ[i,j]), imag(ΔVᴴ[i,j])) for i in 1:size(ΔVᴴ, 1), j in 1:size(ΔVᴴ, 2)]
                 end
                 dUSVᴴ = Mooncake.build_tangent(typeof((ΔU,ΔS2,ΔVᴴ)), dU, dS, dVᴴ)
-                Mooncake.TestUtils.test_rule(rng, svd_compact, A, alg; output_tangent=dUSVᴴ, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, svd_compact, A, alg; test_rewind=true, output_tangent=dUSVᴴ, is_primitive=false, atol=atol, rtol=rtol)
             end
             @testset "svd_vals" begin
                 Mooncake.TestUtils.test_rule(rng, svd_vals, A, alg; is_primitive=false, atol=atol, rtol=rtol)

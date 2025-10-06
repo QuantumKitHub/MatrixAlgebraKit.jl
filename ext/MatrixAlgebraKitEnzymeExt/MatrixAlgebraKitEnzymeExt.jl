@@ -10,8 +10,6 @@ using LinearAlgebra
 
 @inline EnzymeRules.inactive_type(v::Type{<:MatrixAlgebraKit.AbstractAlgorithm}) = true
 
-#Enzyme.@import_rrule(typeof(MatrixAlgebraKit.svd_trunc!), AbstractMatrix, Any, MatrixAlgebraKit.TruncatedAlgorithm)
-
 function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       func::Const{typeof(lq_null!)},
                                       ::Type{RT},
@@ -193,6 +191,50 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
     return (nothing, nothing, nothing)
 end
 
+function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
+                             func::Const{typeof(qr_null!)},
+                             ::Type{RT},
+                             A::Annotation{<:AbstractMatrix},
+                             N::Annotation{<:AbstractMatrix},
+                             alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                             kwargs...,
+                            ) where {RT}
+    ret = func.val(A.val, N.val, alg.val; kwargs...)
+    N   = ret
+
+    if isa(N, Union{Duplicated, DuplicatedNoNeed}) && !isa(A, Const)
+        dN = N.dval
+        dA = A.dval
+        Ac = MatrixAlgebraKit.copy_input(qr_full, Aval)
+        QR = MatrixAlgebraKit.initialize_output(qr_full!, Aval, alg.val)
+        Q, R = qr_full!(Ac, QR, alg.val)
+        Nval = N.val
+        copy!(Nval, view(Q, 1:size(Aval, 1), (size(Aval, 2) + 1):size(Aval, 1)))
+        (m, n) = size(Aval)
+        minmn  = min(m, n)
+        dQ     = zeros(eltype(Aval), (m, m))
+        view(dQ, 1:m, (minmn + 1):m) .= dN
+        MatrixAlgebraKit.qr_compact_fwd(dA, (Q, R), (dQ, zeros(eltype(R), size(R))))
+        dN    .= view(dQ, 1:m, (minmn + 1):m)
+        dA    .= zero(eltype(A.val))
+        shadow = dN
+        ret    = Nval
+    elseif isa(A, Const) && !!isa(N, Union{Duplicated, DuplicatedNoNeed})
+        make_zero!(N.dval)
+        shadow = N.dval
+    end
+
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return Duplicated(ret, shadow)
+    elseif EnzymeRules.needs_shadow(config)
+        return shadow
+    elseif EnzymeRules.needs_primal(config)
+        return ret
+    else
+        return nothing
+    end
+end
+
 for f in (:qr_compact!, :qr_full!)
     @eval begin
         function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
@@ -248,14 +290,11 @@ for f in (:qr_compact!, :qr_full!)
             m, n = size(A.val)
 
             if isa(QR, Union{Duplicated, DuplicatedNoNeed}) && !isa(A, Const)
-                invR = inv(R)
-                tmp  = Q' * A.dval * invR
-                Rtmp = tmp + tmp'
-                diagview(Rtmp) ./= 2
-                Rtmp[MatrixAlgebraKit.lowertriangularind(Rtmp)] .= zero(eltype(Rtmp))
-                ∂R   = Rtmp * R
-                ∂Q   = A.dval * invR - Q * ∂R * invR
-                shadow = (∂Q, ∂R)
+                dQ, dR = QR.dval
+                dA     = A.dval
+                dQ, dR = MatrixAlgebraKit.qr_compact_fwd(dA, (Q, R), (dQ, dR))
+                dA    .= zero(eltype(A.val))
+                shadow = (dQ, dR)
             elseif isa(A, Const) && !!isa(QR, Union{Duplicated, DuplicatedNoNeed})
                 make_zero!(QR.dval)
                 shadow = QR.dval
@@ -553,13 +592,13 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
         make_zero!(A.dval)
         shadow = (DV.dval[1], DV.dval[2])
     else
-        #=A.dval .*= 2
+        A.dval .*= 2
         diagview(A.dval) ./= 2
         for i in 1:size(A.dval, 1), j in 1:size(A.dval, 2)
             if i > j
                 A.dval[i, j] = zero(eltype(A.dval)) 
             end
-        end=#
+        end
         ∂K      = inv(V) * A.dval * V
         ∂Kdiag  = diagview(∂K)
         ∂Ddiag  = diagview(DV.dval[1])
@@ -570,12 +609,6 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
         ∂Kdiag .= zero(eltype(V))
         mul!(DV.dval[2], V, ∂K, 1, 0)
         shadow  = DV.dval[2]
-        println("∂K")
-        display(∂K)
-        println()
-        println("∂V after")
-        display(DV.dval[2])
-        println()
         A.dval .= zero(eltype(A.val))
         shadow  = (Diagonal(∂Ddiag), DV.dval[2])
     end
@@ -633,7 +666,7 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
     tol             = MatrixAlgebraKit.default_pullback_gaugetol(DV.val[1])
     degeneracy_atol = tol
     gauge_atol      = tol
-    Dmat, V = func.val(A.val, DV.val, alg.val; kwargs...)
+    func.val(A.val, DV.val, alg.val; kwargs...)
     if isa(A, Const) || all(iszero, A.dval)
         if !isa(DV, Const)
             make_zero!(DV.dval[1])
@@ -644,15 +677,9 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
         end
         shadow  = !isa(DV, Const) ? DV.dval : nothing
     else
-        D       = diagview(Dmat) 
-        ∂K      = inv(V) * A.dval * V
-        ∂Kdiag  = diagview(∂K)
-        DV.dval[1].diag .= ∂Kdiag
-        ∂K    ./= transpose(D) .- D
-        fill!(∂Kdiag, zero(eltype(D)))
-        DV.dval[2] .= (V * ∂K)
-        shadow  = DV.dval
-        A.dval .= zero(eltype(A.val))
+        dA     = A.dval
+        MatrixAlgebraKit.eig_full_fwd(dA, DV.val, DV.dval)
+        shadow = DV.dval
     end
     if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
         return Duplicated(DV.val, shadow)
@@ -673,8 +700,8 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
                                       kwargs...,
                                      ) where {RT}
-    cache_DV        = nothing
-    cache_A = EnzymeRules.overwritten(config)[2] ? copy(A.val)  : nothing
+    cache_DV = nothing
+    cache_A  = EnzymeRules.overwritten(config)[2] ? copy(A.val)  : nothing
     func.val(A.val, DV.val, alg.val; kwargs...)
     primal = EnzymeRules.needs_primal(config) ? DV.val : nothing
     shadow = EnzymeRules.needs_shadow(config) ? DV.dval : nothing

@@ -9,7 +9,7 @@ using LinearAlgebra: UpperTriangular, Diagonal, Hermitian, mul!
 
 include("ad_utils.jl")
 
-@timedtestset "QR AD Rules with eltype $T" for T in (Float64,)# ComplexF64,)# Float32)
+@timedtestset "QR AD Rules with eltype $T" for T in (Float64, )#ComplexF64,)# Float32)
     rng = StableRNG(12345)
     m = 19
     @testset "size ($m, $n)" for n in (17, m, 23)
@@ -19,11 +19,39 @@ include("ad_utils.jl")
         @testset for alg in (LAPACK_HouseholderQR(),
                              LAPACK_HouseholderQR(; positive=true),
                             )
-            @testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
-                #test_forward(qr_full, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
-                #test_forward(qr_null, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
-                if m ≥ n
-                    test_forward(qr_compact, RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+            #@testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
+            @testset "forward: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+                @testset "qr_compact" begin
+                    ΔQ   = randn(rng, T, m, minmn)
+                    ΔR   = randn(rng, T, minmn, n)
+                    test_rewind(qr_compact, RT, Duplicated, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(ΔQ, ΔR))
+                end
+                @testset "qr_null" begin
+                    Q, R  = qr_compact(A, alg)
+                    ΔN    = Q * randn(rng, T, minmn, max(0, m - minmn))
+                    test_rewind(qr_null, RT, Duplicated, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=ΔN)
+                end
+                @testset "qr_full" begin
+                    Q, R = qr_full(A, alg)
+                    Q1   = view(Q, 1:m, 1:minmn)
+                    ΔQ   = randn(rng, T, m, m)
+                    ΔQ2  = view(ΔQ, :, (minmn + 1):m)
+                    mul!(ΔQ2, Q1, Q1' * ΔQ2)
+                    ΔR   = randn(rng, T, m, n)
+                    test_rewind(qr_full, RT, Duplicated, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(ΔQ, ΔR))
+                end
+                @testset "qr_compact - rank-deficient A" begin
+                    r = minmn - 5
+                    Ard = randn(rng, T, m, r) * randn(rng, T, r, n)
+                    Q, R = qr_compact(Ard, alg)
+                    ΔQ = randn(rng, T, m, minmn)
+                    Q1 = view(Q, 1:m, 1:r)
+                    Q2 = view(Q, 1:m, (r + 1):minmn)
+                    ΔQ2 = view(ΔQ, 1:m, (r + 1):minmn)
+                    ΔQ2 .= 0
+                    ΔR = randn(rng, T, minmn, n)
+                    view(ΔR, (r + 1):minmn, :) .= 0
+                    test_rewind(qr_compact, RT, Duplicated, (Ard, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,), output_tangent=(ΔQ, ΔR))
                 end
             end
             @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
@@ -116,7 +144,7 @@ end
     end
 end
 
-@timedtestset "EIG AD Rules with eltype $T" for T in (Float64, ComplexF64,) # Float32
+@timedtestset "EIG AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
     rng  = StableRNG(12345)
     m    = 19
     atol = rtol = m * m * precision(T)
@@ -127,8 +155,8 @@ end
     ΔD   = randn(rng, complex(T), m, m)
     ΔD2  = Diagonal(randn(rng, complex(T), m))
     @testset for alg in (LAPACK_Simple(), LAPACK_Expert())
-        @testset for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
-            test_forward(eig_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+        @testset for RT in (Duplicated,), TA in (Duplicated,)
+            test_rewind(eig_full, RT, Duplicated, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔD2), copy(ΔV)))
             test_forward(eig_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
         end
         @testset for RT in (Duplicated,), TA in (Duplicated,)
@@ -138,7 +166,7 @@ end
     end
 end
 
-@timedtestset "EIGH AD Rules with eltype $T" for T in (Float64,)# Float32, ComplexF64)
+@timedtestset "EIGH AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
     rng  = StableRNG(12345)
     m    = 19
     atol = rtol = m * m * precision(T)
@@ -151,12 +179,12 @@ end
     ΔD   = randn(rng, real(T), m, m)
     ΔD2  = Diagonal(randn(rng, real(T), m))
     @testset for alg in (LAPACK_QRIteration(),
-                         #LAPACK_DivideAndConquer(),
-                         #LAPACK_Bisection(),
-                         #LAPACK_MultipleRelativelyRobustRepresentations(),
+                         LAPACK_DivideAndConquer(),
+                         LAPACK_Bisection(),
+                         LAPACK_MultipleRelativelyRobustRepresentations(),
                         )
-        @testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
-            test_forward(eigh_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+        @testset "forward: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+            test_rewind(eigh_full, RT, Duplicated, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔD2), copy(ΔV)))
             test_forward(eigh_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
         end
         @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
@@ -165,8 +193,8 @@ end
         end
     end
 end
-#=
-@timedtestset "SVD AD Rules with eltype $T" for T in (Float64, Float32, ComplexF64)
+
+@timedtestset "SVD AD Rules with eltype $T" for T in (Float64, ComplexF64)
     rng = StableRNG(12345)
     m = 19
     @testset "size ($m, $n)" for n in (17, m, 23)
@@ -177,11 +205,15 @@ end
                              LAPACK_DivideAndConquer(),
                             )
             isa(alg, LAPACK_Jacobi) && m < n && continue
-            # TODO
-            #@testset "forward: RT $RT, TA $TA" for RT in (Const,Duplicated,DuplicatedNoNeed), TA in (Const,Duplicated,)
-                #test_forward(svd_compact, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,))
+            @testset "forward: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+                U, S, Vᴴ = svd_compact(A)
+                ΔU  = randn(rng, T, m, minmn)
+                ΔS  = Diagonal(randn(rng, real(T), minmn))
+                ΔVᴴ = randn(rng, T, minmn, n)
+                ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol=atol)
+                test_rewind(svd_compact, RT, Duplicated, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,), output_tangent=(ΔU, ΔS, ΔVᴴ))
                 #test_forward(svd_full, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,))
-            #end
+            end
             @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
                 @testset "svd_compact" begin
                     U, S, Vᴴ = svd_compact(A)
@@ -252,4 +284,3 @@ end
         end
     end
 end
-=#
