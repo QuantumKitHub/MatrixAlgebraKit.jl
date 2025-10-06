@@ -85,7 +85,7 @@ function ishermitian_exact(A)
     return A == A'
 end
 function ishermitian_exact(A::StridedMatrix; kwargs...)
-    return _ishermitian_exact(A, Val(false); kwargs...)
+    return strided_ishermitian_exact(A, Val(false); kwargs...)
 end
 
 """
@@ -105,12 +105,12 @@ function isantihermitian_exact(A)
     return A == -A'
 end
 function isantihermitian_exact(A::StridedMatrix; kwargs...)
-    return _ishermitian_exact(A, Val(true); kwargs...)
+    return strided_ishermitian_exact(A, Val(true); kwargs...)
 end
 
 # blocked implementation of exact checks for strided matrices
 # -----------------------------------------------------------
-function _ishermitian_exact(A::AbstractMatrix, anti::Val; blocksize = 32)
+function strided_ishermitian_exact(A::AbstractMatrix, anti::Val; blocksize = 32)
     n = size(A, 1)
     for j in 1:blocksize:n
         jb = min(blocksize, n - j + 1)
