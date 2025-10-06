@@ -3,8 +3,8 @@ module MatrixAlgebraKit
 using LinearAlgebra: LinearAlgebra
 using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!, adjoint!, rdiv!, ldiv!
-using LinearAlgebra: sylvester
-using LinearAlgebra: isposdef, issymmetric
+using LinearAlgebra: sylvester, lu!
+using LinearAlgebra: isposdef, issymmetric, opnorm
 using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
@@ -77,7 +77,7 @@ include("common/gauge.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
-include("interface/hermitian.jl")
+include("interface/projections.jl")
 include("interface/decompositions.jl")
 include("interface/truncation.jl")
 include("interface/qr.jl")
@@ -90,7 +90,7 @@ include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
 
-include("implementations/hermitian.jl")
+include("implementations/projections.jl")
 include("implementations/truncation.jl")
 include("implementations/qr.jl")
 include("implementations/lq.jl")
