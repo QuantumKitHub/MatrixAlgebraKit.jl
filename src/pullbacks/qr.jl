@@ -117,8 +117,8 @@ function qr_null_pullback!(
         gauge_atol::Real = tol
     )
     if !iszerotangent(ΔN) && size(N, 2) > 0
-        NᴴΔN = N' * ΔN
-        Δgauge = norm((NᴴΔN .- NᴴΔN') ./ 2)
+        aNᴴΔN = project_antihermitian!(N' * ΔN)
+        Δgauge = norm(aNᴴΔN)
         Δgauge < tol ||
             @warn "`qr_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 

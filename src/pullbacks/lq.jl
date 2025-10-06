@@ -118,8 +118,8 @@ function lq_null_pullback!(
         gauge_atol::Real = tol
     )
     if !iszerotangent(ΔNᴴ) && size(Nᴴ, 1) > 0
-        NᴴΔN = Nᴴ * ΔNᴴ'
-        Δgauge = norm((NᴴΔN .- NᴴΔN') ./ 2)
+        aNᴴΔN = project_antihermitian!(Nᴴ * ΔNᴴ')
+        Δgauge = norm(aNᴴΔN)
         Δgauge < tol ||
             @warn "`lq_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
         L, Q = lq_compact(A; positive = true) # should we be able to provide algorithm here?

@@ -7,6 +7,9 @@ if !is_buildkite
     @safetestset "Algorithms" begin
         include("algorithms.jl")
     end
+    @safetestset "Projections" begin
+        include("projections.jl")
+    end
     @safetestset "Truncate" begin
         include("truncate.jl")
     end

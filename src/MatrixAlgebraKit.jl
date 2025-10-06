@@ -4,13 +4,15 @@ using LinearAlgebra: LinearAlgebra
 using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!, adjoint!, rdiv!, ldiv!
 using LinearAlgebra: sylvester
-using LinearAlgebra: isposdef, ishermitian, issymmetric
+using LinearAlgebra: isposdef, issymmetric
 using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
-export isisometry, isunitary
+export isisometry, isunitary, ishermitian, isantihermitian
 
+export project_hermitian, project_antihermitian
+export project_hermitian!, project_antihermitian!
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
 export svd_compact, svd_full, svd_vals, svd_trunc
@@ -33,6 +35,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_DivideAndConquer, LAPACK_Jacobi
 export LQViaTransposedQR
 export DiagonalAlgorithm
+export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
     CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer
 export ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi,
@@ -74,6 +77,7 @@ include("common/gauge.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
+include("interface/projections.jl")
 include("interface/decompositions.jl")
 include("interface/truncation.jl")
 include("interface/qr.jl")
@@ -86,6 +90,7 @@ include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
 
+include("implementations/projections.jl")
 include("implementations/truncation.jl")
 include("implementations/qr.jl")
 include("implementations/lq.jl")
