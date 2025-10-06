@@ -111,4 +111,7 @@ include("pullbacks/eigh.jl")
 include("pullbacks/svd.jl")
 include("pullbacks/polar.jl")
 
+include("pullfwds/qr.jl")
+include("pullfwds/eig.jl")
+
 end
