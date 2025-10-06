@@ -3,8 +3,8 @@ module MatrixAlgebraKit
 using LinearAlgebra: LinearAlgebra
 using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!, adjoint!, rdiv!, ldiv!
-using LinearAlgebra: sylvester
-using LinearAlgebra: isposdef, issymmetric
+using LinearAlgebra: sylvester, lu!
+using LinearAlgebra: isposdef, issymmetric, opnorm
 using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
