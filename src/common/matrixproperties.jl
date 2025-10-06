@@ -151,30 +151,18 @@ end
 Test whether a linear map is Hermitian, i.e. `A = A'`.
 The `isapprox_kwargs` can be used to control the tolerances of the equality.
 """
-function ishermitian(A; atol::Real = 0, rtol::Real = 0, kwargs...)
-    return (atol == rtol == 0) ? (A == A') : isapprox(A, A'; atol, rtol, kwargs...)
-end
-function ishermitian(A::AbstractMatrix; atol::Real = 0, rtol::Real = 0, norm = LinearAlgebra.norm, kwargs...)
-    Base.require_one_based_indexing(A)
-    m, n = size(A)
-    m == n || return false
-    if atol == rtol == 0
-        for j in 1:n
-            for i in 1:j
-                A[i, j] == adjoint(A[j, i]) || return false
-            end
-        end
-    elseif norm === LinearAlgebra.norm
-        atol = max(atol, rtol * norm(A))
-        for j in 1:n
-            for i in 1:j
-                isapprox(A[i, j], adjoint(A[j, i]); atol, abs, kwargs...)  || return false
-            end
-        end
+function ishermitian(A; atol::Real = 0, rtol::Real = 0, norm = LinearAlgebra.norm, kwargs...)
+    if iszero(atol) && iszero(rtol)
+        return ishermitian_exact(A; kwargs...)
     else
-        return isapprox(A, A'; atol, rtol, norm, kwargs...)
+        return 2 * norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
     end
-    return true
+end
+function ishermitian_exact(A)
+    return A == A'
+end
+function ishermitian_exact(A::AbstractMatrix; kwargs...)
+    return _ishermitian_exact(A, Val(false); kwargs...)
 end
 
 """
@@ -183,28 +171,52 @@ end
 Test whether a linear map is anti-Hermitian, i.e. `A = -A'`.
 The `isapprox_kwargs` can be used to control the tolerances of the equality.
 """
-function isantihermitian(A; atol::Real = 0, rtol::Real = 0, kwargs...)
-    return (atol == 0 & rtol == 0) ? (A == -A') : isapprox(A, -A'; atol, rtol, kwargs...)
-end
-function isantihermitian(A::AbstractMatrix; atol::Real = 0, rtol::Real = 0, norm = LinearAlgebra.norm, kwargs...)
-    Base.require_one_based_indexing(A)
-    m, n = size(A)
-    m == n || return false
-    if atol == rtol == 0
-        @inbounds for j in 1:n
-            for i in 1:j
-                A[i, j] == -adjoint(A[j, i]) || return false
-            end
-        end
-    elseif norm === LinearAlgebra.norm
-        atol = max(atol, rtol * norm(A))
-        @inbounds for j in 1:n
-            for i in 1:j
-                isapprox(A[i, j], -adjoint(A[j, i]); atol, abs, kwargs...)  || return false
-            end
-        end
+function isantihermitian(A; atol::Real = 0, rtol::Real = 0, norm = LinearAlgebra.norm, kwargs...)
+    if iszero(atol) && iszero(rtol)
+        return isantihermitian_exact(A; kwargs...)
     else
-        return isapprox(A, -A'; atol, rtol, norm, kwargs...)
+        return 2 * norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
+    end
+end
+function isantihermitian_exact(A)
+    return A == -A'
+end
+function isantihermitian_exact(A::AbstractMatrix; kwargs...)
+    return _ishermitian_exact(A, Val(true); kwargs...)
+end
+
+# block implementation of exact checks
+function _ishermitian_exact(A::AbstractMatrix, anti::Val; blocksize = 32)
+    n = size(A, 1)
+    for j in 1:blocksize:n
+        jb = min(blocksize, n - j + 1)
+        _ishermitian_exact_diag(view(A, j:(j + jb - 1), j:(j + jb - 1)), anti) || return false
+        for i in 1:blocksize:(j - 1)
+            ib = blocksize
+            _ishermitian_exact_offdiag(
+                view(A, i:(i + ib - 1), j:(j + jb - 1)),
+                view(A, j:(j + jb - 1), i:(i + ib - 1)),
+                anti
+            ) || return false
+        end
+    end
+    return true
+end
+function _ishermitian_exact_diag(A, ::Val{anti}) where {anti}
+    n = size(A, 1)
+    @inbounds for j in 1:n
+        @simd for i in 1:j
+            A[i, j] == (anti ? -adjoint(A[j, i]) : adjoint(A[j, i])) || return false
+        end
+    end
+    return true
+end
+function _ishermitian_exact_offdiag(Al, Au, ::Val{anti}) where {anti}
+    m, n = size(Al) # == reverse(size(Al))
+    @inbounds for j in 1:n
+        @simd for i in 1:m
+            Al[i, j] == (anti ? -adjoint(Au[j, i]) : adjoint(Au[j, i])) || return false
+        end
     end
     return true
 end
