@@ -47,7 +47,7 @@ end
 # -----------------------
 function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
     check_input(left_polar!, A, WP, alg)
-    U, S, Vᴴ = svd_compact!(A, alg.svdalg)
+    U, S, Vᴴ = svd_compact!(A, alg.svd_alg)
     W, P = WP
     W = mul!(W, U, Vᴴ)
     if !isempty(P)
@@ -59,7 +59,7 @@ function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
 end
 function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarViaSVD)
     check_input(right_polar!, A, PWᴴ, alg)
-    U, S, Vᴴ = svd_compact!(A, alg.svdalg)
+    U, S, Vᴴ = svd_compact!(A, alg.svd_alg)
     P, Wᴴ = PWᴴ
     Wᴴ = mul!(Wᴴ, U, Vᴴ)
     if !isempty(P)

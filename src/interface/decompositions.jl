@@ -121,13 +121,13 @@ const LAPACK_SVDAlgorithm = Union{
 # Polar decompositions
 # =========================
 """
-    PolarViaSVD(svdalg)
+    PolarViaSVD(svd_alg)
 
 Algorithm for computing the polar decomposition of a matrix `A` via the singular value
-decomposition (SVD) of `A`. The `svdalg` argument specifies the SVD algorithm to use.
+decomposition (SVD) of `A`. The `svd_alg` argument specifies the SVD algorithm to use.
 """
 struct PolarViaSVD{SVDAlg} <: AbstractAlgorithm
-    svdalg::SVDAlg
+    svd_alg::SVDAlg
 end
 
 """
