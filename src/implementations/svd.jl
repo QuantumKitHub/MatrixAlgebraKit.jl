@@ -89,7 +89,7 @@ end
 function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
-function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
+function initialize_output(::typeof(svd_trunc!), A, alg::TruncatedAlgorithm)
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
