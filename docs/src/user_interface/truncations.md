@@ -149,10 +149,8 @@ julia> size(U)
 julia> size(Vh)
 (2, 3)
 
-julia> # Verify the truncated decomposition approximates the original
-       reconstruction_error = norm(B - U * S * Vh);
-
-julia> reconstruction_error < 2.1  # Error is small (equals smallest discarded singular value)
+julia> # Verify the truncated decomposition error equals the discarded singular values
+       norm(B - U * S * Vh) ≈ norm(svd_vals(B)[3:end])
 true
 ```
 
