@@ -118,6 +118,28 @@ const LAPACK_SVDAlgorithm = Union{
 }
 
 # =========================
+# Polar decompositions
+# =========================
+"""
+    PolarViaSVD(svdalg)
+
+Algorithm for computing the polar decomposition of a matrix `A` via the singular value
+decomposition (SVD) of `A`. The `svdalg` argument specifies the SVD algorithm to use.
+"""
+struct PolarViaSVD{SVDAlg} <: AbstractAlgorithm
+    svdalg::SVDAlg
+end
+
+"""
+    PolarNewton(; maxiter = 10, tol = defaulttol(A))
+
+Algorithm for computing the polar decomposition of a matrix `A` via
+scaled Newton iteration, with a maximum of `maxiter` iterations and
+until convergence up to tolerance `tol`.
+"""
+@algdef PolarNewton
+
+# =========================
 # DIAGONAL ALGORITHMS
 # =========================
 """

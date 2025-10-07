@@ -39,25 +39,6 @@ See also [`left_polar(!)`](@ref left_polar).
 """
 @functiondef right_polar
 
-"""
-    PolarViaSVD(svdalg)
-    
-Algorithm for computing the polar decomposition of a matrix `A` via the singular value
-decomposition (SVD) of `A`. The `svdalg` argument specifies the SVD algorithm to use.
-"""
-struct PolarViaSVD{SVDAlg} <: AbstractAlgorithm
-    svdalg::SVDAlg
-end
-
-"""
-    PolarNewton(; maxiter = 10, tol = defaulttol(A))
-    
-Algorithm for computing the polar decomposition of a matrix `A` via
-scaled Newton iteration, with a maximum of `maxiter` iterations and
-until convergence up to tolerance `tol`.
-"""
-@algdef PolarNewton
-
 # Algorithm selection
 # -------------------
 default_polar_algorithm(A; kwargs...) = default_polar_algorithm(typeof(A); kwargs...)
