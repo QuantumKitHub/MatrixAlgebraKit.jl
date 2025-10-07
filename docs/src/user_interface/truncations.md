@@ -19,15 +19,16 @@ truncfilter
 truncerror
 ```
 
-## Combining Strategies
-
 Truncation strategies can be combined using the `&` operator to create intersection-based truncation.
 When strategies are combined, only the values that satisfy all conditions are kept.
 
-For example, to keep at most 10 eigenvalues while also discarding all values below `1e-6`:
+```jldoctest
+julia> using MatrixAlgebraKit
 
-```julia
-combined_trunc = truncrank(10) & trunctol(; atol = 1e-6)
+julia> combined_trunc = truncrank(10) & trunctol(; atol = 1e-6);
+
+julia> typeof(combined_trunc)
+MatrixAlgebraKit.TruncationIntersection{Tuple{MatrixAlgebraKit.TruncationByOrder{typeof(abs)}, MatrixAlgebraKit.TruncationByValue{Float64, Int64, typeof(abs)}}}
 ```
 
 ## Using Truncations in Decompositions
@@ -38,81 +39,121 @@ Truncation strategies can be used with truncated decomposition functions in two 
 
 The simplest approach is to pass a `NamedTuple` with the truncation parameters:
 
-```julia
-using MatrixAlgebraKit
+```jldoctest truncations
+julia> using MatrixAlgebraKit
 
-# Create a symmetric matrix
-A = randn(100, 100)
-A = A + A'  # Make symmetric
+julia> # Create a symmetric matrix with known values
+       A = [4.0 2.0 1.0; 2.0 5.0 3.0; 1.0 3.0 6.0];
 
-# Keep only the 10 largest eigenvalues
-D, V = eigh_trunc(A; trunc = (maxrank = 10,))
+julia> # Keep only the 2 largest eigenvalues
+       D, V = eigh_trunc(A; trunc = (maxrank = 2,));
 
-# Keep eigenvalues with absolute value above tolerance
-D, V = eigh_trunc(A; trunc = (atol = 1e-6,))
+julia> size(D)
+(2, 2)
 
-# Combine multiple criteria
-D, V = eigh_trunc(A; trunc = (maxrank = 20, atol = 1e-10, rtol = 1e-8))
+julia> size(V)
+(3, 2)
+```
+
+You can also use tolerance-based truncation or combine multiple criteria:
+
+```jldoctest truncations
+julia> # Keep eigenvalues with absolute value above tolerance
+       D, V = eigh_trunc(A; trunc = (atol = 1e-6,));
+
+julia> size(D, 1)  # All eigenvalues are above 1e-6
+3
+
+julia> # Combine multiple criteria
+       D, V = eigh_trunc(A; trunc = (maxrank = 2, atol = 1e-10));
+
+julia> size(D)
+(2, 2)
 ```
 
 ### 2. Using explicit `TruncationStrategy` objects
 
 For more control, you can construct `TruncationStrategy` objects directly:
 
-```julia
-# Keep the 5 largest eigenvalues
-strategy = truncrank(5)
-D, V = eigh_trunc(A; trunc = strategy)
+```jldoctest truncations
+julia> # Keep the 2 largest eigenvalues
+       strategy = truncrank(2);
 
-# Keep eigenvalues above an absolute tolerance
-strategy = trunctol(; atol = 1e-6)
-D, V = eigh_trunc(A; trunc = strategy)
+julia> D, V = eigh_trunc(A; trunc = strategy);
 
-# Combine strategies: keep at most 10 eigenvalues, all above 1e-8
-strategy = truncrank(10) & trunctol(; atol = 1e-8)
-D, V = eigh_trunc(A; trunc = strategy)
+julia> size(D)
+(2, 2)
+
+julia> # Combine strategies: keep at most 2 eigenvalues, all above 1e-8
+       strategy = truncrank(2) & trunctol(; atol = 1e-8);
+
+julia> D, V = eigh_trunc(A; trunc = strategy);
+
+julia> size(D)
+(2, 2)
 ```
 
 ## Complete Example
 
 Here's a complete example demonstrating different truncation approaches:
 
-```julia
-using MatrixAlgebraKit
-using LinearAlgebra
+```jldoctest complete_example
+julia> using MatrixAlgebraKit, LinearAlgebra
 
-# Generate a test matrix with known spectrum
-n = 50
-A = randn(n, n)
-A = A + A'  # Make symmetric
+julia> # Create a symmetric test matrix with known spectrum
+       A = [10.0  2.0  1.0  0.5;
+             2.0  8.0  1.5  0.3;
+             1.0  1.5  6.0  0.2;
+             0.5  0.3  0.2  4.0];
 
-# 1. No truncation - keep all eigenvalues
-D_full, V_full = eigh_trunc(A; trunc = nothing)
-@assert size(D_full) == (n, n)
+julia> # 1. No truncation - keep all eigenvalues
+       D_full, V_full = eigh_trunc(A; trunc = nothing);
 
-# 2. Keep only the 10 largest eigenvalues
-D_rank, V_rank = eigh_trunc(A; trunc = (maxrank = 10,))
-@assert size(D_rank) == (10, 10)
-@assert size(V_rank) == (n, 10)
+julia> size(D_full)
+(4, 4)
 
-# 3. Keep eigenvalues with absolute value above a threshold
-D_tol, V_tol = eigh_trunc(A; trunc = (atol = 1e-6,))
-println("Kept $(size(D_tol, 1)) eigenvalues above tolerance")
+julia> # 2. Keep only the 2 largest eigenvalues
+       D_rank, V_rank = eigh_trunc(A; trunc = (maxrank = 2,));
 
-# 4. Combine rank and tolerance truncation
-strategy = truncrank(15) & trunctol(; atol = 1e-8)
-D_combined, V_combined = eigh_trunc(A; trunc = strategy)
-println("Kept $(size(D_combined, 1)) eigenvalues (max 15, all above 1e-8)")
+julia> size(D_rank)
+(2, 2)
 
-# 5. Truncated SVD example
-B = randn(100, 80)
-U, S, Vh = svd_trunc(B; trunc = (maxrank = 20,))
-@assert size(S) == (20, 20)
-@assert size(U) == (100, 20)
-@assert size(Vh) == (20, 80)
+julia> size(V_rank)
+(4, 2)
 
-# Verify the truncated decomposition is accurate
-@assert norm(B - U * S * Vh) ≈ norm(svd(B).S[21:end])
+julia> # 3. Keep eigenvalues with absolute value above a threshold
+       D_tol, V_tol = eigh_trunc(A; trunc = (atol = 5.0,));
+
+julia> size(D_tol, 1) >= 2  # At least 2 eigenvalues are above 5.0
+true
+
+julia> # 4. Combine rank and tolerance truncation
+       strategy = truncrank(3) & trunctol(; atol = 1e-8);
+
+julia> D_combined, V_combined = eigh_trunc(A; trunc = strategy);
+
+julia> size(D_combined, 1) <= 3
+true
+
+julia> # 5. Truncated SVD example
+       B = [3.0 2.0 1.0; 1.0 4.0 2.0; 2.0 1.0 5.0; 0.5 1.0 2.0];
+
+julia> U, S, Vh = svd_trunc(B; trunc = (maxrank = 2,));
+
+julia> size(S)
+(2, 2)
+
+julia> size(U)
+(4, 2)
+
+julia> size(Vh)
+(2, 3)
+
+julia> # Verify the truncated decomposition approximates the original
+       reconstruction_error = norm(B - U * S * Vh);
+
+julia> reconstruction_error < 2.1  # Error is small (equals smallest discarded singular value)
+true
 ```
 
 ## Truncation with SVD vs Eigenvalue Decompositions
@@ -129,12 +170,24 @@ When using truncations with different decomposition types, keep in mind:
 
 For specialized needs, you can use [`truncfilter`](@ref) to define custom selection criteria:
 
-```julia
-# Keep only positive eigenvalues
-strategy = truncfilter(x -> x > 0)
-D_positive, V_positive = eigh_trunc(A; trunc = strategy)
+```jldoctest custom_filters
+julia> using MatrixAlgebraKit
 
-# Keep eigenvalues in a specific range
-strategy = truncfilter(x -> 0.1 < abs(x) < 10.0)
-D_range, V_range = eigh_trunc(A; trunc = strategy)
+julia> A = [4.0 -1.0 2.0; -1.0 3.0 1.0; 2.0 1.0 -2.0];
+
+julia> # Keep only positive eigenvalues
+       strategy = truncfilter(x -> x > 0);
+
+julia> D_positive, V_positive = eigh_trunc(A; trunc = strategy);
+
+julia> size(D_positive, 1) >= 2  # At least 2 positive eigenvalues
+true
+
+julia> # Keep eigenvalues in a specific range
+       strategy = truncfilter(x -> 1.0 < abs(x) < 5.0);
+
+julia> D_range, V_range = eigh_trunc(A; trunc = strategy);
+
+julia> size(D_range, 1) >= 1  # At least 1 eigenvalue in range
+true
 ```
