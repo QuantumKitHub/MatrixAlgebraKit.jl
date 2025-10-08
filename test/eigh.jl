@@ -52,14 +52,14 @@ end
 
         D1, V1 = @constinferred eigh_trunc(A; alg, trunc = truncrank(r))
         @test length(diagview(D1)) == r
-        @test isisometry(V1)
+        @test isisometric(V1)
         @test A * V1 ≈ V1 * D1
         @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
 
         trunc = trunctol(; atol = s * D₀[r + 1])
         D2, V2 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
-        @test isisometry(V2)
+        @test isisometric(V2)
         @test A * V2 ≈ V2 * D2
 
         s = 1 - sqrt(eps(real(T)))

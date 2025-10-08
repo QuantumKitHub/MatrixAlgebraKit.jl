@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef, norm
-using MatrixAlgebraKit: TruncatedAlgorithm, diagview, isisometry
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview, isisometric
 
 const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 
@@ -38,8 +38,8 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
             @test S isa Diagonal{real(T)} && size(S) == (minmn, minmn)
             @test Vᴴ isa Matrix{T} && size(Vᴴ) == (minmn, n)
             @test U * S * Vᴴ ≈ A
-            @test isisometry(U)
-            @test isisometry(Vᴴ; side = :right)
+            @test isisometric(U)
+            @test isisometric(Vᴴ; side = :right)
             @test isposdef(S)
 
             Ac = similar(A)
@@ -50,8 +50,8 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
             @test S2 === S
             @test V2ᴴ === Vᴴ
             @test U * S * Vᴴ ≈ A
-            @test isisometry(U)
-            @test isisometry(Vᴴ; side = :right)
+            @test isisometric(U)
+            @test isisometric(Vᴴ; side = :right)
             @test isposdef(S)
 
             Sd = @constinferred svd_vals(A, alg′)

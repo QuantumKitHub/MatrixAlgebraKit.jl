@@ -5,6 +5,8 @@ function copy_input(::typeof(project_hermitian), A::AbstractMatrix)
 end
 copy_input(::typeof(project_antihermitian), A) = copy_input(project_hermitian, A)
 
+copy_input(::typeof(project_isometric), A) = copy_input(left_polar, A)
+
 function check_input(::typeof(project_hermitian!), A::AbstractMatrix, B::AbstractMatrix, ::AbstractAlgorithm)
     LinearAlgebra.checksquare(A)
     n = Base.require_one_based_indexing(A)
@@ -18,6 +20,16 @@ function check_input(::typeof(project_antihermitian!), A::AbstractMatrix, B::Abs
     return nothing
 end
 
+function check_input(::typeof(project_isometric!), A::AbstractMatrix, W::AbstractMatrix, ::AbstractAlgorithm)
+    m, n = size(A)
+    m >= n ||
+        throw(ArgumentError("input matrix needs at least as many rows as columns"))
+    @assert W isa AbstractMatrix
+    @check_size(W, (m, n))
+    @check_scalar(W, A)
+    return nothing
+end
+
 # Outputs
 # -------
 function initialize_output(::typeof(project_hermitian!), A::AbstractMatrix, ::NativeBlocked)
@@ -27,15 +39,26 @@ function initialize_output(::typeof(project_antihermitian!), A::AbstractMatrix, 
     return A
 end
 
+function initialize_output(::typeof(project_isometric!), A::AbstractMatrix, ::AbstractAlgorithm)
+    return similar(A)
+end
+
 # Implementation
 # --------------
-function project_hermitian!(A::AbstractMatrix, B, alg::NativeBlocked)
-    check_input(project_hermitian!, A, B, alg)
-    return project_hermitian_native!(A, B, Val(false); alg.kwargs...)
+function project_hermitian!(A::AbstractMatrix, Aₕ, alg::NativeBlocked)
+    check_input(project_hermitian!, A, Aₕ, alg)
+    return project_hermitian_native!(A, Aₕ, Val(false); alg.kwargs...)
 end
-function project_antihermitian!(A::AbstractMatrix, B, alg::NativeBlocked)
-    check_input(project_antihermitian!, A, B, alg)
-    return project_hermitian_native!(A, B, Val(true); alg.kwargs...)
+function project_antihermitian!(A::AbstractMatrix, Aₐ, alg::NativeBlocked)
+    check_input(project_antihermitian!, A, Aₐ, alg)
+    return project_hermitian_native!(A, Aₐ, Val(true); alg.kwargs...)
+end
+
+function project_isometric!(A::AbstractMatrix, W, alg::AbstractAlgorithm)
+    check_input(project_isometric!, A, W, alg)
+    noP = similar(W, (0, 0))
+    W, _ = left_polar!(A, (W, noP), alg)
+    return W
 end
 
 function project_hermitian_native!(A::AbstractMatrix, B::AbstractMatrix, anti::Val; blocksize = 32)

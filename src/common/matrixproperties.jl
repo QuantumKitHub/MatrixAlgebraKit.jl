@@ -1,5 +1,5 @@
 """
-    isisometry(A; side=:left, isapprox_kwargs...) -> Bool
+    isisometric(A; side=:left, isapprox_kwargs...) -> Bool
 
 Test whether a linear map is an isometry, where the type of isometry is controlled by `kind`:
 
@@ -8,13 +8,14 @@ Test whether a linear map is an isometry, where the type of isometry is controll
 
 The `isapprox_kwargs` are passed on to `isapprox` to control the tolerances.
 
-New specializations should overload [`is_left_isometry`](@ref) and [`is_right_isometry`](@ref).
+New specializations should overload [`MatrixAlgebraKit.is_left_isometric`](@ref) and
+[`MatrixAlgebraKit.is_right_isometric`](@ref).
 
 See also [`isunitary`](@ref).
 """
-function isisometry(A; side::Symbol = :left, isapprox_kwargs...)
-    side === :left && return is_left_isometry(A; isapprox_kwargs...)
-    side === :right && return is_right_isometry(A; isapprox_kwargs...)
+function isisometric(A; side::Symbol = :left, isapprox_kwargs...)
+    side === :left && return is_left_isometric(A; isapprox_kwargs...)
+    side === :right && return is_right_isometric(A; isapprox_kwargs...)
 
     throw(ArgumentError(lazy"Invalid isometry side: $side"))
 end
@@ -25,27 +26,27 @@ end
 Test whether a linear map is unitary, i.e. `A * A' ≈ I ≈ A' * A`.
 The `isapprox_kwargs` are passed on to `isapprox` to control the tolerances.
 
-See also [`isisometry`](@ref).
+See also [`isisometric`](@ref).
 """
 function isunitary(A; isapprox_kwargs...)
-    return is_left_isometry(A; isapprox_kwargs...) &&
-        is_right_isometry(A; isapprox_kwargs...)
+    return is_left_isometric(A; isapprox_kwargs...) &&
+        is_right_isometric(A; isapprox_kwargs...)
 end
 function isunitary(A::AbstractMatrix; isapprox_kwargs...)
     size(A, 1) == size(A, 2) || return false
-    return is_left_isometry(A; isapprox_kwargs...)
+    return is_left_isometric(A; isapprox_kwargs...)
 end
 
 @doc """
-    is_left_isometry(A; isapprox_kwargs...) -> Bool
+    is_left_isometric(A; isapprox_kwargs...) -> Bool
 
-Test whether a linear map is a left isometry, i.e. `A' * A ≈ I`.
+Test whether a linear map is a (left) isometry, i.e. `A' * A ≈ I`.
 The `isapprox_kwargs` can be used to control the tolerances of the equality.
 
-See also [`isisometry`](@ref) and [`is_right_isometry`](@ref).
-""" is_left_isometry
+See also [`isisometric`](@ref) and [`MatrixAlgebraKit.is_right_isometric`](@ref).
+""" is_left_isometric
 
-function is_left_isometry(A::AbstractMatrix; atol::Real = 0, rtol::Real = defaulttol(A), norm = LinearAlgebra.norm)
+function is_left_isometric(A::AbstractMatrix; atol::Real = 0, rtol::Real = defaulttol(A), norm = LinearAlgebra.norm)
     P = A' * A
     nP = norm(P) # isapprox would use `rtol * max(norm(P), norm(I))`
     diagview(P) .-= 1
@@ -53,20 +54,14 @@ function is_left_isometry(A::AbstractMatrix; atol::Real = 0, rtol::Real = defaul
 end
 
 @doc """
-    is_right_isometry(A; isapprox_kwargs...) -> Bool
+    is_right_isometric(A; isapprox_kwargs...) -> Bool
 
-Test whether a linear map is a right isometry, i.e. `A * A' ≈ I`.
+Test whether a linear map is a (right) isometry, i.e. `A * A' ≈ I`.
 The `isapprox_kwargs` can be used to control the tolerances of the equality.
 
-See also [`isisometry`](@ref) and [`is_left_isometry`](@ref).
-""" is_right_isometry
-
-function is_right_isometry(A::AbstractMatrix; atol::Real = 0, rtol::Real = defaulttol(A), norm = LinearAlgebra.norm)
-    P = A * A'
-    nP = norm(P) # isapprox would use `rtol * max(norm(P), norm(I))`
-    diagview(P) .-= 1
-    return norm(P) <= max(atol, rtol * nP) # assume that the norm of I is `sqrt(n)`
-end
+See also [`isisometric`](@ref) and [`MatrixAlgebraKit.is_left_isometric`](@ref).
+""" is_right_isometric
+is_right_isometric(A; kwargs...) = is_left_isometric(A'; kwargs...)
 
 """
     ishermitian(A; isapprox_kwargs...)

@@ -18,9 +18,9 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         @test Q * R ≈ A
         N = @constinferred qr_null(A)
         @test N isa Matrix{T} && size(N) == (m, m - minmn)
-        @test isisometry(Q)
+        @test isisometric(Q)
         @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
-        @test isisometry(N)
+        @test isisometric(N)
 
         Ac = similar(A)
         Q2, R2 = @constinferred qr_compact!(copy!(Ac, A), (Q, R))
@@ -37,13 +37,13 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         # unblocked algorithm
         qr_compact!(copy!(Ac, A), (Q, R); blocksize = 1)
         @test Q * R ≈ A
-        @test isisometry(Q)
+        @test isisometric(Q)
         qr_compact!(copy!(Ac, A), (Q2, noR); blocksize = 1)
         @test Q == Q2
         qr_compact!(copy!(Ac, A), (Q2, noR); blocksize = 1)
         qr_null!(copy!(Ac, A), N; blocksize = 1)
         @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
-        @test isisometry(N)
+        @test isisometric(N)
         if n <= m
             qr_compact!(copy!(Q2, A), (Q2, noR); blocksize = 1) # in-place Q
             @test Q ≈ Q2
@@ -54,12 +54,12 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         # other blocking
         qr_compact!(copy!(Ac, A), (Q, R); blocksize = 8)
         @test Q * R ≈ A
-        @test isisometry(Q)
+        @test isisometric(Q)
         qr_compact!(copy!(Ac, A), (Q2, noR); blocksize = 8)
         @test Q == Q2
         qr_null!(copy!(Ac, A), N; blocksize = 8)
         @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
-        @test isisometry(N)
+        @test isisometric(N)
 
         # pivoted
         qr_compact!(copy!(Ac, A), (Q, R); pivoted = true)
@@ -70,21 +70,21 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         # positive
         qr_compact!(copy!(Ac, A), (Q, R); positive = true)
         @test Q * R ≈ A
-        @test isisometry(Q)
+        @test isisometric(Q)
         @test all(>=(zero(real(T))), real(diag(R)))
         qr_compact!(copy!(Ac, A), (Q2, noR); positive = true)
         @test Q == Q2
         # positive and blocksize 1
         qr_compact!(copy!(Ac, A), (Q, R); positive = true, blocksize = 1)
         @test Q * R ≈ A
-        @test isisometry(Q)
+        @test isisometric(Q)
         @test all(>=(zero(real(T))), real(diag(R)))
         qr_compact!(copy!(Ac, A), (Q2, noR); positive = true, blocksize = 1)
         @test Q == Q2
         # positive and pivoted
         qr_compact!(copy!(Ac, A), (Q, R); positive = true, pivoted = true)
         @test Q * R ≈ A
-        @test isisometry(Q)
+        @test isisometric(Q)
         if n <= m
             # the following test tries to find the diagonal element (in order to test positivity)
             # before the column permutation. This only works if all columns have a diagonal
