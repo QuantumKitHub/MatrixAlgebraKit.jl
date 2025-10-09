@@ -65,6 +65,7 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
             :svd_pullback!, :svd_trunc_pullback!
         )
     )
+    eval(Expr(:public, :is_left_isometric, :is_right_isometric))
 end
 
 include("common/defaults.jl")
