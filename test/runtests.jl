@@ -63,6 +63,9 @@ if CUDA.functional()
     @safetestset "CUDA LQ" begin
         include("cuda/lq.jl")
     end
+    @safetestset "CUDA Projections" begin
+        include("cuda/projections.jl")
+    end
     @safetestset "CUDA SVD" begin
         include("cuda/svd.jl")
     end
@@ -91,6 +94,9 @@ if AMDGPU.functional()
     @safetestset "AMDGPU LQ" begin
         include("amd/lq.jl")
     end
+    #=@safetestset "AMDGPU Projections" begin
+        include("amd/projections.jl")
+    end=# # TODO
     @safetestset "AMDGPU SVD" begin
         include("amd/svd.jl")
     end
