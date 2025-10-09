@@ -9,7 +9,7 @@ using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
-export isisometry, isunitary, ishermitian, isantihermitian
+export isisometric, isunitary, ishermitian, isantihermitian
 
 export project_hermitian, project_antihermitian, project_isometric
 export project_hermitian!, project_antihermitian!, project_isometric!

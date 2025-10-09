@@ -17,11 +17,11 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         @test L isa Matrix{T} && size(L) == (m, minmn)
         @test Q isa Matrix{T} && size(Q) == (minmn, n)
         @test L * Q ≈ A
-        @test isisometry(Q; side = :right)
+        @test isisometric(Q; side = :right)
         Nᴴ = @constinferred lq_null(A)
         @test Nᴴ isa Matrix{T} && size(Nᴴ) == (n - minmn, n)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
-        @test isisometry(Nᴴ; side = :right)
+        @test isisometric(Nᴴ; side = :right)
 
         Ac = similar(A)
         L2, Q2 = @constinferred lq_compact!(copy!(Ac, A), (L, Q))
@@ -51,12 +51,12 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         # unblocked algorithm
         lq_compact!(copy!(Ac, A), (L, Q); blocksize = 1)
         @test L * Q ≈ A
-        @test isisometry(Q; side = :right)
+        @test isisometric(Q; side = :right)
         lq_compact!(copy!(Ac, A), (noL, Q2); blocksize = 1)
         @test Q == Q2
         lq_null!(copy!(Ac, A), Nᴴ; blocksize = 1)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
-        @test isisometry(Nᴴ; side = :right)
+        @test isisometric(Nᴴ; side = :right)
         if m <= n
             lq_compact!(copy!(Q2, A), (noL, Q2); blocksize = 1) # in-place Q
             @test Q ≈ Q2
@@ -66,12 +66,12 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         end
         lq_compact!(copy!(Ac, A), (L, Q); blocksize = 8)
         @test L * Q ≈ A
-        @test isisometry(Q; side = :right)
+        @test isisometric(Q; side = :right)
         lq_compact!(copy!(Ac, A), (noL, Q2); blocksize = 8)
         @test Q == Q2
         lq_null!(copy!(Ac, A), Nᴴ; blocksize = 8)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
-        @test isisometry(Nᴴ; side = :right)
+        @test isisometric(Nᴴ; side = :right)
         @test Nᴴ * Nᴴ' ≈ I
 
         qr_alg = LAPACK_HouseholderQR(; blocksize = 1)
@@ -91,7 +91,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         # positive
         lq_compact!(copy!(Ac, A), (L, Q); positive = true)
         @test L * Q ≈ A
-        @test isisometry(Q; side = :right)
+        @test isisometric(Q; side = :right)
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_compact!(copy!(Ac, A), (noL, Q2); positive = true)
         @test Q == Q2
@@ -99,7 +99,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         # positive and blocksize 1
         lq_compact!(copy!(Ac, A), (L, Q); positive = true, blocksize = 1)
         @test L * Q ≈ A
-        @test isisometry(Q; side = :right)
+        @test isisometric(Q; side = :right)
         @test all(>=(zero(real(T))), real(diag(L)))
         lq_compact!(copy!(Ac, A), (noL, Q2); positive = true, blocksize = 1)
         @test Q == Q2

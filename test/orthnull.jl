@@ -68,9 +68,9 @@ end
         @test C isa Matrix{T} && size(C) == (minmn, n)
         @test N isa Matrix{T} && size(N) == (m, m - minmn)
         @test V * C ≈ A
-        @test isisometry(V)
+        @test isisometric(V)
         @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-        @test isisometry(N)
+        @test isisometric(N)
         @test V * V' + N * N' ≈ I
 
         M = LinearMap(A)
@@ -85,9 +85,9 @@ end
             @test C isa Matrix{T} && size(C) == (minmn, n)
             @test N isa Matrix{T} && size(N) == (m, nullity)
             @test V * C ≈ A
-            @test isisometry(V)
+            @test isisometric(V)
             @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-            @test isisometry(N)
+            @test isisometric(N)
         end
 
         for alg_qr in ((; positive = true), (; positive = false), LAPACK_HouseholderQR())
@@ -97,9 +97,9 @@ end
             @test C isa Matrix{T} && size(C) == (minmn, n)
             @test N isa Matrix{T} && size(N) == (m, m - minmn)
             @test V * C ≈ A
-            @test isisometry(V)
+            @test isisometric(V)
             @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-            @test isisometry(N)
+            @test isisometric(N)
             @test V * V' + N * N' ≈ I
         end
 
@@ -110,9 +110,9 @@ end
         @test C2 === C
         @test N2 === N
         @test V2 * C2 ≈ A
-        @test isisometry(V2)
+        @test isisometric(V2)
         @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-        @test isisometry(N2)
+        @test isisometric(N2)
         @test V2 * V2' + N2 * N2' ≈ I
 
         atol = eps(real(T))
@@ -122,9 +122,9 @@ end
         @test C2 !== C
         @test N2 !== C
         @test V2 * C2 ≈ A
-        @test isisometry(V2)
+        @test isisometric(V2)
         @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-        @test isisometry(N2)
+        @test isisometric(N2)
         @test V2 * V2' + N2 * N2' ≈ I
 
         rtol = eps(real(T))
@@ -138,9 +138,9 @@ end
             @test C2 !== C
             @test N2 !== C
             @test V2 * C2 ≈ A
-            @test isisometry(V2)
+            @test isisometric(V2)
             @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-            @test isisometry(N2)
+            @test isisometric(N2)
             @test V2 * V2' + N2 * N2' ≈ I
         end
 
@@ -150,12 +150,12 @@ end
             @test V2 === V
             @test C2 === C
             @test V2 * C2 ≈ A
-            @test isisometry(V2)
+            @test isisometric(V2)
             if kind != :polar
                 N2 = @constinferred left_null!(copy!(Ac, A), N; kind = kind)
                 @test N2 === N
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-                @test isisometry(N2)
+                @test isisometric(N2)
                 @test V2 * V2' + N2 * N2' ≈ I
             end
 
@@ -178,9 +178,9 @@ end
                 @test C2 !== C
                 @test N2 !== C
                 @test V2 * C2 ≈ A
-                @test isisometry(V2)
+                @test isisometric(V2)
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-                @test isisometry(N2)
+                @test isisometric(N2)
                 @test V2 * V2' + N2 * N2' ≈ I
             else
                 @test_throws ArgumentError left_orth!(copy!(Ac, A), (V, C); kind, trunc = (; atol))
@@ -204,9 +204,9 @@ end
         @test Vᴴ isa Matrix{T} && size(Vᴴ) == (minmn, n)
         @test Nᴴ isa Matrix{T} && size(Nᴴ) == (n - minmn, n)
         @test C * Vᴴ ≈ A
-        @test isisometry(Vᴴ; side = :right)
+        @test isisometric(Vᴴ; side = :right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-        @test isisometry(Nᴴ; side = :right)
+        @test isisometric(Nᴴ; side = :right)
         @test Vᴴ' * Vᴴ + Nᴴ' * Nᴴ ≈ I
 
         M = LinearMap(A)
@@ -220,9 +220,9 @@ end
         @test Vᴴ2 === Vᴴ
         @test Nᴴ2 === Nᴴ
         @test C2 * Vᴴ2 ≈ A
-        @test isisometry(Vᴴ2; side = :right)
+        @test isisometric(Vᴴ2; side = :right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-        @test isisometry(Nᴴ; side = :right)
+        @test isisometric(Nᴴ; side = :right)
         @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
         atol = eps(real(T))
@@ -232,9 +232,9 @@ end
         @test Vᴴ2 !== Vᴴ
         @test Nᴴ2 !== Nᴴ
         @test C2 * Vᴴ2 ≈ A
-        @test isisometry(Vᴴ2; side = :right)
+        @test isisometric(Vᴴ2; side = :right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-        @test isisometry(Nᴴ; side = :right)
+        @test isisometric(Nᴴ; side = :right)
         @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
         rtol = eps(real(T))
@@ -244,9 +244,9 @@ end
         @test Vᴴ2 !== Vᴴ
         @test Nᴴ2 !== Nᴴ
         @test C2 * Vᴴ2 ≈ A
-        @test isisometry(Vᴴ2; side = :right)
+        @test isisometric(Vᴴ2; side = :right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-        @test isisometry(Nᴴ2; side = :right)
+        @test isisometric(Nᴴ2; side = :right)
         @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
         for kind in (:lq, :polar, :svd)
@@ -255,12 +255,12 @@ end
             @test C2 === C
             @test Vᴴ2 === Vᴴ
             @test C2 * Vᴴ2 ≈ A
-            @test isisometry(Vᴴ2; side = :right)
+            @test isisometric(Vᴴ2; side = :right)
             if kind != :polar
                 Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; kind)
                 @test Nᴴ2 === Nᴴ
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-                @test isisometry(Nᴴ2; side = :right)
+                @test isisometric(Nᴴ2; side = :right)
                 @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
             end
 
@@ -271,9 +271,9 @@ end
                 @test Vᴴ2 !== Vᴴ
                 @test Nᴴ2 !== Nᴴ
                 @test C2 * Vᴴ2 ≈ A
-                @test isisometry(Vᴴ2; side = :right)
+                @test isisometric(Vᴴ2; side = :right)
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-                @test isisometry(Nᴴ2; side = :right)
+                @test isisometric(Nᴴ2; side = :right)
                 @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
                 C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); kind, trunc = (; rtol))
@@ -282,9 +282,9 @@ end
                 @test Vᴴ2 !== Vᴴ
                 @test Nᴴ2 !== Nᴴ
                 @test C2 * Vᴴ2 ≈ A
-                @test isisometry(Vᴴ2; side = :right)
+                @test isisometric(Vᴴ2; side = :right)
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-                @test isisometry(Nᴴ2; side = :right)
+                @test isisometric(Nᴴ2; side = :right)
                 @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
             else
                 @test_throws ArgumentError right_orth!(copy!(Ac, A), (C, Vᴴ); kind, trunc = (; atol))
