@@ -117,10 +117,12 @@ for eig in (:eig, :eigh)
         end
         function $(_make_eig_t_pb)(A, DV, ind)
             function $eig_t_pb(ΔDV_and_err)
-                # Ignore the truncerr tangent (last element)
-                ΔDV = ΔDV_and_err[1:end-1]
+                # Extract the tangents for D and V, ignore the truncerr tangent
+                ΔD = ΔDV_and_err[1]
+                ΔV = ΔDV_and_err[2]
+                # Ignore ΔDV_and_err[3] which is the truncerr tangent
                 ΔA = zero(A)
-                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, unthunk.(ΔDV), ind)
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, (unthunk(ΔD), unthunk(ΔV)), ind)
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function $eig_t_pb(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -158,10 +160,13 @@ function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlg
 end
 function _make_svd_trunc_pullback(A, USVᴴ, ind)
     function svd_trunc_pullback(ΔUSVᴴ_and_err)
-        # Ignore the truncerr tangent (last element)
-        ΔUSVᴴ = ΔUSVᴴ_and_err[1:end-1]
+        # Extract the tangents for U, S, and Vᴴ, ignore the truncerr tangent
+        ΔU = ΔUSVᴴ_and_err[1]
+        ΔS = ΔUSVᴴ_and_err[2]
+        ΔVᴴ = ΔUSVᴴ_and_err[3]
+        # Ignore ΔUSVᴴ_and_err[4] which is the truncerr tangent
         ΔA = zero(A)
-        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.(ΔUSVᴴ), ind)
+        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, (unthunk(ΔU), unthunk(ΔS), unthunk(ΔVᴴ)), ind)
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
