@@ -61,13 +61,7 @@ The `isapprox_kwargs` can be used to control the tolerances of the equality.
 
 See also [`isisometric`](@ref) and [`MatrixAlgebraKit.is_left_isometric`](@ref).
 """ is_right_isometric
-
-function is_right_isometric(A::AbstractMatrix; atol::Real = 0, rtol::Real = defaulttol(A), norm = LinearAlgebra.norm)
-    P = A * A'
-    nP = norm(P) # isapprox would use `rtol * max(norm(P), norm(I))`
-    diagview(P) .-= 1
-    return norm(P) <= max(atol, rtol * nP) # assume that the norm of I is `sqrt(n)`
-end
+is_right_isometric(A; kwargs...) = is_left_isometric(A'; kwargs...)
 
 """
     ishermitian(A; isapprox_kwargs...)
