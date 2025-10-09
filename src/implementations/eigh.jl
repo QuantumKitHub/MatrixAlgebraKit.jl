@@ -111,7 +111,8 @@ end
 
 function eigh_trunc!(A, DV, alg::TruncatedAlgorithm)
     D, V = eigh_full!(A, DV, alg.alg)
-    return first(truncate(eigh_trunc!, (D, V), alg.trunc))
+    result, _, truncerr = truncate(eigh_trunc!, (D, V), alg.trunc)
+    return result..., truncerr
 end
 
 # Diagonal logic

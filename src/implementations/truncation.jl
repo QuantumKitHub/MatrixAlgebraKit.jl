@@ -1,29 +1,57 @@
+# Compute truncation error as 2-norm of discarded values
+function _compute_truncerr(values::AbstractVector, ind)
+    # Find indices that are NOT in ind (i.e., discarded values)
+    if ind isa Colon
+        # No truncation, all values kept
+        return zero(real(eltype(values)))
+    elseif ind isa AbstractVector{Bool}
+        # Boolean indexing: discarded values are where ind is false
+        discarded_vals = view(values, .!ind)
+    else
+        # Integer indexing: need to find complement
+        all_inds = Set(eachindex(values))
+        kept_inds = Set(ind)
+        discarded_inds = collect(setdiff(all_inds, kept_inds))
+        discarded_vals = view(values, discarded_inds)
+    end
+    # Compute 2-norm of discarded values
+    return sqrt(sum(abs2, discarded_vals))
+end
+
 # truncate
 # --------
 # Generic implementation: `findtruncated` followed by indexing
 function truncate(::typeof(svd_trunc!), (U, S, Vᴴ), strategy::TruncationStrategy)
     ind = findtruncated_svd(diagview(S), strategy)
-    return (U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]), ind
+    Svals = diagview(S)
+    truncerr = _compute_truncerr(Svals, ind)
+    return (U[:, ind], Diagonal(Svals[ind]), Vᴴ[ind, :]), ind, truncerr
 end
 function truncate(::typeof(eig_trunc!), (D, V), strategy::TruncationStrategy)
     ind = findtruncated(diagview(D), strategy)
-    return (Diagonal(diagview(D)[ind]), V[:, ind]), ind
+    Dvals = diagview(D)
+    truncerr = _compute_truncerr(Dvals, ind)
+    return (Diagonal(Dvals[ind]), V[:, ind]), ind, truncerr
 end
 function truncate(::typeof(eigh_trunc!), (D, V), strategy::TruncationStrategy)
     ind = findtruncated(diagview(D), strategy)
-    return (Diagonal(diagview(D)[ind]), V[:, ind]), ind
+    Dvals = diagview(D)
+    truncerr = _compute_truncerr(Dvals, ind)
+    return (Diagonal(Dvals[ind]), V[:, ind]), ind, truncerr
 end
 function truncate(::typeof(left_null!), (U, S), strategy::TruncationStrategy)
     # TODO: avoid allocation?
     extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 1) - size(S, 2))))
     ind = findtruncated(extended_S, strategy)
-    return U[:, ind], ind
+    truncerr = _compute_truncerr(extended_S, ind)
+    return U[:, ind], ind, truncerr
 end
 function truncate(::typeof(right_null!), (S, Vᴴ), strategy::TruncationStrategy)
     # TODO: avoid allocation?
     extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 2) - size(S, 1))))
     ind = findtruncated(extended_S, strategy)
-    return Vᴴ[ind, :], ind
+    truncerr = _compute_truncerr(extended_S, ind)
+    return Vᴴ[ind, :], ind, truncerr
 end
 
 # findtruncated

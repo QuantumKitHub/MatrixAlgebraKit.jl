@@ -238,7 +238,8 @@ end
 
 function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
     USVᴴ′ = svd_compact!(A, USVᴴ, alg.alg)
-    return first(truncate(svd_trunc!, USVᴴ′, alg.trunc))
+    result, _, truncerr = truncate(svd_trunc!, USVᴴ′, alg.trunc)
+    return result..., truncerr
 end
 
 # Diagonal logic
@@ -381,7 +382,8 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
     # TODO: make this controllable using a `gaugefix` keyword argument
     gaugefix!(svd_trunc!, U, S, Vᴴ, size(A)...)
-    return first(truncate(svd_trunc!, USVᴴ, alg.trunc))
+    result, _, truncerr = truncate(svd_trunc!, USVᴴ, alg.trunc)
+    return result..., truncerr
 end
 
 function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)

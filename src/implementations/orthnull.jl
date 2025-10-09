@@ -128,7 +128,7 @@ function left_orth_svd!(A, VC, alg, trunc)
     alg′ = select_algorithm(svd_compact!, A, alg)
     check_input(left_orth!, A, VC, alg′)
     alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
-    U, S, Vᴴ = svd_trunc!(A, alg_trunc)
+    U, S, Vᴴ, _ = svd_trunc!(A, alg_trunc)
     V, C = VC
     return copy!(V, U), mul!(C, S, Vᴴ)
 end
@@ -138,7 +138,7 @@ function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc)
     alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
     V, C = VC
     S = Diagonal(initialize_output(svd_vals!, A, alg_trunc.alg))
-    U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg_trunc)
+    U, S, Vᴴ, _ = svd_trunc!(A, (V, S, C), alg_trunc)
     return U, lmul!(S, Vᴴ)
 end
 
@@ -189,7 +189,7 @@ function right_orth_svd!(A, CVᴴ, alg, trunc)
     alg′ = select_algorithm(svd_compact!, A, alg)
     check_input(right_orth!, A, CVᴴ, alg′)
     alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
-    U, S, Vᴴ′ = svd_trunc!(A, alg_trunc)
+    U, S, Vᴴ′, _ = svd_trunc!(A, alg_trunc)
     C, Vᴴ = CVᴴ
     return mul!(C, U, S), copy!(Vᴴ, Vᴴ′)
 end
@@ -199,7 +199,7 @@ function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc)
     alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
     C, Vᴴ = CVᴴ
     S = Diagonal(initialize_output(svd_vals!, A, alg_trunc.alg))
-    U, S, Vᴴ = svd_trunc!(A, (C, S, Vᴴ), alg_trunc)
+    U, S, Vᴴ, _ = svd_trunc!(A, (C, S, Vᴴ), alg_trunc)
     return rmul!(U, S), Vᴴ
 end
 

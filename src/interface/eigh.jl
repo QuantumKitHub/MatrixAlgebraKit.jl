@@ -31,15 +31,18 @@ See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref eigh_trunc)
 @functiondef eigh_full
 
 """
-    eigh_trunc(A; kwargs...) -> D, V
-    eigh_trunc(A, alg::AbstractAlgorithm) -> D, V
-    eigh_trunc!(A, [DV]; kwargs...) -> D, V
-    eigh_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
+    eigh_trunc(A; kwargs...) -> D, V, ϵ
+    eigh_trunc(A, alg::AbstractAlgorithm) -> D, V, ϵ
+    eigh_trunc!(A, [DV]; kwargs...) -> D, V, ϵ
+    eigh_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V, ϵ
 
 Compute a partial or truncated eigenvalue decomposition of the symmetric or hermitian matrix
 `A`, such that `A * V ≈ V * D`, where the isometric matrix `V` contains a subset of the
 orthogonal eigenvectors and the real diagonal matrix `D` contains the associated eigenvalues,
-selected according to a truncation strategy. 
+selected according to a truncation strategy.
+
+The function also returns `ϵ`, the truncation error defined as the 2-norm of the 
+discarded eigenvalues.
 
 !!! note
     The bang method `eigh_trunc!` optionally accepts the output structure and
