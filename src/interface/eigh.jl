@@ -9,14 +9,17 @@ For generic eigenvalue decompositions, see [`eig_full`](@ref).
 """
 
 """
-    eigh_full(A; kwargs...) -> D, V
-    eigh_full(A, alg::AbstractAlgorithm) -> D, V
-    eigh_full!(A, [DV]; kwargs...) -> D, V
-    eigh_full!(A, [DV], alg::AbstractAlgorithm) -> D, V
+    eigh_full(A; kwargs...) -> D, V, ϵ
+    eigh_full(A, alg::AbstractAlgorithm) -> D, V, ϵ
+    eigh_full!(A, [DV]; kwargs...) -> D, V, ϵ
+    eigh_full!(A, [DV], alg::AbstractAlgorithm) -> D, V, ϵ
 
 Compute the full eigenvalue decomposition of the symmetric or hermitian matrix `A`,
 such that `A * V = V * D`, where the unitary matrix `V` contains the orthogonal eigenvectors
 and the real diagonal matrix `D` contains the associated eigenvalues.
+
+The function also returns `ϵ`, the truncation error defined as the 2-norm of the 
+discarded eigenvalues.
 
 !!! note
     The bang method `eigh_full!` optionally accepts the output structure and

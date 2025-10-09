@@ -237,8 +237,9 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
 end
 
 function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
-    USVᴴ′ = svd_compact!(A, USVᴴ, alg.alg)
-    return first(truncate(svd_trunc!, USVᴴ′, alg.trunc))
+    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
+    USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+    return USVᴴtrunc..., compute_truncerr!(diagview(S), ind)
 end
 
 # Diagonal logic

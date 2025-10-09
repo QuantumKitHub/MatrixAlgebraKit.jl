@@ -116,3 +116,10 @@ end
 _ind_intersect(A::AbstractVector, B::AbstractVector{Bool}) = _ind_intersect(B, A)
 _ind_intersect(A::AbstractVector{Bool}, B::AbstractVector{Bool}) = A .& B
 _ind_intersect(A, B) = intersect(A, B)
+
+# Compute truncation error as 2-norm of discarded values
+# by destroying original values
+function compute_truncerr!(values::AbstractVector, ind)
+    values[ind] .= zero(eltype(values))
+    return norm(values)
+end

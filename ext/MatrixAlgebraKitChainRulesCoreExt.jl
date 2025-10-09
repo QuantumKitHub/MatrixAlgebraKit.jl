@@ -2,7 +2,7 @@ module MatrixAlgebraKitChainRulesCoreExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: copy_input, initialize_output, zero!, diagview,
-    TruncatedAlgorithm, findtruncated, findtruncated_svd
+    TruncatedAlgorithm, findtruncated, findtruncated_svd, compute_truncerr!
 using ChainRulesCore
 using LinearAlgebra
 
@@ -113,15 +113,20 @@ for eig in (:eig, :eigh)
             Ac = copy_input($eig_f, A)
             DV = $(eig_f!)(Ac, DV, alg.alg)
             DV′, ind = MatrixAlgebraKit.truncate($eig_t!, DV, alg.trunc)
-            return DV′, $(_make_eig_t_pb)(A, DV, ind)
+            ϵ = compute_truncerr!(diagview(copy(DV[1])), ind)
+            return (DV′..., ϵ), $(_make_eig_t_pb)(A, DV, ind)
         end
         function $(_make_eig_t_pb)(A, DV, ind)
-            function $eig_t_pb(ΔDV)
+            function $eig_t_pb(ΔDVϵ)
                 ΔA = zero(A)
-                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, unthunk.(ΔDV), ind)
+                ΔD, ΔV, Δϵ = ΔDVϵ
+                if !MatrixAlgebraKit.iszerotangent(Δϵ) && !iszero(unthunk(Δϵ))
+                    throw(ArgumentError("Pullback for eig_trunc! does not yet support non-zero tangent for the truncation error"))
+                end
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, unthunk.((ΔD, ΔV)), ind)
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
-            function $eig_t_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
+            function $eig_t_pb(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return $eig_t_pb
@@ -152,15 +157,20 @@ function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlg
     Ac = copy_input(svd_compact, A)
     USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
     USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
-    return USVᴴ′, _make_svd_trunc_pullback(A, USVᴴ, ind)
+    ϵ = compute_truncerr!(diagview(copy(USVᴴ[2])), ind)
+    return (USVᴴ′..., ϵ), _make_svd_trunc_pullback(A, USVᴴ, ind)
 end
 function _make_svd_trunc_pullback(A, USVᴴ, ind)
-    function svd_trunc_pullback(ΔUSVᴴ)
+    function svd_trunc_pullback(ΔUSVᴴϵ)
         ΔA = zero(A)
-        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.(ΔUSVᴴ), ind)
+        ΔU, ΔS, ΔVᴴ, Δϵ = ΔUSVᴴϵ
+        if !MatrixAlgebraKit.iszerotangent(Δϵ) && !iszero(unthunk(Δϵ))
+            throw(ArgumentError("Pullback for svd_trunc! does not yet support non-zero tangent for the truncation error"))
+        end
+        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.((ΔU, ΔS, ΔVᴴ)), ind)
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
+    function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return svd_trunc_pullback
