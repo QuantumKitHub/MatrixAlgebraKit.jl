@@ -113,25 +113,29 @@ end
             minmn = min(m, n)
             r = minmn - 2
 
-            U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
+            U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
             @test length(S1.diag) == r
             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            # Test truncation error
+            @test ϵ1 ≈ norm(@view(S₀[(r + 1):end]))
 
             s = 1 + sqrt(eps(real(T)))
             trunc = trunctol(; atol = s * S₀[r + 1])
 
-            U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc)
+            U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg, trunc)
             @test length(S2.diag) == r
             @test U1 ≈ U2
             @test S1 ≈ S2
             @test V1ᴴ ≈ V2ᴴ
+            @test ϵ2 ≈ ϵ1
 
             trunc = truncerror(; atol = s * norm(@view(S₀[(r + 1):end])))
-            U3, S3, V3ᴴ = @constinferred svd_trunc(A; alg, trunc)
+            U3, S3, V3ᴴ, ϵ3 = @constinferred svd_trunc(A; alg, trunc)
             @test length(S3.diag) == r
             @test U1 ≈ U3
             @test S1 ≈ S3
             @test V1ᴴ ≈ V3ᴴ
+            @test ϵ3 ≈ ϵ1
         end
     end
 end

@@ -50,21 +50,23 @@ end
         r = m - 2
         s = 1 + sqrt(eps(real(T)))
 
-        D1, V1 = @constinferred eigh_trunc(A; alg, trunc = truncrank(r))
+        D1, V1, ϵ1 = @constinferred eigh_trunc(A; alg, trunc = truncrank(r))
         @test length(diagview(D1)) == r
         @test isisometry(V1)
         @test A * V1 ≈ V1 * D1
         @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
+        # Test truncation error
+        @test ϵ1 ≈ norm(@view(D₀[(r + 1):end]))
 
         trunc = trunctol(; atol = s * D₀[r + 1])
-        D2, V2 = @constinferred eigh_trunc(A; alg, trunc)
+        D2, V2, ϵ2 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test isisometry(V2)
         @test A * V2 ≈ V2 * D2
 
         s = 1 - sqrt(eps(real(T)))
         trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
-        D3, V3 = @constinferred eigh_trunc(A; alg, trunc)
+        D3, V3, ϵ3 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D3)) == r
         @test A * V3 ≈ V3 * D3
 
@@ -84,12 +86,12 @@ end
     A = V * D * V'
     A = (A + A') / 2
     alg = TruncatedAlgorithm(LAPACK_QRIteration(), truncrank(2))
-    D2, V2 = @constinferred eigh_trunc(A; alg)
+    D2, V2, ϵ2 = @constinferred eigh_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
     @test_throws ArgumentError eigh_trunc(A; alg, trunc = (; maxrank = 2))
 
     alg = TruncatedAlgorithm(LAPACK_QRIteration(), truncerror(; atol = 0.2))
-    D3, V3 = @constinferred eigh_trunc(A; alg)
+    D3, V3, ϵ3 = @constinferred eigh_trunc(A; alg)
     @test diagview(D3) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
 end
 
@@ -111,6 +113,6 @@ end
 
     A2 = Diagonal(T[0.9, 0.3, 0.1, 0.01])
     alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
-    D2, V2 = @constinferred eigh_trunc(A2; alg)
+    D2, V2, ϵ2 = @constinferred eigh_trunc(A2; alg)
     @test diagview(D2) ≈ diagview(A2)[1:2]
 end

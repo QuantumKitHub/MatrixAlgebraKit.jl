@@ -275,7 +275,7 @@ end
             ΔVtrunc = ΔV[:, ind]
             test_rrule(
                 copy_eig_trunc, A, truncalg ⊢ NoTangent();
-                output_tangent = (ΔDtrunc, ΔVtrunc),
+                output_tangent = (ΔDtrunc, ΔVtrunc, ZeroTangent()),
                 atol = atol, rtol = rtol
             )
             dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
@@ -290,7 +290,7 @@ end
         ΔVtrunc = ΔV[:, ind]
         test_rrule(
             copy_eig_trunc, A, truncalg ⊢ NoTangent();
-            output_tangent = (ΔDtrunc, ΔVtrunc),
+            output_tangent = (ΔDtrunc, ΔVtrunc, ZeroTangent()),
             atol = atol, rtol = rtol
         )
         dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
@@ -351,7 +351,7 @@ end
             ΔVtrunc = ΔV[:, ind]
             test_rrule(
                 copy_eigh_trunc, A, truncalg ⊢ NoTangent();
-                output_tangent = (ΔDtrunc, ΔVtrunc),
+                output_tangent = (ΔDtrunc, ΔVtrunc, ZeroTangent()),
                 atol = atol, rtol = rtol
             )
             dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
@@ -366,7 +366,7 @@ end
         ΔVtrunc = ΔV[:, ind]
         test_rrule(
             copy_eigh_trunc, A, truncalg ⊢ NoTangent();
-            output_tangent = (ΔDtrunc, ΔVtrunc),
+            output_tangent = (ΔDtrunc, ΔVtrunc, ZeroTangent()),
             atol = atol, rtol = rtol
         )
         dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
@@ -446,7 +446,7 @@ end
                 ΔVᴴtrunc = ΔVᴴ[ind, :]
                 test_rrule(
                     copy_svd_trunc, A, truncalg ⊢ NoTangent();
-                    output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc),
+                    output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc, ZeroTangent()),
                     atol = atol, rtol = rtol
                 )
                 dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, (U, S, Vᴴ), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc), ind)
@@ -463,7 +463,7 @@ end
             ΔVᴴtrunc = ΔVᴴ[ind, :]
             test_rrule(
                 copy_svd_trunc, A, truncalg ⊢ NoTangent();
-                output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc),
+                output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc, ZeroTangent()),
                 atol = atol, rtol = rtol
             )
             dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, (U, S, Vᴴ), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc), ind)

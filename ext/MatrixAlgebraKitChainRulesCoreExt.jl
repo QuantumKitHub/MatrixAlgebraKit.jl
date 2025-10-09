@@ -112,16 +112,18 @@ for eig in (:eig, :eigh)
         function ChainRulesCore.rrule(::typeof($eig_t!), A, DV, alg::TruncatedAlgorithm)
             Ac = copy_input($eig_f, A)
             DV = $(eig_f!)(Ac, DV, alg.alg)
-            DV′, ind = MatrixAlgebraKit.truncate($eig_t!, DV, alg.trunc)
-            return DV′, $(_make_eig_t_pb)(A, DV, ind)
+            DV′, ind, truncerr = MatrixAlgebraKit.truncate($eig_t!, DV, alg.trunc)
+            return (DV′..., truncerr), $(_make_eig_t_pb)(A, DV, ind)
         end
         function $(_make_eig_t_pb)(A, DV, ind)
-            function $eig_t_pb(ΔDV)
+            function $eig_t_pb(ΔDV_and_err)
+                # Ignore the truncerr tangent (last element)
+                ΔDV = ΔDV_and_err[1:end-1]
                 ΔA = zero(A)
                 MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, unthunk.(ΔDV), ind)
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
-            function $eig_t_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
+            function $eig_t_pb(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return $eig_t_pb
@@ -151,16 +153,18 @@ end
 function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlgorithm)
     Ac = copy_input(svd_compact, A)
     USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
-    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
-    return USVᴴ′, _make_svd_trunc_pullback(A, USVᴴ, ind)
+    USVᴴ′, ind, truncerr = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+    return (USVᴴ′..., truncerr), _make_svd_trunc_pullback(A, USVᴴ, ind)
 end
 function _make_svd_trunc_pullback(A, USVᴴ, ind)
-    function svd_trunc_pullback(ΔUSVᴴ)
+    function svd_trunc_pullback(ΔUSVᴴ_and_err)
+        # Ignore the truncerr tangent (last element)
+        ΔUSVᴴ = ΔUSVᴴ_and_err[1:end-1]
         ΔA = zero(A)
         MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.(ΔUSVᴴ), ind)
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
+    function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return svd_trunc_pullback
