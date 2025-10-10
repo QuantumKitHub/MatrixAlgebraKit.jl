@@ -11,7 +11,7 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
     m = 54
     noisefactor = eps(real(T))^(3 / 4)
     for alg in (NativeBlocked(blocksize = 16), NativeBlocked(blocksize = 32), NativeBlocked(blocksize = 64))
-        A = randn(rng, T, m, m)
+        A = ROCArray(randn(rng, T, m, m))
         Ah = (A + A') / 2
         Aa = (A - A') / 2
         Ac = copy(A)
@@ -57,9 +57,9 @@ end
         end
         algs = (PolarViaSVD.(svdalgs)..., PolarNewton())
         @testset "algorithm $alg" for alg in algs
-            A = randn(rng, T, m, n)
+            A = ROCArray(randn(rng, T, m, n))
             W = project_isometric(A, alg)
-            @test isisometry(W)
+            @test isisometric(W)
             W2 = project_isometric(W, alg)
             @test W2 ≈ W # stability of the projection
             @test W * (W' * A) ≈ A
@@ -67,11 +67,11 @@ end
             Ac = similar(A)
             W2 = @constinferred project_isometric!(copy!(Ac, A), W, alg)
             @test W2 === W
-            @test isisometry(W)
+            @test isisometric(W)
 
             # test that W is closer to A then any other isometry
             for k in 1:10
-                δA = randn(rng, T, m, n)
+                δA = ROCArray(randn(rng, T, m, n))
                 W = project_isometric(A, alg)
                 W2 = project_isometric(A + δA / 100, alg)
                 @test norm(A - W2) > norm(A - W)

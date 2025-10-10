@@ -56,7 +56,7 @@ end
         @testset "algorithm $alg" for alg in algs
             A = CuArray(randn(rng, T, m, n))
             W = project_isometric(A, alg)
-            @test isisometry(W)
+            @test isisometric(W)
             W2 = project_isometric(W, alg)
             @test W2 ≈ W # stability of the projection
             @test W * (W' * A) ≈ A
@@ -64,7 +64,7 @@ end
             Ac = similar(A)
             W2 = @constinferred project_isometric!(copy!(Ac, A), W, alg)
             @test W2 === W
-            @test isisometry(W)
+            @test isisometric(W)
 
             # test that W is closer to A then any other isometry
             for k in 1:10
