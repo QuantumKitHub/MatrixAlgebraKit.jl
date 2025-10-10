@@ -49,14 +49,7 @@ be used.
 
 See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null), [`right_null(!)`](@ref right_null)
 """
-function left_orth end
-function left_orth! end
-function left_orth!(A; kwargs...)
-    return left_orth!(A, initialize_output(left_orth!, A); kwargs...)
-end
-function left_orth(A; kwargs...)
-    return left_orth!(copy_input(left_orth, A); kwargs...)
-end
+@functiondef left_orth
 
 """
     right_orth(A; [kind::Symbol, trunc, alg_lq, alg_polar, alg_svd]) -> C, Vᴴ
@@ -108,14 +101,7 @@ be used.
 
 See also [`left_orth(!)`](@ref left_orth), [`left_null(!)`](@ref left_null), [`right_null(!)`](@ref right_null)
 """
-function right_orth end
-function right_orth! end
-function right_orth!(A; kwargs...)
-    return right_orth!(A, initialize_output(right_orth!, A); kwargs...)
-end
-function right_orth(A; kwargs...)
-    return right_orth!(copy_input(right_orth, A); kwargs...)
-end
+@functiondef right_orth
 
 # Null functions
 # --------------
