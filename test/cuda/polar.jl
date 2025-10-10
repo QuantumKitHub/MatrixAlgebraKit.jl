@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using StableRNGs
-using LinearAlgebra: LinearAlgebra, I, isposdef
+using LinearAlgebra: LinearAlgebra, I, isposdef, Hermitian
 using MatrixAlgebraKit: PolarViaSVD
 using CUDA
 
@@ -21,7 +21,8 @@ using CUDA
             @test P isa CuMatrix{T} && size(P) == (n, n)
             @test W * P ≈ A
             @test isisometric(W)
-            @test isposdef(P)
+            # work around extremely strict Julia criteria for Hermiticity
+            @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P)) && isposdef(Hermitian(P))
 
             Ac = similar(A)
             W2, P2 = @constinferred left_polar!(copy!(Ac, A), (W, P), alg)
@@ -29,7 +30,17 @@ using CUDA
             @test P2 === P
             @test W * P ≈ A
             @test isisometric(W)
-            @test isposdef(P)
+            # work around extremely strict Julia criteria for Hermiticity
+            @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P)) && isposdef(Hermitian(P))
+
+            noP = similar(P, (0, 0))
+            W2, P2 = @constinferred left_polar!(copy!(Ac, A), (W, noP), alg)
+            @test P2 === noP
+            @test W2 === W
+            @test isisometric(W)
+            P = W' * A # compute P explicitly to verify W correctness
+            @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P))
+            @test isposdef(Hermitian(project_hermitian!(P)))
         end
     end
 end
@@ -49,7 +60,8 @@ end
             @test P  isa CuMatrix{T} && size(P) == (m, m)
             @test P * Wᴴ ≈ A
             @test isisometric(Wᴴ; side=:right)
-            @test isposdef(P)
+            # work around extremely strict Julia criteria for Hermiticity
+            @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P)) && isposdef(Hermitian(P))
 
             Ac = similar(A)
             P2, Wᴴ2 = @constinferred right_polar!(copy!(Ac, A), (P, Wᴴ), alg)
@@ -57,7 +69,17 @@ end
             @test Wᴴ2 === Wᴴ
             @test P * Wᴴ ≈ A
             @test isisometric(Wᴴ; side=:right)
-            @test isposdef(P)
+            # work around extremely strict Julia criteria for Hermiticity
+            @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P)) && isposdef(Hermitian(P))
+
+            noP = similar(P, (0, 0))
+            P2, Wᴴ2 = @constinferred right_polar!(copy!(Ac, A), (noP, Wᴴ), alg)
+            @test P2 === noP
+            @test Wᴴ2 === Wᴴ
+            @test isisometric(Wᴴ; side = :right)
+            P = A * Wᴴ' # compute P explicitly to verify W correctness
+            @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P))
+            @test isposdef(Hermitian(project_hermitian!(P)))
         end
     end
 end
