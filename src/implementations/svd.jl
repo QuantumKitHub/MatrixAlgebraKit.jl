@@ -382,7 +382,12 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
     # TODO: make this controllable using a `gaugefix` keyword argument
     gaugefix!(svd_trunc!, U, S, Vᴴ, size(A)...)
-    return first(truncate(svd_trunc!, USVᴴ, alg.trunc))
+    # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
+    USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+    Strunc = diagview(USVᴴtrunc[2])
+    # normal `compute_truncerr!` does not work here since `S` is not the full singular value spectrum
+    ϵ = sqrt(norm(A)^2 - norm(Strunc)^2) # is there a more accurate way to do this?
+    return USVᴴtrunc..., ϵ
 end
 
 function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
