@@ -5,7 +5,7 @@ CollapsedDocStrings = true
 
 # Truncations
 
-Truncation strategies allow you to control which eigenvalues or singular values to keep when computing partial or truncated decompositions. These strategies are used in functions like [`eigh_trunc`](@ref), [`eig_trunc`](@ref), and [`svd_trunc`](@ref) to reduce the size of the decomposition while retaining the most important information.
+Truncation strategies allow you to control which eigenvalues or singular values to keep when computing partial or truncated decompositions. These strategies are used in the functions [`eigh_trunc`](@ref), [`eig_trunc`](@ref), and [`svd_trunc`](@ref) to reduce the size of the decomposition while retaining the most important information.
 
 ## Using Truncations in Decompositions
 

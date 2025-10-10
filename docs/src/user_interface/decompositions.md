@@ -55,6 +55,7 @@ Not all matrices can be diagonalized, and some real matrices can only be diagona
 In particular, the resulting decomposition can only guaranteed to be real for real symmetric inputs `A`.
 Therefore, we provide `eig_` and `eigh_` variants, where `eig` always results in complex-valued `V` and `D`, while `eigh` requires symmetric inputs but retains the scalartype of the input.
 
+The full set of eigenvalues and eigenvectors can be computed using the [`eig_full`](@ref) and [`eigh_full`](@ref) functions.
 If only the eigenvalues are required, the [`eig_vals`](@ref) and [`eigh_vals`](@ref) functions can be used.
 These functions return the diagonal elements of `D` in a vector.
 
@@ -99,7 +100,7 @@ Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_EigAlgorithm
 
 The [Schur decomposition](https://en.wikipedia.org/wiki/Schur_decomposition) transforms a complex square matrix `A` into a product `Q * T * Qᴴ`, where `Q` is unitary and `T` is upper triangular.
 It rewrites an arbitrary complex square matrix as unitarily similar to an upper triangular matrix whose diagonal elements are the eigenvalues of `A`.
-For real matrices, the same decomposition can be achieved with `T` being quasi-upper triangular, ie triangular with blocks of size `(1, 1)` and `(2, 2)` on the diagonal.
+For real matrices, the same decomposition can be achieved in real arithmetic by allowing `T` to be quasi-upper triangular, i.e. triangular with blocks of size `(1, 1)` and `(2, 2)` on the diagonal.
 
 This decomposition is also useful for computing the eigenvalues of a matrix, which is exposed through the [`schur_vals`](@ref) function.
 
@@ -117,12 +118,12 @@ Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_EigAlgorithm
 
 ## Singular Value Decomposition
 
-The [Singular Value Decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition) transforms a matrix `A` into a product `U * Σ * Vᴴ`, where `U` and `V` are orthogonal, and `Σ` is diagonal, real and non-negative.
-For a square matrix `A`, both `U` and `V` are unitary, and if the singular values are distinct, the decomposition is unique.
+The [Singular Value Decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition) transforms a matrix `A` into a product `U * Σ * Vᴴ`, where `U` and `Vᴴ` are unitary, and `Σ` is diagonal, real and non-negative.
+For a square matrix `A`, both `U` and `Vᴴ` are unitary, and if the singular values are distinct, the decomposition is unique.
 
 For rectangular matrices `A` of size `(m, n)`, there are two modes of operation, [`svd_full`](@ref) and [`svd_compact`](@ref).
-The former ensures that the resulting `U`, and `V` remain square unitary matrices, of size `(m, m)` and `(n, n)`, with rectangular `Σ` of size `(m, n)`.
-The latter creates an isometric `U` of size `(m, min(m, n))`, and `V` of size `(n, min(m, n))`, with a square `Σ` of size `(min(m, n), min(m, n))`.
+The former ensures that the resulting `U`, and `Vᴴ` remain square unitary matrices, of size `(m, m)` and `(n, n)`, with rectangular `Σ` of size `(m, n)`.
+The latter creates an isometric `U` of size `(m, min(m, n))`, and `V = (Vᴴ)'` of size `(n, min(m, n))`, with a square `Σ` of size `(min(m, n), min(m, n))`.
 
 It is also possible to compute the singular values only, using the [`svd_vals`](@ref) function.
 This then returns a vector of the values on the diagonal of `Σ`.
@@ -147,21 +148,23 @@ Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_SVDAlgorithm
 
 The [Polar Decomposition](https://en.wikipedia.org/wiki/Polar_decomposition) of a matrix `A` is a factorization `A = W * P`, where `W` is unitary and `P` is positive semi-definite.
 If `A` is invertible (and therefore square), the polar decomposition always exists and is unique.
-For non-square matrices, the polar decomposition is not unique, but `P` is.
-In particular, the polar decomposition is unique if `A` is full rank.
+For non-square matrices `A` of size `(m, n)`, the decomposition `A = W * P` with `P` positive semi-definite of size `(n, n)` and `W` isometric of size `(m, n)` exists only if `m >= n`, and is unique if `A` and thus `P` is full rank.
+For `m <= n`, we can analoguously decompose `A` as `A = P * Wᴴ` with `P` positive semi-definite of size `(m, m)` and `Wᴴ` of size `(m, n)` such that `W = (Wᴴ)'` is isometric. Only in the case `m = n` do both decompositions exist.
 
-This decomposition can be computed for both sides, resulting in the [`left_polar`](@ref) and [`right_polar`](@ref) functions.
+The decompositions `A = W * P` or `A = P * Wᴴ` can be computed with the [`left_polar`](@ref) and [`right_polar`](@ref) functions, respectively.
 
 ```@docs; canonical=false
 left_polar
 right_polar
 ```
 
-These functions are implemented by first computing a singular value decomposition, and then constructing the polar decomposition from the singular values and vectors.
-Therefore, the relevant LAPACK-based implementation is the one for the SVD:
+These functions can be implemented by first computing a singular value decomposition, and then constructing the polar decomposition from the singular values and vectors. Alternatively, the polar decomposition can be computed using an 
+iterative method based on Newton's method, that can be more efficient for large matrices, especially if they are
+close to being isometric already.
 
 ```@docs; canonical=false
 PolarViaSVD
+PolarNewton
 ```
 
 ## Orthogonal Subspaces
@@ -179,7 +182,7 @@ right_orth
 ## Null Spaces
 
 Similarly, it can be convenient to obtain an orthogonal basis for the kernel or cokernel of a matrix.
-These are the compliments of the image and coimage, and can be computed using the [`left_null`](@ref) and [`right_null`](@ref) functions.
+These are the compliments of the coimage and image, respectively, and can be computed using the [`left_null`](@ref) and [`right_null`](@ref) functions.
 Again, this is typically implemented through a combination of the decompositions mentioned above, and serves as a convenient interface to these operations.
 
 ```@docs; canonical=false
