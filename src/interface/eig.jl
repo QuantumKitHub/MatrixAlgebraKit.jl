@@ -3,9 +3,10 @@
 # TODO: kwargs for sorting eigenvalues?
 
 docs_eig_note = """
-Note that [`eig_full`](@ref) and its variants do not assume additional structure on the input,
-and therefore will always return complex eigenvalues and eigenvectors. For the real
-eigenvalue decomposition of symmetric or hermitian operators, see [`eigh_full`](@ref).
+    Note that [`eig_full`](@ref) and its variants do not assume any symmetry structure on
+    the input matrices, and therefore will always return complex eigenvalues and eigenvectors
+    for reasons of type stability.  For the  eigenvalue decomposition of symmetric or hermitian
+    operators, see [`eigh_full`](@ref).
 """
 
 """
@@ -24,7 +25,7 @@ and the diagonal matrix `D` contains the associated eigenvalues.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eig_note)
+$(docs_eig_note)
 
 See also [`eig_vals(!)`](@ref eig_vals) and [`eig_trunc(!)`](@ref eig_trunc).
 """
@@ -67,7 +68,7 @@ truncation strategy is already embedded in the algorithm.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eig_note)
+$(docs_eig_note)
 
 See also [`eig_full(!)`](@ref eig_full), [`eig_vals(!)`](@ref eig_vals), and
 [Truncations](@ref) for more information on truncation strategies.
@@ -88,7 +89,7 @@ Compute the list of eigenvalues of `A`.
     as it may not always be possible to use the provided `D` as output.
 
 !!! note
-    $(docs_eig_note)
+$(docs_eig_note)
 
 See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 """

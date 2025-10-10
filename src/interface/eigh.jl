@@ -3,9 +3,12 @@
 # TODO: kwargs for sorting eigenvalues?
 
 docs_eigh_note = """
-Note that [`eigh_full`](@ref) and its variants assume additional structure on the input,
-and therefore will retain the `eltype` of the input for the eigenvalues and eigenvectors.
-For generic eigenvalue decompositions, see [`eig_full`](@ref).
+    Note that [`eigh_full`](@ref) and its variants assume that the input matrix is hermitian,
+    or thus symmetric if the input is real. The resulting algorithms exploit this structure,
+    and return eigenvalues that are always real, and eigenvectors that are orthogonal and have
+    the same `eltype` as the input matrix. If the input matrix does not have this structure,
+    the generic eigenvalue decomposition provided by [`eig_full`](@ref) and its variants
+    should be used instead.
 """
 
 """
@@ -24,7 +27,7 @@ and the real diagonal matrix `D` contains the associated eigenvalues.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eigh_note)
+$(docs_eigh_note)
 
 See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref eigh_trunc).
 """
@@ -67,7 +70,7 @@ truncation strategy is already embedded in the algorithm.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eigh_note)
+$(docs_eigh_note)
 
 See also [`eigh_full(!)`](@ref eigh_full), [`eigh_vals(!)`](@ref eigh_vals), and
 [Truncations](@ref) for more information on truncation strategies.
@@ -88,7 +91,7 @@ Compute the list of (real) eigenvalues of the symmetric or hermitian matrix `A`.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eigh_note)
+$(docs_eigh_note)
 
 See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_trunc(!)`](@ref eigh_trunc).
 """
