@@ -51,7 +51,7 @@ function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
     W, P = WP
     W = mul!(W, U, Vᴴ)
     if !isempty(P)
-        S .= sqrt.(S)
+        @. S = sqrt(S)
         SsqrtVᴴ = lmul!(S, Vᴴ)
         P = mul!(P, SsqrtVᴴ', SsqrtVᴴ)
     end
@@ -63,7 +63,7 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarViaSVD)
     P, Wᴴ = PWᴴ
     Wᴴ = mul!(Wᴴ, U, Vᴴ)
     if !isempty(P)
-        S .= sqrt.(S)
+        @. S = sqrt(S)
         USsqrt = rmul!(U, S)
         P = mul!(P, USsqrt, USsqrt')
     end
