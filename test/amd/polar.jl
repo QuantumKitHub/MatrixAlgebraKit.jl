@@ -20,16 +20,16 @@ using AMDGPU
             @test W isa ROCMatrix{T} && size(W) == (m, n)
             @test P isa ROCMatrix{T} && size(P) == (n, n)
             @test W * P ≈ A
-            @test isisometry(W)
-            #@test isposdef(P)
+            @test isisometric(W)
+            @test isposdef(P)
 
             Ac = similar(A)
             W2, P2 = @constinferred left_polar!(copy!(Ac, A), (W, P), alg)
             @test W2 === W
             @test P2 === P
             @test W * P ≈ A
-            @test isisometry(W)
-            #@test isposdef(P)
+            @test isisometric(W)
+            @test isposdef(P)
         end
     end
 end
@@ -48,16 +48,16 @@ end
             @test Wᴴ isa ROCMatrix{T} && size(Wᴴ) == (m, n)
             @test P  isa ROCMatrix{T} && size(P) == (m, m)
             @test P * Wᴴ ≈ A
-            @test isisometry(Wᴴ; side=:right)
-            #@test isposdef(P)
+            @test isisometric(Wᴴ; side=:right)
+            @test isposdef(P)
 
             Ac = similar(A)
             P2, Wᴴ2 = @constinferred right_polar!(copy!(Ac, A), (P, Wᴴ), alg)
             @test P2 === P
             @test Wᴴ2 === Wᴴ
             @test P * Wᴴ ≈ A
-            @test isisometry(Wᴴ; side=:right)
-            #@test isposdef(P)
+            @test isisometric(Wᴴ; side=:right)
+            @test isposdef(P)
         end
     end
 end
