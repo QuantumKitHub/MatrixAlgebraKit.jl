@@ -30,7 +30,7 @@ function TruncationStrategy(;
     end
 
     isnothing(maxrank) || (strategy &= truncrank(maxrank))
-    isnothing(maxerror) || (strategy &= truncerror(maxerror))
+    isnothing(maxerror) || (strategy &= truncerror(; atol = maxerror))
     isnothing(filter) || (strategy &= truncfilter(filter))
 
     return strategy
