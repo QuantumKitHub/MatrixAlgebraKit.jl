@@ -1,6 +1,6 @@
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
-using LinearAlgebra: Diagonal, isposdef, opnorm
+using LinearAlgebra: Diagonal, isposdef, norm, opnorm
 using Test
 using TestExtras
 using StableRNGs
