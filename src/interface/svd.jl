@@ -42,9 +42,9 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_vals(!)`](@ref svd_vals) and
 @functiondef svd_compact
 
 """
-    svd_trunc(A; trunc, kwargs...) -> U, S, Vᴴ
+    svd_trunc(A; [trunc], kwargs...) -> U, S, Vᴴ
     svd_trunc(A, alg::AbstractAlgorithm) -> U, S, Vᴴ
-    svd_trunc!(A, [USVᴴ]; trunc, kwargs...) -> U, S, Vᴴ
+    svd_trunc!(A, [USVᴴ]; [trunc], kwargs...) -> U, S, Vᴴ
     svd_trunc!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ
 
 Compute a partial or truncated singular value decomposition (SVD) of `A`, such that

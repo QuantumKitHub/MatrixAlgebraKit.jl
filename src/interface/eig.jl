@@ -31,9 +31,9 @@ See also [`eig_vals(!)`](@ref eig_vals) and [`eig_trunc(!)`](@ref eig_trunc).
 @functiondef eig_full
 
 """
-    eig_trunc(A; trunc, kwargs...) -> D, V
+    eig_trunc(A; [trunc], kwargs...) -> D, V
     eig_trunc(A, alg::AbstractAlgorithm) -> D, V
-    eig_trunc!(A, [DV]; trunc, kwargs...) -> D, V
+    eig_trunc!(A, [DV]; [trunc], kwargs...) -> D, V
     eig_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
 
 Compute a partial or truncated eigenvalue decomposition of the matrix `A`,

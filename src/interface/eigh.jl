@@ -31,9 +31,9 @@ See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref eigh_trunc)
 @functiondef eigh_full
 
 """
-    eigh_trunc(A; trunc, kwargs...) -> D, V
+    eigh_trunc(A; [trunc], kwargs...) -> D, V
     eigh_trunc(A, alg::AbstractAlgorithm) -> D, V
-    eigh_trunc!(A, [DV]; trunc, kwargs...) -> D, V
+    eigh_trunc!(A, [DV]; [trunc], kwargs...) -> D, V
     eigh_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
 
 Compute a partial or truncated eigenvalue decomposition of the symmetric or hermitian matrix
