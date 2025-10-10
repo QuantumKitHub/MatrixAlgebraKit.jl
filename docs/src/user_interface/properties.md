@@ -8,7 +8,7 @@ CollapsedDocStrings = true
 MatrixAlgebraKit.jl provides a number of methods to check various properties of matrices.
 
 ```@docs; canonical=false
-isisometry
+isisometric
 isunitary
 ishermitian
 isantihermitian
