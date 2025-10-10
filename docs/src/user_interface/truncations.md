@@ -69,6 +69,13 @@ size(Dtrunc, 1) <= 2 && all(>(2.9), diagview(Dtrunc))
 true
 ```
 
+In general, the keyword arguments that are supported can be found in the `TruncationStrategy` docstring:
+
+```@docs; canonical = false
+TruncationStrategy
+```
+
+
 ### 2. Using explicit `TruncationStrategy` objects
 
 For more control, you can construct [`TruncationStrategy`](@ref) objects directly.
