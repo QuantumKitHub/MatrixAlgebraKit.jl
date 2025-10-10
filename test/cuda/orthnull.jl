@@ -76,14 +76,16 @@ end
         if m > n
             nullity = 5
             V, C = @constinferred left_orth(A)
-            #N = @constinferred left_null(A; trunc=(; maxnullity=nullity)) # TODO
+            CUDA.@allowscalar begin
+                N = @constinferred left_null(A; trunc=(; maxnullity=nullity))
+            end
             @test V isa CuMatrix{T} && size(V) == (m, minmn)
             @test C isa CuMatrix{T} && size(C) == (minmn, n)
-            #@test N isa CuMatrix{T} && size(N) == (m, nullity)
+            @test N isa CuMatrix{T} && size(N) == (m, nullity)
             @test V * C ≈ A
             @test isisometry(V)
-            #@test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-            #@test isisometry(N)
+            @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
+            @test isisometry(N)
         end
 
         for alg_qr in ((; positive=true), (; positive=false), CUSOLVER_HouseholderQR())
@@ -96,7 +98,6 @@ end
             @test isisometry(V)
             @test norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
             @test isisometry(N)
-            #@test norm(V * V' + N * N' - CuArray(diagm(ones(T, m)))) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T) # TODO
             hV = collect(V)
             hN = collect(N)
             @test hV * hV' + hN * hN' ≈ I
@@ -114,7 +115,7 @@ end
         @test isisometry(N2)
         hV2 = collect(V2)
         hN2 = collect(N2)
-        # @test hV2 * hV2' + hN2 * hN2' ≈ I # TODO
+        @test hV2 * hV2' ≈ I
 
         atol = eps(real(T))
         V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=(; atol=atol))
@@ -126,7 +127,7 @@ end
         @test isisometry(V2)
         @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test isisometry(N2)
-        #@test V2 * V2' + N2 * N2' ≈ I #TODO
+        @test V2 * V2' + N2 * N2' ≈ I
 
         rtol = eps(real(T))
         for (trunc_orth, trunc_null) in (
@@ -142,7 +143,7 @@ end
             @test isisometry(V2)
             @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
             @test isisometry(N2)
-            #@test V2 * V2' + N2 * N2' ≈ I TODO
+            @test V2 * V2' + N2 * N2' ≈ I
         end
 
         for kind in (:qr, :polar, :svd) # explicit kind kwarg
@@ -159,7 +160,7 @@ end
                 @test isisometry(N2)
                 hV2 = collect(V2)
                 hN2 = collect(N2)
-                #@test hV2 * hV2' + hN2 * hN2' ≈ I # TODO
+                @test hV2 * hV2' + hN2 * hN2' ≈ I
             end
 
             # with kind and tol kwargs
@@ -175,7 +176,7 @@ end
                 @test V2' * V2 ≈ I
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometry(N2)
-                #@test V2 * V2' + N2 * N2' ≈ I # TODO
+                @test V2 * V2' + N2 * N2' ≈ I
 
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
                                                    trunc=(; rtol=rtol))
@@ -188,7 +189,7 @@ end
                 @test isisometry(V2)
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometry(N2)
-                #@test V2 * V2' + N2 * N2' ≈ I # TODO
+                @test V2 * V2' + N2 * N2' ≈ I
             else
                 @test_throws ArgumentError left_orth!(copy!(Ac, A), (V, C); kind=kind,
                                                       trunc=(; atol=atol))
@@ -221,7 +222,7 @@ end
         @test isisometry(Nᴴ; side=:right)
         hVᴴ = collect(Vᴴ)
         hNᴴ = collect(Nᴴ)
-        #@test hVᴴ' * hVᴴ + hNᴴ' * hNᴴ ≈ I # TODO
+        @test hVᴴ' * hVᴴ + hNᴴ' * hNᴴ ≈ I
 
         M = LinearMap(A)
         CM, VMᴴ = @constinferred right_orth(M; kind=:svd)
@@ -239,7 +240,7 @@ end
         @test isisometry(Nᴴ; side=:right)
         hVᴴ2 = collect(Vᴴ2)
         hNᴴ2 = collect(Nᴴ2)
-        # @test hVᴴ2' * hVᴴ2 + hNᴴ2' * hNᴴ2 ≈ I # TODO
+        @test hVᴴ2' * hVᴴ2 + hNᴴ2' * hNᴴ2 ≈ I
 
         atol = eps(real(T))
         rtol = eps(real(T))
@@ -252,7 +253,7 @@ end
         @test isisometry(Vᴴ2; side=:right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test isisometry(Nᴴ; side=:right)
-        #@test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I # TODO
+        @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
         C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); trunc=(; rtol=rtol))
         Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; trunc=(; rtol=rtol))
@@ -263,7 +264,7 @@ end
         @test isisometry(Vᴴ2; side=:right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test isisometry(Nᴴ2; side=:right)
-        #@test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I # TODO
+        @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
         @testset "kind = $kind" for kind in (:lq, :polar, :svd)
             n < m && kind == :polar && continue
@@ -279,7 +280,7 @@ end
                 @test isisometry(Nᴴ2; side=:right)
                 hVᴴ2 = collect(Vᴴ2)
                 hNᴴ2 = collect(Nᴴ2)
-                # @test hVᴴ2' * hVᴴ2 + hNᴴ2' * hNᴴ2 ≈ I # TODO
+                @test hVᴴ2' * hVᴴ2 + hNᴴ2' * hNᴴ2 ≈ I
             end
 
             if kind == :svd
@@ -294,7 +295,7 @@ end
                 @test isisometry(Vᴴ2; side=:right)
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometry(Nᴴ2; side=:right)
-                # @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I # TODO
+                @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
                 
                 C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
                                                      trunc=(; rtol=rtol))
@@ -307,7 +308,7 @@ end
                 @test isisometry(Vᴴ2; side=:right)
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometry(Nᴴ2; side=:right)
-                # @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I # TODO
+                @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
             else
                 @test_throws ArgumentError right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
                                                        trunc=(; atol=atol))
