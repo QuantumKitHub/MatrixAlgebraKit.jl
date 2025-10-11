@@ -113,25 +113,29 @@ end
             minmn = min(m, n)
             r = minmn - 2
 
-            U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
+            U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
             @test length(S1.diag) == r
             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            # Test truncation error
+            @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn))
 
             s = 1 + sqrt(eps(real(T)))
             trunc = trunctol(; atol = s * S₀[r + 1])
 
-            U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc)
+            U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg, trunc)
             @test length(S2.diag) == r
             @test U1 ≈ U2
             @test S1 ≈ S2
             @test V1ᴴ ≈ V2ᴴ
+            @test ϵ2 ≈ ϵ1
 
             trunc = truncerror(; atol = s * norm(@view(S₀[(r + 1):end])))
-            U3, S3, V3ᴴ = @constinferred svd_trunc(A; alg, trunc)
+            U3, S3, V3ᴴ, ϵ3 = @constinferred svd_trunc(A; alg, trunc)
             @test length(S3.diag) == r
             @test U1 ≈ U3
             @test S1 ≈ S3
             @test V1ᴴ ≈ V3ᴴ
+            @test ϵ3 ≈ ϵ1
         end
     end
 end
@@ -148,7 +152,7 @@ end
     m = 4
     @testset "algorithm $alg" for alg in algs
         U = qr_compact(randn(rng, T, m, m))[1]
-        S = Diagonal([0.9, 0.3, 0.1, 0.01])
+        S = Diagonal(T[0.9, 0.3, 0.1, 0.01])
         Vᴴ = qr_compact(randn(rng, T, m, m))[1]
         A = U * S * Vᴴ
 
@@ -156,11 +160,11 @@ end
                 (rtol, maxrank) -> (; rtol, maxrank),
                 (rtol, maxrank) -> truncrank(maxrank) & trunctol(; rtol),
             )
-            U1, S1, V1ᴴ = svd_trunc(A; alg, trunc = trunc_fun(0.2, 1))
+            U1, S1, V1ᴴ, ϵ1 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 1))
             @test length(S1.diag) == 1
             @test S1.diag ≈ S.diag[1:1] rtol = sqrt(eps(real(T)))
 
-            U2, S2, V2ᴴ = svd_trunc(A; alg, trunc = trunc_fun(0.2, 3))
+            U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 3))
             @test length(S2.diag) == 2
             @test S2.diag ≈ S.diag[1:2] rtol = sqrt(eps(real(T)))
         end
@@ -171,12 +175,13 @@ end
     rng = StableRNG(123)
     m = 4
     U = qr_compact(randn(rng, T, m, m))[1]
-    S = Diagonal([0.9, 0.3, 0.1, 0.01])
+    S = Diagonal(real(T)[0.9, 0.3, 0.1, 0.01])
     Vᴴ = qr_compact(randn(rng, T, m, m))[1]
     A = U * S * Vᴴ
     alg = TruncatedAlgorithm(LAPACK_DivideAndConquer(), trunctol(; atol = 0.2))
-    U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg)
+    U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg)
     @test diagview(S2) ≈ diagview(S)[1:2] rtol = sqrt(eps(real(T)))
+    @test ϵ2 ≈ norm(diagview(S)[3:4])
     @test_throws ArgumentError svd_trunc(A; alg, trunc = (; maxrank = 2))
 end
 
@@ -209,7 +214,8 @@ end
         @test S2 ≈ diagview(S)
 
         alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
-        U3, S3, Vᴴ3 = @constinferred svd_trunc(A; alg)
+        U3, S3, Vᴴ3, ϵ3 = @constinferred svd_trunc(A; alg)
         @test diagview(S3) ≈ S2[1:min(m, 2)]
+        @test ϵ3 ≈ norm(S2[(min(m, 2) + 1):m])
     end
 end

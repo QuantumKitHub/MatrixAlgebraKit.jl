@@ -94,7 +94,7 @@ end
 #         algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
 #                 LAPACK_Jacobi())
 #     end
-
+#
 #     @testset "size ($m, $n)" for n in (37, m, 63)
 #         @testset "algorithm $alg" for alg in algs
 #             n > m && alg isa LAPACK_Jacobi && continue # not supported
@@ -102,15 +102,15 @@ end
 #             S₀ = svd_vals(A)
 #             minmn = min(m, n)
 #             r = minmn - 2
-
-#             U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc=truncrank(r))
+#
+#             U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc(A; alg, trunc=truncrank(r))
 #             @test length(S1.diag) == r
 #             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
-
+#
 #             s = 1 + sqrt(eps(real(T)))
 #             trunc2 = trunctol(; atol=s * S₀[r + 1])
-
-#             U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(; atol=s * S₀[r + 1]))
+#
+#             U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg, trunc=trunctol(; atol=s * S₀[r + 1]))
 #             @test length(S2.diag) == r
 #             @test U1 ≈ U2
 #             @test S1 ≈ S2

@@ -41,14 +41,14 @@ end
         r = m - 2
         s = 1 + sqrt(eps(real(T)))
 
-        D1, V1 = @constinferred eigh_trunc(A; alg, trunc=truncrank(r))
+        D1, V1, ϵ1 = @constinferred eigh_trunc(A; alg, trunc=truncrank(r))
         @test length(diagview(D1)) == r
         @test isisometric(V1)
         @test A * V1 ≈ V1 * D1
         @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
 
         trunc = trunctol(; atol = s * D₀[r + 1])
-        D2, V2 = @constinferred eigh_trunc(A; alg, trunc)
+        D2, V2, ϵ2 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test isisometric(V2)
         @test A * V2 ≈ V2 * D2
@@ -70,7 +70,7 @@ end
     A = V * D * V'
     A = (A + A') / 2
     alg = TruncatedAlgorithm(CUSOLVER_QRIteration(), truncrank(2))
-    D2, V2 = @constinferred eigh_trunc(A; alg)
+    D2, V2, ϵ2 = @constinferred eigh_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
     @test_throws ArgumentError eigh_trunc(A; alg, trunc=(; maxrank=2))
 end=#
