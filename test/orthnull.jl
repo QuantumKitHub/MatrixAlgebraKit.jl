@@ -2,9 +2,10 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using StableRNGs
-using LinearAlgebra: LinearAlgebra, I, mul!
-using MatrixAlgebraKit: LAPACK_SVDAlgorithm, check_input, copy_input, default_svd_algorithm,
-    initialize_output, AbstractAlgorithm
+using LinearAlgebra: LinearAlgebra, I
+
+# testing non-AbstractArray codepaths:
+include("linearmap.jl")
 
 # testing non-AbstractArray codepaths:
 include("linearmap.jl")
