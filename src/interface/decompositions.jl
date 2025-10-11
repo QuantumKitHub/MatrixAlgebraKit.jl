@@ -36,6 +36,9 @@ elements of `L` are non-negative.
 @algdef LAPACK_HouseholderQL
 @algdef LAPACK_HouseholderRQ
 
+left_orth_kind(::Union{LAPACK_HouseholderQR, LAPACK_HouseholderQL}) = left_orth_qr!
+right_orth_kind(::Union{LAPACK_HouseholderLQ, LAPACK_HouseholderRQ}) = right_orth_lq!
+
 # General Eigenvalue Decomposition
 # -------------------------------
 """
@@ -117,6 +120,9 @@ const LAPACK_SVDAlgorithm = Union{
     LAPACK_Jacobi,
 }
 
+left_orth_kind(::LAPACK_SVDAlgorithm) = left_orth_svd!
+right_orth_kind(::LAPACK_SVDAlgorithm) = right_orth_svd!
+
 # =========================
 # Polar decompositions
 # =========================
@@ -138,6 +144,9 @@ scaled Newton iteration, with a maximum of `maxiter` iterations and
 until convergence up to tolerance `tol`.
 """
 @algdef PolarNewton
+
+left_orth_kind(::Union{PolarViaSVD, PolarNewton}) = left_orth_polar!
+right_orth_kind(::Union{PolarViaSVD, PolarNewton}) = right_orth_polar!
 
 # =========================
 # DIAGONAL ALGORITHMS
@@ -161,6 +170,8 @@ a matrix using Householder reflectors. The keyword `positive=true` can be used t
 the diagonal elements of `R` are non-negative.
 """
 @algdef CUSOLVER_HouseholderQR
+
+left_orth_kind(::CUSOLVER_HouseholderQR) = left_orth_qr!
 
 """
     CUSOLVER_QRIteration()
@@ -202,6 +213,8 @@ See also the [CUSOLVER documentation](https://docs.nvidia.com/cuda/cusolver/inde
 for more information.
 """
 @algdef CUSOLVER_Randomized
+
+does_truncate(::CUSOLVER_Randomized) = true
 
 """
     CUSOLVER_Simple()
@@ -276,9 +289,8 @@ const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
 const GPU_Bisection = Union{ROCSOLVER_Bisection}
-const GPU_EighAlgorithm = Union{
-    GPU_QRIteration,
-    GPU_Jacobi,
-    GPU_DivideAndConquer,
-    GPU_Bisection,
-}
+const GPU_SVDAlgorithm = Union{GPU_Jacobi, GPU_DivideAndConquer, GPU_QRIteration}
+const GPU_EighAlgorithm = Union{GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection, CUSOLVER_SVDPolar}
+
+left_orth_kind(::GPU_SVDAlgorithm) = left_orth_svd!
+right_orth_kind(::GPU_SVDAlgorithm) = right_orth_svd!
