@@ -123,3 +123,44 @@ function compute_truncerr!(values::AbstractVector, ind)
     values[ind] .= zero(eltype(values))
     return norm(values)
 end
+
+function compute_truncerr(values::AbstractVector{<:Number}, ind::AbstractUnitRange)
+    init = abs2(zero(eltype(values)))
+    return sqrt(
+        sum(abs2, view(values, firstindex(values):(first(ind) - 1)); init) +
+            sum(abs2, view(values, (last(ind) + 1):lastindex(values)); init)
+    )
+end
+
+function compute_truncerr(values::AbstractVector{<:Number}, ind::AbstractVector{Bool})
+    init = abs2(zero(eltype(values)))
+    @inbounds for i in eachindex(values, ind)
+        init += abs2(values[i] * ~(ind[i]))
+    end
+    return sqrt(init)
+end
+
+function compute_truncerr(values::AbstractVector{<:Number}, ind::AbstractVector{<:Integer})
+    sort!(ind)
+    allind = eachindex(IndexLinear(), values)
+    next_i, next_j = iterate(allind), iterate(ind)
+    init = abs2(zero(eltype(values)))
+
+    while !(isnothing(next_i) || isnothing(next_j))
+        (i, state_i), (j, state_j) = (next_i, next_j)
+        (i < j) && (@inbounds init += abs2(values[i]))
+        (i <= j) && (next_i = iterate(allind, state_i))
+        (j <= i) && (next_j = iterate(ind, state_j))
+    end
+
+    while !isnothing(next_i) # next_j is nothing
+        (i, state_i) = next_i
+        @inbounds init += abs2(values[i])
+        next_i = iterate(allind, state_i)
+    end
+
+    return sqrt(init)
+end
+
+# generic fallback: no allocations but inaccurate
+compute_truncerr(values::AbstractVector, ind) = sqrt(norm(values)^2 - norm(view(values, ind))^2)
