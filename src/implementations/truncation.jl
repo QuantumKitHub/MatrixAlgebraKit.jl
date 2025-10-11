@@ -95,16 +95,20 @@ function _truncerr_impl(values::AbstractVector, I; atol::Real = 0, rtol::Real = 
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationIntersection)
-    return mapreduce(
-        Base.Fix1(findtruncated, values), _ind_intersect, strategy.components;
-        init = trues(length(values))
-    )
+    length(strategy.components) == 0 && return eachindex(values)
+    length(strategy.components) == 1 && return findtruncated(values, only(strategy.components))
+
+    ind1 = findtruncated(values, strategy.components[1])
+    ind2 = findtruncated(values, TruncationIntersection(Base.tail(strategy.components)))
+    return _ind_intersect(ind1, ind2)
 end
 function findtruncated_svd(values::AbstractVector, strategy::TruncationIntersection)
-    return mapreduce(
-        Base.Fix1(findtruncated_svd, values), _ind_intersect,
-        strategy.components; init = trues(length(values))
-    )
+    length(strategy.components) == 0 && return eachindex(values)
+    length(strategy.components) == 1 && return findtruncated_svd(values, only(strategy.components))
+
+    ind1 = findtruncated_svd(values, strategy.components[1])
+    ind2 = findtruncated_svd(values, TruncationIntersection(Base.tail(strategy.components)))
+    return _ind_intersect(ind1, ind2)
 end
 
 # when one of the ind selections is a bitvector, have to handle differently
