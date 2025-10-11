@@ -51,6 +51,11 @@ See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null), [
 """
 @functiondef left_orth
 
+# helper functions
+function left_orth_qr! end
+function left_orth_polar! end
+function left_orth_svd! end
+
 """
     right_orth(A; [kind::Symbol, trunc, alg_lq, alg_polar, alg_svd]) -> C, Vᴴ
     right_orth!(A, [CVᴴ]; [kind::Symbol, trunc, alg_lq, alg_polar, alg_svd]) -> C, Vᴴ
@@ -102,6 +107,11 @@ be used.
 See also [`left_orth(!)`](@ref left_orth), [`left_null(!)`](@ref left_null), [`right_null(!)`](@ref right_null)
 """
 @functiondef right_orth
+
+# helper functions
+function right_orth_lq! end
+function right_orth_polar! end
+function right_orth_svd! end
 
 # Null functions
 # --------------
@@ -204,3 +214,57 @@ end
 function right_null(A; kwargs...)
     return right_null!(copy_input(right_null, A); kwargs...)
 end
+
+# Algorithm selection
+# -------------------
+# specific override for `alg::Symbol` case, to allow for choosing the kind of factorization.
+function select_algorithm(::typeof(left_orth!), A, alg::Symbol; trunc = nothing, kwargs...)
+    alg === :svd && return select_algorithm(
+        left_orth_svd!, A, get(kwargs, :alg_svd, nothing); trunc
+    )
+
+    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+
+    alg === :qr && return select_algorithm(left_orth_qr!, A, get(kwargs, :alg_qr, nothing))
+    alg === :polar && return select_algorithm(left_orth_polar!, A, get(kwargs, :alg_polar, nothing))
+
+    throw(ArgumentError(lazy"Unknown alg symbol $alg"))
+end
+
+default_algorithm(::typeof(left_orth!), A; trunc = nothing, kwargs...) =
+    isnothing(trunc) ? select_algorithm(left_orth_qr!, A; kwargs...) :
+    select_algorithm(left_orth_svd!, A; trunc, kwargs...)
+
+select_algorithm(::typeof(left_orth_qr!), A, alg = nothing; kwargs...) =
+    select_algorithm(qr_compact!, A, alg; kwargs...)
+select_algorithm(::typeof(left_orth_polar!), A, alg = nothing; kwargs...) =
+    select_algorithm(left_polar!, A, alg; kwargs...)
+select_algorithm(::typeof(left_orth_svd!), A, alg = nothing; trunc = nothing, kwargs...) =
+    isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
+    select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
+
+# specific override for `alg::Symbol` case, to allow for choosing the kind of factorization.
+function select_algorithm(::typeof(right_orth!), A, alg::Symbol; trunc = nothing, kwargs...)
+    alg === :svd && return select_algorithm(
+        right_orth_svd!, A, get(kwargs, :alg_svd, nothing); trunc
+    )
+
+    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+
+    alg === :lq && return select_algorithm(right_orth_lq!, A, get(kwargs, :alg_lq, nothing))
+    alg === :polar && return select_algorithm(right_orth_polar!, A, get(kwargs, :alg_polar, nothing))
+
+    throw(ArgumentError(lazy"Unknown alg symbol $alg"))
+end
+
+default_algorithm(::typeof(right_orth!), A; trunc = nothing, kwargs...) =
+    isnothing(trunc) ? select_algorithm(right_orth_lq!, A; kwargs...) :
+    select_algorithm(right_orth_svd!, A; trunc, kwargs...)
+
+select_algorithm(::typeof(right_orth_lq!), A, alg = nothing; kwargs...) =
+    select_algorithm(lq_compact!, A, alg; kwargs...)
+select_algorithm(::typeof(right_orth_polar!), A, alg = nothing; kwargs...) =
+    select_algorithm(right_polar!, A, alg; kwargs...)
+select_algorithm(::typeof(right_orth_svd!), A, alg = nothing; trunc = nothing, kwargs...) =
+    isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
+    select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
