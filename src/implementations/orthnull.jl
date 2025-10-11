@@ -5,32 +5,48 @@ copy_input(::typeof(right_orth), A) = copy_input(lq_compact, A) # do we ever nee
 copy_input(::typeof(left_null), A) = copy_input(qr_null, A) # do we ever need anything else
 copy_input(::typeof(right_null), A) = copy_input(lq_null, A) # do we ever need anything else
 
-function check_input(::typeof(left_orth!), A::AbstractMatrix, VC, ::AbstractAlgorithm)
-    m, n = size(A)
-    minmn = min(m, n)
-    V, C = VC
-    @assert V isa AbstractMatrix && C isa AbstractMatrix
-    @check_size(V, (m, minmn))
-    @check_scalar(V, A)
-    if !isempty(C)
-        @check_size(C, (minmn, n))
-        @check_scalar(C, A)
-    end
-    return nothing
-end
-function check_input(::typeof(right_orth!), A::AbstractMatrix, CVᴴ, ::AbstractAlgorithm)
-    m, n = size(A)
-    minmn = min(m, n)
-    C, Vᴴ = CVᴴ
-    @assert C isa AbstractMatrix && Vᴴ isa AbstractMatrix
-    if !isempty(C)
-        @check_size(C, (m, minmn))
-        @check_scalar(C, A)
-    end
-    @check_size(Vᴴ, (minmn, n))
-    @check_scalar(Vᴴ, A)
-    return nothing
-end
+check_input(::typeof(left_orth!), A, VC, alg::AbstractAlgorithm) =
+    check_input(left_orth_kind(alg), A, VC, alg)
+
+check_input(::typeof(right_orth!), A, CVᴴ, alg::AbstractAlgorithm) =
+    check_input(right_orth_kind(alg), A, CVᴴ, alg)
+
+
+check_input(::typeof(left_orth_qr!), A, VC, alg::AbstractAlgorithm) =
+    check_input(qr_compact!, A, VC, alg)
+check_input(::typeof(left_orth_polar!), A, VC, alg::AbstractAlgorithm) =
+    check_input(left_polar!, A, VC, alg)
+check_input(::typeof(left_orth_svd!), A, VC, alg::AbstractAlgorithm) =
+    check_input(qr_compact!, A, VC, alg)
+
+check_input(::typeof(right_orth_lq!), A, CVᴴ, alg::AbstractAlgorithm) =
+    check_input(lq_compact!, A, CVᴴ, alg)
+check_input(::typeof(right_orth_polar!), A, CVᴴ, alg::AbstractAlgorithm) =
+    check_input(right_polar!, A, CVᴴ, alg)
+check_input(::typeof(right_orth_svd!), A, CVᴴ, alg::AbstractAlgorithm) =
+    check_input(lq_compact!, A, CVᴴ, alg)
+
+
+initialize_output(::typeof(left_orth!), A, alg::AbstractAlgorithm) =
+    initialize_output(left_orth_kind(alg), A, alg)
+initialize_output(::typeof(right_orth!), A, alg::AbstractAlgorithm) =
+    initialize_output(right_orth_kind(alg), A, alg)
+
+
+initialize_output(::typeof(left_orth_qr!), A, alg::AbstractAlgorithm) =
+    initialize_output(qr_compact!, A, alg)
+initialize_output(::typeof(left_orth_polar!), A, alg::AbstractAlgorithm) =
+    initialize_output(left_polar!, A, alg)
+initialize_output(::typeof(left_orth_svd!), A, alg::AbstractAlgorithm) =
+    initialize_output(qr_compact!, A, alg)
+
+initialize_output(::typeof(right_orth_lq!), A, alg::AbstractAlgorithm) =
+    initialize_output(lq_compact!, A, alg)
+initialize_output(::typeof(right_orth_polar!), A, alg::AbstractAlgorithm) =
+    initialize_output(right_polar!, A, alg)
+initialize_output(::typeof(right_orth_svd!), A, alg::AbstractAlgorithm) =
+    initialize_output(lq_compact!, A, alg)
+
 
 function check_input(::typeof(left_null!), A::AbstractMatrix, N, ::AbstractAlgorithm)
     m, n = size(A)
@@ -51,20 +67,13 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(left_orth!), A::AbstractMatrix)
-    m, n = size(A)
-    minmn = min(m, n)
-    V = similar(A, (m, minmn))
-    C = similar(A, (minmn, n))
-    return (V, C)
+
+function initialize_orth_svd(A::AbstractMatrix, F, alg)
+    S = Diagonal(initialize_output(svd_vals!, A, alg))
+    return F[1], S, F[2]
 end
-function initialize_output(::typeof(right_orth!), A::AbstractMatrix)
-    m, n = size(A)
-    minmn = min(m, n)
-    C = similar(A, (m, minmn))
-    Vᴴ = similar(A, (minmn, n))
-    return (C, Vᴴ)
-end
+# fallback doesn't re-use F at all
+initialize_orth_svd(A, F, alg) = initialize_output(svd_compact!, A, alg)
 
 function initialize_output(::typeof(left_null!), A::AbstractMatrix)
     m, n = size(A)
@@ -81,126 +90,28 @@ end
 
 # Implementation of orth functions
 # --------------------------------
-function left_orth!(
-        A, VC;
-        trunc = nothing, kind = isnothing(trunc) ? :qr : :svd,
-        alg_qr = (; positive = true), alg_polar = (;), alg_svd = (;)
-    )
-    if !isnothing(trunc) && kind != :svd
-        throw(ArgumentError("truncation not supported for left_orth with kind=$kind"))
-    end
-    if kind == :qr
-        return left_orth_qr!(A, VC, alg_qr)
-    elseif kind == :polar
-        return left_orth_polar!(A, VC, alg_polar)
-    elseif kind == :svd
-        return left_orth_svd!(A, VC, alg_svd, trunc)
-    else
-        throw(ArgumentError("`left_orth!` received unknown value `kind = $kind`"))
-    end
-end
-function left_orth_qr!(A, VC, alg)
-    alg′ = select_algorithm(qr_compact!, A, alg)
-    check_input(left_orth!, A, VC, alg′)
-    return qr_compact!(A, VC, alg′)
-end
-function left_orth_polar!(A, VC, alg)
-    alg′ = select_algorithm(left_polar!, A, alg)
-    check_input(left_orth!, A, VC, alg′)
-    return left_polar!(A, VC, alg′)
-end
-function left_orth_svd!(A, VC, alg, trunc::Nothing = nothing)
-    alg′ = select_algorithm(svd_compact!, A, alg)
-    check_input(left_orth!, A, VC, alg′)
-    U, S, Vᴴ = svd_compact!(A, alg′)
-    V, C = VC
-    return copy!(V, U), mul!(C, S, Vᴴ)
-end
-function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc::Nothing = nothing)
-    alg′ = select_algorithm(svd_compact!, A, alg)
-    check_input(left_orth!, A, VC, alg′)
-    V, C = VC
-    S = Diagonal(initialize_output(svd_vals!, A, alg′))
-    U, S, Vᴴ = svd_compact!(A, (V, S, C), alg′)
-    return U, lmul!(S, Vᴴ)
-end
-function left_orth_svd!(A, VC, alg, trunc)
-    alg′ = select_algorithm(svd_compact!, A, alg)
-    check_input(left_orth!, A, VC, alg′)
-    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
-    U, S, Vᴴ = svd_trunc!(A, alg_trunc)
-    V, C = VC
-    return copy!(V, U), mul!(C, S, Vᴴ)
-end
-function left_orth_svd!(A::AbstractMatrix, VC, alg, trunc)
-    alg′ = select_algorithm(svd_compact!, A, alg)
-    check_input(left_orth!, A, VC, alg′)
-    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
-    V, C = VC
-    S = Diagonal(initialize_output(svd_vals!, A, alg_trunc.alg))
-    U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg_trunc)
-    return U, lmul!(S, Vᴴ)
-end
+left_orth!(A, VC, alg::AbstractAlgorithm) = left_orth_kind(alg)(A, VC, alg)
+right_orth!(A, CVᴴ, alg::AbstractAlgorithm) = right_orth_kind(alg)(A, CVᴴ, alg)
 
-function right_orth!(
-        A, CVᴴ;
-        trunc = nothing, kind = isnothing(trunc) ? :lq : :svd,
-        alg_lq = (; positive = true), alg_polar = (;), alg_svd = (;)
-    )
-    if !isnothing(trunc) && kind != :svd
-        throw(ArgumentError("truncation not supported for right_orth with kind=$kind"))
-    end
-    if kind == :lq
-        return right_orth_lq!(A, CVᴴ, alg_lq)
-    elseif kind == :polar
-        return right_orth_polar!(A, CVᴴ, alg_polar)
-    elseif kind == :svd
-        return right_orth_svd!(A, CVᴴ, alg_svd, trunc)
-    else
-        throw(ArgumentError("`right_orth!` received unknown value `kind = $kind`"))
-    end
+left_orth_qr!(A, VC, alg::AbstractAlgorithm) = qr_compact!(A, VC, alg)
+right_orth_lq!(A, CVᴴ, alg::AbstractAlgorithm) = lq_compact!(A, CVᴴ, alg)
+left_orth_polar!(A, VC, alg::AbstractAlgorithm) = left_polar!(A, VC, alg)
+right_orth_polar!(A, CVᴴ, alg::AbstractAlgorithm) = right_polar!(A, CVᴴ, alg)
+
+# orth_svd requires implementations of `lmul!` and `rmul!`
+function left_orth_svd!(A, VC, alg::AbstractAlgorithm)
+    check_input(left_orth_svd!, A, VC, alg)
+    USVᴴ = initialize_orth_svd(A, VC, alg)
+    V, S, C = does_truncate(alg) ? svd_trunc!(A, USVᴴ, alg) : svd_compact!(A, USVᴴ, alg)
+    lmul!(S, C)
+    return V, C
 end
-function right_orth_lq!(A, CVᴴ, alg)
-    alg′ = select_algorithm(lq_compact!, A, alg)
-    check_input(right_orth!, A, CVᴴ, alg′)
-    return lq_compact!(A, CVᴴ, alg′)
-end
-function right_orth_polar!(A, CVᴴ, alg)
-    alg′ = select_algorithm(right_polar!, A, alg)
-    check_input(right_orth!, A, CVᴴ, alg′)
-    return right_polar!(A, CVᴴ, alg′)
-end
-function right_orth_svd!(A, CVᴴ, alg, trunc::Nothing = nothing)
-    alg′ = select_algorithm(svd_compact!, A, alg)
-    check_input(right_orth!, A, CVᴴ, alg′)
-    U, S, Vᴴ′ = svd_compact!(A, alg′)
-    C, Vᴴ = CVᴴ
-    return mul!(C, U, S), copy!(Vᴴ, Vᴴ′)
-end
-function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc::Nothing = nothing)
-    alg′ = select_algorithm(svd_compact!, A, alg)
-    check_input(right_orth!, A, CVᴴ, alg′)
-    C, Vᴴ = CVᴴ
-    S = Diagonal(initialize_output(svd_vals!, A, alg′))
-    U, S, Vᴴ = svd_compact!(A, (C, S, Vᴴ), alg′)
-    return rmul!(U, S), Vᴴ
-end
-function right_orth_svd!(A, CVᴴ, alg, trunc)
-    alg′ = select_algorithm(svd_compact!, A, alg)
-    check_input(right_orth!, A, CVᴴ, alg′)
-    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
-    U, S, Vᴴ′ = svd_trunc!(A, alg_trunc)
-    C, Vᴴ = CVᴴ
-    return mul!(C, U, S), copy!(Vᴴ, Vᴴ′)
-end
-function right_orth_svd!(A::AbstractMatrix, CVᴴ, alg, trunc)
-    alg′ = select_algorithm(svd_compact!, A, alg)
-    check_input(right_orth!, A, CVᴴ, alg′)
-    alg_trunc = select_algorithm(svd_trunc!, A, alg′; trunc)
-    C, Vᴴ = CVᴴ
-    S = Diagonal(initialize_output(svd_vals!, A, alg_trunc.alg))
-    U, S, Vᴴ = svd_trunc!(A, (C, S, Vᴴ), alg_trunc)
-    return rmul!(U, S), Vᴴ
+function right_orth_svd!(A, CVᴴ, alg::AbstractAlgorithm)
+    check_input(right_orth_svd!, A, CVᴴ, alg)
+    USVᴴ = initialize_orth_svd(A, CVᴴ, alg)
+    C, S, Vᴴ = does_truncate(alg) ? svd_trunc!(A, USVᴴ, alg) : svd_compact!(A, USVᴴ, alg)
+    rmul!(C, S)
+    return C, Vᴴ
 end
 
 # Implementation of null functions
@@ -249,7 +160,8 @@ function left_null_svd!(A, N, alg, trunc)
     trunc′ = trunc isa TruncationStrategy ? trunc :
         trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
         throw(ArgumentError("Unknown truncation strategy: $trunc"))
-    return first(truncate(left_null!, (U, S), trunc′))
+    N, ind = truncate(left_null!, (U, S), trunc′)
+    return N
 end
 
 function right_null!(
