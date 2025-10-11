@@ -28,7 +28,7 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
 
     trunc = @constinferred TruncationStrategy(; atol, rtol, maxrank)
     @test trunc isa TruncationIntersection
-    @test trunc == truncrank(maxrank) & trunctol(; atol, rtol)
+    @test trunc == trunctol(; atol, rtol) & truncrank(maxrank)
 
     values = [1, 0.9, 0.5, -0.3, 0.01]
     @test values[@constinferred(findtruncated(values, truncrank(2)))] == values[1:2]

@@ -14,7 +14,7 @@ MatrixAlgebraKit.iszerotangent(::AbstractZero) = true
 @non_differentiable MatrixAlgebraKit.select_algorithm(args...)
 @non_differentiable MatrixAlgebraKit.initialize_output(args...)
 @non_differentiable MatrixAlgebraKit.check_input(args...)
-@non_differentiable MatrixAlgebraKit.isisometry(args...)
+@non_differentiable MatrixAlgebraKit.isisometric(args...)
 @non_differentiable MatrixAlgebraKit.isunitary(args...)
 
 function ChainRulesCore.rrule(::typeof(copy_input), f, A)

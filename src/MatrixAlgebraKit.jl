@@ -9,7 +9,7 @@ using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
-export isisometry, isunitary, ishermitian, isantihermitian
+export isisometric, isunitary, ishermitian, isantihermitian
 
 export project_hermitian, project_antihermitian, project_isometric
 export project_hermitian!, project_antihermitian!, project_isometric!
@@ -65,6 +65,7 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
             :svd_pullback!, :svd_trunc_pullback!
         )
     )
+    eval(Expr(:public, :is_left_isometric, :is_right_isometric))
 end
 
 include("common/defaults.jl")

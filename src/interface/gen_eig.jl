@@ -3,9 +3,11 @@
 # TODO: kwargs for sorting eigenvalues?
 
 docs_gen_eig_note = """
-Note that [`gen_eig_full`](@ref) and its variants do not assume additional structure on the inputs,
-and therefore will always return complex eigenvalues and eigenvectors. For the real
-generalized eigenvalue decomposition is not yet supported.
+    Note that [`gen_eig_full`](@ref) and its variants do not assume additional structure
+    on the inputs, and therefore will always return complex eigenvalues and eigenvectors.
+    Real eigenvalues can be expected when both input matrices are hermitian and one of them
+    is positive definite, but specialized methods that exploit this structure are not yet
+    implemented or supported.
 """
 
 # TODO: do we need "full"?
@@ -26,7 +28,7 @@ and the diagonal matrix `W` contains the associated generalized eigenvalues.
     possible to use the provided `WV` as output.
 
 !!! note
-    $(docs_gen_eig_note)
+$(docs_gen_eig_note)
 
 See also [`gen_eig_vals(!)`](@ref eig_vals).
 """
@@ -47,7 +49,7 @@ Compute the list of generalized eigenvalues of `A` and `B`.
     provided `W` as output.
 
 !!! note
-    $(docs_gen_eig_note)
+$(docs_gen_eig_note)
 
 See also [`gen_eig_full(!)`](@ref gen_eig_full).
 """

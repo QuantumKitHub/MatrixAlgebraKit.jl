@@ -41,7 +41,6 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_vals(!)`](@ref svd_vals) and
 """
 @functiondef svd_compact
 
-# TODO: decide if we should have `svd_trunc!!` instead
 """
     svd_trunc(A; kwargs...) -> U, S, Vᴴ, ϵ
     svd_trunc(A, alg::AbstractAlgorithm) -> U, S, Vᴴ, ϵ
@@ -61,9 +60,9 @@ discarded singular values.
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `USVᴴ` as output.
 
-
-See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) and
-[`svd_vals(!)`](@ref svd_vals).
+See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact),
+[`svd_vals(!)`](@ref svd_vals), and [Truncations](@ref) for more information on
+truncation strategies.
 """
 @functiondef svd_trunc
 
