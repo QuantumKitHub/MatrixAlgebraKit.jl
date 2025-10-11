@@ -3,9 +3,12 @@
 # TODO: kwargs for sorting eigenvalues?
 
 docs_eigh_note = """
-Note that [`eigh_full`](@ref) and its variants assume additional structure on the input,
-and therefore will retain the `eltype` of the input for the eigenvalues and eigenvectors.
-For generic eigenvalue decompositions, see [`eig_full`](@ref).
+    Note that [`eigh_full`](@ref) and its variants assume that the input matrix is hermitian,
+    or thus symmetric if the input is real. The resulting algorithms exploit this structure,
+    and return eigenvalues that are always real, and eigenvectors that are orthogonal and have
+    the same `eltype` as the input matrix. If the input matrix does not have this structure,
+    the generic eigenvalue decomposition provided by [`eig_full`](@ref) and its variants
+    should be used instead.
 """
 
 """
@@ -24,22 +27,42 @@ and the real diagonal matrix `D` contains the associated eigenvalues.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eigh_note)
+$(docs_eigh_note)
 
 See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref eigh_trunc).
 """
 @functiondef eigh_full
 
 """
-    eigh_trunc(A; kwargs...) -> D, V
+    eigh_trunc(A; [trunc], kwargs...) -> D, V
     eigh_trunc(A, alg::AbstractAlgorithm) -> D, V
-    eigh_trunc!(A, [DV]; kwargs...) -> D, V
+    eigh_trunc!(A, [DV]; [trunc], kwargs...) -> D, V
     eigh_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
 
 Compute a partial or truncated eigenvalue decomposition of the symmetric or hermitian matrix
 `A`, such that `A * V ≈ V * D`, where the isometric matrix `V` contains a subset of the
 orthogonal eigenvectors and the real diagonal matrix `D` contains the associated eigenvalues,
-selected according to a truncation strategy. 
+selected according to a truncation strategy.
+
+## Keyword arguments
+The behavior of this function is controlled by the following keyword arguments:
+
+- `trunc`: Specifies the truncation strategy. This can be:
+  - A `NamedTuple` with fields `atol`, `rtol`, and/or `maxrank`, which will be converted to
+    a [`TruncationStrategy`](@ref). For details on available truncation strategies, see
+    [Truncations](@ref).
+  - A `TruncationStrategy` object directly (e.g., `truncrank(10)`, `trunctol(atol=1e-6)`, or
+    combinations using `&`).
+  - `nothing` (default), which keeps all eigenvalues.
+
+- Other keyword arguments are passed to the algorithm selection procedure. If no explicit
+  `alg` is provided, these keywords are used to select and configure the algorithm through
+  [`MatrixAlgebraKit.select_algorithm`](@ref). The remaining keywords after algorithm
+  selection are passed to the algorithm constructor. See [`MatrixAlgebraKit.default_algorithm`](@ref)
+  for the default algorithm selection behavior.
+
+When `alg` is a [`TruncatedAlgorithm`](@ref), the `trunc` keyword cannot be specified as the
+truncation strategy is already embedded in the algorithm.
 
 !!! note
     The bang method `eigh_trunc!` optionally accepts the output structure and
@@ -47,9 +70,10 @@ selected according to a truncation strategy.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eigh_note)
+$(docs_eigh_note)
 
-See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_vals(!)`](@ref eigh_vals).
+See also [`eigh_full(!)`](@ref eigh_full), [`eigh_vals(!)`](@ref eigh_vals), and
+[Truncations](@ref) for more information on truncation strategies.
 """
 @functiondef eigh_trunc
 
@@ -67,7 +91,7 @@ Compute the list of (real) eigenvalues of the symmetric or hermitian matrix `A`.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eigh_note)
+$(docs_eigh_note)
 
 See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_trunc(!)`](@ref eigh_trunc).
 """

@@ -3,9 +3,10 @@
 # TODO: kwargs for sorting eigenvalues?
 
 docs_eig_note = """
-Note that [`eig_full`](@ref) and its variants do not assume additional structure on the input,
-and therefore will always return complex eigenvalues and eigenvectors. For the real
-eigenvalue decomposition of symmetric or hermitian operators, see [`eigh_full`](@ref).
+    Note that [`eig_full`](@ref) and its variants do not assume any symmetry structure on
+    the input matrices, and therefore will always return complex eigenvalues and eigenvectors
+    for reasons of type stability.  For the  eigenvalue decomposition of symmetric or hermitian
+    operators, see [`eigh_full`](@ref).
 """
 
 """
@@ -24,16 +25,16 @@ and the diagonal matrix `D` contains the associated eigenvalues.
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eig_note)
+$(docs_eig_note)
 
 See also [`eig_vals(!)`](@ref eig_vals) and [`eig_trunc(!)`](@ref eig_trunc).
 """
 @functiondef eig_full
 
 """
-    eig_trunc(A; kwargs...) -> D, V
+    eig_trunc(A; [trunc], kwargs...) -> D, V
     eig_trunc(A, alg::AbstractAlgorithm) -> D, V
-    eig_trunc!(A, [DV]; kwargs...) -> D, V
+    eig_trunc!(A, [DV]; [trunc], kwargs...) -> D, V
     eig_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
 
 Compute a partial or truncated eigenvalue decomposition of the matrix `A`,
@@ -41,15 +42,36 @@ such that `A * V ≈ V * D`, where the (possibly rectangular) matrix `V` contain
 a subset of eigenvectors and the diagonal matrix `D` contains the associated eigenvalues,
 selected according to a truncation strategy.
 
+## Keyword arguments
+The behavior of this function is controlled by the following keyword arguments:
+
+- `trunc`: Specifies the truncation strategy. This can be:
+  - A `NamedTuple` with fields `atol`, `rtol`, and/or `maxrank`, which will be converted to
+    a [`TruncationStrategy`](@ref). For details on available truncation strategies, see
+    [Truncations](@ref).
+  - A `TruncationStrategy` object directly (e.g., `truncrank(10)`, `trunctol(atol=1e-6)`, or
+    combinations using `&`).
+  - `nothing` (default), which keeps all eigenvalues.
+
+- Other keyword arguments are passed to the algorithm selection procedure. If no explicit
+  `alg` is provided, these keywords are used to select and configure the algorithm through
+  [`MatrixAlgebraKit.select_algorithm`](@ref). The remaining keywords after algorithm
+  selection are passed to the algorithm constructor. See [`MatrixAlgebraKit.default_algorithm`](@ref)
+  for the default algorithm selection behavior.
+
+When `alg` is a [`TruncatedAlgorithm`](@ref), the `trunc` keyword cannot be specified as the
+truncation strategy is already embedded in the algorithm.
+
 !!! note
     The bang method `eig_trunc!` optionally accepts the output structure and
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `DV` as output.
 
 !!! note
-    $(docs_eig_note)
+$(docs_eig_note)
 
-See also [`eig_full(!)`](@ref eig_full) and [`eig_vals(!)`](@ref eig_vals).
+See also [`eig_full(!)`](@ref eig_full), [`eig_vals(!)`](@ref eig_vals), and
+[Truncations](@ref) for more information on truncation strategies.
 """
 @functiondef eig_trunc
 
@@ -67,7 +89,7 @@ Compute the list of eigenvalues of `A`.
     as it may not always be possible to use the provided `D` as output.
 
 !!! note
-    $(docs_eig_note)
+$(docs_eig_note)
 
 See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 """

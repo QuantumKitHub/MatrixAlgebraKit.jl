@@ -26,6 +26,7 @@ These operations typically follow some common skeleton, and here we go into a li
 
 ```@contents
 Pages = ["user_interface/compositions.md", "user_interface/decompositions.md",
-         "user_interface/truncations.md", "user_interface/matrix_functions.md"]
+         "user_interface/truncations.md", "user_interface/properties.md",
+         "user_interface/matrix_functions.md"]
 Depth = 2
 ```

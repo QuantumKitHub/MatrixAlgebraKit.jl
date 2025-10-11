@@ -4,26 +4,36 @@
 Select a truncation strategy based on the provided keyword arguments.
 
 ## Keyword arguments
-- `atol=nothing` : Absolute tolerance for the truncation
-- `rtol=nothing` : Relative tolerance for the truncation
-- `maxrank=nothing` : Maximal rank for the truncation
+The following keyword arguments are all optional, and their default value (`nothing`)
+will be ignored. It is also allowed to combine multiple of these, in which case the kept
+values will consist of the intersection of the different truncated strategies.
+
+- `atol::Real` : Absolute tolerance for the truncation
+- `rtol::Real` : Relative tolerance for the truncation
+- `maxrank::Real` : Maximal rank for the truncation
+- `maxerror::Real` : Maximal truncation error.
+- `filter` : Custom filter to select truncated values.
 """
-function TruncationStrategy(; atol = nothing, rtol = nothing, maxrank = nothing)
-    if isnothing(maxrank) && isnothing(atol) && isnothing(rtol)
-        return NoTruncation()
-    elseif isnothing(maxrank)
+function TruncationStrategy(;
+        atol::Union{Real, Nothing} = nothing,
+        rtol::Union{Real, Nothing} = nothing,
+        maxrank::Union{Real, Nothing} = nothing,
+        maxerror::Union{Real, Nothing} = nothing,
+        filter = nothing
+    )
+    strategy = notrunc()
+
+    if !isnothing(atol) || !isnothing(rtol)
         atol = @something atol 0
         rtol = @something rtol 0
-        return trunctol(; atol, rtol)
-    else
-        if isnothing(atol) && isnothing(rtol)
-            return truncrank(maxrank)
-        else
-            atol = @something atol 0
-            rtol = @something rtol 0
-            return truncrank(maxrank) & trunctol(; atol, rtol)
-        end
+        strategy &= trunctol(; atol, rtol)
     end
+
+    isnothing(maxrank) || (strategy &= truncrank(maxrank))
+    isnothing(maxerror) || (strategy &= truncerror(; atol = maxerror))
+    isnothing(filter) || (strategy &= truncfilter(filter))
+
+    return strategy
 end
 
 """
@@ -151,6 +161,8 @@ end
 function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
     return TruncationIntersection((trunc1, trunc2))
 end
+
+# flatten components
 function Base.:&(trunc1::TruncationIntersection, trunc2::TruncationIntersection)
     return TruncationIntersection((trunc1.components..., trunc2.components...))
 end
@@ -160,3 +172,12 @@ end
 function Base.:&(trunc1::TruncationStrategy, trunc2::TruncationIntersection)
     return TruncationIntersection((trunc1, trunc2.components...))
 end
+
+# drop notrunc
+Base.:&(::NoTruncation, trunc::TruncationStrategy) = trunc
+Base.:&(trunc::TruncationStrategy, ::NoTruncation) = trunc
+Base.:&(::NoTruncation, ::NoTruncation) = notrunc()
+
+# disambiguate
+Base.:&(::NoTruncation, trunc::TruncationIntersection) = trunc
+Base.:&(trunc::TruncationIntersection, ::NoTruncation) = trunc
