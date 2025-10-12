@@ -268,3 +268,63 @@ select_algorithm(::typeof(right_orth_polar!), A, alg = nothing; kwargs...) =
 select_algorithm(::typeof(right_orth_svd!), A, alg = nothing; trunc = nothing, kwargs...) =
     isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
     select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
+
+function select_algorithm(::typeof(left_null!), A, alg::Symbol; trunc = nothing, kwargs...)
+    alg === :svd && return select_algorithm(
+        left_null_svd!, A, get(kwargs, :alg_svd, nothing); trunc
+    )
+
+    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+
+    alg === :qr && return select_algorithm(left_null_qr!, A, get(kwargs, :alg_qr, nothing))
+
+    throw(ArgumentError(lazy"unkown alg symbol $alg"))
+end
+
+default_algorithm(::typeof(left_null!), A; trunc = nothing, kwargs...) =
+    isnothing(trunc) ? select_algorithm(left_null_qr!, A; kwargs...) :
+    select_algorithm(left_null_svd!, A; trunc, kwargs...)
+
+select_algorithm(::typeof(left_null_qr!), A, alg = nothing; kwargs...) =
+    select_algorithm(qr_null!, A, alg; kwargs...)
+function select_algorithm(::typeof(left_null_svd!), A, alg = nothing; trunc = nothing, kwargs...)
+    if alg isa TruncatedAlgorithm
+        isnothing(trunc) ||
+            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
+        return alg
+    else
+        alg_svd = select_algorithm(svd_full!, A, alg; kwargs...)
+        return TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
+    end
+end
+
+function select_algorithm(::typeof(right_null!), A, alg::Symbol; trunc = nothing, kwargs...)
+    alg === :svd && return select_algorithm(
+        right_null_svd!, A, get(kwargs, :alg_svd, nothing); trunc
+    )
+
+    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+
+    alg === :lq && return select_algorithm(right_null_lq!, A, get(kwargs, :alg_lq, nothing))
+
+    throw(ArgumentError(lazy"unkown alg symbol $alg"))
+end
+
+default_algorithm(::typeof(right_null!), A; trunc = nothing, kwargs...) =
+    isnothing(trunc) ? select_algorithm(right_null_lq!, A; kwargs...) :
+    select_algorithm(right_null_svd!, A; trunc, kwargs...)
+
+select_algorithm(::typeof(right_null_lq!), A, alg = nothing; kwargs...) =
+    select_algorithm(lq_null!, A, alg; kwargs...)
+
+function select_algorithm(::typeof(right_null_svd!), A, alg; trunc = nothing, kwargs...)
+    if alg isa TruncatedAlgorithm
+        isnothing(trunc) ||
+            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
+        return alg
+    else
+        alg_svd = select_algorithm(svd_full!, A, alg; kwargs...)
+        return TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
+    end
+
+end

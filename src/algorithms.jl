@@ -212,6 +212,24 @@ function select_truncation(trunc)
 end
 
 @doc """
+    MatrixAlgebraKit.select_null_truncation(trunc)
+
+Construct a [`TruncationStrategy`](@ref) from the given `NamedTuple` of keywords or input strategy, to implement a nullspace selection.
+""" select_null_truncation
+
+function select_null_truncation(trunc)
+    if isnothing(trunc)
+        return NoTruncation()
+    elseif trunc isa NamedTuple
+        return null_truncation_strategy(; trunc...)
+    elseif trunc isa TruncationStrategy
+        return trunc
+    else
+        return throw(ArgumentError("Unknown truncation strategy: $trunc"))
+    end
+end
+
+@doc """
     MatrixAlgebraKit.findtruncated(values::AbstractVector, strategy::TruncationStrategy)
 
 Generic interface for finding truncated values of the spectrum of a decomposition
