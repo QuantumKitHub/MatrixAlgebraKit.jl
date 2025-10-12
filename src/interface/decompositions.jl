@@ -235,6 +235,10 @@ Divide and Conquer algorithm.
 """
 @algdef CUSOLVER_DivideAndConquer
 
+const CUSOLVER_SVDAlgorithm = Union{
+    CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
+}
+
 # =========================
 # ROCSOLVER ALGORITHMS
 # =========================
@@ -282,6 +286,7 @@ Divide and Conquer algorithm.
 """
 @algdef ROCSOLVER_DivideAndConquer
 
+const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 
 const GPU_Simple = Union{CUSOLVER_Simple}
 const GPU_EigAlgorithm = Union{GPU_Simple}
@@ -289,8 +294,13 @@ const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
 const GPU_Bisection = Union{ROCSOLVER_Bisection}
-const GPU_SVDAlgorithm = Union{GPU_Jacobi, GPU_DivideAndConquer, GPU_QRIteration}
-const GPU_EighAlgorithm = Union{GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection, CUSOLVER_SVDPolar}
+const GPU_EighAlgorithm = Union{
+    GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
+}
+const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
+
+const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
+const GPU_Randomized = Union{CUSOLVER_Randomized}
 
 left_orth_kind(::GPU_SVDAlgorithm) = left_orth_svd!
 right_orth_kind(::GPU_SVDAlgorithm) = right_orth_svd!
