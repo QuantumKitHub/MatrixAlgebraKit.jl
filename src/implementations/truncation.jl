@@ -26,6 +26,17 @@ function truncate(::typeof(right_null!), (S, Vᴴ), strategy::TruncationStrategy
     return Vᴴ[ind, :], ind
 end
 
+# special case `NoTruncation` for null: should keep exact zeros due to rectangularity
+function truncate(::typeof(left_null!), (U, S), strategy::NoTruncation)
+    ind = (1:max(0, size(S, 1) - size(S, 2))) .+ length(diagview(S))
+    return U[:, ind], ind
+end
+function truncate(::typeof(right_null!), (S, Vᴴ), strategy::NoTruncation)
+    ind = (1:max(0, size(S, 2) - size(S, 1))) .+ length(diagview(S))
+    return Vᴴ[ind, :], ind
+end
+
+
 # findtruncated
 # -------------
 # Generic fallback
