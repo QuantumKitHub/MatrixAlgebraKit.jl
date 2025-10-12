@@ -156,14 +156,11 @@ be used.
 
 See also [`right_null(!)`](@ref right_null), [`left_orth(!)`](@ref left_orth), [`right_orth(!)`](@ref right_orth)
 """
-function left_null end
-function left_null! end
-function left_null!(A; kwargs...)
-    return left_null!(A, initialize_output(left_null!, A); kwargs...)
-end
-function left_null(A; kwargs...)
-    return left_null!(copy_input(left_null, A); kwargs...)
-end
+@functiondef left_null
+
+# helper functions
+function left_null_qr! end
+function left_null_svd! end
 
 """
     right_null(A; [kind::Symbol, alg_lq, alg_svd]) -> Nᴴ
@@ -206,14 +203,11 @@ be used.
 
 See also [`left_null(!)`](@ref left_null), [`left_orth(!)`](@ref left_orth), [`right_orth(!)`](@ref right_orth)
 """
-function right_null end
-function right_null! end
-function right_null!(A; kwargs...)
-    return right_null!(A, initialize_output(right_null!, A); kwargs...)
-end
-function right_null(A; kwargs...)
-    return right_null!(copy_input(right_null, A); kwargs...)
-end
+@functiondef right_null
+
+# helper functions
+function right_null_lq! end
+function right_null_svd! end
 
 # Algorithm selection
 # -------------------
