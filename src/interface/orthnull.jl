@@ -371,9 +371,14 @@ function select_algorithm(::typeof(left_orth!), A, alg::Symbol; trunc = nothing,
     throw(ArgumentError(lazy"Unknown alg symbol $alg"))
 end
 
-default_algorithm(::typeof(left_orth!), A; trunc = nothing, kwargs...) =
+default_algorithm(::typeof(left_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
     isnothing(trunc) ? select_algorithm(left_orth_qr!, A; kwargs...) :
     select_algorithm(left_orth_svd!, A; trunc, kwargs...)
+# disambiguate
+default_algorithm(::typeof(left_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+    isnothing(trunc) ? select_algorithm(left_orth_qr!, A; kwargs...) :
+    select_algorithm(left_orth_svd!, A; trunc, kwargs...)
+
 
 select_algorithm(::typeof(left_orth_qr!), A, alg = nothing; kwargs...) =
     select_algorithm(qr_compact!, A, alg; kwargs...)
@@ -397,9 +402,14 @@ function select_algorithm(::typeof(right_orth!), A, alg::Symbol; trunc = nothing
     throw(ArgumentError(lazy"Unknown alg symbol $alg"))
 end
 
-default_algorithm(::typeof(right_orth!), A; trunc = nothing, kwargs...) =
+default_algorithm(::typeof(right_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
     isnothing(trunc) ? select_algorithm(right_orth_lq!, A; kwargs...) :
     select_algorithm(right_orth_svd!, A; trunc, kwargs...)
+# disambiguate:
+default_algorithm(::typeof(right_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+    isnothing(trunc) ? select_algorithm(right_orth_lq!, A; kwargs...) :
+    select_algorithm(right_orth_svd!, A; trunc, kwargs...)
+
 
 select_algorithm(::typeof(right_orth_lq!), A, alg = nothing; kwargs...) =
     select_algorithm(lq_compact!, A, alg; kwargs...)
@@ -421,7 +431,11 @@ function select_algorithm(::typeof(left_null!), A, alg::Symbol; trunc = nothing,
     throw(ArgumentError(lazy"unkown alg symbol $alg"))
 end
 
-default_algorithm(::typeof(left_null!), A; trunc = nothing, kwargs...) =
+default_algorithm(::typeof(left_null!), A::TA; trunc = nothing, kwargs...) where {TA} =
+    isnothing(trunc) ? select_algorithm(left_null_qr!, A; kwargs...) :
+    select_algorithm(left_null_svd!, A; trunc, kwargs...)
+# disambiguate
+default_algorithm(::typeof(left_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(left_null_qr!, A; kwargs...) :
     select_algorithm(left_null_svd!, A; trunc, kwargs...)
 
@@ -450,7 +464,10 @@ function select_algorithm(::typeof(right_null!), A, alg::Symbol; trunc = nothing
     throw(ArgumentError(lazy"unkown alg symbol $alg"))
 end
 
-default_algorithm(::typeof(right_null!), A; trunc = nothing, kwargs...) =
+default_algorithm(::typeof(right_null!), A::TA; trunc = nothing, kwargs...) where {TA} =
+    isnothing(trunc) ? select_algorithm(right_null_lq!, A; kwargs...) :
+    select_algorithm(right_null_svd!, A; trunc, kwargs...)
+default_algorithm(::typeof(right_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(right_null_lq!, A; kwargs...) :
     select_algorithm(right_null_svd!, A; trunc, kwargs...)
 
