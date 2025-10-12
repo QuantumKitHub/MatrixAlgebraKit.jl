@@ -1,28 +1,5 @@
 # Orth functions
 # --------------
-
-const docs_truncation_kwargs = """
-* `atol::Real`      : Absolute tolerance for the truncation
-* `rtol::Real`      : Relative tolerance for the truncation
-* `maxrank::Real`   : Maximal rank for the truncation
-* `maxerror::Real`  : Maximal truncation error.
-* `filter`          : Custom filter to select truncated values.
-"""
-
-const docs_truncation_strategies = """
-- [`notrunc`](@ref)
-- [`truncrank`](@ref)
-- [`trunctol`](@ref)
-- [`truncerror`](@ref)
-- [`truncfilter`](@ref)
-"""
-
-const docs_null_truncation_kwargs = """
-* `atol::Real`       : Absolute tolerance for the truncation
-* `rtol::Real`       : Relative tolerance for the truncation
-* `maxnullity::Real` : Maximal rank for the truncation
-"""
-
 """
     left_orth(A; [trunc], kwargs...) -> V, C
     left_orth!(A, [VC]; [trunc], kwargs...) -> V, C
