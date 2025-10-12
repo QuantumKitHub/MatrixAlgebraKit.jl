@@ -103,8 +103,6 @@ end
 
 # Implementation of null functions
 # --------------------------------
-
-
 left_null!(A, N, alg::AbstractAlgorithm) = left_null_kind(alg)(A, N, alg)
 left_null_qr!(A, N, alg::AbstractAlgorithm) = qr_null!(A, N, alg)
 
@@ -123,3 +121,9 @@ function right_null_svd!(A, Nᴴ, alg::TruncatedAlgorithm)
     Nᴴ, _ = truncate(right_null!, (S, Vᴴ), alg.trunc)
     return Nᴴ
 end
+
+# randomized algorithms don't work for smallest values:
+left_null_svd!(A, N, alg::TruncatedAlgorithm{<:GPU_Randomized}) =
+    throw(ArgumentError("Randomized SVD ($alg) cannot be used for null spaces"))
+right_null_svd!(A, Nᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized}) =
+    throw(ArgumentError("Randomized SVD ($alg) cannot be used for null spaces"))
