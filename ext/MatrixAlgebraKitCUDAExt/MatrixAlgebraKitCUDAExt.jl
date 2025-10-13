@@ -16,38 +16,38 @@ using CUDA: i32
 
 include("yacusolver.jl")
 
-function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {TT<:BlasFloat, T<:StridedCuMatrix{TT}}
+function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
     return CUSOLVER_HouseholderQR(; kwargs...)
 end
-function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {TT<:BlasFloat, T<:StridedCuMatrix{TT}}
+function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
     qr_alg = CUSOLVER_HouseholderQR(; kwargs...)
     return LQViaTransposedQR(qr_alg)
 end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {TT<:BlasFloat, T<:StridedCuMatrix{TT}}
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
     return CUSOLVER_QRIteration(; kwargs...)
 end
-function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {TT<:BlasFloat, T<:StridedCuMatrix{TT}}
+function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
     return CUSOLVER_Simple(; kwargs...)
 end
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {TT<:BlasFloat, T<:StridedCuMatrix{TT}}
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
     return CUSOLVER_DivideAndConquer(; kwargs...)
 end
 
 # include for block sector support
-function MatrixAlgebraKit.default_qr_algorithm(::Type{Base.ReshapedArray{T,2,SubArray{T,1,A,Tuple{UnitRange{Int}},true},Tuple{}}}; kwargs...) where {T<:BlasFloat, A<:CuVecOrMat{T}}
+function MatrixAlgebraKit.default_qr_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
     return CUSOLVER_HouseholderQR(; kwargs...)
 end
-function MatrixAlgebraKit.default_lq_algorithm(::Type{Base.ReshapedArray{T,2,SubArray{T,1,A,Tuple{UnitRange{Int}},true},Tuple{}}}; kwargs...) where {T<:BlasFloat, A<:CuVecOrMat{T}}
+function MatrixAlgebraKit.default_lq_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
     qr_alg = CUSOLVER_HouseholderQR(; kwargs...)
     return LQViaTransposedQR(qr_alg)
 end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{Base.ReshapedArray{T,2,SubArray{T,1,A,Tuple{UnitRange{Int}},true},Tuple{}}}; kwargs...) where {T<:BlasFloat, A<:CuVecOrMat{T}}
+function MatrixAlgebraKit.default_svd_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
     return CUSOLVER_Jacobi(; kwargs...)
 end
-function MatrixAlgebraKit.default_eig_algorithm(::Type{Base.ReshapedArray{T,2,SubArray{T,1,A,Tuple{UnitRange{Int}},true},Tuple{}}}; kwargs...) where {T<:BlasFloat, A<:CuVecOrMat{T}}
+function MatrixAlgebraKit.default_eig_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
     return CUSOLVER_Simple(; kwargs...)
 end
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{Base.ReshapedArray{T,2,SubArray{T,1,A,Tuple{UnitRange{Int}},true},Tuple{}}}; kwargs...) where {T<:BlasFloat, A<:CuVecOrMat{T}}
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
     return CUSOLVER_DivideAndConquer(; kwargs...)
 end
 
@@ -112,7 +112,7 @@ function _project_hermitian_diag_kernel(A, B, ::Val{true})
     j > n && return
     @inbounds begin
         for i in 1i32:(j - 1i32)
-            val = (A[i, j] - adjoint(A[j, i])) /2
+            val = (A[i, j] - adjoint(A[j, i])) / 2
             B[i, j] = val
             B[j, i] = -adjoint(val)
         end
@@ -140,22 +140,22 @@ function MatrixAlgebraKit._project_hermitian_offdiag!(
         Au::StridedCuMatrix, Al::StridedCuMatrix, Bu::StridedCuMatrix, Bl::StridedCuMatrix, ::Val{anti}
     ) where {anti}
     thread_dim = 512
-    block_dim  = cld(size(Au, 2), thread_dim)
-    @cuda threads=thread_dim blocks=block_dim _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, Val(anti))
+    block_dim = cld(size(Au, 2), thread_dim)
+    @cuda threads = thread_dim blocks = block_dim _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, Val(anti))
     return nothing
 end
 function MatrixAlgebraKit._project_hermitian_diag!(A::StridedCuMatrix, B::StridedCuMatrix, ::Val{anti}) where {anti}
     thread_dim = 512
-    block_dim  = cld(size(A, 1), thread_dim)
-    @cuda threads=thread_dim blocks=block_dim _project_hermitian_diag_kernel(A, B, Val(anti))
+    block_dim = cld(size(A, 1), thread_dim)
+    @cuda threads = thread_dim blocks = block_dim _project_hermitian_diag_kernel(A, B, Val(anti))
     return nothing
 end
 
-MatrixAlgebraKit.ishermitian_exact(A::StridedCuMatrix) = all( A .== adjoint(A))
-MatrixAlgebraKit.ishermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} = all( A.diag .== adjoint(A.diag))
+MatrixAlgebraKit.ishermitian_exact(A::StridedCuMatrix) = all(A .== adjoint(A))
+MatrixAlgebraKit.ishermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} = all(A.diag .== adjoint(A.diag))
 
-MatrixAlgebraKit.isantihermitian_exact(A::StridedCuMatrix) = all( A .== -adjoint(A))
-MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} = all( A.diag .== -adjoint(A.diag))
+MatrixAlgebraKit.isantihermitian_exact(A::StridedCuMatrix) = all(A .== -adjoint(A))
+MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} = all(A.diag .== -adjoint(A.diag))
 
 function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
@@ -165,14 +165,14 @@ function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
         @inbounds begin
             a = A[j]
             b = B[j]
-            A[j] = (a+b)/2
+            A[j] = (a + b) / 2
             B[j] = b - a
         end
         return
     end
     thread_dim = 512
-    block_dim  = cld(length(A), thread_dim)
-    @cuda threads=thread_dim blocks=block_dim _avgdiff_kernel(A, B)
+    block_dim = cld(length(A), thread_dim)
+    @cuda threads = thread_dim blocks = block_dim _avgdiff_kernel(A, B)
     return A, B
 end
 

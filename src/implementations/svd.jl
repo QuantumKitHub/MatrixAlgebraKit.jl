@@ -354,7 +354,7 @@ function _gpu_gesvd_maybe_transpose!(A::AbstractMatrix, S::AbstractVector, U::Ab
     minmn = min(m, n)
     Aᴴ = min(m, n) > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
     Uᴴ = similar(U')
-    V  = similar(Vᴴ')
+    V = similar(Vᴴ')
     if size(U) == (m, m)
         _gpu_gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
     else

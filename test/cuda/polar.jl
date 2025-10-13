@@ -13,7 +13,7 @@ using CUDA
         k = min(m, n)
         svd_algs = (CUSOLVER_QRIteration(), CUSOLVER_Jacobi())
         @testset "algorithm $svd_alg" for svd_alg in svd_algs
-            n < m && svd_alg isa CUSOLVER_QRIteration && continue 
+            n < m && svd_alg isa CUSOLVER_QRIteration && continue
             A = CuArray(randn(rng, T, m, n))
             alg = PolarViaSVD(svd_alg)
             W, P = left_polar(A; alg)
@@ -52,14 +52,14 @@ end
         k = min(m, n)
         svd_algs = (CUSOLVER_QRIteration(), CUSOLVER_Jacobi())
         @testset "algorithm $svd_alg" for svd_alg in svd_algs
-            n > m && svd_alg isa CUSOLVER_QRIteration && continue 
+            n > m && svd_alg isa CUSOLVER_QRIteration && continue
             A = CuArray(randn(rng, T, m, n))
             alg = PolarViaSVD(svd_alg)
             P, Wᴴ = right_polar(A; alg)
             @test Wᴴ isa CuMatrix{T} && size(Wᴴ) == (m, n)
-            @test P  isa CuMatrix{T} && size(P) == (m, m)
+            @test P isa CuMatrix{T} && size(P) == (m, m)
             @test P * Wᴴ ≈ A
-            @test isisometric(Wᴴ; side=:right)
+            @test isisometric(Wᴴ; side = :right)
             # work around extremely strict Julia criteria for Hermiticity
             @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P)) && isposdef(Hermitian(P))
 
@@ -68,7 +68,7 @@ end
             @test P2 === P
             @test Wᴴ2 === Wᴴ
             @test P * Wᴴ ≈ A
-            @test isisometric(Wᴴ; side=:right)
+            @test isisometric(Wᴴ; side = :right)
             # work around extremely strict Julia criteria for Hermiticity
             @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P)) && isposdef(Hermitian(P))
 
