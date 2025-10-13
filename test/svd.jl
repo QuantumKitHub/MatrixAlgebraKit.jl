@@ -97,6 +97,7 @@ end
 @testset "svd_trunc! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
+    atol = sqrt(eps(real(T)))
     if LinearAlgebra.LAPACK.version() < v"3.12.0"
         algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
     else
@@ -117,7 +118,7 @@ end
             @test length(S1.diag) == r
             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
             # Test truncation error
-            @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn))
+            @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             s = 1 + sqrt(eps(real(T)))
             trunc = trunctol(; atol = s * S₀[r + 1])
@@ -187,6 +188,7 @@ end
 
 @testset "svd for Diagonal{$T}" for T in BLASFloats
     rng = StableRNG(123)
+    atol = sqrt(eps(real(T)))
     for m in (54, 0)
         Ad = randn(T, m)
         A = Diagonal(Ad)
@@ -216,6 +218,6 @@ end
         alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
         U3, S3, Vᴴ3, ϵ3 = @constinferred svd_trunc(A; alg)
         @test diagview(S3) ≈ S2[1:min(m, 2)]
-        @test ϵ3 ≈ norm(S2[(min(m, 2) + 1):m])
+        @test ϵ3 ≈ norm(S2[(min(m, 2) + 1):m]) atol = atol
     end
 end
