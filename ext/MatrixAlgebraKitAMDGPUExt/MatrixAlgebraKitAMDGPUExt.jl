@@ -49,8 +49,6 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{Base.ReshapedArray{T,2,S
     return ROCSOLVER_DivideAndConquer(; kwargs...)
 end
 
-MatrixAlgebraKit.ishermitian_exact(A::StridedROCMatrix) = ishermitian(A)
-
 _gpu_geqrf!(A::StridedROCMatrix) = YArocSOLVER.geqrf!(A)
 _gpu_ungqr!(A::StridedROCMatrix, τ::StridedROCVector) = YArocSOLVER.ungqr!(A, τ)
 _gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::StridedROCMatrix, τ::StridedROCVector, C::StridedROCVecOrMat) =
@@ -169,7 +167,7 @@ function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
     end
     thread_dim = 512
     block_dim  = cld(length(A), thread_dim)
-    @cuda groupsize=thread_dim gridsize=block_dim _avgdiff_kernel(A, B)
+    @roc groupsize=thread_dim gridsize=block_dim _avgdiff_kernel(A, B)
     return A, B
 end
 end
