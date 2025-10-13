@@ -239,7 +239,7 @@ end
 function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
-    return USVᴴtrunc..., compute_truncerr!(diagview(S), ind)
+    return USVᴴtrunc..., truncation_error!(diagview(S), ind)
 end
 
 # Diagonal logic
@@ -385,7 +385,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
     Strunc = diagview(USVᴴtrunc[2])
-    # normal `compute_truncerr!` does not work here since `S` is not the full singular value spectrum
+    # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
     ϵ = sqrt(norm(A)^2 - norm(Strunc)^2) # is there a more accurate way to do this?
     return USVᴴtrunc..., ϵ
 end

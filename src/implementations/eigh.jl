@@ -112,7 +112,7 @@ end
 function eigh_trunc!(A, DV, alg::TruncatedAlgorithm)
     D, V = eigh_full!(A, DV, alg.alg)
     DVtrunc, ind = truncate(eigh_trunc!, (D, V), alg.trunc)
-    return DVtrunc..., compute_truncerr!(diagview(D), ind)
+    return DVtrunc..., truncation_error!(diagview(D), ind)
 end
 
 # Diagonal logic

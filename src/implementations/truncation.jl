@@ -117,9 +117,20 @@ _ind_intersect(A::AbstractVector, B::AbstractVector{Bool}) = _ind_intersect(B, A
 _ind_intersect(A::AbstractVector{Bool}, B::AbstractVector{Bool}) = A .& B
 _ind_intersect(A, B) = intersect(A, B)
 
-# Compute truncation error as 2-norm of discarded values
-# by destroying original values
-function compute_truncerr!(values::AbstractVector, ind)
+# Truncation error
+# ----------------
+@doc """
+    truncation_error(values, ind)
+    truncation_error!(values, ind)
+
+Determine the truncation error of selecting `ind` out of the `values`.
+This is defined as the 2-norm of the discarded values.
+""" truncation_error, truncation_error!
+
+truncation_error(values::AbstractVector, ind) = truncation_error!(copy(values), ind)
+# destroys input in order to maximize accuracy:
+# sqrt(norm(values)^2 - norm(values[ind])^2) might suffer from floating point error
+function truncation_error!(values::AbstractVector, ind)
     values[ind] .= zero(eltype(values))
     return norm(values)
 end
