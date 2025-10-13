@@ -214,7 +214,7 @@ for more information.
 """
 @algdef CUSOLVER_Randomized
 
-does_truncate(::CUSOLVER_Randomized) = true
+does_truncate(::TruncatedAlgorithm{<:CUSOLVER_Randomized}) = true
 
 """
     CUSOLVER_Simple()
