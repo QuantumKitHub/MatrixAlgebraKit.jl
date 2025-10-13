@@ -119,14 +119,6 @@ _ind_intersect(A, B) = intersect(A, B)
 
 # Truncation error
 # ----------------
-@doc """
-    truncation_error(values, ind)
-    truncation_error!(values, ind)
-
-Determine the truncation error of selecting `ind` out of the `values`.
-This is defined as the 2-norm of the discarded values.
-""" truncation_error, truncation_error!
-
 truncation_error(values::AbstractVector, ind) = truncation_error!(copy(values), ind)
 # destroys input in order to maximize accuracy:
 # sqrt(norm(values)^2 - norm(values[ind])^2) might suffer from floating point error

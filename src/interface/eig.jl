@@ -45,6 +45,26 @@ selected according to a truncation strategy.
 The function also returns `ϵ`, the truncation error defined as the 2-norm of the 
 discarded eigenvalues.
 
+## Keyword arguments
+The behavior of this function is controlled by the following keyword arguments:
+
+- `trunc`: Specifies the truncation strategy. This can be:
+  - A `NamedTuple` with fields `atol`, `rtol`, and/or `maxrank`, which will be converted to
+    a [`TruncationStrategy`](@ref). For details on available truncation strategies, see
+    [Truncations](@ref).
+  - A `TruncationStrategy` object directly (e.g., `truncrank(10)`, `trunctol(atol=1e-6)`, or
+    combinations using `&`).
+  - `nothing` (default), which keeps all eigenvalues.
+
+- Other keyword arguments are passed to the algorithm selection procedure. If no explicit
+  `alg` is provided, these keywords are used to select and configure the algorithm through
+  [`MatrixAlgebraKit.select_algorithm`](@ref). The remaining keywords after algorithm
+  selection are passed to the algorithm constructor. See [`MatrixAlgebraKit.default_algorithm`](@ref)
+  for the default algorithm selection behavior.
+
+When `alg` is a [`TruncatedAlgorithm`](@ref), the `trunc` keyword cannot be specified as the
+truncation strategy is already embedded in the algorithm.
+
 !!! note
     The bang method `eig_trunc!` optionally accepts the output structure and
     possibly destroys the input matrix `A`. Always use the return value of the function
