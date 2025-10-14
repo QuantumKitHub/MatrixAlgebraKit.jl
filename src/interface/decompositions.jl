@@ -328,6 +328,11 @@ function Base.show(io::IO, alg::LQViaTransposedQR)
 end
 
 # =========================
+# RANDOMIZED ALGORITHMS
+# =========================
+@algdef RandomizedSVD
+
+# =========================
 # CUSOLVER ALGORITHMS
 # =========================
 """
