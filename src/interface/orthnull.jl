@@ -7,10 +7,26 @@
 Compute an orthonormal basis `V` for the image of the matrix `A`, as well as a  matrix `C`
 (the corestriction) such that `A` factors as `A = V * C`.
 
-This is a high-level wrapper where te keyword arguments can be used to specify and control
+This is a high-level wrapper where the keyword arguments can be used to specify and control
 the specific orthogonal decomposition that should be used to factor `A`, whereas `trunc`
 can optionally be used to control the precision in determining the rank of `A`, typically
 via its singular values.
+
+## Truncation
+The optional truncation strategy can be controlled via the `trunc` keyword argument, and
+any non-trivial strategy typically requires an SVD-based decompositions. This keyword can
+be either a `NamedTuple` or a [`TruncationStrategy`](@ref).
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$(docs_truncation_kwargs)
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly.
+By default, MatrixAlgebraKit supplies the following:
+
+$(docs_truncation_strategies)
 
 ## Keyword arguments
 There are 3 major modes of operation, based on the `alg` keyword, with slightly different
@@ -51,22 +67,6 @@ In this expert mode the algorithm is supplied directly, and the kind of decompos
 deduced from that. This hinges on the implementation of the algorithm trait
 [`MatrixAlgebraKit.left_orth_kind(alg)`](@ref).
 
-## Truncation
-The optional truncation strategy can be controlled via the `trunc` keyword argument, and
-any non-trivial strategy typically requires an SVD-based decompositions. This keyword can
-be either a `NamedTuple` or a [`TruncationStrategy`](@ref).
-
-### `trunc::NamedTuple`
-The supported truncation keyword arguments are:
-
-$(docs_truncation_kwargs)
-
-### `trunc::TruncationStrategy`
-For more control, a truncation strategy can be supplied directly.
-By default, MatrixAlgebraKit supplies the following:
-
-$(docs_truncation_strategies)
-
 ---
 
 !!! note
@@ -95,6 +95,22 @@ This is a high-level wrapper where the keyword arguments can be used to specify 
 the specific orthogonal decomposition that should be used to factor `A`, whereas `trunc` can
 optionally be used to control the precision in determining the rank of `A`, typically via
 its singular values.
+
+## Truncation
+The optional truncation strategy can be controlled via the `trunc` keyword argument, and
+any non-trivial strategy typically requires an SVD-based decompositions. This keyword can
+be either a `NamedTuple` or a [`TruncationStrategy`](@ref).
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$(docs_truncation_kwargs)
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly.
+By default, MatrixAlgebraKit supplies the following:
+
+$(docs_truncation_strategies)
 
 ## Keyword arguments
 There are 3 major modes of operation, based on the `alg` keyword, with slightly different
@@ -135,22 +151,6 @@ In this expert mode the algorithm is supplied directly, and the kind of decompos
 deduced from that. This hinges on the implementation of the algorithm trait
 [`MatrixAlgebraKit.right_orth_kind(alg)`](@ref).
 
-## Truncation
-The optional truncation strategy can be controlled via the `trunc` keyword argument, and
-any non-trivial strategy typically requires an SVD-based decompositions. This keyword can
-be either a `NamedTuple` or a [`TruncationStrategy`](@ref).
-
-### `trunc::NamedTuple`
-The supported truncation keyword arguments are:
-
-$(docs_truncation_kwargs)
-
-### `trunc::TruncationStrategy`
-For more control, a truncation strategy can be supplied directly.
-By default, MatrixAlgebraKit supplies the following:
-
-$(docs_truncation_strategies)
-
 ---
 
 !!! note
@@ -181,6 +181,26 @@ This is a high-level wrapper where the keyword arguments can be used to specify 
 the underlying orthogonal decomposition that should be used to find the null space of `A'`,
 whereas `trunc` can optionally  be used to control the precision in determining the rank of
 `A`, typically via its singular values.
+
+## Truncation
+The optional truncation strategy can be controlled via the `trunc` keyword argument, and any
+non-trivial strategy typically requires an SVD-based decomposition. This keyword can be
+either a `NamedTuple` or a [`TruncationStrategy`](@ref).
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$(docs_null_truncation_kwargs)
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly. By default,
+MatrixAlgebraKit supplies the following:
+
+$(docs_truncation_strategies)
+
+!!! note
+    Here [`notrunc`](@ref) has special meaning, and signifies keeping the values that
+    correspond to the exact zeros determined from the additional columns of `A`.
 
 ## Keyword arguments
 There are 3 major modes of operation, based on the `alg` keyword, with slightly different
@@ -215,26 +235,6 @@ In this expert mode the algorithm is supplied directly, and the kind of decompos
 deduced from that. This hinges on the implementation of the algorithm trait
 [`MatrixAlgebraKit.left_null_kind(alg)`](@ref).
 
-## Truncation
-The optional truncation strategy can be controlled via the `trunc` keyword argument, and any
-non-trivial strategy typically requires an SVD-based decomposition. This keyword can be
-either a `NamedTuple` or a [`TruncationStrategy`](@ref).
-
-### `trunc::NamedTuple`
-The supported truncation keyword arguments are:
-
-$(docs_null_truncation_kwargs)
-
-### `trunc::TruncationStrategy`
-For more control, a truncation strategy can be supplied directly. By default,
-MatrixAlgebraKit supplies the following:
-
-$(docs_truncation_strategies)
-
-!!! note
-    Here [`notrunc`](@ref) has special meaning, and signifies keeping the values that
-    correspond to the exact zeros determined from the additional columns of `A`.
-
 ---
 
 !!! note
@@ -262,6 +262,26 @@ This is a high-level wrapper where the keyword arguments can be used to specify 
 the underlying orthogonal decomposition that should be used to find the null space of `A`,
 whereas `trunc` can optionally  be used to control the precision in determining the rank of
 `A`, typically via its singular values.
+
+## Truncation
+The optional truncation strategy can be controlled via the `trunc` keyword argument, and any
+non-trivial strategy typically requires an SVD-based decomposition. This keyword can be
+either a `NamedTuple` or a [`TruncationStrategy`](@ref).
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$(docs_null_truncation_kwargs)
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly. By default,
+MatrixAlgebraKit supplies the following:
+
+$(docs_truncation_strategies)
+
+!!! note
+    Here [`notrunc`](@ref) has special meaning, and signifies keeping the values that
+    correspond to the exact zeros determined from the additional rows of `A`.
 
 ## Keyword arguments
 There are 3 major modes of operation, based on the `alg` keyword, with slightly different
@@ -295,26 +315,6 @@ procedure takes other keywords into account:
 In this expert mode the algorithm is supplied directly, and the kind of decomposition is
 deduced from that. This hinges on the implementation of the algorithm trait
 [`MatrixAlgebraKit.right_null_kind(alg)`](@ref).
-
-## Truncation
-The optional truncation strategy can be controlled via the `trunc` keyword argument, and any
-non-trivial strategy typically requires an SVD-based decomposition. This keyword can be
-either a `NamedTuple` or a [`TruncationStrategy`](@ref).
-
-### `trunc::NamedTuple`
-The supported truncation keyword arguments are:
-
-$(docs_null_truncation_kwargs)
-
-### `trunc::TruncationStrategy`
-For more control, a truncation strategy can be supplied directly. By default,
-MatrixAlgebraKit supplies the following:
-
-$(docs_truncation_strategies)
-
-!!! note
-    Here [`notrunc`](@ref) has special meaning, and signifies keeping the values that
-    correspond to the exact zeros determined from the additional rows of `A`.
 
 ---
 
