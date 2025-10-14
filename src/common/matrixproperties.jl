@@ -151,20 +151,20 @@ function strided_ishermitian_approx(
         blocksize = 32, atol::Real = default_hermitian_tol(A), rtol::Real = 0
     )
     n = size(A, 1)
-    ϵ = abs2(zero(eltype(A)))
-    ϵmax = oftype(ϵ, rtol > 0 ? max(atol, rtol * norm(A)) : atol)^2
+    ϵ² = abs2(zero(eltype(A)))
+    ϵ²max = oftype(ϵ², rtol > 0 ? max(atol, rtol * norm(A)) : atol)^2
     for j in 1:blocksize:n
         jb = min(blocksize, n - j + 1)
-        ϵ += _ishermitian_approx_diag(view(A, j:(j + jb - 1), j:(j + jb - 1)), anti)
-        ϵ < ϵmax || return false
+        ϵ² += _ishermitian_approx_diag(view(A, j:(j + jb - 1), j:(j + jb - 1)), anti)
+        ϵ² < ϵ²max || return false
         for i in 1:blocksize:(j - 1)
             ib = blocksize
-            ϵ += _ishermitian_approx_offdiag(
+            ϵ² += _ishermitian_approx_offdiag(
                 view(A, i:(i + ib - 1), j:(j + jb - 1)),
                 view(A, j:(j + jb - 1), i:(i + ib - 1)),
                 anti
             )
-            ϵ < ϵmax || return false
+            ϵ² < ϵ²max || return false
         end
     end
     return true
@@ -172,23 +172,23 @@ end
 
 function _ishermitian_approx_diag(A, ::Val{anti}) where {anti}
     n = size(A, 1)
-    ϵ = abs2(zero(eltype(A)))
+    ϵ² = abs2(zero(eltype(A)))
     @inbounds for j in 1:n
         @simd for i in 1:j
             val = anti ? (A[i, j] + adjoint(A[j, i])) : (A[i, j] - adjoint(A[j, i]))
-            ϵ += abs2(val)
+            ϵ² += abs2(val) * (1 + Int(i < j))
         end
     end
-    return ϵ
+    return ϵ²
 end
 function _ishermitian_approx_offdiag(Al, Au, ::Val{anti}) where {anti}
     m, n = size(Al) # == reverse(size(Al))
-    ϵ = abs2(zero(eltype(Al)))
+    ϵ² = abs2(zero(eltype(Al)))
     @inbounds for j in 1:n
         @simd for i in 1:m
             val = anti ? (Al[i, j] + adjoint(Au[j, i])) : (Al[i, j] - adjoint(Au[j, i]))
-            ϵ += abs2(val)
+            ϵ² += abs2(val)
         end
     end
-    return ϵ
+    return 2ϵ²
 end
