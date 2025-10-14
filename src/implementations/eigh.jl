@@ -8,10 +8,20 @@ copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
 
 copy_input(::typeof(eigh_full), A::Diagonal) = copy(A)
 
-function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::AbstractAlgorithm)
+_hermitian_tol(A, alg) = default_hermitian_tol(A)
+_hermitian_tol(A, alg::Algorithm) = get(alg.kwargs, :hermitian_tol, default_hermitian_tol(A))
+function check_hermitian(A, alg, context::Symbol)
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected"))
+    ishermitian(A; atol = _hermitian_tol(A, alg)) ||
+        throw(DomainError(A, "`eigh_$(context)!(A)` was called on a non-hermitian input matrix `A`. Try `eig_$(context)!(A)` or `eigh_$(context)(project_hermitian(A))` instead."))
+    return nothing
+end
+
+function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractAlgorithm)
+    check_hermitian(A, alg, :full)
     D, V = DV
+    m = size(A, 1)
     @assert D isa Diagonal && V isa AbstractMatrix
     @check_size(D, (m, m))
     @check_scalar(D, A, real)
@@ -19,19 +29,19 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::AbstractAlgo
     @check_scalar(V, A)
     return nothing
 end
-function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, ::AbstractAlgorithm)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected"))
+function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::AbstractAlgorithm)
+    check_hermitian(A, alg, :vals)
+    m = size(A, 1)
     @assert D isa AbstractVector
-    @check_size(D, (n,))
+    @check_size(D, (m,))
     @check_scalar(D, A, real)
     return nothing
 end
 
-function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::DiagonalAlgorithm)
-    m, n = size(A)
-    @assert m == n && isdiag(A)
-    @assert (eltype(A) <: Real && issymmetric(A)) || ishermitian(A)
+function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalAlgorithm)
+    check_hermitian(A, alg, :full)
+    @assert isdiag(A)
+    m = size(A, 1)
     D, V = DV
     @assert D isa Diagonal && V isa Diagonal
     @check_size(D, (m, m))
@@ -40,12 +50,12 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, ::DiagonalAlgo
     @check_scalar(V, A)
     return nothing
 end
-function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, ::DiagonalAlgorithm)
-    m, n = size(A)
-    @assert m == n && isdiag(A)
-    @assert (eltype(A) <: Real && issymmetric(A)) || ishermitian(A)
+function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::DiagonalAlgorithm)
+    check_hermitian(A, alg, :vals)
+    @assert isdiag(A)
+    m = size(A, 1)
     @assert D isa AbstractVector
-    @check_size(D, (n,))
+    @check_size(D, (m,))
     @check_scalar(D, A, real)
     return nothing
 end
