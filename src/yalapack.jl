@@ -984,7 +984,8 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
                 A::AbstractMatrix{$elty},
                 W::AbstractVector{$relty} = similar(A, $relty, size(A, 1)),
                 V::AbstractMatrix{$elty} = A;
-                uplo::AbstractChar = 'U'
+                uplo::AbstractChar = 'U',
+                kwargs...
             ) # shouldn't matter but 'U' seems slightly faster than 'L'
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
@@ -1274,7 +1275,8 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
                 A::AbstractMatrix{$elty},
                 W::AbstractVector{$relty} = similar(A, $relty, size(A, 1)),
                 V::AbstractMatrix{$elty} = A;
-                uplo::AbstractChar = 'U'
+                uplo::AbstractChar = 'U',
+                kwargs...
             ) # shouldn't matter but 'U' seems slightly faster than 'L'
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
