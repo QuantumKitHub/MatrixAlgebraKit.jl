@@ -12,17 +12,15 @@ Truncation strategies allow you to control which eigenvalues or singular values 
 Truncation strategies can be used with truncated decomposition functions in two ways, as illustrated below.
 For concreteness, we use the following matrix as an example:
 
-```jldoctest truncations
+```jldoctest truncations; output=false
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
 
 A = [2 1 0; 1 3 1; 0 1 4];
 D, V = eigh_full(A);
-
 diagview(D) ≈ [3 - √3, 3, 3 + √3]
 
 # output
-
 true
 ```
 
@@ -31,38 +29,35 @@ true
 The simplest approach is to pass a `NamedTuple` with the truncation parameters.
 For example, keeping only the largest 2 eigenvalues:
 
-```jldoctest truncations
-Dtrunc, Vtrunc = eigh_trunc(A; trunc = (maxrank = 2,));
+```jldoctest truncations; output=false
+Dtrunc, Vtrunc, ϵ = eigh_trunc(A; trunc = (maxrank = 2,));
 size(Dtrunc, 1) <= 2
 
 # output
-
 true
 ```
 
 Note however that there are no guarantees on the order of the output values:
 
-```jldoctest truncations
+```jldoctest truncations; output=false
 diagview(Dtrunc) ≈ diagview(D)[[3, 2]]
 
 # output
-
 true
 ```
 
 You can also use tolerance-based truncation or combine multiple criteria:
 
-```jldoctest truncations
-Dtrunc, Vtrunc = eigh_trunc(A; trunc = (atol = 2.9,));
+```jldoctest truncations; output=false
+Dtrunc, Vtrunc, ϵ = eigh_trunc(A; trunc = (atol = 2.9,));
 all(>(2.9), diagview(Dtrunc))
 
 # output
-
 true
 ```
 
-```jldoctest truncations
-Dtrunc, Vtrunc = eigh_trunc(A; trunc = (maxrank = 2, atol = 2.9));
+```jldoctest truncations; output=false
+Dtrunc, Vtrunc, ϵ = eigh_trunc(A; trunc = (maxrank = 2, atol = 2.9));
 size(Dtrunc, 1) <= 2 && all(>(2.9), diagview(Dtrunc))
 
 # output
@@ -72,7 +67,7 @@ true
 In general, the keyword arguments that are supported can be found in the `TruncationStrategy` docstring:
 
 ```@docs; canonical = false
-TruncationStrategy
+TruncationStrategy()
 ```
 
 
@@ -81,32 +76,21 @@ TruncationStrategy
 For more control, you can construct [`TruncationStrategy`](@ref) objects directly.
 This is also what the previous syntax will end up calling.
 
-```jldoctest truncations
+```jldoctest truncations; output=false
 Dtrunc, Vtrunc = eigh_trunc(A; trunc = truncrank(2))
 size(Dtrunc, 1) <= 2
 
 # output
-
 true
 ```
 
-```jldoctest truncations
-Dtrunc, Vtrunc = eigh_trunc(A; trunc = truncrank(2) & trunctol(; atol = 2.9))
+```jldoctest truncations; output=false
+Dtrunc, Vtrunc, ϵ = eigh_trunc(A; trunc = truncrank(2) & trunctol(; atol = 2.9))
 size(Dtrunc, 1) <= 2 && all(>(2.9), diagview(Dtrunc))
 
 # output
 true
 ```
-
-## Truncation with SVD vs Eigenvalue Decompositions
-
-When using truncations with different decomposition types, keep in mind:
-
-- **`svd_trunc`**: Singular values are always real and non-negative, sorted in descending order. Truncation by value typically keeps the largest singular values.
-
-- **`eigh_trunc`**: Eigenvalues are real but can be negative for symmetric matrices. By default, `truncrank` sorts by absolute value, so `truncrank(k)` keeps the `k` eigenvalues with largest magnitude (positive or negative).
-
-- **`eig_trunc`**: For general (non-symmetric) matrices, eigenvalues can be complex. Truncation by absolute value considers the complex magnitude.
 
 ## Truncation Strategies
 
@@ -126,4 +110,32 @@ When strategies are combined, only the values that satisfy all conditions are ke
 ```julia
 combined_trunc = truncrank(10) & trunctol(; atol = 1e-6);
 ```
+
+## Truncation Error
+
+When using truncated decompositions such as [`svd_trunc`](@ref), [`eig_trunc`](@ref), or [`eigh_trunc`](@ref), an additional truncation error value is returned.
+This error is defined as the 2-norm of the discarded  singular values or eigenvalues, providing a measure of the approximation quality.
+For `svd_trunc` and `eigh_trunc`, this corresponds to the 2-norm difference between the original and the truncated matrix.
+For the case of `eig_trunc`, this interpretation does not hold because the norm of the non-unitary matrix of eigenvectors and its inverse also influence the approximation quality.
+
+
+For example:
+```jldoctest truncations; output=false
+using LinearAlgebra: norm
+U, S, Vᴴ, ϵ = svd_trunc(A; trunc=truncrank(2))
+norm(A - U * S * Vᴴ) ≈ ϵ # ϵ is the 2-norm of the discarded singular values
+
+# output
+true
+```
+
+### Truncation with SVD vs Eigenvalue Decompositions
+
+When using truncations with different decomposition types, keep in mind:
+
+- **[`svd_trunc`](@ref)**: Singular values are always real and non-negative, sorted in descending order. Truncation by value typically keeps the largest singular values. The truncation error gives the 2-norm difference between the original and the truncated matrix.
+
+- **[`eigh_trunc`](@ref)**: Eigenvalues are real but can be negative for symmetric matrices. By default, eigenvalues are treated by absolute value, e.g. `truncrank(k)` keeps the `k` eigenvalues with largest magnitude (positive or negative). The truncation error gives the 2-norm difference between the original and the truncated matrix.
+
+- **[`eig_trunc`](@ref)**: For general (non-symmetric) matrices, eigenvalues can be complex. By default, eigenvalues are treated by absolute value. The truncation error gives an indication of the magnitude of discarded values, but is not directly related to the 2-norm difference between the original and the truncated matrix.
 

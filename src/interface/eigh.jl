@@ -12,14 +12,17 @@ docs_eigh_note = """
 """
 
 """
-    eigh_full(A; kwargs...) -> D, V
-    eigh_full(A, alg::AbstractAlgorithm) -> D, V
-    eigh_full!(A, [DV]; kwargs...) -> D, V
-    eigh_full!(A, [DV], alg::AbstractAlgorithm) -> D, V
+    eigh_full(A; kwargs...) -> D, V, ϵ
+    eigh_full(A, alg::AbstractAlgorithm) -> D, V, ϵ
+    eigh_full!(A, [DV]; kwargs...) -> D, V, ϵ
+    eigh_full!(A, [DV], alg::AbstractAlgorithm) -> D, V, ϵ
 
 Compute the full eigenvalue decomposition of the symmetric or hermitian matrix `A`,
 such that `A * V = V * D`, where the unitary matrix `V` contains the orthogonal eigenvectors
 and the real diagonal matrix `D` contains the associated eigenvalues.
+
+The function also returns `ϵ`, the truncation error defined as the 2-norm of the 
+discarded eigenvalues.
 
 !!! note
     The bang method `eigh_full!` optionally accepts the output structure and
@@ -34,15 +37,18 @@ See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref eigh_trunc)
 @functiondef eigh_full
 
 """
-    eigh_trunc(A; [trunc], kwargs...) -> D, V
-    eigh_trunc(A, alg::AbstractAlgorithm) -> D, V
-    eigh_trunc!(A, [DV]; [trunc], kwargs...) -> D, V
-    eigh_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
+    eigh_trunc(A; [trunc], kwargs...) -> D, V, ϵ
+    eigh_trunc(A, alg::AbstractAlgorithm) -> D, V, ϵ
+    eigh_trunc!(A, [DV]; [trunc], kwargs...) -> D, V, ϵ
+    eigh_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V, ϵ
 
 Compute a partial or truncated eigenvalue decomposition of the symmetric or hermitian matrix
 `A`, such that `A * V ≈ V * D`, where the isometric matrix `V` contains a subset of the
 orthogonal eigenvectors and the real diagonal matrix `D` contains the associated eigenvalues,
 selected according to a truncation strategy.
+
+The function also returns `ϵ`, the truncation error defined as the 2-norm of the discarded
+eigenvalues.
 
 ## Keyword arguments
 The behavior of this function is controlled by the following keyword arguments:

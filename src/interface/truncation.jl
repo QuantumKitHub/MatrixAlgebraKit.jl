@@ -181,3 +181,8 @@ Base.:&(::NoTruncation, ::NoTruncation) = notrunc()
 # disambiguate
 Base.:&(::NoTruncation, trunc::TruncationIntersection) = trunc
 Base.:&(trunc::TruncationIntersection, ::NoTruncation) = trunc
+
+@doc """
+    truncation_error(values, ind)
+Compute the truncation error as the 2-norm of the values that are not kept by `ind`.
+""" truncation_error, truncation_error!

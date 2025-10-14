@@ -42,15 +42,18 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_vals(!)`](@ref svd_vals) and
 @functiondef svd_compact
 
 """
-    svd_trunc(A; [trunc], kwargs...) -> U, S, Vᴴ
-    svd_trunc(A, alg::AbstractAlgorithm) -> U, S, Vᴴ
-    svd_trunc!(A, [USVᴴ]; [trunc], kwargs...) -> U, S, Vᴴ
-    svd_trunc!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ
+    svd_trunc(A; [trunc], kwargs...) -> U, S, Vᴴ, ϵ
+    svd_trunc(A, alg::AbstractAlgorithm) -> U, S, Vᴴ, ϵ
+    svd_trunc!(A, [USVᴴ]; [trunc], kwargs...) -> U, S, Vᴴ, ϵ
+    svd_trunc!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ, ϵ
 
 Compute a partial or truncated singular value decomposition (SVD) of `A`, such that
-`A * (Vᴴ)' =  U * S`. Here, `U` is an isometric matrix (orthonormal columns) of size
+`A * (Vᴴ)' ≈ U * S`. Here, `U` is an isometric matrix (orthonormal columns) of size
 `(m, k)`, whereas  `Vᴴ` is a matrix of size `(k, n)` with orthonormal rows and `S` is a
 square diagonal matrix of size `(k, k)`, with `k` is set by the truncation strategy.
+
+The function also returns `ϵ`, the truncation error defined as the 2-norm of the 
+discarded singular values.
 
 ## Keyword arguments
 The behavior of this function is controlled by the following keyword arguments:

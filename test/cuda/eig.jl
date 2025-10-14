@@ -44,13 +44,13 @@ end
         rmin = findfirst(i -> abs(D₀[end - i]) != abs(D₀[end - i - 1]), 1:(m - 2))
         r = length(D₀) - rmin
 
-        D1, V1 = @constinferred eig_trunc(A; alg, trunc=truncrank(r))
+        D1, V1, ϵ1 = @constinferred eig_trunc(A; alg, trunc=truncrank(r))
         @test length(D1.diag) == r
         @test A * V1 ≈ V1 * D1
 
         s = 1 + sqrt(eps(real(T)))
         trunc = trunctol(; atol=s * abs(D₀[r + 1]))
-        D2, V2 = @constinferred eig_trunc(A; alg, trunc)
+        D2, V2, ϵ2 = @constinferred eig_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test A * V2 ≈ V2 * D2
 

@@ -97,6 +97,7 @@ end
 @testset "svd_trunc! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
+    atol = sqrt(eps(real(T)))
     if LinearAlgebra.LAPACK.version() < v"3.12.0"
         algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
     else
@@ -113,25 +114,30 @@ end
             minmn = min(m, n)
             r = minmn - 2
 
-            U1, S1, V1ᴴ = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
-            @test length(S1.diag) == r
+            U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
+            @test length(diagview(S1)) == r
+            @test diagview(S1) ≈ S₀[1:r]
             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            # Test truncation error
+            @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             s = 1 + sqrt(eps(real(T)))
             trunc = trunctol(; atol = s * S₀[r + 1])
 
-            U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc)
-            @test length(S2.diag) == r
+            U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg, trunc)
+            @test length(diagview(S2)) == r
             @test U1 ≈ U2
             @test S1 ≈ S2
             @test V1ᴴ ≈ V2ᴴ
+            @test ϵ2 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             trunc = truncerror(; atol = s * norm(@view(S₀[(r + 1):end])))
-            U3, S3, V3ᴴ = @constinferred svd_trunc(A; alg, trunc)
-            @test length(S3.diag) == r
+            U3, S3, V3ᴴ, ϵ3 = @constinferred svd_trunc(A; alg, trunc)
+            @test length(diagview(S3)) == r
             @test U1 ≈ U3
             @test S1 ≈ S3
             @test V1ᴴ ≈ V3ᴴ
+            @test ϵ3 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
         end
     end
 end
@@ -148,7 +154,7 @@ end
     m = 4
     @testset "algorithm $alg" for alg in algs
         U = qr_compact(randn(rng, T, m, m))[1]
-        S = Diagonal([0.9, 0.3, 0.1, 0.01])
+        S = Diagonal(T[0.9, 0.3, 0.1, 0.01])
         Vᴴ = qr_compact(randn(rng, T, m, m))[1]
         A = U * S * Vᴴ
 
@@ -156,32 +162,35 @@ end
                 (rtol, maxrank) -> (; rtol, maxrank),
                 (rtol, maxrank) -> truncrank(maxrank) & trunctol(; rtol),
             )
-            U1, S1, V1ᴴ = svd_trunc(A; alg, trunc = trunc_fun(0.2, 1))
-            @test length(S1.diag) == 1
-            @test S1.diag ≈ S.diag[1:1] rtol = sqrt(eps(real(T)))
+            U1, S1, V1ᴴ, ϵ1 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 1))
+            @test length(diagview(S1)) == 1
+            @test diagview(S1) ≈ diagview(S)[1:1]
 
-            U2, S2, V2ᴴ = svd_trunc(A; alg, trunc = trunc_fun(0.2, 3))
-            @test length(S2.diag) == 2
-            @test S2.diag ≈ S.diag[1:2] rtol = sqrt(eps(real(T)))
+            U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 3))
+            @test length(diagview(S2)) == 2
+            @test diagview(S2) ≈ diagview(S)[1:2]
         end
     end
 end
 
 @testset "svd_trunc! specify truncation algorithm T = $T" for T in BLASFloats
     rng = StableRNG(123)
+    atol = sqrt(eps(real(T)))
     m = 4
     U = qr_compact(randn(rng, T, m, m))[1]
-    S = Diagonal([0.9, 0.3, 0.1, 0.01])
+    S = Diagonal(real(T)[0.9, 0.3, 0.1, 0.01])
     Vᴴ = qr_compact(randn(rng, T, m, m))[1]
     A = U * S * Vᴴ
     alg = TruncatedAlgorithm(LAPACK_DivideAndConquer(), trunctol(; atol = 0.2))
-    U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg)
-    @test diagview(S2) ≈ diagview(S)[1:2] rtol = sqrt(eps(real(T)))
+    U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg)
+    @test diagview(S2) ≈ diagview(S)[1:2]
+    @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
     @test_throws ArgumentError svd_trunc(A; alg, trunc = (; maxrank = 2))
 end
 
 @testset "svd for Diagonal{$T}" for T in BLASFloats
     rng = StableRNG(123)
+    atol = sqrt(eps(real(T)))
     for m in (54, 0)
         Ad = randn(T, m)
         A = Diagonal(Ad)
@@ -209,7 +218,8 @@ end
         @test S2 ≈ diagview(S)
 
         alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
-        U3, S3, Vᴴ3 = @constinferred svd_trunc(A; alg)
+        U3, S3, Vᴴ3, ϵ3 = @constinferred svd_trunc(A; alg)
         @test diagview(S3) ≈ S2[1:min(m, 2)]
+        @test ϵ3 ≈ norm(S2[(min(m, 2) + 1):m]) atol = atol
     end
 end
