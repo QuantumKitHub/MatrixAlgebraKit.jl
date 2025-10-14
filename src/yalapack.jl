@@ -10,7 +10,7 @@ module YALAPACK # Yet another lapack wrapper
 
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, Char, LAPACK,
     LAPACKException, SingularException, PosDefException, checksquare, chkstride1,
-    require_one_based_indexing, triu!, issymmetric, ishermitian, isposdef, adjoint!
+    require_one_based_indexing, triu!, isposdef, adjoint!
 
 using LinearAlgebra.BLAS: @blasfunc, libblastrampoline
 using LinearAlgebra.LAPACK: chkfinite, chktrans, chkside, chkuplofinite, chklapackerror
@@ -989,11 +989,6 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
-            if $elty <: Real
-                issymmetric(A) || throw(ArgumentError("A must be symmetric"))
-            else
-                ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
-            end
             chkuplofinite(A, uplo)
             n == length(W) || throw(DimensionMismatch("length mismatch between A and W"))
             if length(V) == 0
@@ -1063,11 +1058,6 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
-            if $elty <: Real
-                issymmetric(A) || throw(ArgumentError("A must be symmetric"))
-            else
-                ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
-            end
             chkuplofinite(A, uplo)
             if haskey(kwargs, :irange)
                 il = first(kwargs[:irange])
@@ -1175,11 +1165,6 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
-            if $elty <: Real
-                issymmetric(A) || throw(ArgumentError("A must be symmetric"))
-            else
-                ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
-            end
             chkuplofinite(A, uplo)
             if haskey(kwargs, :irange)
                 il = first(irange)
@@ -1294,11 +1279,6 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
-            if $elty <: Real
-                issymmetric(A) || throw(ArgumentError("A must be symmetric"))
-            else
-                ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
-            end
             uplo = 'U' # shouldn't matter but 'U' seems slightly faster than 'L'
             chkuplofinite(A, uplo)
             n == length(W) || throw(DimensionMismatch("length mismatch between A and W"))
