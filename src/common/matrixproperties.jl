@@ -80,7 +80,7 @@ end
 ishermitian_exact(A) = A == A'
 ishermitian_exact(A::StridedMatrix; kwargs...) = strided_ishermitian_exact(A, Val(false); kwargs...)
 function ishermitian_approx(A; atol, rtol, kwargs...)
-    return 2 * norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
+    return norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 end
 ishermitian_approx(A::StridedMatrix; kwargs...) = strided_ishermitian_approx(A, Val(false); kwargs...)
 
@@ -104,7 +104,7 @@ function isantihermitian_exact(A::StridedMatrix; kwargs...)
     return strided_ishermitian_exact(A, Val(true); kwargs...)
 end
 function isantihermitian_approx(A; atol, rtol, kwargs...)
-    return 2 * norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
+    return norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 end
 isantihermitian_approx(A::StridedMatrix; kwargs...) = strided_ishermitian_approx(A, Val(true); kwargs...)
 
@@ -159,7 +159,7 @@ function strided_ishermitian_approx(
         ϵ² < ϵ²max || return false
         for i in 1:blocksize:(j - 1)
             ib = blocksize
-            ϵ² += _ishermitian_approx_offdiag(
+            ϵ² += 2 * _ishermitian_approx_offdiag(
                 view(A, i:(i + ib - 1), j:(j + jb - 1)),
                 view(A, j:(j + jb - 1), i:(i + ib - 1)),
                 anti
@@ -175,7 +175,7 @@ function _ishermitian_approx_diag(A, ::Val{anti}) where {anti}
     ϵ² = abs2(zero(eltype(A)))
     @inbounds for j in 1:n
         @simd for i in 1:j
-            val = anti ? (A[i, j] + adjoint(A[j, i])) : (A[i, j] - adjoint(A[j, i]))
+            val = _project_hermitian(A[i, j], A[j, i], !anti)
             ϵ² += abs2(val) * (1 + Int(i < j))
         end
     end
@@ -186,9 +186,9 @@ function _ishermitian_approx_offdiag(Al, Au, ::Val{anti}) where {anti}
     ϵ² = abs2(zero(eltype(Al)))
     @inbounds for j in 1:n
         @simd for i in 1:m
-            val = anti ? (Al[i, j] + adjoint(Au[j, i])) : (Al[i, j] - adjoint(Au[j, i]))
+            val = _project_hermitian(Al[i, j], Au[j, i], !anti)
             ϵ² += abs2(val)
         end
     end
-    return 2ϵ²
+    return ϵ²
 end
