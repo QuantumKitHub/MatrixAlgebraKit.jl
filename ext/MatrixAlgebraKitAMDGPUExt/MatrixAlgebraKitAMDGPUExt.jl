@@ -52,6 +52,7 @@ function MatrixAlgebraKit.findtruncated_svd(values::StridedROCVector, strategy::
     return MatrixAlgebraKit.findtruncated(values, strategy)
 end
 
+# COV_EXCL_START
 function _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, ::Val{true})
     m, n = size(Au)
     j = workitemIdx().x + (workgroupIdx().x - 1) * workgroupDim().x
@@ -109,6 +110,7 @@ function _project_hermitian_diag_kernel(A, B, ::Val{false})
     end
     return
 end
+# COV_EXCL_STOP
 
 function MatrixAlgebraKit._project_hermitian_offdiag!(
         Au::StridedROCMatrix, Al::StridedROCMatrix, Bu::StridedROCMatrix, Bl::StridedROCMatrix, ::Val{anti}
@@ -133,6 +135,7 @@ MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedROCVector{T}}) wh
 
 function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
+    # COV_EXCL_START
     function _avgdiff_kernel(A, B)
         j = workitemIdx().x + (workgroupIdx().x - 1) * workgroupDim().x
         j > length(A) && return
@@ -144,6 +147,7 @@ function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
         end
         return
     end
+    # COV_EXCL_STOP
     thread_dim = 512
     block_dim = cld(length(A), thread_dim)
     @roc groupsize = thread_dim gridsize = block_dim _avgdiff_kernel(A, B)

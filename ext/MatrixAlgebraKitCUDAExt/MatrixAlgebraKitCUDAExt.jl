@@ -59,6 +59,7 @@ function MatrixAlgebraKit.findtruncated_svd(values::StridedCuVector, strategy::T
     return MatrixAlgebraKit.findtruncated(values, strategy)
 end
 
+# COV_EXCL_START
 function _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, ::Val{true})
     m, n = size(Au)
     j = threadIdx().x + (blockIdx().x - 1i32) * blockDim().x
@@ -116,6 +117,7 @@ function _project_hermitian_diag_kernel(A, B, ::Val{false})
     end
     return
 end
+# COV_EXCL_STOP
 
 function MatrixAlgebraKit._project_hermitian_offdiag!(
         Au::StridedCuMatrix, Al::StridedCuMatrix, Bu::StridedCuMatrix, Bl::StridedCuMatrix, ::Val{anti}
@@ -140,6 +142,7 @@ MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) whe
 
 function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
+    # COV_EXCL_START
     function _avgdiff_kernel(A, B)
         j = threadIdx().x + (blockIdx().x - 1i32) * blockDim().x
         j > length(A) && return
@@ -151,6 +154,7 @@ function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
         end
         return
     end
+    # COV_EXCL_STOP
     thread_dim = 512
     block_dim = cld(length(A), thread_dim)
     @cuda threads = thread_dim blocks = block_dim _avgdiff_kernel(A, B)
