@@ -15,7 +15,6 @@ include(joinpath("..", "utilities.jl"))
         k = min(m, n)
         algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa ROCSOLVER_QRIteration && continue # not supported
             minmn = min(m, n)
             A = ROCArray(randn(rng, T, m, n))
 
@@ -41,6 +40,9 @@ include(joinpath("..", "utilities.jl"))
             Sd = svd_vals(A, alg)
             @test ROCArray(diagview(S)) ≈ Sd
             # ROCArray is necessary because norm of ROCArray view with non-unit step is broken
+            if alg isa ROCSOLVER_QRIteration
+                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_compact!(copy!(Ac, A), (U, S, Vᴴ), ROCSOLVER_QRIteration(; bad = "bad"))
+            end
         end
     end
 end
@@ -51,7 +53,6 @@ end
     @testset "size ($m, $n)" for n in (37, m, 63)
         algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa ROCSOLVER_QRIteration && continue # not supported
             A = ROCArray(randn(rng, T, m, n))
             U, S, Vᴴ = svd_full(A; alg)
             @test U isa ROCMatrix{T} && size(U) == (m, m)
@@ -81,6 +82,26 @@ end
             @test Sc === Sc2
             @test ROCArray(diagview(S)) ≈ Sc
             # ROCArray is necessary because norm of ROCArray view with non-unit step is broken
+            if alg isa ROCSOLVER_QRIteration
+                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_full!(copy!(Ac, A), (U, S, Vᴴ), ROCSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_vals!(copy!(Ac, A), Sc, ROCSOLVER_QRIteration(; bad = "bad"))
+            end
+        end
+    end
+    @testset "size (0, 0)" begin
+        algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
+        @testset "algorithm $alg" for alg in algs
+            A = ROCArray(randn(rng, T, 0, 0))
+            U, S, Vᴴ = svd_full(A; alg)
+            @test U isa ROCMatrix{T} && size(U) == (0, 0)
+            @test S isa ROCMatrix{real(T)} && size(S) == (0, 0)
+            @test Vᴴ isa ROCMatrix{T} && size(Vᴴ) == (0, 0)
+            @test U * S * Vᴴ ≈ A
+            @test isapproxone(U' * U)
+            @test isapproxone(U * U')
+            @test isapproxone(Vᴴ * Vᴴ')
+            @test isapproxone(Vᴴ' * Vᴴ)
+            @test all(isposdef, diagview(S))
         end
     end
 end

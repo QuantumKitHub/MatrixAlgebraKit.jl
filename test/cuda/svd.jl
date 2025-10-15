@@ -15,7 +15,6 @@ include(joinpath("..", "utilities.jl"))
         k = min(m, n)
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             minmn = min(m, n)
             A = CuArray(randn(rng, T, m, n))
 
@@ -41,6 +40,9 @@ include(joinpath("..", "utilities.jl"))
             Sd = svd_vals(A, alg)
             @test CuArray(diagview(S)) ≈ Sd
             # CuArray is necessary because norm of CuArray view with non-unit step is broken
+            if alg isa CUSOLVER_QRIteration
+                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_compact!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
+            end
         end
     end
 end
@@ -51,7 +53,6 @@ end
     @testset "size ($m, $n)" for n in (37, m, 63)
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             A = CuArray(randn(rng, T, m, n))
             U, S, Vᴴ = svd_full(A; alg)
             @test U isa CuMatrix{T} && size(U) == (m, m)
@@ -82,8 +83,26 @@ end
             @test Sc === Sc2
             @test CuArray(diagview(S)) ≈ Sc
             # CuArray is necessary because norm of CuArray view with non-unit step is broken
+            if alg isa CUSOLVER_QRIteration
+                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_full!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_vals!(copy!(Ac, A), Sc, CUSOLVER_QRIteration(; bad = "bad"))
+            end
         end
+    end
+    @testset "size (0, 0)" begin
+        algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
+            A = CuArray(randn(rng, T, 0, 0))
+            U, S, Vᴴ = svd_full(A; alg)
+            @test U isa CuMatrix{T} && size(U) == (0, 0)
+            @test S isa CuMatrix{real(T)} && size(S) == (0, 0)
+            @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (0, 0)
+            @test U * S * Vᴴ ≈ A
+            @test isapproxone(U' * U)
+            @test isapproxone(U * U')
+            @test isapproxone(Vᴴ * Vᴴ')
+            @test isapproxone(Vᴴ' * Vᴴ)
+            @test all(isposdef, diagview(S))
         end
     end
 end
@@ -96,7 +115,6 @@ end
         p = min(m, n) - k - 1
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi(), CUSOLVER_Randomized(; k = k, p = p, niters = 100))
         @testset "algorithm $alg" for alg in algs
-            n > m && alg isa CUSOLVER_QRIteration && continue # not supported
             hA = randn(rng, T, m, n)
             S₀ = svd_vals(hA)
             A = CuArray(hA)
