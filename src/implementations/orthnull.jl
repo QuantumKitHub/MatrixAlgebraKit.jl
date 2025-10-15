@@ -1,5 +1,5 @@
-# Orthogonalization
-# -----------------
+# Inputs
+# ------
 copy_input(::typeof(left_orth), A) = copy_input(qr_compact, A) # do we ever need anything else
 copy_input(::typeof(right_orth), A) = copy_input(lq_compact, A) # do we ever need anything else
 copy_input(::typeof(left_null), A) = copy_input(qr_null, A) # do we ever need anything else
@@ -35,7 +35,8 @@ check_input(::typeof(right_null_lq!), A, Nᴴ, alg::AbstractAlgorithm) =
     check_input(lq_null!, A, Nᴴ, alg)
 check_input(::typeof(right_null_svd!), A, Nᴴ, alg::AbstractAlgorithm) = nothing
 
-
+# Outputs
+# -------
 initialize_output(::typeof(left_orth!), A, alg::AbstractAlgorithm) =
     initialize_output(left_orth_kind(alg), A, alg)
 initialize_output(::typeof(left_orth_qr!), A, alg::AbstractAlgorithm) =
@@ -66,8 +67,6 @@ initialize_output(::typeof(right_null_lq!), A, alg::AbstractAlgorithm) =
     initialize_output(lq_null!, A, alg)
 initialize_output(::typeof(right_null_svd!), A, alg::AbstractAlgorithm) = nothing
 
-# Outputs
-# -------
 function initialize_orth_svd(A::AbstractMatrix, F, alg)
     S = Diagonal(initialize_output(svd_vals!, A, alg))
     return F[1], S, F[2]
