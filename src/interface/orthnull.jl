@@ -335,66 +335,58 @@ function right_null_svd! end
 # Algorithm selection
 # -------------------
 # specific override for `alg::Symbol` case, to allow for choosing the kind of factorization.
-function select_algorithm(::typeof(left_orth!), A, alg::Symbol; trunc = nothing, kwargs...)
-    alg === :svd && return select_algorithm(
-        left_orth_svd!, A, get(kwargs, :alg_svd, nothing); trunc
-    )
+@inline select_algorithm(::typeof(left_orth!), A, alg::Symbol; trunc = nothing, kwargs...) =
+    LeftOrthAlgorithm{alg}(A; alg = get(kwargs, alg, nothing), trunc)
+@inline select_algorithm(::typeof(right_orth!), A, alg::Symbol; trunc = nothing, kwargs...) =
+    RightOrthAlgorithm{alg}(A; alg = get(kwargs, alg, nothing), trunc)
 
-    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+function LeftOrthViaQR(A; alg = nothing, trunc = nothing, kwargs...)
+    isnothing(trunc) ||
+        throw(ArgumentError("QR-based `left_orth` is incompatible with specifying `trunc`"))
+    alg = select_algorithm(qr_compact!, A, alg; kwargs...)
+    return LeftOrthViaQR{typeof(alg)}(alg)
+end
+function LeftOrthViaPolar(A; alg = nothing, trunc = nothing, kwargs...)
+    isnothing(trunc) ||
+        throw(ArgumentError("Polar-based `left_orth` is incompatible with specifying `trunc`"))
+    alg = select_algorithm(left_polar!, A, alg; kwargs...)
+    return LeftOrthViaPolar{typeof(alg)}(alg)
+end
+function LeftOrthViaSVD(A; alg = nothing, trunc = nothing, kwargs...)
+    alg = isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
+        select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
+    return LeftOrthViaSVD{typeof(alg)}(alg)
+end
 
-    alg === :qr && return select_algorithm(left_orth_qr!, A, get(kwargs, :alg_qr, nothing))
-    alg === :polar && return select_algorithm(left_orth_polar!, A, get(kwargs, :alg_polar, nothing))
-
-    throw(ArgumentError(lazy"Unknown alg symbol $alg"))
+function RightOrthViaLQ(A; alg = nothing, trunc = nothing, kwargs...)
+    isnothing(trunc) ||
+        throw(ArgumentError("LQ-based `right_orth` is incompatible with specifying `trunc`"))
+    alg = select_algorithm(lq_compact!, A, alg; kwargs...)
+    return RightOrthViaLQ{typeof(alg)}(alg)
+end
+function RightOrthViaPolar(A; alg = nothing, trunc = nothing, kwargs...)
+    isnothing(trunc) ||
+        throw(ArgumentError("Polar-based `right_orth` is incompatible with specifying `trunc`"))
+    alg = select_algorithm(right_polar!, A, alg; kwargs...)
+    return RightOrthViaPolar{typeof(alg)}(alg)
+end
+function RightOrthViaSVD(A; alg = nothing, trunc = nothing, kwargs...)
+    alg = isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
+        select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
+    return RightOrthViaSVD{typeof(alg)}(alg)
 end
 
 default_algorithm(::typeof(left_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
-    isnothing(trunc) ? select_algorithm(left_orth_qr!, A; kwargs...) :
-    select_algorithm(left_orth_svd!, A; trunc, kwargs...)
+    isnothing(trunc) ? LeftOrthViaQR(A; kwargs...) : LeftOrthViaSVD(A; trunc, kwargs...)
 # disambiguate
 default_algorithm(::typeof(left_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
-    isnothing(trunc) ? select_algorithm(left_orth_qr!, A; kwargs...) :
-    select_algorithm(left_orth_svd!, A; trunc, kwargs...)
-
-
-select_algorithm(::typeof(left_orth_qr!), A, alg = nothing; kwargs...) =
-    select_algorithm(qr_compact!, A, alg; kwargs...)
-select_algorithm(::typeof(left_orth_polar!), A, alg = nothing; kwargs...) =
-    select_algorithm(left_polar!, A, alg; kwargs...)
-select_algorithm(::typeof(left_orth_svd!), A, alg = nothing; trunc = nothing, kwargs...) =
-    isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
-    select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
-
-# specific override for `alg::Symbol` case, to allow for choosing the kind of factorization.
-function select_algorithm(::typeof(right_orth!), A, alg::Symbol; trunc = nothing, kwargs...)
-    alg === :svd && return select_algorithm(
-        right_orth_svd!, A, get(kwargs, :alg_svd, nothing); trunc
-    )
-
-    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
-
-    alg === :lq && return select_algorithm(right_orth_lq!, A, get(kwargs, :alg_lq, nothing))
-    alg === :polar && return select_algorithm(right_orth_polar!, A, get(kwargs, :alg_polar, nothing))
-
-    throw(ArgumentError(lazy"Unknown alg symbol $alg"))
-end
+    isnothing(trunc) ? LeftOrthViaQR(A; kwargs...) : LeftOrthViaSVD(A; trunc, kwargs...)
 
 default_algorithm(::typeof(right_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
-    isnothing(trunc) ? select_algorithm(right_orth_lq!, A; kwargs...) :
-    select_algorithm(right_orth_svd!, A; trunc, kwargs...)
-# disambiguate:
+    isnothing(trunc) ? RightOrthViaLQ(A; kwargs...) : RightOrthViaSVD(A; trunc, kwargs...)
+# disambiguate
 default_algorithm(::typeof(right_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
-    isnothing(trunc) ? select_algorithm(right_orth_lq!, A; kwargs...) :
-    select_algorithm(right_orth_svd!, A; trunc, kwargs...)
-
-
-select_algorithm(::typeof(right_orth_lq!), A, alg = nothing; kwargs...) =
-    select_algorithm(lq_compact!, A, alg; kwargs...)
-select_algorithm(::typeof(right_orth_polar!), A, alg = nothing; kwargs...) =
-    select_algorithm(right_polar!, A, alg; kwargs...)
-select_algorithm(::typeof(right_orth_svd!), A, alg = nothing; trunc = nothing, kwargs...) =
-    isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
-    select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
+    isnothing(trunc) ? RightOrthViaLQ(A; kwargs...) : RightOrthViaSVD(A; trunc, kwargs...)
 
 function select_algorithm(::typeof(left_null!), A, alg::Symbol; trunc = nothing, kwargs...)
     alg === :svd && return select_algorithm(

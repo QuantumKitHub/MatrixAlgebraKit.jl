@@ -149,6 +149,26 @@ left_orth_kind(::Union{PolarViaSVD, PolarNewton}) = left_orth_polar!
 right_orth_kind(::Union{PolarViaSVD, PolarNewton}) = right_orth_polar!
 
 # =========================
+# ORTHOGONALIZATION ALGORITHMS
+# =========================
+
+struct LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+
+const LeftOrthViaQR = LeftOrthAlgorithm{:qr}
+const LeftOrthViaPolar = LeftOrthAlgorithm{:polar}
+const LeftOrthViaSVD = LeftOrthAlgorithm{:svd}
+
+struct RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+
+const RightOrthViaLQ = RightOrthAlgorithm{:lq}
+const RightOrthViaPolar = RightOrthAlgorithm{:polar}
+const RightOrthViaSVD = RightOrthAlgorithm{:svd}
+
+# =========================
 # DIAGONAL ALGORITHMS
 # =========================
 """
