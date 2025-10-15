@@ -449,9 +449,9 @@ for (f, St) in ((svd_full!, :AbstractMatrix), (svd_compact!, :Diagonal))
             Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
             USVᴴ    = $f(A, USVᴴ, Mooncake.primal(alg_dalg); kwargs...)
             function dsvd_adjoint(::Mooncake.NoRData)
-                dA .= zero(eltype(A))
+                dA   .= zero(eltype(A))
                 minmn = min(size(A)...)
-                dA  = MatrixAlgebraKit.svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
+                dA    = MatrixAlgebraKit.svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
                 return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
             end
             return Mooncake.CoDual(USVᴴ, dUSVᴴ), dsvd_adjoint
@@ -470,15 +470,25 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
     Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
     Ac      = MatrixAlgebraKit.copy_input(svd_compact, A)
     USVᴴ    = svd_compact!(Ac, USVᴴ, alg.alg)
+    @show size.((dU, dS, dVᴴ))
+    function dsvd_trunc_adjoint(::Tuple{Mooncake.NoRData, Mooncake.NoRData, Mooncake.NoRData, Float64})
+        dA .= zero(eltype(A))
+        dA  = MatrixAlgebraKit.svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ), ind)
+        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+    end
     function dsvd_trunc_adjoint(::Mooncake.NoRData)
         dA .= zero(eltype(A))
         dA  = MatrixAlgebraKit.svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ), ind)
         return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
     end
     USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
-    ΔU′  = Matrix(dU[:, ind])
-    ΔS′  = Diagonal(dS[ind, ind])
-    ΔVᴴ′ = Matrix(dVᴴ[ind, :])
+    ΔU′  = zeros(eltype(dU), size(USVᴴ′[1]))
+    ΔS′  = Diagonal(zeros(eltype(dS), size(USVᴴ′[2], 1)))
+    ΔVᴴ′ = zeros(eltype(dVᴴ), size(USVᴴ′[3]))
+    @show size.((ΔU′, ΔS′, ΔVᴴ′))
+    @show size.((dU, dS, dVᴴ))
+    println()
+    println()
     dS′  = Mooncake.build_tangent(typeof(ΔS′), ΔS′.diag)
     if eltype(A) <: Real
         dU′   = ΔU′
@@ -487,8 +497,12 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
         dU′   = [Mooncake.build_tangent(typeof(ΔU′[i,j]), real(ΔU′[i,j]), imag(ΔU′[i,j])) for i in 1:size(ΔU′, 1), j in 1:size(ΔU′, 2)]
         dVᴴ′  = [Mooncake.build_tangent(typeof(ΔVᴴ′[i,j]), real(ΔVᴴ′[i,j]), imag(ΔVᴴ′[i,j])) for i in 1:size(ΔVᴴ′, 1), j in 1:size(ΔVᴴ′, 2)]
     end
+    err = MatrixAlgebraKit.truncation_error!(diagview(USVᴴ[2]), ind)
+    USVᴴerr′ = (USVᴴ′..., err)
     dUSVᴴ′ = Mooncake.build_tangent(typeof((ΔU′,ΔS′,ΔVᴴ′)), dU′, dS′, dVᴴ′)
-    return Mooncake.CoDual(USVᴴ′, dUSVᴴ′), dsvd_trunc_adjoint
+    dUSVᴴerr′ = (dUSVᴴ′[1], Mooncake.FData((diag=ΔS′.diag,)), dUSVᴴ′[3], Mooncake.NoFData())
+    A .= Ac
+    return Mooncake.CoDual(USVᴴerr′, dUSVᴴerr′), dsvd_trunc_adjoint
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof(MatrixAlgebraKit.svd_vals!), AbstractMatrix, AbstractVector, MatrixAlgebraKit.AbstractAlgorithm}
