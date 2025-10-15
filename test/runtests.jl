@@ -78,6 +78,9 @@ if CUDA.functional()
     @safetestset "CUDA Polar Decomposition" begin
         include("cuda/polar.jl")
     end
+    @safetestset "CUDA Image and Null Space" begin
+        include("cuda/orthnull.jl")
+    end
 end
 
 using AMDGPU
@@ -99,5 +102,8 @@ if AMDGPU.functional()
     end
     @safetestset "AMDGPU Polar Decomposition" begin
         include("amd/polar.jl")
+    end
+    @safetestset "AMDGPU Image and Null Space" begin
+        include("amd/orthnull.jl")
     end
 end
