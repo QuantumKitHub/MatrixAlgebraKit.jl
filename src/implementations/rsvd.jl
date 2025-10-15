@@ -1,4 +1,4 @@
-function rand_range_finder(A::AbstractMatrix, Ω::AbstractMatrix; maxiter::Integer = 1, alg_qr = nothing)
+function left_orth(A::AbstractMatrix, Ω::AbstractMatrix; maxiter::Integer = 1, alg_qr = nothing)
     @assert size(Ω, 2) ≤ min(size(A)...)
     Y = A * Ω
     Q = similar(Y, (size(A, 1), size(Ω, 2)))
@@ -12,18 +12,18 @@ function rand_range_finder(A::AbstractMatrix, Ω::AbstractMatrix; maxiter::Integ
     end
 
 
-    return Q
+    R = Q' * A
+    return Q, R
 end
+
+
+@algdef SVDViaOrth
 
 function rand_svd(A, k::Integer; trunc = truncrank(k), p::Integer = 10, maxiter::Integer = 1)
     m, n = size(A)
     @assert p <= min(m, n)
-    Ω = Random.randn!(similar(A, (m, k + p)))
-    Q = rand_range_finder(A, Ω; maxiter)
-    B = Q' * A
-
-    U′, S, Vᴴ = svd_trunc!(B; trunc)
+    Q, R = left_orth!(A)
+    U′, S, Vᴴ = svd_trunc!(R; trunc)
     U = Q * U′
-
     return U, S, Vᴴ
 end
