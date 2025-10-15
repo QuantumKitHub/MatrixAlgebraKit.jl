@@ -47,12 +47,13 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
     # test approximate error calculation
     A = normalize!(randn(rng, T, m, m))
     Ah = project_hermitian(A)
+    Aa = project_antihermitian(A)
+
     Ah_approx = Ah + noisefactor * Aa
     ϵ = norm(project_antihermitian(Ah_approx))
     @test !ishermitian(Ah_approx; atol = (999 // 1000) * ϵ)
     @test ishermitian(Ah_approx; atol = (1001 // 1000) * ϵ)
 
-    Aa = project_antihermitian(A)
     Aa_approx = Aa + noisefactor * Ah
     ϵ = norm(project_hermitian(Aa_approx))
     @test !isantihermitian(Aa_approx; atol = (999 // 1000) * ϵ)
