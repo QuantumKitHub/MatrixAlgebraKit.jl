@@ -17,7 +17,10 @@ function truncate(::typeof(left_null!), (U, S), strategy::TruncationStrategy)
     # TODO: avoid allocation?
     extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 1) - size(S, 2))))
     ind = findtruncated(extended_S, strategy)
-    return U[:, ind], ind
+    trunc_cols = collect(1:size(U, 2))[ind]
+    Utrunc = similar(U, (size(U, 1), length(trunc_cols)))
+    Utrunc .= U[:, trunc_cols]
+    return Utrunc, ind
 end
 function truncate(::typeof(right_null!), (S, Vᴴ), strategy::TruncationStrategy)
     # TODO: avoid allocation?
