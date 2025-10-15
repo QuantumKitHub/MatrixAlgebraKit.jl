@@ -8,18 +8,18 @@ copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
 
 copy_input(::typeof(eigh_full), A::Diagonal) = copy(A)
 
-_hermitian_tol(A, alg) = default_hermitian_tol(A)
-_hermitian_tol(A, alg::Algorithm) = get(alg.kwargs, :hermitian_tol, default_hermitian_tol(A))
-function check_hermitian(A, alg, context::Symbol)
+check_hermitian(A, ::AbstractAlgorithm) = check_hermitian(A)
+check_hermitian(A, alg::Algorithm) = check_hermitian(A; atol = get(alg.kwargs, :hermitian_tol, default_hermitian_tol(A)))
+function check_hermitian(A; atol::Real = default_hermitian_tol(A), rtol::Real = 0)
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected"))
-    ishermitian(A; atol = _hermitian_tol(A, alg)) ||
-        throw(DomainError(A, "`eigh_$(context)!(A)` was called on a non-hermitian input matrix `A`. Try `eig_$(context)!(A)` or `eigh_$(context)(project_hermitian(A))` instead."))
+    ishermitian(A; atol, rtol) ||
+        throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix."))
     return nothing
 end
 
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractAlgorithm)
-    check_hermitian(A, alg, :full)
+    check_hermitian(A, alg)
     D, V = DV
     m = size(A, 1)
     @assert D isa Diagonal && V isa AbstractMatrix
@@ -30,7 +30,7 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractA
     return nothing
 end
 function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::AbstractAlgorithm)
-    check_hermitian(A, alg, :vals)
+    check_hermitian(A, alg)
     m = size(A, 1)
     @assert D isa AbstractVector
     @check_size(D, (m,))
@@ -39,7 +39,7 @@ function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::AbstractAl
 end
 
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalAlgorithm)
-    check_hermitian(A, alg, :full)
+    check_hermitian(A, alg)
     @assert isdiag(A)
     m = size(A, 1)
     D, V = DV
@@ -51,7 +51,7 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalA
     return nothing
 end
 function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::DiagonalAlgorithm)
-    check_hermitian(A, alg, :vals)
+    check_hermitian(A, alg)
     @assert isdiag(A)
     m = size(A, 1)
     @assert D isa AbstractVector
