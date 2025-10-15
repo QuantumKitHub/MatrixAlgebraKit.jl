@@ -134,11 +134,19 @@ function MatrixAlgebraKit._project_hermitian_diag!(A::StridedCuMatrix, B::Stride
     return nothing
 end
 
-MatrixAlgebraKit.ishermitian_exact(A::StridedCuMatrix) = all(A .== adjoint(A))
-MatrixAlgebraKit.ishermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} = all(A.diag .== adjoint(A.diag))
+MatrixAlgebraKit.ishermitian_exact(A::StridedCuMatrix) =
+    all(A .== adjoint(A))
+MatrixAlgebraKit.ishermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} =
+    all(A.diag .== adjoint(A.diag))
+MatrixAlgebraKit.ishermitian_approx(A::StridedCuMatrix; kwargs...) =
+    @invoke MatrixAlgebraKit.ishermitian_approx(A::Any; kwargs...)
 
-MatrixAlgebraKit.isantihermitian_exact(A::StridedCuMatrix) = all(A .== -adjoint(A))
-MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} = all(A.diag .== -adjoint(A.diag))
+MatrixAlgebraKit.isantihermitian_exact(A::StridedCuMatrix) =
+    all(A .== -adjoint(A))
+MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} =
+    all(A.diag .== -adjoint(A.diag))
+MatrixAlgebraKit.isantihermitian_approx(A::StridedCuMatrix; kwargs...) =
+    @invoke MatrixAlgebraKit.isantihermitian_approx(A::Any; kwargs...)
 
 function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
