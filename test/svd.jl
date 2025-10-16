@@ -92,6 +92,20 @@ end
             @test diagview(S) ≈ Sc
         end
     end
+    @testset "size (0, 0)" begin
+        @testset "algorithm $alg" for alg in
+            (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
+            A = randn(rng, T, 0, 0)
+            U, S, Vᴴ = svd_full(A; alg)
+            @test U isa Matrix{T} && size(U) == (0, 0)
+            @test S isa Matrix{real(T)} && size(S) == (0, 0)
+            @test Vᴴ isa Matrix{T} && size(Vᴴ) == (0, 0)
+            @test U * S * Vᴴ ≈ A
+            @test isunitary(U)
+            @test isunitary(Vᴴ)
+            @test all(isposdef, diagview(S))
+        end
+    end
 end
 
 @testset "svd_trunc! for T = $T" for T in BLASFloats
