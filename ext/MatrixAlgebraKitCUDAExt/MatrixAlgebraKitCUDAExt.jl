@@ -4,7 +4,7 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
-using MatrixAlgebraKit: LQViaTransposedQR, TruncationByValue
+using MatrixAlgebraKit: LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_Xgesvdr!, _gpu_gesvdj!, _gpu_geev!
 import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!
@@ -134,11 +134,19 @@ function MatrixAlgebraKit._project_hermitian_diag!(A::StridedCuMatrix, B::Stride
     return nothing
 end
 
-MatrixAlgebraKit.ishermitian_exact(A::StridedCuMatrix) = all(A .== adjoint(A))
-MatrixAlgebraKit.ishermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} = all(A.diag .== adjoint(A.diag))
+MatrixAlgebraKit.ishermitian_exact(A::StridedCuMatrix) =
+    all(A .== adjoint(A))
+MatrixAlgebraKit.ishermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} =
+    all(A.diag .== adjoint(A.diag))
+MatrixAlgebraKit.ishermitian_approx(A::StridedCuMatrix; kwargs...) =
+    @invoke MatrixAlgebraKit.ishermitian_approx(A::Any; kwargs...)
 
-MatrixAlgebraKit.isantihermitian_exact(A::StridedCuMatrix) = all(A .== -adjoint(A))
-MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} = all(A.diag .== -adjoint(A.diag))
+MatrixAlgebraKit.isantihermitian_exact(A::StridedCuMatrix) =
+    all(A .== -adjoint(A))
+MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) where {T} =
+    all(A.diag .== -adjoint(A.diag))
+MatrixAlgebraKit.isantihermitian_approx(A::StridedCuMatrix; kwargs...) =
+    @invoke MatrixAlgebraKit.isantihermitian_approx(A::Any; kwargs...)
 
 function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())

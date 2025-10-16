@@ -85,14 +85,16 @@ function project_hermitian_native!(A::AbstractMatrix, B::AbstractMatrix, anti::V
     return B
 end
 
+@inline function _project_hermitian(Aij::Number, Aji::Number, anti::Bool)
+    return anti ? (Aij - Aji') / 2 : (Aij + Aji') / 2
+end
 function _project_hermitian_offdiag!(
         Au::AbstractMatrix, Al::AbstractMatrix, Bu::AbstractMatrix, Bl::AbstractMatrix, ::Val{anti}
     ) where {anti}
-
     m, n = size(Au) # == reverse(size(Au))
     return @inbounds for j in 1:n
         @simd for i in 1:m
-            val = anti ? (Au[i, j] - adjoint(Al[j, i])) / 2 : (Au[i, j] + adjoint(Al[j, i])) / 2
+            val = _project_hermitian(Au[i, j], Al[j, i], anti)
             Bu[i, j] = val
             aval = adjoint(val)
             Bl[j, i] = anti ? -aval : aval
@@ -104,7 +106,7 @@ function _project_hermitian_diag!(A::AbstractMatrix, B::AbstractMatrix, ::Val{an
     n = size(A, 1)
     @inbounds for j in 1:n
         @simd for i in 1:(j - 1)
-            val = anti ? (A[i, j] - adjoint(A[j, i])) / 2 : (A[i, j] + adjoint(A[j, i])) / 2
+            val = _project_hermitian(A[i, j], A[j, i], anti)
             B[i, j] = val
             aval = adjoint(val)
             B[j, i] = anti ? -aval : aval
