@@ -75,6 +75,9 @@ if CUDA.functional()
     @safetestset "CUDA Hermitian Eigenvalue Decomposition" begin
         include("cuda/eigh.jl")
     end
+    @safetestset "CUDA Polar Decomposition" begin
+        include("cuda/polar.jl")
+    end
 end
 
 using AMDGPU
@@ -93,5 +96,8 @@ if AMDGPU.functional()
     end
     @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
         include("amd/eigh.jl")
+    end
+    @safetestset "AMDGPU Polar Decomposition" begin
+        include("amd/polar.jl")
     end
 end
