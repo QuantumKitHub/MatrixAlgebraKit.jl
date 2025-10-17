@@ -1,3 +1,25 @@
+const docs_truncation_kwargs = """
+* `atol::Real`      : Absolute tolerance for the truncation
+* `rtol::Real`      : Relative tolerance for the truncation
+* `maxrank::Real`   : Maximal rank for the truncation
+* `maxerror::Real`  : Maximal truncation error.
+* `filter`          : Custom filter to select truncated values.
+"""
+
+const docs_truncation_strategies = """
+- [`notrunc`](@ref)
+- [`truncrank`](@ref)
+- [`trunctol`](@ref)
+- [`truncerror`](@ref)
+- [`truncfilter`](@ref)
+"""
+
+const docs_null_truncation_kwargs = """
+* `atol::Real`       : Absolute tolerance for the truncation
+* `rtol::Real`       : Relative tolerance for the truncation
+* `maxnullity::Real` : Maximal rank for the truncation
+"""
+
 """
     TruncationStrategy(; kwargs...)
 
@@ -8,11 +30,7 @@ The following keyword arguments are all optional, and their default value (`noth
 will be ignored. It is also allowed to combine multiple of these, in which case the kept
 values will consist of the intersection of the different truncated strategies.
 
-- `atol::Real` : Absolute tolerance for the truncation
-- `rtol::Real` : Relative tolerance for the truncation
-- `maxrank::Real` : Maximal rank for the truncation
-- `maxerror::Real` : Maximal truncation error.
-- `filter` : Custom filter to select truncated values.
+$docs_truncation_kwargs
 """
 function TruncationStrategy(;
         atol::Union{Real, Nothing} = nothing,
@@ -34,6 +52,28 @@ function TruncationStrategy(;
     isnothing(filter) || (strategy &= truncfilter(filter))
 
     return strategy
+end
+
+"""
+    null_truncation_strategy(; kwargs...)
+
+Select a nullspace truncation strategy based on the provided keyword arguments.
+
+## Keyword arguments
+The following keyword arguments are all optional, and their default value (`nothing`)
+will be ignored. It is also allowed to combine multiple of these, in which case the
+discarded values will consist of the intersection of the different truncated strategies.
+
+$docs_null_truncation_kwargs
+"""
+function null_truncation_strategy(; atol = nothing, rtol = nothing, maxnullity = nothing)
+    if isnothing(maxnullity) && isnothing(atol) && isnothing(rtol)
+        return notrunc()
+    end
+    atol = @something atol 0
+    rtol = @something rtol 0
+    trunc = trunctol(; atol, rtol, keep_below = true)
+    return !isnothing(maxnullity) ? trunc & truncrank(maxnullity; rev = false) : trunc
 end
 
 """
