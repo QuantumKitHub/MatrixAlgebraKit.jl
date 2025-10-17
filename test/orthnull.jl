@@ -6,55 +6,10 @@ using LinearAlgebra: LinearAlgebra, I, mul!
 using MatrixAlgebraKit: LAPACK_SVDAlgorithm, check_input, copy_input, default_svd_algorithm,
     initialize_output, AbstractAlgorithm
 
+# testing non-AbstractArray codepaths:
+include("linearmap.jl")
+
 eltypes = (Float32, Float64, ComplexF32, ComplexF64)
-
-# Used to test non-AbstractMatrix codepaths.
-struct LinearMap{P <: AbstractMatrix}
-    parent::P
-end
-Base.parent(A::LinearMap) = getfield(A, :parent)
-function Base.copy!(dest::LinearMap, src::LinearMap)
-    copy!(parent(dest), parent(src))
-    return dest
-end
-function LinearAlgebra.mul!(C::LinearMap, A::LinearMap, B::LinearMap)
-    mul!(parent(C), parent(A), parent(B))
-    return C
-end
-
-function MatrixAlgebraKit.copy_input(::typeof(qr_compact), A::LinearMap)
-    return LinearMap(copy_input(qr_compact, parent(A)))
-end
-function MatrixAlgebraKit.copy_input(::typeof(lq_compact), A::LinearMap)
-    return LinearMap(copy_input(lq_compact, parent(A)))
-end
-function MatrixAlgebraKit.initialize_output(::typeof(left_orth!), A::LinearMap)
-    return LinearMap.(initialize_output(left_orth!, parent(A)))
-end
-function MatrixAlgebraKit.initialize_output(::typeof(right_orth!), A::LinearMap)
-    return LinearMap.(initialize_output(right_orth!, parent(A)))
-end
-function MatrixAlgebraKit.check_input(
-        ::typeof(left_orth!), A::LinearMap, VC, alg::AbstractAlgorithm
-    )
-    return check_input(left_orth!, parent(A), parent.(VC), alg)
-end
-function MatrixAlgebraKit.check_input(
-        ::typeof(right_orth!), A::LinearMap, VC, alg::AbstractAlgorithm
-    )
-    return check_input(right_orth!, parent(A), parent.(VC), alg)
-end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{LinearMap{A}}; kwargs...) where {A}
-    return default_svd_algorithm(A; kwargs...)
-end
-function MatrixAlgebraKit.initialize_output(
-        ::typeof(svd_compact!), A::LinearMap, alg::LAPACK_SVDAlgorithm
-    )
-    return LinearMap.(initialize_output(svd_compact!, parent(A), alg))
-end
-function MatrixAlgebraKit.svd_compact!(A::LinearMap, USVᴴ, alg::LAPACK_SVDAlgorithm)
-    return LinearMap.(svd_compact!(parent(A), parent.(USVᴴ), alg))
-end
 
 @testset "left_orth and left_null for T = $T" for T in eltypes
     rng = StableRNG(123)

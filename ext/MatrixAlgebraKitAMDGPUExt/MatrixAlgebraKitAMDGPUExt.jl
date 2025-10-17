@@ -161,4 +161,14 @@ function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
     return A, B
 end
 
+function MatrixAlgebraKit.truncate(::typeof(MatrixAlgebraKit.left_null!), US::Tuple{TU, TS}, strategy::MatrixAlgebraKit.TruncationStrategy) where {TU <: ROCArray, TS}
+    # TODO: avoid allocation?
+    U, S = US
+    extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 1) - size(S, 2))))
+    ind = MatrixAlgebraKit.findtruncated(extended_S, strategy)
+    trunc_cols = collect(1:size(U, 2))[ind]
+    Utrunc = U[:, trunc_cols]
+    return Utrunc, ind
+end
+
 end
