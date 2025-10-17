@@ -1,220 +1,464 @@
 # Orth functions
 # --------------
 """
-    left_orth(A; [kind::Symbol, trunc, alg_qr, alg_polar, alg_svd]) -> V, C
-    left_orth!(A, [VC]; [kind::Symbol, trunc, alg_qr, alg_polar, alg_svd]) -> V, C
+    left_orth(A; [trunc], kwargs...) -> V, C
+    left_orth!(A, [VC]; [trunc], kwargs...) -> V, C
 
-Compute an orthonormal basis `V` for the image of the matrix `A` of size `(m, n)`,
-as well as a  matrix `C` (the corestriction) such that `A` factors as `A = V * C`.
-The keyword argument `kind` can be used to specify the specific orthogonal decomposition
-that should be used to factor `A`, whereas `trunc` can be used to control the
-precision in determining the rank of `A` via its singular values.
+Compute an orthonormal basis `V` for the image of the matrix `A`, as well as a  matrix `C`
+(the corestriction) such that `A` factors as `A = V * C`.
 
-`trunc` can either be a truncation strategy object or a NamedTuple with fields
-`atol`, `rtol`, and `maxrank`.
+This is a high-level wrapper where the keyword arguments can be used to specify and control
+the specific orthogonal decomposition that should be used to factor `A`, whereas `trunc`
+can optionally be used to control the precision in determining the rank of `A`, typically
+via its singular values.
 
-This is a high-level wrapper and will use one of the decompositions
-[`qr_compact!`](@ref), [`svd_compact!`](@ref)/[`svd_trunc!`](@ref), and[`left_polar!`](@ref)
-to compute the orthogonal basis `V`, as controlled by the keyword arguments.
+## Truncation
+The optional truncation strategy can be controlled via the `trunc` keyword argument, and
+any non-trivial strategy typically requires an SVD-based decompositions. This keyword can
+be either a `NamedTuple` or a [`TruncationStrategy`](@ref).
 
-When `kind` is provided, its possible values are
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
 
-*   `kind == :qr`: `V` and `C` are computed using the QR decomposition.
-    This requires `isnothing(trunc)` and `left_orth!(A, [VC])` is equivalent to
-    `qr_compact!(A, [VC], alg)` with a default value `alg = select_algorithm(qr_compact!, A; positive=true)`
+$(docs_truncation_kwargs)
 
-*   `kind == :polar`: `V` and `C` are computed using the polar decomposition,
-    This requires `isnothing(trunc)` and `left_orth!(A, [VC])` is equivalent to
-    `left_polar!(A, [VC], alg)` with a default value `alg = select_algorithm(left_polar!, A)`
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly.
+By default, MatrixAlgebraKit supplies the following:
 
-*   `kind == :svd`: `V` and `C` are computed using the singular value decomposition `svd_trunc!` when a
-    truncation strategy is specified using the `trunc` keyword argument, and using `svd_compact!` otherwise.
-    `V` will contain the left singular vectors and `C` is computed as the product of the singular
-    values and the right singular vectors, i.e. with `U, S, Vᴴ = svd(A)`, we have
-    `V = U` and `C = S * Vᴴ`.
+$(docs_truncation_strategies)
 
-When `kind` is not provided, the default value is `:qr` when `isnothing(trunc)`
-and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
-for backend factorizations through the `alg_qr`, `alg_polar`, and `alg_svd` keyword arguments,
-which will only be used if the corresponding factorization is called based on the other inputs.
-If NamedTuples are passed as `alg_qr`, `alg_polar`, or `alg_svd`, a default algorithm is chosen
-with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
-`alg_qr` defaults to `(; positive=true)` so that by default a positive QR decomposition will
-be used.
+## Keyword arguments
+There are 3 major modes of operation, based on the `alg` keyword, with slightly different
+application purposes.
 
-!!! note
-    The bang method `left_orth!` optionally accepts the output structure and possibly destroys
-    the input matrix `A`. Always use the return value of the function as it may not always be
-    possible to use the provided `CV` as output.
+### `alg::Nothing`
+This default mode uses the presence of a truncation strategy `trunc` to determine an optimal
+decomposition type, which will be QR-based for no truncation, or SVD-based for truncation.
+The remaining keyword arguments are passed on directly to the algorithm selection procedure
+of the chosen decomposition type.
 
-See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null), [`right_null(!)`](@ref right_null)
-"""
-function left_orth end
-function left_orth! end
-function left_orth!(A; kwargs...)
-    return left_orth!(A, initialize_output(left_orth!, A); kwargs...)
-end
-function left_orth(A; kwargs...)
-    return left_orth!(copy_input(left_orth, A); kwargs...)
-end
+### `alg::Symbol`
+Here, the driving selector is `alg`, and depending on its value, the algorithm selection
+procedure takes other keywords into account:
 
-"""
-    right_orth(A; [kind::Symbol, trunc, alg_lq, alg_polar, alg_svd]) -> C, Vᴴ
-    right_orth!(A, [CVᴴ]; [kind::Symbol, trunc, alg_lq, alg_polar, alg_svd]) -> C, Vᴴ
+* `:qr` : Factorize via QR decomposition, with further customizations through the
+  `alg_qr` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+```julia
+        V, C = qr_compact(A; alg_qr...)
+```
 
-Compute an orthonormal basis `V = adjoint(Vᴴ)` for the coimage of the matrix `A`, i.e.
-for the image of `adjoint(A)`, as well as a matrix `C` such that `A = C * Vᴴ`.
-The keyword argument `kind` can be used to specify the specific orthogonal decomposition
-that should be used to factor `A`, whereas `trunc` can be used to control the
-precision in determining the rank of `A` via its singular values.
+* `:polar` : Factorize via polar decomposition, with further customizations through the
+  `alg_polar` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+```julia
+        V, C = left_polar(A; alg_polar...)
+```
 
-`trunc` can either be a truncation strategy object or a NamedTuple with fields
-`atol`, `rtol`, and `maxrank`.
+* `:svd` : Factorize via SVD, with further customizations through the `alg_svd` keyword.
+  This mode further allows truncation, which can be selected through the `trunc` argument.
+  This mode is roughly equivalent to:
+```julia
+        V, S, C = svd_trunc(A; trunc, alg_svd...)
+        C = S * C
+```
 
-This is a high-level wrapper and will use one of the decompositions
-[`lq_compact!`](@ref), [`svd_compact!`](@ref)/[`svd_trunc!`](@ref), and
-[`right_polar!`](@ref) to compute the orthogonal basis `V`, as controlled by the
-keyword arguments.
+### `alg::AbstractAlgorithm`
+In this expert mode the algorithm is supplied directly, and the kind of decomposition is
+deduced from that. This hinges on the implementation of the algorithm trait
+[`MatrixAlgebraKit.left_orth_kind(alg)`](@ref).
 
-When `kind` is provided, its possible values are
-
-*   `kind == :lq`: `C` and `Vᴴ` are computed using the QR decomposition,
-    This requires `isnothing(trunc)` and `right_orth!(A, [CVᴴ])` is equivalent to
-    `lq_compact!(A, [CVᴴ], alg)` with a default value `alg = select_algorithm(lq_compact!, A; positive=true)`
-
-*   `kind == :polar`: `C` and `Vᴴ` are computed using the polar decomposition,
-    This requires `isnothing(trunc)` and `right_orth!(A, [CVᴴ])` is equivalent to
-    `right_polar!(A, [CVᴴ], alg)` with a default value `alg = select_algorithm(right_polar!, A)`
-
-*   `kind == :svd`: `C` and `Vᴴ` are computed using the singular value decomposition `svd_trunc!` when
-    a truncation strategy is specified using the `trunc` keyword argument, and using `svd_compact!` otherwise.
-    `V = adjoint(Vᴴ)` will contain the right singular vectors corresponding to the singular
-    values and `C` is computed as the product of the singular values and the right singular vectors,
-    i.e. with `U, S, Vᴴ = svd(A)`, we have `C = rmul!(U, S)` and `Vᴴ = Vᴴ`.
-
-When `kind` is not provided, the default value is `:lq` when `isnothing(trunc)`
-and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
-for backend factorizations through the `alg_lq`, `alg_polar`, and `alg_svd` keyword arguments,
-which will only be used if the corresponding factorization is called based on the other inputs.
-If `alg_lq`, `alg_polar`, or `alg_svd` are NamedTuples, a default algorithm is chosen
-with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
-`alg_lq` defaults to `(; positive=true)` so that by default a positive LQ decomposition will
-be used.
+---
 
 !!! note
-    The bang method `right_orth!` optionally accepts the output structure and possibly destroys
-    the input matrix `A`. Always use the return value of the function as it may not always be
-    possible to use the provided `CVᴴ` as output.
+    The bang method `left_orth!` optionally accepts the output structure and possibly
+    destroys the input matrix `A`. Always use the return value of the function as it may
+    not always be possible to use the provided `CV` as output.
 
-See also [`left_orth(!)`](@ref left_orth), [`left_null(!)`](@ref left_null), [`right_null(!)`](@ref right_null)
+See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null),
+[`right_null(!)`](@ref right_null)
 """
-function right_orth end
-function right_orth! end
-function right_orth!(A; kwargs...)
-    return right_orth!(A, initialize_output(right_orth!, A); kwargs...)
-end
-function right_orth(A; kwargs...)
-    return right_orth!(copy_input(right_orth, A); kwargs...)
-end
+@functiondef left_orth
+
+# helper functions
+function left_orth_qr! end
+function left_orth_polar! end
+function left_orth_svd! end
+
+"""
+    right_orth(A; [trunc], kwargs...) -> C, Vᴴ
+    right_orth!(A, [CVᴴ]; [trunc], kwargs...) -> C, Vᴴ
+
+Compute an orthonormal basis `V = adjoint(Vᴴ)` for the coimage of the matrix `A`, i.e. for
+the image of `adjoint(A)`, as well as a matrix `C` such that `A` factors as `A = C * Vᴴ`.
+
+This is a high-level wrapper where the keyword arguments can be used to specify and control
+the specific orthogonal decomposition that should be used to factor `A`, whereas `trunc` can
+optionally be used to control the precision in determining the rank of `A`, typically via
+its singular values.
+
+## Truncation
+The optional truncation strategy can be controlled via the `trunc` keyword argument, and
+any non-trivial strategy typically requires an SVD-based decompositions. This keyword can
+be either a `NamedTuple` or a [`TruncationStrategy`](@ref).
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$(docs_truncation_kwargs)
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly.
+By default, MatrixAlgebraKit supplies the following:
+
+$(docs_truncation_strategies)
+
+## Keyword arguments
+There are 3 major modes of operation, based on the `alg` keyword, with slightly different
+application purposes.
+
+### `alg::Nothing`
+This default mode uses the presence of a truncation strategy `trunc` to determine an optimal
+decomposition type, which will be LQ-based for no truncation, or SVD-based for truncation.
+The remaining keyword arguments are passed on directly to the algorithm selection procedure
+of the chosen decomposition type.
+
+### `alg::Symbol`
+Here, the driving selector is `alg`, and depending on its value, the algorithm selection
+procedure takes other keywords into account:
+
+* `:lq` : Factorize via LQ decomposition, with further customizations through the
+  `alg_lq` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+```julia
+        C, Vᴴ = lq_compact(A; alg_lq...)
+```
+
+* `:polar` : Factorize via polar decomposition, with further customizations through the
+  `alg_polar` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+```julia
+        C, Vᴴ = right_polar(A; alg_polar...)
+```
+
+* `:svd` : Factorize via SVD, with further customizations through the `alg_svd` keyword.
+  This mode further allows truncation, which can be selected through the `trunc` argument.
+  This mode is roughly equivalent to:
+```julia
+        C, S, Vᴴ = svd_trunc(A; trunc, alg_svd...)
+        C = C * S
+```
+
+### `alg::AbstractAlgorithm`
+In this expert mode the algorithm is supplied directly, and the kind of decomposition is
+deduced from that. This hinges on the implementation of the algorithm trait
+[`MatrixAlgebraKit.right_orth_kind(alg)`](@ref).
+
+---
+
+!!! note
+    The bang method `right_orth!` optionally accepts the output structure and possibly
+    destroys the input matrix `A`. Always use the return value of the function as it may not
+    always be possible to use the provided `CVᴴ` as output.
+
+See also [`left_orth(!)`](@ref left_orth), [`left_null(!)`](@ref left_null),
+[`right_null(!)`](@ref right_null)
+"""
+@functiondef right_orth
+
+# helper functions
+function right_orth_lq! end
+function right_orth_polar! end
+function right_orth_svd! end
 
 # Null functions
 # --------------
 """
-    left_null(A; [kind::Symbol, trunc, alg_qr, alg_svd]) -> N
-    left_null!(A, [N]; [kind::Symbol, alg_qr, alg_svd]) -> N
+    left_null(A; [trunc], kwargs...) -> N
+    left_null!(A, [N]; [trunc], kwargs...) -> N
 
-Compute an orthonormal basis `N` for the cokernel of the matrix `A` of size `(m, n)`, i.e.
-the nullspace of `adjoint(A)`, such that `adjoint(A)*N ≈ 0` and `N'*N ≈ I`.
-The keyword argument `kind` can be used to specify the specific orthogonal decomposition
-that should be used to factor `A`, whereas `trunc` can be used to control the
-the rank of `A` via its singular values.
+Compute an orthonormal basis `N` for the cokernel of the matrix `A`, i.e. the nullspace of
+`adjoint(A)`, such that `adjoint(A) * N ≈ 0` and `N' * N ≈ I`.
 
-`trunc` can either be a truncation strategy object or a NamedTuple with fields
-`atol`, `rtol`, and `maxnullity`.
+This is a high-level wrapper where the keyword arguments can be used to specify and control
+the underlying orthogonal decomposition that should be used to find the null space of `A'`,
+whereas `trunc` can optionally  be used to control the precision in determining the rank of
+`A`, typically via its singular values.
 
-This is a high-level wrapper and will use one of the decompositions `qr!` or `svd!`
-to compute the orthogonal basis `N`, as controlled by the keyword arguments.
+## Truncation
+The optional truncation strategy can be controlled via the `trunc` keyword argument, and any
+non-trivial strategy typically requires an SVD-based decomposition. This keyword can be
+either a `NamedTuple` or a [`TruncationStrategy`](@ref).
 
-When `kind` is provided, its possible values are
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
 
-*   `kind == :qr`: `N` is computed using the QR decomposition.
-    This requires `isnothing(trunc)` and `left_null!(A, [N], kind=:qr)` is equivalent to
-    `qr_null!(A, [N], alg)` with a default value `alg = select_algorithm(qr_compact!, A; positive=true)`
+$(docs_null_truncation_kwargs)
 
-*   `kind == :svd`: `N` is computed using the singular value decomposition and will contain 
-    the left singular vectors corresponding to either the zero singular values if `trunc`
-    isn't specified or the singular values specified by `trunc`.
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly. By default,
+MatrixAlgebraKit supplies the following:
 
-When `kind` is not provided, the default value is `:qr` when `isnothing(trunc)`
-and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
-using the `alg_qr` and `alg_svd` keyword arguments, which will only be used by the corresponding
-factorization backend. If `alg_qr` or `alg_svd` are NamedTuples, a default algorithm is chosen
-with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
-`alg_qr` defaults to `(; positive=true)` so that by default a positive QR decomposition will
-be used.
+$(docs_truncation_strategies)
 
 !!! note
-    The bang method `left_null!` optionally accepts the output structure and possibly destroys
-    the input matrix `A`. Always use the return value of the function as it may not always be
-    possible to use the provided `N` as output.
+    Here [`notrunc`](@ref) has special meaning, and signifies keeping the values that
+    correspond to the exact zeros determined from the additional columns of `A`.
 
-See also [`right_null(!)`](@ref right_null), [`left_orth(!)`](@ref left_orth), [`right_orth(!)`](@ref right_orth)
-"""
-function left_null end
-function left_null! end
-function left_null!(A; kwargs...)
-    return left_null!(A, initialize_output(left_null!, A); kwargs...)
-end
-function left_null(A; kwargs...)
-    return left_null!(copy_input(left_null, A); kwargs...)
-end
+## Keyword arguments
+There are 3 major modes of operation, based on the `alg` keyword, with slightly different
+application purposes.
 
-"""
-    right_null(A; [kind::Symbol, alg_lq, alg_svd]) -> Nᴴ
-    right_null!(A, [Nᴴ]; [kind::Symbol, alg_lq, alg_svd]) -> Nᴴ
+### `alg::Nothing`
+This default mode uses the presence of a truncation strategy `trunc` to determine an optimal
+decomposition type, which will be QR-based for no truncation, or SVD-based for truncation.
+The remaining keyword arguments are passed on directly to the algorithm selection procedure
+of the chosen decomposition type.
 
-Compute an orthonormal basis `N = adjoint(Nᴴ)` for the kernel or nullspace of the matrix `A`
-of size `(m, n)`, such that `A*adjoint(Nᴴ) ≈ 0` and `Nᴴ*adjoint(Nᴴ) ≈ I`.
-The keyword argument `kind` can be used to specify the specific orthogonal decomposition
-that should be used to factor `A`, whereas `trunc` can be used to control the
-the rank of `A` via its singular values.
+### `alg::Symbol`
+Here, the driving selector is `alg`, and depending on its value, the algorithm selection
+procedure takes other keywords into account:
 
-`trunc` can either be a truncation strategy object or a NamedTuple with fields
-`atol`, `rtol`, and `maxnullity`.
+* `:qr` : Factorize via QR nullspace, with further customizations through the `alg_qr`
+  keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+```julia
+        N = qr_null(A; alg_qr...)
+```
 
-This is a high-level wrapper and will use one of the decompositions `lq!` or `svd!`
-to compute the orthogonal basis `Nᴴ`, as controlled by the keyword arguments.
+* `:svd` : Factorize via SVD, with further customizations through the `alg_svd` keyword.
+  This mode further allows truncation, which can be selected through the `trunc` argument.
+  It is roughly equivalent to:
+```julia
+        U, S, _ = svd_trunc(A; trunc, alg_svd...)
+        N = truncate(left_null, (U, S), trunc)
+```
 
-When `kind` is provided, its possible values are
+### `alg::AbstractAlgorithm`
+In this expert mode the algorithm is supplied directly, and the kind of decomposition is
+deduced from that. This hinges on the implementation of the algorithm trait
+[`MatrixAlgebraKit.left_null_kind(alg)`](@ref).
 
-*   `kind == :lq`: `Nᴴ` is computed using the (nonpositive) LQ decomposition.
-    This requires `isnothing(trunc)` and `right_null!(A, [Nᴴ], kind=:lq)` is equivalent to
-    `lq_null!(A, [Nᴴ], alg)` with a default value `alg = select_algorithm(lq_compact!, A; positive=true)`
-
-*   `kind == :svd`: `N` is computed using the singular value decomposition and will contain 
-    the left singular vectors corresponding to the singular values that
-    are smaller than `max(atol, rtol * σ₁)`, where `σ₁` is the largest singular value of `A`.
-
-When `kind` is not provided, the default value is `:lq` when `isnothing(trunc)`
-and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
-using the `alg_lq` and `alg_svd` keyword arguments, which will only be used by the corresponding
-factorization backend. If `alg_lq` or `alg_svd` are NamedTuples, a default algorithm is chosen
-with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
-`alg_lq` defaults to `(; positive=true)` so that by default a positive LQ decomposition will
-be used.
+---
 
 !!! note
-    The bang method `right_null!` optionally accepts the output structure and possibly destroys
-    the input matrix `A`. Always use the return value of the function as it may not always be
-    possible to use the provided `Nᴴ` as output.
+    The bang method `left_null!` optionally accepts the output structure and possibly
+    destroys the input matrix `A`. Always use the return value of the function as it may not
+    always be possible to use the provided `N` as output.
 
-See also [`left_null(!)`](@ref left_null), [`left_orth(!)`](@ref left_orth), [`right_orth(!)`](@ref right_orth)
+See also [`right_null(!)`](@ref right_null), [`left_orth(!)`](@ref left_orth),
+[`right_orth(!)`](@ref right_orth)
 """
-function right_null end
-function right_null! end
-function right_null!(A; kwargs...)
-    return right_null!(A, initialize_output(right_null!, A); kwargs...)
+@functiondef left_null
+
+# helper functions
+function left_null_qr! end
+function left_null_svd! end
+
+"""
+    right_null(A; [trunc], kwargs...) -> Nᴴ
+    right_null!(A, [Nᴴ]; [trunc], kwargs...) -> Nᴴ
+
+Compute an orthonormal basis `N = adjoint(Nᴴ)` for the kernel of the matrix `A`, i.e. the
+nullspace of `A`, such that `A * Nᴴ' ≈ 0` and `Nᴴ * Nᴴ' ≈ I`.
+
+This is a high-level wrapper where the keyword arguments can be used to specify and control
+the underlying orthogonal decomposition that should be used to find the null space of `A`,
+whereas `trunc` can optionally  be used to control the precision in determining the rank of
+`A`, typically via its singular values.
+
+## Truncation
+The optional truncation strategy can be controlled via the `trunc` keyword argument, and any
+non-trivial strategy typically requires an SVD-based decomposition. This keyword can be
+either a `NamedTuple` or a [`TruncationStrategy`](@ref).
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$(docs_null_truncation_kwargs)
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly. By default,
+MatrixAlgebraKit supplies the following:
+
+$(docs_truncation_strategies)
+
+!!! note
+    Here [`notrunc`](@ref) has special meaning, and signifies keeping the values that
+    correspond to the exact zeros determined from the additional rows of `A`.
+
+## Keyword arguments
+There are 3 major modes of operation, based on the `alg` keyword, with slightly different
+application purposes.
+
+### `alg::Nothing`
+This default mode uses the presence of a truncation strategy `trunc` to determine an optimal
+decomposition type, which will be LQ-based for no truncation, or SVD-based for truncation.
+The remaining keyword arguments are passed on directly to the algorithm selection procedure
+of the chosen decomposition type.
+
+### `alg::Symbol`
+Here, the driving selector is `alg`, and depending on its value, the algorithm selection
+procedure takes other keywords into account:
+
+* `:lq` : Factorize via LQ nullspace, with further customizations through the `alg_lq`
+  keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+```julia
+        Nᴴ = lq_null(A; alg_qr...)
+```
+
+* `:svd` : Factorize via SVD, with further customizations through the `alg_svd` keyword.
+  This mode further allows truncation, which can be selected through the `trunc` argument.
+  It is roughly equivalent to:
+```julia
+        _, S, Vᴴ = svd_trunc(A; trunc, alg_svd...)
+        Nᴴ = truncate(right_null, (S, Vᴴ), trunc)
+```
+
+### `alg::AbstractAlgorithm`
+In this expert mode the algorithm is supplied directly, and the kind of decomposition is
+deduced from that. This hinges on the implementation of the algorithm trait
+[`MatrixAlgebraKit.right_null_kind(alg)`](@ref).
+
+---
+
+!!! note
+    The bang method `right_null!` optionally accepts the output structure and possibly
+    destroys the input matrix `A`. Always use the return value of the function as it may not
+    always be possible to use the provided `Nᴴ` as output.
+
+See also [`left_null(!)`](@ref left_null), [`left_orth(!)`](@ref left_orth),
+[`right_orth(!)`](@ref right_orth)
+"""
+@functiondef right_null
+
+# helper functions
+function right_null_lq! end
+function right_null_svd! end
+
+# Algorithm selection
+# -------------------
+# specific override for `alg::Symbol` case, to allow for choosing the kind of factorization.
+function select_algorithm(::typeof(left_orth!), A, alg::Symbol; trunc = nothing, kwargs...)
+    alg === :svd && return select_algorithm(
+        left_orth_svd!, A, get(kwargs, :alg_svd, nothing); trunc
+    )
+
+    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+
+    alg === :qr && return select_algorithm(left_orth_qr!, A, get(kwargs, :alg_qr, nothing))
+    alg === :polar && return select_algorithm(left_orth_polar!, A, get(kwargs, :alg_polar, nothing))
+
+    throw(ArgumentError(lazy"Unknown alg symbol $alg"))
 end
-function right_null(A; kwargs...)
-    return right_null!(copy_input(right_null, A); kwargs...)
+
+default_algorithm(::typeof(left_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
+    isnothing(trunc) ? select_algorithm(left_orth_qr!, A; kwargs...) :
+    select_algorithm(left_orth_svd!, A; trunc, kwargs...)
+# disambiguate
+default_algorithm(::typeof(left_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+    isnothing(trunc) ? select_algorithm(left_orth_qr!, A; kwargs...) :
+    select_algorithm(left_orth_svd!, A; trunc, kwargs...)
+
+
+select_algorithm(::typeof(left_orth_qr!), A, alg = nothing; kwargs...) =
+    select_algorithm(qr_compact!, A, alg; kwargs...)
+select_algorithm(::typeof(left_orth_polar!), A, alg = nothing; kwargs...) =
+    select_algorithm(left_polar!, A, alg; kwargs...)
+select_algorithm(::typeof(left_orth_svd!), A, alg = nothing; trunc = nothing, kwargs...) =
+    isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
+    select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
+
+# specific override for `alg::Symbol` case, to allow for choosing the kind of factorization.
+function select_algorithm(::typeof(right_orth!), A, alg::Symbol; trunc = nothing, kwargs...)
+    alg === :svd && return select_algorithm(
+        right_orth_svd!, A, get(kwargs, :alg_svd, nothing); trunc
+    )
+
+    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+
+    alg === :lq && return select_algorithm(right_orth_lq!, A, get(kwargs, :alg_lq, nothing))
+    alg === :polar && return select_algorithm(right_orth_polar!, A, get(kwargs, :alg_polar, nothing))
+
+    throw(ArgumentError(lazy"Unknown alg symbol $alg"))
+end
+
+default_algorithm(::typeof(right_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
+    isnothing(trunc) ? select_algorithm(right_orth_lq!, A; kwargs...) :
+    select_algorithm(right_orth_svd!, A; trunc, kwargs...)
+# disambiguate:
+default_algorithm(::typeof(right_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+    isnothing(trunc) ? select_algorithm(right_orth_lq!, A; kwargs...) :
+    select_algorithm(right_orth_svd!, A; trunc, kwargs...)
+
+
+select_algorithm(::typeof(right_orth_lq!), A, alg = nothing; kwargs...) =
+    select_algorithm(lq_compact!, A, alg; kwargs...)
+select_algorithm(::typeof(right_orth_polar!), A, alg = nothing; kwargs...) =
+    select_algorithm(right_polar!, A, alg; kwargs...)
+select_algorithm(::typeof(right_orth_svd!), A, alg = nothing; trunc = nothing, kwargs...) =
+    isnothing(trunc) ? select_algorithm(svd_compact!, A, alg; kwargs...) :
+    select_algorithm(svd_trunc!, A, alg; trunc, kwargs...)
+
+function select_algorithm(::typeof(left_null!), A, alg::Symbol; trunc = nothing, kwargs...)
+    alg === :svd && return select_algorithm(
+        left_null_svd!, A, get(kwargs, :alg_svd, nothing); trunc
+    )
+
+    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+
+    alg === :qr && return select_algorithm(left_null_qr!, A, get(kwargs, :alg_qr, nothing))
+
+    throw(ArgumentError(lazy"unkown alg symbol $alg"))
+end
+
+default_algorithm(::typeof(left_null!), A::TA; trunc = nothing, kwargs...) where {TA} =
+    isnothing(trunc) ? select_algorithm(left_null_qr!, A; kwargs...) :
+    select_algorithm(left_null_svd!, A; trunc, kwargs...)
+# disambiguate
+default_algorithm(::typeof(left_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+    isnothing(trunc) ? select_algorithm(left_null_qr!, A; kwargs...) :
+    select_algorithm(left_null_svd!, A; trunc, kwargs...)
+
+select_algorithm(::typeof(left_null_qr!), A, alg = nothing; kwargs...) =
+    select_algorithm(qr_null!, A, alg; kwargs...)
+function select_algorithm(::typeof(left_null_svd!), A, alg = nothing; trunc = nothing, kwargs...)
+    if alg isa TruncatedAlgorithm
+        isnothing(trunc) ||
+            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
+        return alg
+    else
+        alg_svd = select_algorithm(svd_full!, A, alg; kwargs...)
+        return TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
+    end
+end
+
+function select_algorithm(::typeof(right_null!), A, alg::Symbol; trunc = nothing, kwargs...)
+    alg === :svd && return select_algorithm(
+        right_null_svd!, A, get(kwargs, :alg_svd, nothing); trunc
+    )
+
+    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
+
+    alg === :lq && return select_algorithm(right_null_lq!, A, get(kwargs, :alg_lq, nothing))
+
+    throw(ArgumentError(lazy"unkown alg symbol $alg"))
+end
+
+default_algorithm(::typeof(right_null!), A::TA; trunc = nothing, kwargs...) where {TA} =
+    isnothing(trunc) ? select_algorithm(right_null_lq!, A; kwargs...) :
+    select_algorithm(right_null_svd!, A; trunc, kwargs...)
+default_algorithm(::typeof(right_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+    isnothing(trunc) ? select_algorithm(right_null_lq!, A; kwargs...) :
+    select_algorithm(right_null_svd!, A; trunc, kwargs...)
+
+select_algorithm(::typeof(right_null_lq!), A, alg = nothing; kwargs...) =
+    select_algorithm(lq_null!, A, alg; kwargs...)
+
+function select_algorithm(::typeof(right_null_svd!), A, alg; trunc = nothing, kwargs...)
+    if alg isa TruncatedAlgorithm
+        isnothing(trunc) ||
+            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
+        return alg
+    else
+        alg_svd = select_algorithm(svd_full!, A, alg; kwargs...)
+        return TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
+    end
+
 end

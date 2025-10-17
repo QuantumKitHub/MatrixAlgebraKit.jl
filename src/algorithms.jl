@@ -53,6 +53,105 @@ function _show_alg(io::IO, alg::Algorithm)
     return print(io, ")")
 end
 
+# Algorithm traits
+# ----------------
+"""
+    left_orth_kind(alg::AbstractAlgorithm) -> f!
+
+Select an appropriate factorization function for applying `left_orth!(A, alg)`.
+By default, this is either `left_orth_qr!`, `left_orth_polar!` or `left_orth_svd!`, but
+this can be extended to insert arbitrary other decomposition functions, which should follow
+the signature `f!(A, F, alg) -> F`
+"""
+left_orth_kind(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `left_orth` algorithm type `$(typeof(alg))`.
+    To register the algorithm type, define:
+
+            MatrixAlgebraKit.left_orth_kind(alg) = f!
+
+    where `f!` should be the factorization function that will be used.
+    By default, this is either `left_orth_qr!`, `left_orth_polar!` or `left_orth_svd!`.
+    """
+)
+
+"""
+    right_orth_kind(alg::AbstractAlgorithm) -> f!
+
+Select an appropriate factorization function for applying `right_orth!(A, alg)`.
+By default, this is either `right_orth_lq!`, `right_orth_polar!` or `right_orth_svd!`, but
+this can be extended to insert arbitrary other decomposition functions, which should follow
+the signature `f!(A, F, alg) -> F`
+"""
+right_orth_kind(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `right_orth` algorithm type `$(typeof(alg))`.
+    To register the algorithm type, define:
+
+            MatrixAlgebraKit.right_orth_kind(alg) = f!
+
+    where `f!` should be the factorization function that will be used.
+    By default, this is either `right_orth_lq!`, `right_orth_polar!` or `right_orth_svd!`.
+    """
+)
+
+"""
+    left_null_kind(alg::AbstractAlgorithm) -> f!
+
+Select an appropriate factorization function for applying `left_null!(A, alg)`.
+By default, this is either `left_null_qr!` or `left_null_svd!`, but this can be extended
+to insert arbitrary other decomposition functions, which should follow the signature
+`f!(A, F, alg) -> F`
+"""
+function left_null_kind(alg::AbstractAlgorithm)
+    left_orth_kind(alg) === left_orth_qr! && return left_null_qr!
+    left_orth_kind(alg) === left_orth_svd! && return left_null_svd!
+    return error(
+        """
+        Unkown or invalid `left_null` algorithm type `$(typeof(alg))`.
+        To register the algorithm type, define:
+
+                MatrixAlgebraKit.left_null_kind(alg) = f!
+
+        where `f!` should be the factorization function that will be used.
+        By default, this is either `left_null_qr!` or `left_null_svd!`.
+        """
+    )
+end
+
+"""
+    right_null_kind(alg::AbstractAlgorithm) -> f!
+
+Select an appropriate factorization function for applying `right_null!(A, alg)`.
+By default, this is either `right_null_lq!` or `right_null_svd!`, but this can be extended
+to insert arbitrary other decomposition functions, which should follow the signature
+`f!(A, F, alg) -> F`
+"""
+function right_null_kind(alg::AbstractAlgorithm)
+    right_orth_kind(alg) === right_orth_lq! && return right_null_lq!
+    right_orth_kind(alg) === right_orth_svd! && return right_null_svd!
+    return error(
+        """
+        Unkown or invalid `right_null` algorithm type `$(typeof(alg))`.
+        To register the algorithm type, define:
+
+                MatrixAlgebraKit.right_null_kind(alg) = f!
+
+        where `f!` should be the factorization function that will be used.
+        By default, this is either `right_null_lq!` or `right_null_svd!`.
+        """
+    )
+end
+
+"""
+    does_truncate(alg::AbstractAlgorithm) -> Bool
+
+Check whether or not an algorithm can be used for a truncated decomposition.
+"""
+does_truncate(alg::AbstractAlgorithm) = false
+
+# Algorithm selection
+# -------------------
 @doc """
     MatrixAlgebraKit.select_algorithm(f, A, alg::AbstractAlgorithm)
     MatrixAlgebraKit.select_algorithm(f, A, alg::Symbol; kwargs...)
@@ -161,6 +260,24 @@ function select_truncation(trunc)
 end
 
 @doc """
+    MatrixAlgebraKit.select_null_truncation(trunc)
+
+Construct a [`TruncationStrategy`](@ref) from the given `NamedTuple` of keywords or input strategy, to implement a nullspace selection.
+""" select_null_truncation
+
+function select_null_truncation(trunc)
+    if isnothing(trunc)
+        return NoTruncation()
+    elseif trunc isa NamedTuple
+        return null_truncation_strategy(; trunc...)
+    elseif trunc isa TruncationStrategy
+        return trunc
+    else
+        return throw(ArgumentError("Unknown truncation strategy: $trunc"))
+    end
+end
+
+@doc """
     MatrixAlgebraKit.findtruncated(values::AbstractVector, strategy::TruncationStrategy)
 
 Generic interface for finding truncated values of the spectrum of a decomposition
@@ -199,6 +316,10 @@ struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
     alg::A
     trunc::T
 end
+
+left_orth_kind(alg::TruncatedAlgorithm) = left_orth_kind(alg.alg)
+right_orth_kind(alg::TruncatedAlgorithm) = right_orth_kind(alg.alg)
+does_truncate(::TruncatedAlgorithm) = true
 
 # Utility macros
 # --------------
