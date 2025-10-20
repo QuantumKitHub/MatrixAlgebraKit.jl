@@ -50,6 +50,7 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalA
     @check_scalar(V, A)
     return nothing
 end
+
 function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::DiagonalAlgorithm)
     check_hermitian(A, alg)
     @assert isdiag(A)
