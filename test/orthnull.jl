@@ -7,9 +7,6 @@ using LinearAlgebra: LinearAlgebra, I
 # testing non-AbstractArray codepaths:
 include("linearmap.jl")
 
-# testing non-AbstractArray codepaths:
-include("linearmap.jl")
-
 eltypes = (Float32, Float64, ComplexF32, ComplexF64)
 @testset "left_orth and left_null for T = $T" for T in eltypes
     rng = StableRNG(123)
