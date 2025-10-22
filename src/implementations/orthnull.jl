@@ -9,11 +9,11 @@ check_input(::typeof(left_orth!), A, VC, alg::AbstractAlgorithm) =
     check_input(left_orth_kind(alg), A, VC, alg)
 
 check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaQR) =
-    check_input(qr_compact!, A, VC, alg)
+    check_input(qr_compact!, A, VC, alg.alg)
 check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaPolar) =
-    check_input(left_polar!, A, VC, alg)
+    check_input(left_polar!, A, VC, alg.alg)
 check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaSVD) =
-    check_input(qr_compact!, A, VC, alg)
+    check_input(qr_compact!, A, VC, alg.alg)
 
 check_input(::typeof(left_orth_qr!), A, VC, alg::AbstractAlgorithm) =
     check_input(qr_compact!, A, VC, alg)
@@ -26,11 +26,11 @@ check_input(::typeof(right_orth!), A, CVᴴ, alg::AbstractAlgorithm) =
     check_input(right_orth_kind(alg), A, CVᴴ, alg)
 
 check_input(::typeof(right_orth!), A, VC, alg::RightOrthViaLQ) =
-    check_input(lq_compact!, A, VC, alg)
+    check_input(lq_compact!, A, VC, alg.alg)
 check_input(::typeof(right_orth!), A, VC, alg::RightOrthViaPolar) =
-    check_input(right_polar!, A, VC, alg)
+    check_input(right_polar!, A, VC, alg.alg)
 check_input(::typeof(right_orth!), A, VC, alg::RightOrthViaSVD) =
-    check_input(lq_compact!, A, VC, alg)
+    check_input(lq_compact!, A, VC, alg.alg)
 
 check_input(::typeof(right_orth_lq!), A, CVᴴ, alg::AbstractAlgorithm) =
     check_input(lq_compact!, A, CVᴴ, alg)
@@ -57,11 +57,11 @@ initialize_output(::typeof(left_orth!), A, alg::AbstractAlgorithm) =
     initialize_output(left_orth_kind(alg), A, alg)
 
 initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaQR) =
-    initialize_output(qr_compact!, A, alg)
+    initialize_output(qr_compact!, A, alg.alg)
 initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaPolar) =
-    initialize_output(left_polar!, A, alg)
+    initialize_output(left_polar!, A, alg.alg)
 initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaSVD) =
-    initialize_output(qr_compact!, A, alg)
+    initialize_output(qr_compact!, A, alg.alg)
 
 initialize_output(::typeof(left_orth_qr!), A, alg::AbstractAlgorithm) =
     initialize_output(qr_compact!, A, alg)
@@ -74,11 +74,11 @@ initialize_output(::typeof(right_orth!), A, alg::AbstractAlgorithm) =
     initialize_output(right_orth_kind(alg), A, alg)
 
 initialize_output(::typeof(right_orth!), A, alg::RightOrthViaLQ) =
-    initialize_output(lq_compact!, A, alg)
+    initialize_output(lq_compact!, A, alg.alg)
 initialize_output(::typeof(right_orth!), A, alg::RightOrthViaPolar) =
-    initialize_output(right_polar!, A, alg)
+    initialize_output(right_polar!, A, alg.alg)
 initialize_output(::typeof(right_orth!), A, alg::RightOrthViaSVD) =
-    initialize_output(lq_compact!, A, alg)
+    initialize_output(lq_compact!, A, alg.alg)
 
 initialize_output(::typeof(right_orth_lq!), A, alg::AbstractAlgorithm) =
     initialize_output(lq_compact!, A, alg)
