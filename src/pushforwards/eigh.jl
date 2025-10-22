@@ -1,4 +1,4 @@
-function eigh_pullfwd!(dA, A, DV, dDV; kwargs...)
+function eigh_pushforward!(dA, A, DV, dDV; kwargs...)
     tmpV         = V \ dA
     ∂K           = tmpV * V
     ∂Kdiag       = diag(∂K)

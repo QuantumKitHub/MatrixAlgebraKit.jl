@@ -1,7 +1,7 @@
 module MatrixAlgebraKitEnzymeExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: diagview, inv_safe
+using MatrixAlgebraKit: diagview, inv_safe, eig_trunc!, eigh_trunc!
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!, qr_pullfwd!, lq_pullfwd!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!, qr_null_pullfwd!, lq_null_pullfwd!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_pullfwd!, eigh_pullfwd!
@@ -321,7 +321,7 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       A::Annotation{<:AbstractMatrix},
                                       USVᴴ::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix, <:AbstractMatrix}},
                                       ϵ::Annotation{Vector{T}},
-                                      alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                                      alg::Const{<:MatrixAlgebraKit.TruncatedAlgorithm};
                                       kwargs...,
                                      ) where {RT, T<:Real}
     # form cache if needed
@@ -350,7 +350,7 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
                              A::Annotation{<:AbstractMatrix},
                              USVᴴ::Annotation{<:Tuple{<:AbstractMatrix, <:AbstractMatrix, <:AbstractMatrix}},
                              ϵ::Annotation{Vector{T}},
-                             alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                             alg::Const{<:MatrixAlgebraKit.TruncatedAlgorithm};
                              kwargs...) where {RT, T<:Real}
     cache_A, cache_USVᴴ, shadow_USVᴴ, ind = cache
     U, S, Vᴴ    = cache_USVᴴ
@@ -363,7 +363,7 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
         make_zero!(USVᴴ.dval)
     end
     if !isa(ϵ, Const)
-        ϵ.dval .= zero(T)
+        make_zero!(ϵ.dval)
     end
     return (nothing, nothing, nothing, nothing)
 end
@@ -476,16 +476,17 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       ::Type{RT},
                                       A::Annotation{<:AbstractMatrix},
                                       DV::Annotation{<:Tuple{<:Diagonal, <:AbstractMatrix}},
-                                      alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                                      ϵ::Annotation{Vector{T}},
+                                      alg::Const{<:MatrixAlgebraKit.TruncatedAlgorithm};
                                       kwargs...,
-                                     ) where {RT}
+                                     ) where {RT, T}
     # form cache if needed
     cache_A   = copy(A.val)
-    eigh_full!(A.val, DV.val, alg.val.alg)
+    MatrixAlgebraKit.eigh_full!(A.val, DV.val, alg.val.alg)
     cache_DV  = copy.(DV.val)
     DV′, ind  = MatrixAlgebraKit.truncate(eigh_trunc!, DV.val, alg.val.trunc)
-    ϵ         = MatrixAlgebraKit.truncation_error!(diagview(DV.val[1]), ind)
-    primal    = EnzymeRules.needs_primal(config) ? (DV′..., ϵ)  : nothing
+    ϵ.val[1]  = MatrixAlgebraKit.truncation_error!(diagview(DV.val[1]), ind)
+    primal    = EnzymeRules.needs_primal(config) ? (DV′..., ϵ.val)  : nothing
     shadow_DV = if !isa(A, Const) && !isa(DV, Const)
         dD, dV  = DV.dval
         dDtrunc = Diagonal(diagview(dD)[ind])
@@ -494,17 +495,18 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
     else
         (nothing, nothing)
     end
-    shadow = EnzymeRules.needs_shadow(config) ? (shadow_DV..., zero(ϵ)) : nothing
+    shadow = EnzymeRules.needs_shadow(config) ? (shadow_DV..., [zero(T)]) : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_DV, shadow_DV, ind))
 end
 function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
                              func::Const{typeof(eigh_trunc!)},
-                             dret,
+                             ::Type{RT},
                              cache,
                              A::Annotation{<:AbstractMatrix},
                              DV::Annotation{<:Tuple{<:Diagonal, <:AbstractMatrix}},
+                             ϵ::Annotation{Vector{T}},
                              alg::Const{<:MatrixAlgebraKit.TruncatedAlgorithm};
-                             kwargs...)
+                             kwargs...) where {RT, T}
     cache_A, cache_DV, cache_dDVtrunc, ind = cache
     D, V   = cache_DV
     dD, dV = cache_dDVtrunc
@@ -515,24 +517,28 @@ function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
     if !isa(DV, Const)
         make_zero!(DV.dval)
     end
+    if !isa(ϵ, Const)
+        make_zero!(ϵ.dval)
+    end
     return (nothing, nothing, nothing, nothing)
 end
-#=
+
 function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       func::Const{typeof(eig_trunc!)},
                                       ::Type{RT},
                                       A::Annotation{<:AbstractMatrix},
                                       DV::Annotation{<:Tuple{<:Diagonal, <:AbstractMatrix}},
-                                      alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                                      ϵ::Annotation{Vector{T}},
+                                      alg::Const{<:MatrixAlgebraKit.TruncatedAlgorithm};
                                       kwargs...,
-                                     ) where {RT}
+                                     ) where {RT, T}
     # form cache if needed
     cache_A   = copy(A.val)
     eig_full!(A.val, DV.val, alg.val.alg)
     cache_DV  = copy.(DV.val)
     DV′, ind  = MatrixAlgebraKit.truncate(eig_trunc!, DV.val, alg.val.trunc)
-    ϵ         = MatrixAlgebraKit.truncation_error!(diagview(DV.val[1]), ind)
-    primal    = EnzymeRules.needs_primal(config) ? (DV′..., ϵ)  : nothing
+    ϵ.val[1]  = MatrixAlgebraKit.truncation_error!(diagview(DV.val[1]), ind)
+    primal    = EnzymeRules.needs_primal(config) ? (DV′..., ϵ.val)  : nothing
     shadow_DV = if !isa(A, Const) && !isa(DV, Const)
         dD, dV  = DV.dval
         dDtrunc = Diagonal(diagview(dD)[ind])
@@ -541,30 +547,34 @@ function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
     else
         (nothing, nothing)
     end
-    shadow = EnzymeRules.needs_shadow(config) ? (shadow_DV..., zero(ϵ)) : nothing
+    shadow = EnzymeRules.needs_shadow(config) ? (shadow_DV..., [zero(T)]) : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_DV, shadow_DV, ind))
 end
 function EnzymeRules.reverse(config::EnzymeRules.RevConfigWidth{1},
                              func::Const{typeof(eig_trunc!)},
-                             dret,
+                             ::Type{RT},
                              cache,
                              A::Annotation{<:AbstractMatrix},
                              DV::Annotation{<:Tuple{<:Diagonal, <:AbstractMatrix}},
+                             ϵ::Annotation{Vector{T}},
                              alg::Const{<:MatrixAlgebraKit.TruncatedAlgorithm};
-                             kwargs...)
+                             kwargs...) where {RT, T}
     cache_A, cache_DV, cache_dDVtrunc, ind = cache
     D, V   = cache_DV
     dD, dV = cache_dDVtrunc
     if !isa(A, Const) && !isa(DV, Const)
         A.dval .= zero(eltype(A.val))
-        A.dval .= MatrixAlgebraKit.eigh_pullback!(A.dval, A.val, (D, V), (dD, dV), ind; kwargs...)
+        A.dval .= MatrixAlgebraKit.eig_pullback!(A.dval, A.val, (D, V), (dD, dV), ind; kwargs...)
     end
     if !isa(DV, Const)
         make_zero!(DV.dval)
     end
+    if !isa(ϵ, Const)
+        make_zero!(ϵ.dval)
+    end
     return (nothing, nothing, nothing, nothing)
 end
-=#
+
 function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
                                       func::Const{typeof(eigh_full!)},
                                       ::Type{RT},

@@ -1,4 +1,4 @@
-function eig_pullfwd!(dA, A, DV, dDV; kwargs...)
+function eig_pushforward!(dA, A, DV, dDV; kwargs...)
     D, V     = DV
     dD, dV   = dDV
     ∂K       = inv(V) * dA * V

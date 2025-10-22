@@ -1,4 +1,4 @@
-function qr_pullfwd!(dA, A, QR, dQR; tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(QR[2]), rank_atol::Real=tol, gauge_atol::Real=tol)
+function qr_pushforward!(dA, A, QR, dQR; tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(QR[2]), rank_atol::Real=tol, gauge_atol::Real=tol)
     Q, R  = QR
     m     = size(Q, 1)
     n     = size(R, 2)

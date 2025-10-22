@@ -1,4 +1,4 @@
-function svd_pullfwd!(dA, A, USVᴴ, dUSVᴴ; kwargs...)
+function svd_pushforward!(dA, A, USVᴴ, dUSVᴴ; kwargs...)
     U, S, Vᴴ = USVᴴ
     dU, dS, dVᴴ = dUSVᴴ
     V       = adjoint(Vᴴ)

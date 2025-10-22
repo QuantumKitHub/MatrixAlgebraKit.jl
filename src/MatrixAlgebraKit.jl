@@ -112,11 +112,11 @@ include("pullbacks/eigh.jl")
 include("pullbacks/svd.jl")
 include("pullbacks/polar.jl")
 
-include("pullfwds/qr.jl")
-include("pullfwds/lq.jl")
-include("pullfwds/eig.jl")
-include("pullfwds/eigh.jl")
-include("pullfwds/polar.jl")
-include("pullfwds/svd.jl")
+include("pushforwards/qr.jl")
+include("pushforwards/lq.jl")
+include("pushforwards/eig.jl")
+include("pushforwards/eigh.jl")
+include("pushforwards/polar.jl")
+include("pushforwards/svd.jl")
 
 end

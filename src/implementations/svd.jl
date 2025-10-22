@@ -89,7 +89,7 @@ end
 function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
-function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
+function initialize_output(::typeof(svd_trunc!), A, alg::TruncatedAlgorithm)
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
@@ -333,25 +333,46 @@ function _gpu_gesvdj!(
     )
     throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
 end
+function _gpu_gesvd_maybe_transpose!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix)
+    m, n = size(A)
+    m ≥ n && return _gpu_gesvd!(A, S, U, Vᴴ)
+    # both CUSOLVER and ROCSOLVER require m ≥ n for gesvd (QR_Iteration)
+    # if this condition is not met, do the SVD via adjoint
+    minmn = min(m, n)
+    Aᴴ = min(m, n) > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
+    Uᴴ = similar(U')
+    V = similar(Vᴴ')
+    if size(U) == (m, m)
+        _gpu_gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
+    else
+        _gpu_gesvd!(Aᴴ, S, V, Uᴴ)
+    end
+    length(U) > 0 && adjoint!(U, Uᴴ)
+    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
+    return U, S, Vᴴ
+end
+
 # GPU SVD implementation
-function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
+function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_full!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     fill!(S, zero(eltype(S)))
     m, n = size(A)
     minmn = min(m, n)
+    if minmn == 0
+        one!(U)
+        zero!(S)
+        one!(Vᴴ)
+        return USVᴴ
+    end
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||
-            throw(ArgumentError("GPU_QRIteration does not accept any keyword arguments"))
-        _gpu_gesvd!(A, view(S, 1:minmn, 1), U, Vᴴ)
+            @warn "GPU_QRIteration does not accept any keyword arguments"
+        _gpu_gesvd_maybe_transpose!(A, view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa GPU_SVDPolar
         _gpu_Xgesvdp!(A, view(S, 1:minmn, 1), U, Vᴴ; alg.kwargs...)
     elseif alg isa GPU_Jacobi
         _gpu_gesvdj!(A, view(S, 1:minmn, 1), U, Vᴴ; alg.kwargs...)
-        # elseif alg isa LAPACK_Bisection
-        #     throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
-        # elseif alg isa LAPACK_Jacobi
-        #     throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
@@ -368,16 +389,21 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
     # TODO: make this controllable using a `gaugefix` keyword argument
     gaugefix!(svd_trunc!, U, S, Vᴴ, size(A)...)
-    return first(truncate(svd_trunc!, USVᴴ, alg.trunc))
+    # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
+    USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+    Strunc = diagview(USVᴴtrunc[2])
+    # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
+    ϵ = sqrt(norm(A)^2 - norm(Strunc)^2) # is there a more accurate way to do this?
+    return USVᴴtrunc..., ϵ
 end
 
-function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
+function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||
-            throw(ArgumentError("GPU_QRIteration does not accept any keyword arguments"))
-        _gpu_gesvd!(A, S.diag, U, Vᴴ)
+            @warn "GPU_QRIteration does not accept any keyword arguments"
+        _gpu_gesvd_maybe_transpose!(A, S.diag, U, Vᴴ)
     elseif alg isa GPU_SVDPolar
         _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; alg.kwargs...)
     elseif alg isa GPU_Jacobi
@@ -397,8 +423,8 @@ function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
     if alg isa GPU_QRIteration
         isempty(alg.kwargs) ||
-            throw(ArgumentError("GPU_QRIteration does not accept any keyword arguments"))
-        _gpu_gesvd!(A, S, U, Vᴴ)
+            @warn "GPU_QRIteration does not accept any keyword arguments"
+        _gpu_gesvd_maybe_transpose!(A, S, U, Vᴴ)
     elseif alg isa GPU_SVDPolar
         _gpu_Xgesvdp!(A, S, U, Vᴴ; alg.kwargs...)
     elseif alg isa GPU_Jacobi

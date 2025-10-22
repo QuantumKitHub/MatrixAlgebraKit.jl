@@ -1,4 +1,4 @@
-function lq_pullfwd!(dA, A, LQ, dLQ; tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(LQ[1]), rank_atol::Real=tol, gauge_atol::Real=tol)
+function lq_pushforward!(dA, A, LQ, dLQ; tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(LQ[1]), rank_atol::Real=tol, gauge_atol::Real=tol)
     L, Q  = LQ
     m     = size(L, 1)
     n     = size(Q, 2)

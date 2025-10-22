@@ -113,6 +113,19 @@ end
     end
 end
 
+function MatrixAlgebraKit.eig_trunc!(A, DV, ϵ::Vector{T}, alg::MatrixAlgebraKit.TruncatedAlgorithm) where {T}
+    D, V = eig_full!(A, DV, alg.alg)
+    DVtrunc, ind = MatrixAlgebraKit.truncate(eig_trunc!, (D, V), alg.trunc)
+    ϵ[1] = MatrixAlgebraKit.truncation_error!(diagview(D), ind)
+    return DVtrunc..., ϵ
+end
+function dummy_eig_trunc(A, ϵ::Vector{T}, alg::TruncatedAlgorithm) where {T}
+    Ac = MatrixAlgebraKit.copy_input(MatrixAlgebraKit.eig_trunc, A)
+    DV = MatrixAlgebraKit.initialize_output(eig_trunc!, A, alg)
+    Dtrunc, Vtrunc, ϵ = MatrixAlgebraKit.eig_trunc!(Ac, DV, ϵ, alg)
+    return Dtrunc, Vtrunc, ϵ
+end
+
 @timedtestset "EIG AD Rules with eltype $T" for T in ETs 
     rng  = StableRNG(12345)
     m    = 19
@@ -129,7 +142,7 @@ end
             test_reverse(eig_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔD2), copy(ΔV)))
             test_reverse(eig_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=copy(ΔD2.diag))
         end
-        @testset "reverse: RT $RT, TA $TA" for RT in (MixedDuplicated,), TA in (Duplicated,)
+        @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             for r in 1:4:m
                 truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
                 ind = MatrixAlgebraKit.findtruncated(diagview(D), truncalg.trunc)
@@ -137,8 +150,8 @@ end
                 Vtrunc = V[:, ind]
                 ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
                 ΔVtrunc = ΔV[:, ind]
-                # broken right now due to Enzyme 
-                #test_reverse(eig_trunc!, RT, (A, TA), ((D, V), TA), (truncalg, Const); atol=atol, rtol=rtol, output_tangent=Base.RefValue((ΔDtrunc, ΔVtrunc, zero(real(T)))))
+                ϵ = [zero(real(T))] 
+                test_reverse(dummy_eig_trunc, RT, (A, TA), (ϵ, TA), (truncalg, Const); atol=atol, rtol=rtol, output_tangent=(ΔDtrunc, ΔVtrunc, [zero(real(T))]))
                 dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
                 dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
                 @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
@@ -149,8 +162,8 @@ end
             Vtrunc = V[:, ind]
             ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
             ΔVtrunc = ΔV[:, ind]
-            # broken right now due to Enzyme 
-            #test_reverse(eig_trunc, RT, (A, TA); fkwargs=(alg=truncalg,), atol=atol, rtol=rtol, output_tangent=Base.RefValue((ΔDtrunc, ΔVtrunc, zero(real(T)))))
+            ϵ = [zero(real(T))] 
+            test_reverse(dummy_eig_trunc, RT, (A, TA), (ϵ, TA), (truncalg, Const); atol=atol, rtol=rtol, output_tangent=(ΔDtrunc, ΔVtrunc, [zero(real(T))]))
             dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
             dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
             @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
@@ -168,10 +181,18 @@ function copy_eigh_vals(A; kwargs...)
     eigh_vals(A; kwargs...)
 end
 
-function copy_eigh_trunc!(A; kwargs...)
+function MatrixAlgebraKit.eigh_trunc!(A, DV, ϵ::Vector{T}, alg::MatrixAlgebraKit.TruncatedAlgorithm) where {T}
+    D, V = eigh_full!(A, DV, alg.alg)
+    DVtrunc, ind = MatrixAlgebraKit.truncate(eigh_trunc!, (D, V), alg.trunc)
+    ϵ[1] = MatrixAlgebraKit.truncation_error!(diagview(D), ind)
+    return DVtrunc..., ϵ
+end
+function dummy_eigh_trunc(A, ϵ::Vector{T}, alg::TruncatedAlgorithm) where {T}
     A = (A + A')/2
-    DV = MatrixAlgebraKit.initialize_output(eigh_trunc!, A, kwargs[:alg])
-    eigh_trunc!(A, DV; kwargs...)
+    Ac = MatrixAlgebraKit.copy_input(MatrixAlgebraKit.eigh_trunc, A)
+    DV = MatrixAlgebraKit.initialize_output(eigh_trunc!, A, alg)
+    Dtrunc, Vtrunc, ϵ = MatrixAlgebraKit.eigh_trunc!(Ac, DV, ϵ, alg)
+    return Dtrunc, Vtrunc, ϵ
 end
 
 @timedtestset "EIGH AD Rules with eltype $T" for T in ETs 
@@ -194,11 +215,11 @@ end
         @testset "forward: RT $RT, TA $TA" for RT in (Const, Duplicated,), TA in (Const, Duplicated,)
             test_forward(copy_eigh_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
         end
-        @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
+        @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             test_reverse(copy_eigh_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔD2), copy(ΔV)))
             test_reverse(copy_eigh_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=copy(ΔD2.diag))
         end
-        @testset "reverse: RT $RT, TA $TA" for RT  in (MixedDuplicated,), TA in (Duplicated,)
+        @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             for r in 1:4:m
                 Ddiag    = diagview(D)
                 truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
@@ -207,8 +228,8 @@ end
                 Vtrunc   = V[:, ind]
                 ΔDtrunc  = Diagonal(diagview(ΔD2)[ind])
                 ΔVtrunc  = ΔV[:, ind]
-                # broken right now due to Enzyme
-                #test_reverse(copy_eigh_trunc, RT, (A, TA); fkwargs=(alg=truncalg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔDtrunc), copy(ΔVtrunc), zero(real(T))))
+                ϵ = [zero(real(T))] 
+                test_reverse(dummy_eigh_trunc, RT, (A, TA), (ϵ, TA), (truncalg, Const); atol=atol, rtol=rtol, output_tangent=(ΔDtrunc, ΔVtrunc, [zero(real(T))]))
                 dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
                 dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
                 @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
@@ -220,13 +241,26 @@ end
             Vtrunc = V[:, ind]
             ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
             ΔVtrunc = ΔV[:, ind]
-            # broken right now due to Enzyme
-            #test_reverse(copy_eigh_trunc, RT, (A, TA); fkwargs=(alg=truncalg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔDtrunc), copy(ΔVtrunc), zero(real(T))))
+            ϵ = [zero(real(T))] 
+            test_reverse(dummy_eigh_trunc, RT, (A, TA), (ϵ, TA), (truncalg, Const); atol=atol, rtol=rtol, output_tangent=(ΔDtrunc, ΔVtrunc, [zero(real(T))]))
             dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
             dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
             @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
         end
     end
+end
+
+function MatrixAlgebraKit.svd_trunc!(A, USVᴴ, ϵ::Vector{T}, alg::MatrixAlgebraKit.TruncatedAlgorithm) where {T}
+    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
+    USVᴴtrunc, ind = MatrixAlgebraKit.truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+    ϵ[1] = MatrixAlgebraKit.truncation_error!(diagview(S), ind)
+    return USVᴴtrunc..., ϵ
+end
+function dummy_svd_trunc(A, ϵ::Vector{T}, alg::TruncatedAlgorithm) where {T}
+    Ac   = MatrixAlgebraKit.copy_input(MatrixAlgebraKit.svd_trunc, A)
+    USVᴴ = MatrixAlgebraKit.initialize_output(svd_trunc!, A, alg)
+    Utrunc, Strunc, Vᴴtrunc, ϵ = MatrixAlgebraKit.svd_trunc!(Ac, USVᴴ, ϵ, alg)
+    return Utrunc, Strunc, Vᴴtrunc, ϵ
 end
 
 @timedtestset "SVD AD Rules with eltype $T" for T in ETs 
@@ -239,7 +273,7 @@ end
         @testset for alg in (LAPACK_QRIteration(),
                              LAPACK_DivideAndConquer(),
                             )
-            @testset "reverse: RT $RT, TA $TA" for RT  in (Duplicated,), TA in (Duplicated,)
+            @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 @testset "svd_compact" begin
                     U, S, Vᴴ = svd_compact(A)
                     ΔU  = randn(rng, T, m, minmn)
@@ -250,7 +284,7 @@ end
                     test_reverse(svd_compact, RT, (A, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,), output_tangent=(ΔU, ΔS, ΔVᴴ), fdm=fdm)
                 end
             end
-            @testset "reverse: RT $RT, TA $TA" for RT  in (MixedDuplicated,), TA in (Duplicated,)
+            @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 @testset "svd_trunc" begin
                     for r in 1:4:minmn
                         U, S, Vᴴ = svd_compact(A)
@@ -269,7 +303,8 @@ end
                         ΔVᴴtrunc = ΔVᴴ[ind, :]
                         fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range=1e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                         # broken due to Enzyme
-                        #test_reverse(svd_trunc, RT, (A, TA); fkwargs=(alg=truncalg,), atol=atol, rtol=rtol, output_tangent=(ΔUtrunc, ΔStrunc, ΔVᴴtrunc, zero(real(T))), fdm=fdm)
+                        ϵ = [zero(real(T))] 
+                        test_reverse(dummy_svd_trunc, RT, (A, TA), (ϵ, TA), (truncalg, Const); atol=atol, rtol=rtol, output_tangent=(ΔUtrunc, ΔStrunc, ΔVᴴtrunc, [zero(real(T))]), fdm=fdm)
                         dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), copy(A), (U, S, Vᴴ), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc), ind)
                         dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), copy(A), (Utrunc, Strunc, Vᴴtrunc), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc))
                         @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
@@ -290,7 +325,8 @@ end
                     ΔVᴴtrunc = ΔVᴴ[ind, :]
                     fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range=1e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                     # broken due to Enzyme
-                    #test_reverse(svd_trunc, RT, (A, TA); fkwargs=(alg=truncalg,), atol=atol, rtol=rtol, output_tangent=(ΔUtrunc, ΔStrunc, ΔVᴴtrunc, zero(real(T))), fdm)
+                    ϵ = [zero(real(T))] 
+                    test_reverse(dummy_svd_trunc, RT, (A, TA), (ϵ, TA), (truncalg, Const); atol=atol, rtol=rtol, output_tangent=(ΔUtrunc, ΔStrunc, ΔVᴴtrunc, [zero(real(T))]), fdm=fdm)
                     dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), copy(A), (copy(U), copy(S), copy(Vᴴ)), (copy(ΔUtrunc), copy(ΔStrunc), copy(ΔVᴴtrunc)), ind)
                     dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), copy(A), (Utrunc, Strunc, Vᴴtrunc), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc))
                     @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
