@@ -148,25 +148,6 @@ until convergence up to tolerance `tol`.
 left_orth_kind(::Union{PolarViaSVD, PolarNewton}) = left_orth_polar!
 right_orth_kind(::Union{PolarViaSVD, PolarNewton}) = right_orth_polar!
 
-# =========================
-# ORTHOGONALIZATION ALGORITHMS
-# =========================
-
-struct LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
-    alg::Alg
-end
-
-const LeftOrthViaQR = LeftOrthAlgorithm{:qr}
-const LeftOrthViaPolar = LeftOrthAlgorithm{:polar}
-const LeftOrthViaSVD = LeftOrthAlgorithm{:svd}
-
-struct RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
-    alg::Alg
-end
-
-const RightOrthViaLQ = RightOrthAlgorithm{:lq}
-const RightOrthViaPolar = RightOrthAlgorithm{:polar}
-const RightOrthViaSVD = RightOrthAlgorithm{:svd}
 
 # =========================
 # DIAGONAL ALGORITHMS
@@ -308,6 +289,24 @@ Divide and Conquer algorithm.
 
 const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 
+# Alternative algorithm (necessary for CUDA)
+"""
+    LQViaTransposedQR(qr_alg)
+
+Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
+The `qr_alg` specifies which QR-decomposition implementation to use.
+"""
+struct LQViaTransposedQR{A <: AbstractAlgorithm} <: AbstractAlgorithm
+    qr_alg::A
+end
+function Base.show(io::IO, alg::LQViaTransposedQR)
+    print(io, "LQViaTransposedQR(")
+    _show_alg(io, alg.qr_alg)
+    return print(io, ")")
+end
+
+# Various consts and unions
+# -------------------------
 const GPU_Simple = Union{CUSOLVER_Simple}
 const GPU_EigAlgorithm = Union{GPU_Simple}
 const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
@@ -324,3 +323,61 @@ const GPU_Randomized = Union{CUSOLVER_Randomized}
 
 left_orth_kind(::GPU_SVDAlgorithm) = left_orth_svd!
 right_orth_kind(::GPU_SVDAlgorithm) = right_orth_svd!
+
+# ================================
+# ORTHOGONALIZATION ALGORITHMS
+# ================================
+
+struct LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+
+LeftOrthAlgorithm(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `left_orth` algorithm type `$(typeof(alg))`.
+    To register the algorithm type for `left_orth`, define
+
+        MatrixAlgebraKit.LeftOrthAlgorithm(alg) = LeftOrthAlgorithm{kind}(alg)
+
+    where `kind` selects the factorization type that will be used.
+    By default, this is either `:qr`, `:polar` or `:svd`, to select [`qr_compact!`](@ref),
+    [`left_polar!`](@ref), [`svd_compact!`](@ref) or [`svd_trunc!`](@ref) respectively.
+    """
+)
+
+const LeftOrthViaQR = LeftOrthAlgorithm{:qr}
+LeftOrthAlgorithm(alg::Union{LAPACK_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}) =
+    LeftOrthViaQR(alg)
+
+const LeftOrthViaPolar = LeftOrthAlgorithm{:polar}
+LeftOrthAlgorithm(alg::Union{PolarSVD, PolarNewton}) = LeftOrthViaPolar(alg)
+
+const LeftOrthViaSVD = LeftOrthAlgorithm{:svd}
+LeftOrthAlgorithm(alg::Union{LAPACK_SVDAlgorithm, GPU_SVDAlgorithm}) = LeftOrthViaSVD(alg)
+
+
+struct RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+
+RightOrthAlgorithm(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `right_orth` algorithm type `$(typeof(alg))`.
+    To register the algorithm type for `right_orth`, define
+
+        MatrixAlgebraKit.RightOrthAlgorithm(alg) = RightOrthAlgorithm{kind}(alg)
+
+    where `kind` selects the factorization type that will be used.
+    By default, this is either `:lq`, `:polar` or `:svd`, to select [`lq_compact!`](@ref),
+    [`right_polar!`](@ref), [`svd_compact!`](@ref) or [`svd_trunc!`](@ref) respectively.
+    """
+)
+
+const RightOrthViaLQ = RightOrthAlgorithm{:lq}
+RightOrthAlgorithm(alg::Union{LAPACK_HouseholderLQ, LQViaTransposedQR}) = LeftOrthViaLQ(alg)
+
+const RightOrthViaPolar = RightOrthAlgorithm{:polar}
+RightOrthAlgorithm(alg::Union{PolarSVD, PolarNewton}) = RightOrthViaPolar(alg)
+
+const RightOrthViaSVD = RightOrthAlgorithm{:svd}
+RightOrthAlgorithm(alg::Union{LAPACK_SVDAlgorithm, GPU_SVDAlgorithm}) = RightOrthViaSVD(alg)

@@ -55,45 +55,6 @@ end
 
 # Algorithm traits
 # ----------------
-"""
-    left_orth_kind(alg::AbstractAlgorithm) -> f!
-
-Select an appropriate factorization function for applying `left_orth!(A, alg)`.
-By default, this is either `left_orth_qr!`, `left_orth_polar!` or `left_orth_svd!`, but
-this can be extended to insert arbitrary other decomposition functions, which should follow
-the signature `f!(A, F, alg) -> F`
-"""
-left_orth_kind(alg::AbstractAlgorithm) = error(
-    """
-    Unkown or invalid `left_orth` algorithm type `$(typeof(alg))`.
-    To register the algorithm type, define:
-
-            MatrixAlgebraKit.left_orth_kind(alg) = f!
-
-    where `f!` should be the factorization function that will be used.
-    By default, this is either `left_orth_qr!`, `left_orth_polar!` or `left_orth_svd!`.
-    """
-)
-
-"""
-    right_orth_kind(alg::AbstractAlgorithm) -> f!
-
-Select an appropriate factorization function for applying `right_orth!(A, alg)`.
-By default, this is either `right_orth_lq!`, `right_orth_polar!` or `right_orth_svd!`, but
-this can be extended to insert arbitrary other decomposition functions, which should follow
-the signature `f!(A, F, alg) -> F`
-"""
-right_orth_kind(alg::AbstractAlgorithm) = error(
-    """
-    Unkown or invalid `right_orth` algorithm type `$(typeof(alg))`.
-    To register the algorithm type, define:
-
-            MatrixAlgebraKit.right_orth_kind(alg) = f!
-
-    where `f!` should be the factorization function that will be used.
-    By default, this is either `right_orth_lq!`, `right_orth_polar!` or `right_orth_svd!`.
-    """
-)
 
 """
     left_null_kind(alg::AbstractAlgorithm) -> f!

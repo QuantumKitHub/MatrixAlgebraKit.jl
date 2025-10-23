@@ -6,7 +6,7 @@ copy_input(::typeof(left_null), A) = copy_input(qr_null, A) # do we ever need an
 copy_input(::typeof(right_null), A) = copy_input(lq_null, A) # do we ever need anything else
 
 check_input(::typeof(left_orth!), A, VC, alg::AbstractAlgorithm) =
-    check_input(left_orth_kind(alg), A, VC, alg)
+    check_input(left_orth!, A, VC, left_orth_alg(alg))
 
 check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaQR) =
     check_input(qr_compact!, A, VC, alg.alg)
@@ -15,15 +15,8 @@ check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaPolar) =
 check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaSVD) =
     check_input(qr_compact!, A, VC, alg.alg)
 
-check_input(::typeof(left_orth_qr!), A, VC, alg::AbstractAlgorithm) =
-    check_input(qr_compact!, A, VC, alg)
-check_input(::typeof(left_orth_polar!), A, VC, alg::AbstractAlgorithm) =
-    check_input(left_polar!, A, VC, alg)
-check_input(::typeof(left_orth_svd!), A, VC, alg::AbstractAlgorithm) =
-    check_input(qr_compact!, A, VC, alg)
-
 check_input(::typeof(right_orth!), A, CVᴴ, alg::AbstractAlgorithm) =
-    check_input(right_orth_kind(alg), A, CVᴴ, alg)
+    check_input(right_orth!, A, CVᴴ, right_orth_alg(alg))
 
 check_input(::typeof(right_orth!), A, VC, alg::RightOrthViaLQ) =
     check_input(lq_compact!, A, VC, alg.alg)
@@ -31,13 +24,6 @@ check_input(::typeof(right_orth!), A, VC, alg::RightOrthViaPolar) =
     check_input(right_polar!, A, VC, alg.alg)
 check_input(::typeof(right_orth!), A, VC, alg::RightOrthViaSVD) =
     check_input(lq_compact!, A, VC, alg.alg)
-
-check_input(::typeof(right_orth_lq!), A, CVᴴ, alg::AbstractAlgorithm) =
-    check_input(lq_compact!, A, CVᴴ, alg)
-check_input(::typeof(right_orth_polar!), A, CVᴴ, alg::AbstractAlgorithm) =
-    check_input(right_polar!, A, CVᴴ, alg)
-check_input(::typeof(right_orth_svd!), A, CVᴴ, alg::AbstractAlgorithm) =
-    check_input(lq_compact!, A, CVᴴ, alg)
 
 check_input(::typeof(left_null!), A, N, alg::AbstractAlgorithm) =
     check_input(left_null_kind(alg), A, N, alg)
@@ -54,7 +40,7 @@ check_input(::typeof(right_null_svd!), A, Nᴴ, alg::AbstractAlgorithm) = nothin
 # Outputs
 # -------
 initialize_output(::typeof(left_orth!), A, alg::AbstractAlgorithm) =
-    initialize_output(left_orth_kind(alg), A, alg)
+    initialize_output(left_orth!, A, left_orth_alg(alg))
 
 initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaQR) =
     initialize_output(qr_compact!, A, alg.alg)
@@ -63,15 +49,8 @@ initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaPolar) =
 initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaSVD) =
     initialize_output(qr_compact!, A, alg.alg)
 
-initialize_output(::typeof(left_orth_qr!), A, alg::AbstractAlgorithm) =
-    initialize_output(qr_compact!, A, alg)
-initialize_output(::typeof(left_orth_polar!), A, alg::AbstractAlgorithm) =
-    initialize_output(left_polar!, A, alg)
-initialize_output(::typeof(left_orth_svd!), A, alg::AbstractAlgorithm) =
-    initialize_output(qr_compact!, A, alg)
-
 initialize_output(::typeof(right_orth!), A, alg::AbstractAlgorithm) =
-    initialize_output(right_orth_kind(alg), A, alg)
+    initialize_output(right_orth!, A, right_orth_alg(alg))
 
 initialize_output(::typeof(right_orth!), A, alg::RightOrthViaLQ) =
     initialize_output(lq_compact!, A, alg.alg)
@@ -79,13 +58,6 @@ initialize_output(::typeof(right_orth!), A, alg::RightOrthViaPolar) =
     initialize_output(right_polar!, A, alg.alg)
 initialize_output(::typeof(right_orth!), A, alg::RightOrthViaSVD) =
     initialize_output(lq_compact!, A, alg.alg)
-
-initialize_output(::typeof(right_orth_lq!), A, alg::AbstractAlgorithm) =
-    initialize_output(lq_compact!, A, alg)
-initialize_output(::typeof(right_orth_polar!), A, alg::AbstractAlgorithm) =
-    initialize_output(right_polar!, A, alg)
-initialize_output(::typeof(right_orth_svd!), A, alg::AbstractAlgorithm) =
-    initialize_output(lq_compact!, A, alg)
 
 initialize_output(::typeof(left_null!), A, alg::AbstractAlgorithm) =
     initialize_output(left_null_kind(alg), A, alg)
@@ -108,26 +80,10 @@ initialize_orth_svd(A, F, alg) = initialize_output(svd_compact!, A, alg)
 
 # Implementation of orth functions
 # --------------------------------
-left_orth!(A, VC, alg::AbstractAlgorithm) = left_orth_kind(alg)(A, VC, alg)
+left_orth!(A, VC, alg::AbstractAlgorithm) = left_orth!(A, VC, left_orth_alg(alg))
 left_orth!(A, VC, alg::LeftOrthViaQR) = qr_compact!(A, VC, alg.alg)
 left_orth!(A, VC, alg::LeftOrthViaPolar) = left_polar!(A, VC, alg.alg)
-left_orth_qr!(A, VC, alg::AbstractAlgorithm) = qr_compact!(A, VC, alg)
-left_orth_polar!(A, VC, alg::AbstractAlgorithm) = left_polar!(A, VC, alg)
-
-right_orth!(A, CVᴴ, alg::AbstractAlgorithm) = right_orth_kind(alg)(A, CVᴴ, alg)
-right_orth!(A, CVᴴ, alg::RightOrthViaLQ) = lq_compact!(A, CVᴴ, alg.alg)
-right_orth!(A, CVᴴ, alg::RightOrthViaPolar) = right_polar!(A, CVᴴ, alg.alg)
-right_orth_lq!(A, CVᴴ, alg::AbstractAlgorithm) = lq_compact!(A, CVᴴ, alg)
-right_orth_polar!(A, CVᴴ, alg::AbstractAlgorithm) = right_polar!(A, CVᴴ, alg)
-
 # orth_svd requires implementations of `lmul!` and `rmul!`
-function left_orth_svd!(A, VC, alg::AbstractAlgorithm)
-    check_input(left_orth_svd!, A, VC, alg)
-    USVᴴ = initialize_orth_svd(A, VC, alg)
-    V, S, C = does_truncate(alg) ? svd_trunc!(A, USVᴴ, alg) : svd_compact!(A, USVᴴ, alg)
-    lmul!(S, C)
-    return V, C
-end
 function left_orth!(A, VC, alg::LeftOrthViaSVD)
     check_input(left_orth!, A, VC, alg)
     USVᴴ = initialize_orth_svd(A, VC, alg.alg)
@@ -135,14 +91,11 @@ function left_orth!(A, VC, alg::LeftOrthViaSVD)
     lmul!(S, C)
     return V, C
 end
+# orth_svd requires implementations of `lmul!` and `rmul!`
+right_orth!(A, CVᴴ, alg::AbstractAlgorithm) = right_orth!(A, CVᴴ, right_orth_alg(alg))
+right_orth!(A, CVᴴ, alg::RightOrthViaLQ) = lq_compact!(A, CVᴴ, alg.alg)
+right_orth!(A, CVᴴ, alg::RightOrthViaPolar) = right_polar!(A, CVᴴ, alg.alg)
 
-function right_orth_svd!(A, CVᴴ, alg::AbstractAlgorithm)
-    check_input(right_orth_svd!, A, CVᴴ, alg)
-    USVᴴ = initialize_orth_svd(A, CVᴴ, alg)
-    C, S, Vᴴ = does_truncate(alg) ? svd_trunc!(A, USVᴴ, alg) : svd_compact!(A, USVᴴ, alg)
-    rmul!(C, S)
-    return C, Vᴴ
-end
 function right_orth!(A, CVᴴ, alg::RightOrthViaSVD)
     check_input(right_orth!, A, CVᴴ, alg)
     USVᴴ = initialize_orth_svd(A, CVᴴ, alg.alg)

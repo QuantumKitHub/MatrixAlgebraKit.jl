@@ -43,29 +43,30 @@ Here, the driving selector is `alg`, and depending on its value, the algorithm s
 procedure takes other keywords into account:
 
 * `:qr` : Factorize via QR decomposition, with further customizations through the
-  `alg_qr` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+  `qr` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
 ```julia
-        V, C = qr_compact(A; alg_qr...)
+        V, C = qr_compact(A; alg = qr)
 ```
 
 * `:polar` : Factorize via polar decomposition, with further customizations through the
-  `alg_polar` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+  `polar` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
 ```julia
-        V, C = left_polar(A; alg_polar...)
+        V, C = left_polar(A; alg = polar)
 ```
 
-* `:svd` : Factorize via SVD, with further customizations through the `alg_svd` keyword.
+* `:svd` : Factorize via SVD, with further customizations through the `svd` keyword.
   This mode further allows truncation, which can be selected through the `trunc` argument.
   This mode is roughly equivalent to:
 ```julia
-        V, S, C = svd_trunc(A; trunc, alg_svd...)
+        V, S, C = svd_trunc(A; trunc, alg = svd)
         C = S * C
 ```
 
 ### `alg::AbstractAlgorithm`
 In this expert mode the algorithm is supplied directly, and the kind of decomposition is
-deduced from that. This hinges on the implementation of the algorithm trait
-[`MatrixAlgebraKit.left_orth_kind(alg)`](@ref).
+deduced from that. This is achieved either directly by providing a
+[`LeftOrthAlgorithm{kind}`](@ref LeftOrthAlgorithm), or automatically by attempting to
+deduce the decomposition kind with `LeftOrthAlgorithm(alg)`.
 
 ---
 
@@ -74,15 +75,9 @@ deduced from that. This hinges on the implementation of the algorithm trait
     destroys the input matrix `A`. Always use the return value of the function as it may
     not always be possible to use the provided `CV` as output.
 
-See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null),
-[`right_null(!)`](@ref right_null)
+See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null), [`right_null(!)`](@ref right_null)
 """
 @functiondef left_orth
-
-# helper functions
-function left_orth_qr! end
-function left_orth_polar! end
-function left_orth_svd! end
 
 """
     right_orth(A; [trunc], kwargs...) -> C, Vᴴ
@@ -127,29 +122,30 @@ Here, the driving selector is `alg`, and depending on its value, the algorithm s
 procedure takes other keywords into account:
 
 * `:lq` : Factorize via LQ decomposition, with further customizations through the
-  `alg_lq` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+  `lq` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
 ```julia
-        C, Vᴴ = lq_compact(A; alg_lq...)
+        C, Vᴴ = lq_compact(A; alg = lq)
 ```
 
 * `:polar` : Factorize via polar decomposition, with further customizations through the
-  `alg_polar` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
+  `polar` keyword. This mode requires `isnothing(trunc)`, and is equivalent to
 ```julia
-        C, Vᴴ = right_polar(A; alg_polar...)
+        C, Vᴴ = right_polar(A; alg = polar)
 ```
 
-* `:svd` : Factorize via SVD, with further customizations through the `alg_svd` keyword.
+* `:svd` : Factorize via SVD, with further customizations through the `svd` keyword.
   This mode further allows truncation, which can be selected through the `trunc` argument.
   This mode is roughly equivalent to:
 ```julia
-        C, S, Vᴴ = svd_trunc(A; trunc, alg_svd...)
+        C, S, Vᴴ = svd_trunc(A; trunc, alg = svd)
         C = C * S
 ```
 
 ### `alg::AbstractAlgorithm`
 In this expert mode the algorithm is supplied directly, and the kind of decomposition is
-deduced from that. This hinges on the implementation of the algorithm trait
-[`MatrixAlgebraKit.right_orth_kind(alg)`](@ref).
+deduced from that. This is achieved either directly by providing a
+[`RightOrthAlgorithm{kind}`](@ref RightOrthAlgorithm), or automatically by attempting to
+deduce the decomposition kind with `RightOrthAlgorithm(alg)`.
 
 ---
 
@@ -162,11 +158,6 @@ See also [`left_orth(!)`](@ref left_orth), [`left_null(!)`](@ref left_null),
 [`right_null(!)`](@ref right_null)
 """
 @functiondef right_orth
-
-# helper functions
-function right_orth_lq! end
-function right_orth_polar! end
-function right_orth_svd! end
 
 # Null functions
 # --------------
