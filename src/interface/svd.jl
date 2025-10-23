@@ -112,7 +112,7 @@ default_svd_algorithm(A; kwargs...) = default_svd_algorithm(typeof(A); kwargs...
 function default_svd_algorithm(T::Type; kwargs...)
     throw(MethodError(default_svd_algorithm, (T,)))
 end
-function default_svd_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.BlasMat}
+function default_svd_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
     return LAPACK_DivideAndConquer(; kwargs...)
 end
 function default_svd_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}

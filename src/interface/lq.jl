@@ -72,7 +72,7 @@ default_lq_algorithm(A; kwargs...) = default_lq_algorithm(typeof(A); kwargs...)
 function default_lq_algorithm(T::Type; kwargs...)
     throw(MethodError(default_lq_algorithm, (T,)))
 end
-function default_lq_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.BlasMat}
+function default_lq_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
     return LAPACK_HouseholderLQ(; kwargs...)
 end
 function default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}

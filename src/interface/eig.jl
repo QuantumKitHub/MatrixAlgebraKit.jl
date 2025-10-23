@@ -108,7 +108,7 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 # -------------------
 default_eig_algorithm(A; kwargs...) = default_eig_algorithm(typeof(A); kwargs...)
 default_eig_algorithm(T::Type; kwargs...) = throw(MethodError(default_eig_algorithm, (T,)))
-function default_eig_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.BlasMat}
+function default_eig_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
     return LAPACK_Expert(; kwargs...)
 end
 function default_eig_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
