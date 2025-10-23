@@ -307,6 +307,7 @@ end
 
 # Various consts and unions
 # -------------------------
+
 const GPU_Simple = Union{CUSOLVER_Simple}
 const GPU_EigAlgorithm = Union{GPU_Simple}
 const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
@@ -321,8 +322,10 @@ const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
-left_orth_kind(::GPU_SVDAlgorithm) = left_orth_svd!
-right_orth_kind(::GPU_SVDAlgorithm) = right_orth_svd!
+const QRAlgorithms = Union{LAPACK_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
+const LQAlgorithms = Union{LAPACK_HouseholderLQ, LQViaTransposedQR}
+const SVDAlgorithms = Union{LAPACK_SVDAlgorithm, GPU_SVDAlgorithm}
+const PolarAlgorithms = Union{PolarViaSVD, PolarNewton}
 
 # ================================
 # ORTHOGONALIZATION ALGORITHMS
@@ -346,15 +349,14 @@ LeftOrthAlgorithm(alg::AbstractAlgorithm) = error(
 )
 
 const LeftOrthViaQR = LeftOrthAlgorithm{:qr}
-LeftOrthAlgorithm(alg::Union{LAPACK_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}) =
-    LeftOrthViaQR(alg)
+LeftOrthAlgorithm(alg::QRAlgorithms) = LeftOrthViaQR{typeof(alg)}(alg)
 
 const LeftOrthViaPolar = LeftOrthAlgorithm{:polar}
-LeftOrthAlgorithm(alg::Union{PolarSVD, PolarNewton}) = LeftOrthViaPolar(alg)
+LeftOrthAlgorithm(alg::PolarAlgorithms) = LeftOrthViaPolar{typeof(alg)}(alg)
 
 const LeftOrthViaSVD = LeftOrthAlgorithm{:svd}
-LeftOrthAlgorithm(alg::Union{LAPACK_SVDAlgorithm, GPU_SVDAlgorithm}) = LeftOrthViaSVD(alg)
-
+LeftOrthAlgorithm(alg::SVDAlgorithms) = LeftOrthViaSVD{typeof(alg)}(alg)
+LeftOrthAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = LeftOrthViaSVD{typeof(alg)}(alg)
 
 struct RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
@@ -374,10 +376,59 @@ RightOrthAlgorithm(alg::AbstractAlgorithm) = error(
 )
 
 const RightOrthViaLQ = RightOrthAlgorithm{:lq}
-RightOrthAlgorithm(alg::Union{LAPACK_HouseholderLQ, LQViaTransposedQR}) = LeftOrthViaLQ(alg)
+RightOrthAlgorithm(alg::LQAlgorithms) = RightOrthViaLQ{typeof(alg)}(alg)
 
 const RightOrthViaPolar = RightOrthAlgorithm{:polar}
-RightOrthAlgorithm(alg::Union{PolarSVD, PolarNewton}) = RightOrthViaPolar(alg)
+RightOrthAlgorithm(alg::PolarAlgorithms) = RightOrthViaPolar{typeof(alg)}(alg)
 
 const RightOrthViaSVD = RightOrthAlgorithm{:svd}
-RightOrthAlgorithm(alg::Union{LAPACK_SVDAlgorithm, GPU_SVDAlgorithm}) = RightOrthViaSVD(alg)
+RightOrthAlgorithm(alg::SVDAlgorithms) = RightOrthViaSVD{typeof(alg)}(alg)
+RightOrthAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = RightOrthViaSVD{typeof(alg)}(alg)
+
+struct LeftNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+
+LeftNullAlgorithm(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `left_null` algorithm type `$(typeof(alg))`.
+    To register the algorithm type for `left_null`, define
+
+        MatrixAlgebraKit.LeftNullAlgorithm(alg) = LeftNullAlgorithm{kind}(alg)
+
+    where `kind` selects the factorization type that will be used.
+    By default, this is either `:qr` or `:svd`, to select [`qr_null!`](@ref),
+    [`svd_compact!`](@ref) or [`svd_trunc!`](@ref) respectively.
+    """
+)
+
+const LeftNullViaQR = LeftNullAlgorithm{:qr}
+LeftNullAlgorithm(alg::QRAlgorithms) = LeftNullViaQR{typeof(alg)}(alg)
+
+const LeftNullViaSVD = LeftNullAlgorithm{:svd}
+LeftNullAlgorithm(alg::SVDAlgorithms) = LeftNullViaSVD{typeof(alg)}(alg)
+LeftNullAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = LeftNullViaSVD{typeof(alg)}(alg)
+
+struct RightNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+
+RightNullAlgorithm(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `right_null` algorithm type `$(typeof(alg))`.
+    To register the algorithm type for `right_null`, define
+
+        MatrixAlgebraKit.RightNullAlgorithm(alg) = RightNullAlgorithm{kind}(alg)
+
+    where `kind` selects the factorization type that will be used.
+    By default, this is either `:lq` or `:svd`, to select [`lq_null!`](@ref),
+    [`svd_compact!`](@ref) or [`svd_trunc!`](@ref) respectively.
+    """
+)
+
+const RightNullViaLQ = RightNullAlgorithm{:lq}
+RightNullAlgorithm(alg::LQAlgorithms) = RightNullViaLQ{typeof(alg)}(alg)
+
+const RightNullViaSVD = RightNullAlgorithm{:svd}
+RightNullAlgorithm(alg::SVDAlgorithms) = RightNullViaSVD{typeof(alg)}(alg)
+RightNullAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = RightNullViaSVD{typeof(alg)}(alg)

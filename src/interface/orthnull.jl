@@ -207,24 +207,25 @@ of the chosen decomposition type.
 Here, the driving selector is `alg`, and depending on its value, the algorithm selection
 procedure takes other keywords into account:
 
-* `:qr` : Factorize via QR nullspace, with further customizations through the `alg_qr`
+* `:qr` : Factorize via QR nullspace, with further customizations through the `qr`
   keyword. This mode requires `isnothing(trunc)`, and is equivalent to
 ```julia
-        N = qr_null(A; alg_qr...)
+        N = qr_null(A; alg = qr)
 ```
 
-* `:svd` : Factorize via SVD, with further customizations through the `alg_svd` keyword.
+* `:svd` : Factorize via SVD, with further customizations through the `svd` keyword.
   This mode further allows truncation, which can be selected through the `trunc` argument.
   It is roughly equivalent to:
 ```julia
-        U, S, _ = svd_trunc(A; trunc, alg_svd...)
+        U, S, _ = svd_trunc(A; trunc, alg = svd)
         N = truncate(left_null, (U, S), trunc)
 ```
 
 ### `alg::AbstractAlgorithm`
 In this expert mode the algorithm is supplied directly, and the kind of decomposition is
-deduced from that. This hinges on the implementation of the algorithm trait
-[`MatrixAlgebraKit.left_null_kind(alg)`](@ref).
+deduced from that. This is achieved either directly by providing a
+[`LeftNullAlgorithm{kind}`](@ref LeftNullAlgorithm), or automatically by attempting to
+deduce the decomposition kind with `LeftNullAlgorithm(alg)`.
 
 ---
 
@@ -237,10 +238,6 @@ See also [`right_null(!)`](@ref right_null), [`left_orth(!)`](@ref left_orth),
 [`right_orth(!)`](@ref right_orth)
 """
 @functiondef left_null
-
-# helper functions
-function left_null_qr! end
-function left_null_svd! end
 
 """
     right_null(A; [trunc], kwargs...) -> Nᴴ
@@ -288,24 +285,25 @@ of the chosen decomposition type.
 Here, the driving selector is `alg`, and depending on its value, the algorithm selection
 procedure takes other keywords into account:
 
-* `:lq` : Factorize via LQ nullspace, with further customizations through the `alg_lq`
+* `:lq` : Factorize via LQ nullspace, with further customizations through the `lq`
   keyword. This mode requires `isnothing(trunc)`, and is equivalent to
 ```julia
-        Nᴴ = lq_null(A; alg_qr...)
+        Nᴴ = lq_null(A; alg = lq)
 ```
 
-* `:svd` : Factorize via SVD, with further customizations through the `alg_svd` keyword.
+* `:svd` : Factorize via SVD, with further customizations through the `svd` keyword.
   This mode further allows truncation, which can be selected through the `trunc` argument.
   It is roughly equivalent to:
 ```julia
-        _, S, Vᴴ = svd_trunc(A; trunc, alg_svd...)
+        _, S, Vᴴ = svd_trunc(A; trunc, alg = svd)
         Nᴴ = truncate(right_null, (S, Vᴴ), trunc)
 ```
 
 ### `alg::AbstractAlgorithm`
 In this expert mode the algorithm is supplied directly, and the kind of decomposition is
-deduced from that. This hinges on the implementation of the algorithm trait
-[`MatrixAlgebraKit.right_null_kind(alg)`](@ref).
+deduced from that. This is achieved either directly by providing a
+[`RightNullAlgorithm{kind}`](@ref RightNullAlgorithm), or automatically by attempting to
+deduce the decomposition kind with `RightNullAlgorithm(alg)`.
 
 ---
 
@@ -319,10 +317,6 @@ See also [`left_null(!)`](@ref left_null), [`left_orth(!)`](@ref left_orth),
 """
 @functiondef right_null
 
-# helper functions
-function right_null_lq! end
-function right_null_svd! end
-
 # Algorithm selection
 # -------------------
 # specific override for `alg::Symbol` case, to allow for choosing the kind of factorization.
@@ -330,6 +324,10 @@ function right_null_svd! end
     LeftOrthAlgorithm{alg}(A; alg = get(kwargs, alg, nothing), trunc)
 @inline select_algorithm(::typeof(right_orth!), A, alg::Symbol; trunc = nothing, kwargs...) =
     RightOrthAlgorithm{alg}(A; alg = get(kwargs, alg, nothing), trunc)
+@inline select_algorithm(::typeof(left_null!), A, alg::Symbol; trunc = nothing, kwargs...) =
+    LeftNullAlgorithm{alg}(A; alg = get(kwargs, alg, nothing), trunc)
+@inline select_algorithm(::typeof(right_null!), A, alg::Symbol; trunc = nothing, kwargs...) =
+    RightNullAlgorithm{alg}(A; alg = get(kwargs, alg, nothing), trunc)
 
 function LeftOrthViaQR(A; alg = nothing, trunc = nothing, kwargs...)
     isnothing(trunc) ||
@@ -367,6 +365,30 @@ function RightOrthViaSVD(A; alg = nothing, trunc = nothing, kwargs...)
     return RightOrthViaSVD{typeof(alg)}(alg)
 end
 
+function LeftNullViaQR(A; alg = nothing, trunc = nothing, kwargs...)
+    isnothing(trunc) ||
+        throw(ArgumentError("QR-based `left_null` is incompatible with specifying `trunc`"))
+    alg = select_algorithm(qr_null!, A, alg; kwargs...)
+    return LeftNullViaQR{typeof(alg)}(alg)
+end
+function LeftNullViaSVD(A; alg = nothing, trunc = nothing, kwargs...)
+    alg_svd = select_algorithm(svd_full!, A, alg; kwargs...)
+    alg = TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
+    return LeftNullViaSVD{typeof(alg)}(alg)
+end
+
+function RightNullViaLQ(A; alg = nothing, trunc = nothing, kwargs...)
+    isnothing(trunc) ||
+        throw(ArgumentError("LQ-based `right_null` is incompatible with specifying `trunc`"))
+    alg = select_algorithm(lq_null!, A, alg; kwargs...)
+    return RightNullViaLQ{typeof(alg)}(alg)
+end
+function RightNullViaSVD(A; alg = nothing, trunc = nothing, kwargs...)
+    alg_svd = select_algorithm(svd_full!, A, alg; kwargs...)
+    alg = TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
+    return RightNullViaSVD{typeof(alg)}(alg)
+end
+
 default_algorithm(::typeof(left_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
     isnothing(trunc) ? LeftOrthViaQR(A; kwargs...) : LeftOrthViaSVD(A; trunc, kwargs...)
 # disambiguate
@@ -379,69 +401,19 @@ default_algorithm(::typeof(right_orth!), A::TA; trunc = nothing, kwargs...) wher
 default_algorithm(::typeof(right_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? RightOrthViaLQ(A; kwargs...) : RightOrthViaSVD(A; trunc, kwargs...)
 
-function select_algorithm(::typeof(left_null!), A, alg::Symbol; trunc = nothing, kwargs...)
-    alg === :svd && return select_algorithm(
-        left_null_svd!, A, get(kwargs, :alg_svd, nothing); trunc
-    )
-
-    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
-
-    alg === :qr && return select_algorithm(left_null_qr!, A, get(kwargs, :alg_qr, nothing))
-
-    throw(ArgumentError(lazy"unkown alg symbol $alg"))
-end
-
 default_algorithm(::typeof(left_null!), A::TA; trunc = nothing, kwargs...) where {TA} =
-    isnothing(trunc) ? select_algorithm(left_null_qr!, A; kwargs...) :
-    select_algorithm(left_null_svd!, A; trunc, kwargs...)
+    isnothing(trunc) ? LeftNullViaQR(A; kwargs...) : LeftNullViaSVD(A; trunc, kwargs...)
 # disambiguate
 default_algorithm(::typeof(left_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
-    isnothing(trunc) ? select_algorithm(left_null_qr!, A; kwargs...) :
-    select_algorithm(left_null_svd!, A; trunc, kwargs...)
-
-select_algorithm(::typeof(left_null_qr!), A, alg = nothing; kwargs...) =
-    select_algorithm(qr_null!, A, alg; kwargs...)
-function select_algorithm(::typeof(left_null_svd!), A, alg = nothing; trunc = nothing, kwargs...)
-    if alg isa TruncatedAlgorithm
-        isnothing(trunc) ||
-            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
-        return alg
-    else
-        alg_svd = select_algorithm(svd_full!, A, alg; kwargs...)
-        return TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
-    end
-end
-
-function select_algorithm(::typeof(right_null!), A, alg::Symbol; trunc = nothing, kwargs...)
-    alg === :svd && return select_algorithm(
-        right_null_svd!, A, get(kwargs, :alg_svd, nothing); trunc
-    )
-
-    isnothing(trunc) || throw(ArgumentError(lazy"alg ($alg) incompatible with truncation"))
-
-    alg === :lq && return select_algorithm(right_null_lq!, A, get(kwargs, :alg_lq, nothing))
-
-    throw(ArgumentError(lazy"unkown alg symbol $alg"))
-end
+    isnothing(trunc) ? LeftNullViaQR(A; kwargs...) : LeftNullViaSVD(A; trunc, kwargs...)
 
 default_algorithm(::typeof(right_null!), A::TA; trunc = nothing, kwargs...) where {TA} =
-    isnothing(trunc) ? select_algorithm(right_null_lq!, A; kwargs...) :
-    select_algorithm(right_null_svd!, A; trunc, kwargs...)
+    isnothing(trunc) ? RightNullViaLQ(A; kwargs...) : RightNullViaSVD(A; trunc, kwargs...)
+# disambiguate
 default_algorithm(::typeof(right_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
-    isnothing(trunc) ? select_algorithm(right_null_lq!, A; kwargs...) :
-    select_algorithm(right_null_svd!, A; trunc, kwargs...)
+    isnothing(trunc) ? RightNullViaLQ(A; kwargs...) : RightNullViaSVD(A; trunc, kwargs...)
 
-select_algorithm(::typeof(right_null_lq!), A, alg = nothing; kwargs...) =
-    select_algorithm(lq_null!, A, alg; kwargs...)
-
-function select_algorithm(::typeof(right_null_svd!), A, alg; trunc = nothing, kwargs...)
-    if alg isa TruncatedAlgorithm
-        isnothing(trunc) ||
-            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
-        return alg
-    else
-        alg_svd = select_algorithm(svd_full!, A, alg; kwargs...)
-        return TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
-    end
-
-end
+left_orth_alg(alg::AbstractAlgorithm) = LeftOrthAlgorithm(alg)
+right_orth_alg(alg::AbstractAlgorithm) = RightOrthAlgorithm(alg)
+left_null_alg(alg::AbstractAlgorithm) = LeftNullAlgorithm(alg)
+right_null_alg(alg::AbstractAlgorithm) = RightNullAlgorithm(alg)

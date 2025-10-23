@@ -130,6 +130,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
             else
                 @test_throws ArgumentError left_orth!(copy!(Ac, A), (V, C); alg, trunc = (; atol))
                 @test_throws ArgumentError left_orth!(copy!(Ac, A), (V, C); alg, trunc = (; rtol))
+                alg == :polar && continue
                 @test_throws ArgumentError left_null!(copy!(Ac, A), N; alg, trunc = (; atol))
                 @test_throws ArgumentError left_null!(copy!(Ac, A), N; alg, trunc = (; rtol))
             end
@@ -216,6 +217,7 @@ end
             else
                 @test_throws ArgumentError right_orth!(copy!(Ac, A), (C, Vᴴ); alg, trunc = (; atol))
                 @test_throws ArgumentError right_orth!(copy!(Ac, A), (C, Vᴴ); alg, trunc = (; rtol))
+                alg == :polar && continue
                 @test_throws ArgumentError right_null!(copy!(Ac, A), Nᴴ; alg, trunc = (; atol))
                 @test_throws ArgumentError right_null!(copy!(Ac, A), Nᴴ; alg, trunc = (; rtol))
             end
