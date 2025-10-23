@@ -263,7 +263,6 @@ end
 function _arg_expr(::Val{1}, f, f!)
     return quote # out of place to inplace
         @inline $f(A; alg = nothing, kwargs...) = $f(A, select_algorithm($f, A, alg; kwargs...))
-        # $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
         $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
 
         # fill in arguments

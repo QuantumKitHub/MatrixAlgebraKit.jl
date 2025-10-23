@@ -179,7 +179,7 @@ left_orth
 right_orth
 ```
 
-In order to dispatch to the underlying factorizations, the following wrapper functions are used:
+In order to dispatch to the underlying factorizations, the following wrapper algorithms are used:
 
 ```@docs; canonical=false
 LeftOrthAlgorithm
