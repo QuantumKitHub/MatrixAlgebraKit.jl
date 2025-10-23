@@ -115,9 +115,9 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg = $(QuoteNode(alg)), trunc = (; atol))
                 N2 = @constinferred left_null!(copy!(Ac, A), N; alg, trunc = (; atol))
                 @test V2 * C2 ≈ A
-                @test V2' * V2 ≈ I
+                @test isisometric(V2)
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-                @test N2' * N2 ≈ I
+                @test isisometric(N2)
                 @test V2 * V2' + N2 * N2' ≈ I
 
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg = $(QuoteNode(alg)), trunc = (; rtol))
