@@ -331,6 +331,12 @@ const PolarAlgorithms = Union{PolarViaSVD, PolarNewton}
 # ORTHOGONALIZATION ALGORITHMS
 # ================================
 
+"""
+    LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
+
+Wrapper type to denote the `Kind` of factorization that is used as a backend for [`left_orth`](@ref).
+By default `Kind` is a symbol, which can be either `:qr`, `:polar` or `:svd`.
+"""
 struct LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
 end
@@ -358,6 +364,12 @@ const LeftOrthViaSVD = LeftOrthAlgorithm{:svd}
 LeftOrthAlgorithm(alg::SVDAlgorithms) = LeftOrthViaSVD{typeof(alg)}(alg)
 LeftOrthAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = LeftOrthViaSVD{typeof(alg)}(alg)
 
+"""
+    RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
+
+Wrapper type to denote the `Kind` of factorization that is used as a backend for [`right_orth`](@ref).
+By default `Kind` is a symbol, which can be either `:lq`, `:polar` or `:svd`.
+"""
 struct RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
 end
@@ -385,6 +397,12 @@ const RightOrthViaSVD = RightOrthAlgorithm{:svd}
 RightOrthAlgorithm(alg::SVDAlgorithms) = RightOrthViaSVD{typeof(alg)}(alg)
 RightOrthAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = RightOrthViaSVD{typeof(alg)}(alg)
 
+"""
+    LeftNullAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
+
+Wrapper type to denote the `Kind` of factorization that is used as a backend for [`left_null`](@ref).
+By default `Kind` is a symbol, which can be either `:qr` or `:svd`.
+"""
 struct LeftNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
 end
@@ -409,6 +427,12 @@ const LeftNullViaSVD = LeftNullAlgorithm{:svd}
 LeftNullAlgorithm(alg::SVDAlgorithms) = LeftNullViaSVD{typeof(alg)}(alg)
 LeftNullAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = LeftNullViaSVD{typeof(alg)}(alg)
 
+"""
+    RightNullAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
+
+Wrapper type to denote the `Kind` of factorization that is used as a backend for [`right_null`](@ref).
+By default `Kind` is a symbol, which can be either `:lq` or `:svd`.
+"""
 struct RightNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
 end

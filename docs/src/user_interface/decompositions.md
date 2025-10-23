@@ -179,6 +179,14 @@ left_orth
 right_orth
 ```
 
+In order to dispatch to the underlying factorizations, the following wrapper functions are used:
+
+```@docs; canonical=false
+LeftOrthAlgorithm
+RightOrthAlgorithm
+```
+
+
 ## Null Spaces
 
 Similarly, it can be convenient to obtain an orthogonal basis for the kernel or cokernel of a matrix.
@@ -188,4 +196,11 @@ Again, this is typically implemented through a combination of the decompositions
 ```@docs; canonical=false
 left_null
 right_null
+```
+
+Again, dispatching happens through the following wrapper algorithm types:
+
+```@docs; canonical=false
+LeftNullAlgorithm
+RightNullAlgorithm
 ```
