@@ -57,54 +57,6 @@ end
 # ----------------
 
 """
-    left_null_kind(alg::AbstractAlgorithm) -> f!
-
-Select an appropriate factorization function for applying `left_null!(A, alg)`.
-By default, this is either `left_null_qr!` or `left_null_svd!`, but this can be extended
-to insert arbitrary other decomposition functions, which should follow the signature
-`f!(A, F, alg) -> F`
-"""
-function left_null_kind(alg::AbstractAlgorithm)
-    left_orth_kind(alg) === left_orth_qr! && return left_null_qr!
-    left_orth_kind(alg) === left_orth_svd! && return left_null_svd!
-    return error(
-        """
-        Unkown or invalid `left_null` algorithm type `$(typeof(alg))`.
-        To register the algorithm type, define:
-
-                MatrixAlgebraKit.left_null_kind(alg) = f!
-
-        where `f!` should be the factorization function that will be used.
-        By default, this is either `left_null_qr!` or `left_null_svd!`.
-        """
-    )
-end
-
-"""
-    right_null_kind(alg::AbstractAlgorithm) -> f!
-
-Select an appropriate factorization function for applying `right_null!(A, alg)`.
-By default, this is either `right_null_lq!` or `right_null_svd!`, but this can be extended
-to insert arbitrary other decomposition functions, which should follow the signature
-`f!(A, F, alg) -> F`
-"""
-function right_null_kind(alg::AbstractAlgorithm)
-    right_orth_kind(alg) === right_orth_lq! && return right_null_lq!
-    right_orth_kind(alg) === right_orth_svd! && return right_null_svd!
-    return error(
-        """
-        Unkown or invalid `right_null` algorithm type `$(typeof(alg))`.
-        To register the algorithm type, define:
-
-                MatrixAlgebraKit.right_null_kind(alg) = f!
-
-        where `f!` should be the factorization function that will be used.
-        By default, this is either `right_null_lq!` or `right_null_svd!`.
-        """
-    )
-end
-
-"""
     does_truncate(alg::AbstractAlgorithm) -> Bool
 
 Check whether or not an algorithm can be used for a truncated decomposition.
@@ -278,8 +230,6 @@ struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
     trunc::T
 end
 
-left_orth_kind(alg::TruncatedAlgorithm) = left_orth_kind(alg.alg)
-right_orth_kind(alg::TruncatedAlgorithm) = right_orth_kind(alg.alg)
 does_truncate(::TruncatedAlgorithm) = true
 
 # Utility macros
