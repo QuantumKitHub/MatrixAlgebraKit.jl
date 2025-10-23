@@ -100,7 +100,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
 
         for alg in (:qr, :polar, :svd) # explicit kind kwarg
             m < n && alg === :polar && continue
-            V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg)
+            V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg = $(QuoteNode(alg)))
             @test V2 * C2 ≈ A
             @test isisometric(V2)
             if alg != :polar
@@ -112,7 +112,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
 
             # with kind and tol kwargs
             if alg == :svd
-                V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg, trunc = (; atol))
+                V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg = $(QuoteNode(alg)), trunc = (; atol))
                 N2 = @constinferred left_null!(copy!(Ac, A), N; alg, trunc = (; atol))
                 @test V2 * C2 ≈ A
                 @test V2' * V2 ≈ I
@@ -120,7 +120,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
                 @test N2' * N2 ≈ I
                 @test V2 * V2' + N2 * N2' ≈ I
 
-                V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg, trunc = (; rtol))
+                V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg = $(QuoteNode(alg)), trunc = (; rtol))
                 N2 = @constinferred left_null!(copy!(Ac, A), N; alg, trunc = (; rtol))
                 @test V2 * C2 ≈ A
                 @test isisometric(V2)
@@ -188,27 +188,27 @@ end
 
         for alg in (:lq, :polar, :svd)
             n < m && alg == :polar && continue
-            C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg)
+            C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg = $(QuoteNode(alg)))
             @test C2 * Vᴴ2 ≈ A
             @test isisometric(Vᴴ2; side = :right)
             if alg != :polar
-                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg)
+                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg = $(QuoteNode(alg)))
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometric(Nᴴ2; side = :right)
                 @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
             end
 
             if alg == :svd
-                C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg, trunc = (; atol))
-                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg, trunc = (; atol))
+                C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg = $(QuoteNode(alg)), trunc = (; atol))
+                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg = $(QuoteNode(alg)), trunc = (; atol))
                 @test C2 * Vᴴ2 ≈ A
                 @test isisometric(Vᴴ2; side = :right)
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
                 @test isisometric(Nᴴ2; side = :right)
                 @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
-                C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg, trunc = (; rtol))
-                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg, trunc = (; rtol))
+                C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg = $(QuoteNode(alg)), trunc = (; rtol))
+                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg = $(QuoteNode(alg)), trunc = (; rtol))
                 @test C2 * Vᴴ2 ≈ A
                 @test isisometric(Vᴴ2; side = :right)
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)

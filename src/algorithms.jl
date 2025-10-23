@@ -95,7 +95,7 @@ function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
         return Algorithm{alg}(; kwargs...)
     elseif alg isa Type
         return alg(; kwargs...)
-    elseif alg isa NamedTuple
+    elseif alg isa NamedTuple || alg isa Base.Pairs
         isempty(kwargs) ||
             throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
         return default_algorithm(f, A; alg...)
@@ -267,10 +267,10 @@ function _arg_expr(::Val{1}, f, f!)
         $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
 
         # fill in arguments
-        function $f!(A; alg = nothing, kwargs...)
+        @inline function $f!(A; alg = nothing, kwargs...)
             return $f!(A, select_algorithm($f!, A, alg; kwargs...))
         end
-        function $f!(A, out; alg = nothing, kwargs...)
+        @inline function $f!(A, out; alg = nothing, kwargs...)
             return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
         end
         function $f!(A, alg::AbstractAlgorithm)

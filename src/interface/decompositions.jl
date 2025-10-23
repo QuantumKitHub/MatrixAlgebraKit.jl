@@ -328,6 +328,7 @@ By default `Kind` is a symbol, which can be either `:qr`, `:polar` or `:svd`.
 struct LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
 end
+LeftOrthAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = LeftOrthAlgorithm{Kind, Alg}(alg)
 
 LeftOrthAlgorithm(alg::AbstractAlgorithm) = error(
     """
@@ -361,6 +362,7 @@ By default `Kind` is a symbol, which can be either `:lq`, `:polar` or `:svd`.
 struct RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
 end
+RightOrthAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = RightOrthAlgorithm{Kind, Alg}(alg)
 
 RightOrthAlgorithm(alg::AbstractAlgorithm) = error(
     """
@@ -394,6 +396,7 @@ By default `Kind` is a symbol, which can be either `:qr` or `:svd`.
 struct LeftNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
 end
+LeftNullAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = LeftNullAlgorithm{Kind, Alg}(alg)
 
 LeftNullAlgorithm(alg::AbstractAlgorithm) = error(
     """
@@ -424,6 +427,7 @@ By default `Kind` is a symbol, which can be either `:lq` or `:svd`.
 struct RightNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
     alg::Alg
 end
+RightNullAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = RightNullAlgorithm{Kind, Alg}(alg)
 
 RightNullAlgorithm(alg::AbstractAlgorithm) = error(
     """
