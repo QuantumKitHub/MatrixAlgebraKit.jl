@@ -2,10 +2,10 @@ module MatrixAlgebraKitEnzymeExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview, inv_safe, eig_trunc!, eigh_trunc!
-using MatrixAlgebraKit: qr_pullback!, lq_pullback!, qr_pullfwd!, lq_pullfwd!
-using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!, qr_null_pullfwd!, lq_null_pullfwd!
-using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_pullfwd!, eigh_pullfwd!
-using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!, left_polar_pullfwd!, right_polar_pullfwd!
+using MatrixAlgebraKit: qr_pullback!, lq_pullback!, qr_pushforward!, lq_pushforward!
+using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!, qr_null_pushforward!, lq_null_pushforward!
+using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_pushforward!, eigh_pushforward!
+using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!, left_polar_pushforward!, right_polar_pushforward!
 using Enzyme
 using Enzyme.EnzymeCore
 using Enzyme.EnzymeCore: EnzymeRules
@@ -15,13 +15,13 @@ using LinearAlgebra
 
 
 # two-argument factorizations like LQ, QR, EIG
-for (f, pb, pf) in ((qr_full!, qr_pullback!, qr_pullfwd!), 
-                    (qr_compact!, qr_pullback!, qr_pullfwd!),
-                    (lq_full!, lq_pullback!, lq_pullfwd!), 
-                    (lq_compact!, lq_pullback!, lq_pullfwd!),
-                    (eig_full!, eig_pullback!, eig_pullfwd!),
-                    (left_polar!, left_polar_pullback!, left_polar_pullfwd!),
-                    (right_polar!, right_polar_pullback!, right_polar_pullfwd!),
+for (f, pb, pf) in ((qr_full!, qr_pullback!, qr_pushforward!), 
+                    (qr_compact!, qr_pullback!, qr_pushforward!),
+                    (lq_full!, lq_pullback!, lq_pushforward!), 
+                    (lq_compact!, lq_pullback!, lq_pushforward!),
+                    (eig_full!, eig_pullback!, eig_pushforward!),
+                    (left_polar!, left_polar_pullback!, left_polar_pushforward!),
+                    (right_polar!, right_polar_pullback!, right_polar_pushforward!),
                    )
     @eval begin
         function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},
@@ -95,8 +95,8 @@ for (f, pb, pf) in ((qr_full!, qr_pullback!, qr_pullfwd!),
     end
 end
 
-for (f, pb, pf) in ((qr_null!, qr_null_pullback!, qr_null_pullfwd!), 
-                    (lq_null!, lq_null_pullback!, lq_null_pullfwd!), 
+for (f, pb, pf) in ((qr_null!, qr_null_pullback!, qr_null_pushforward!), 
+                    (lq_null!, lq_null_pullback!, lq_null_pushforward!), 
                    )
     @eval begin
         function EnzymeRules.augmented_primal(config::EnzymeRules.RevConfigWidth{1},

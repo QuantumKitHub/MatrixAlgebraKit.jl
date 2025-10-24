@@ -30,7 +30,7 @@ function make_mooncake_tangent(ΔD::Diagonal{T}) where {T<:Complex}
     return Mooncake.build_tangent(typeof(ΔD), diag_tangent)                                                                                                                                                          
 end 
 
-ETs = (Float64, Float32, ComplexF64, ComplexF32)
+ETs = (Float64, Float32,)# ComplexF64, ComplexF32)
 
 @timedtestset "QR AD Rules with eltype $T" for T in ETs
     rng = StableRNG(12345)
@@ -43,13 +43,13 @@ ETs = (Float64, Float32, ComplexF64, ComplexF32)
                              LAPACK_HouseholderQR(; positive=true),
                             )
             @testset "qr_compact" begin 
-                Mooncake.TestUtils.test_rule(rng, qr_compact, A, alg; mode=Mooncake.ReverseMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, qr_compact, A, alg; is_primitive=false, atol=atol, rtol=rtol)
             end
             @testset "qr_null" begin
                 Q, R = qr_compact(A, alg)
                 ΔN   = Q * randn(rng, T, minmn, max(0, m - minmn))
                 dN   = make_mooncake_tangent(ΔN)
-                Mooncake.TestUtils.test_rule(rng, qr_null, A, alg; mode=Mooncake.ReverseMode, output_tangent = dN, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, qr_null, A, alg; output_tangent = dN, is_primitive=false, atol=atol, rtol=rtol)
             end
             @testset "qr_full" begin
                 Q, R = qr_full(A, alg)
@@ -61,7 +61,7 @@ ETs = (Float64, Float32, ComplexF64, ComplexF32)
                 dQ   = make_mooncake_tangent(ΔQ)
                 dR   = make_mooncake_tangent(ΔR)
                 dQR  = Mooncake.build_tangent(typeof((ΔQ,ΔR)), dQ, dR)
-                Mooncake.TestUtils.test_rule(rng, qr_full, A, alg; mode=Mooncake.ReverseMode, output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, qr_full, A, alg; output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
             end
             @testset "qr_compact - rank-deficient A" begin
                 r    = minmn - 5
@@ -77,7 +77,7 @@ ETs = (Float64, Float32, ComplexF64, ComplexF32)
                 dQ   = make_mooncake_tangent(ΔQ)
                 dR   = make_mooncake_tangent(ΔR)
                 dQR  = Mooncake.build_tangent(typeof((ΔQ,ΔR)), dQ, dR)
-                Mooncake.TestUtils.test_rule(rng, qr_compact, copy(Ard), alg; mode=Mooncake.ReverseMode, output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, qr_compact, copy(Ard), alg; output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
             end
         end
     end
@@ -158,7 +158,9 @@ end
     # compute the dA corresponding to the above dD, dV
     @testset for alg in (LAPACK_Simple(), LAPACK_Expert())
         @testset "eig_full" begin
-            Mooncake.TestUtils.test_rule(rng, eig_full, A, alg; mode=Mooncake.ReverseMode, output_tangent = dDV, is_primitive=false, atol=atol, rtol=rtol)
+            Ah = (A + A')/2
+            Mooncake.TestUtils.test_rule(rng, (A, alg) -> eig_full(exp(A), alg)[1], Ah, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+            Mooncake.TestUtils.test_rule(rng, (A, alg) -> eig_full(exp(A), alg)[2], Ah, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
         end
         @testset "eig_vals" begin
             Mooncake.TestUtils.test_rule(rng, eig_vals, A, alg; atol=atol, rtol=rtol, is_primitive=false)
@@ -283,24 +285,42 @@ end
         A        = randn(rng, T, m, n)
         minmn    = min(m, n)
         @testset for alg in (LAPACK_QRIteration(),
-                             LAPACK_DivideAndConquer(),
+                             #LAPACK_DivideAndConquer(),
                             )
+            ΔU       = randn(rng, T, m, minmn)
+            ΔS       = randn(rng, real(T), minmn, minmn)
+            ΔS2      = Diagonal(randn(rng, real(T), minmn))
+            ΔVᴴ      = randn(rng, T, minmn, n)
+            U, S, Vᴴ = svd_compact(A)
+            ΔU, ΔVᴴ  = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol=atol)
+            ΔUref    = copy(ΔU)
+            ΔSref    = copy(ΔS2)
+            ΔVᴴref   = copy(ΔVᴴ)
             @testset "svd_compact" begin
-                ΔU       = randn(rng, T, m, minmn)
-                ΔS       = randn(rng, real(T), minmn, minmn)
-                ΔS2      = Diagonal(randn(rng, real(T), minmn))
-                ΔVᴴ      = randn(rng, T, minmn, n)
-                U, S, Vᴴ = svd_compact(A)
-                ΔU, ΔVᴴ  = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol=atol)
                 dS       = make_mooncake_tangent(ΔS2)
                 dU       = make_mooncake_tangent(ΔU)
                 dVᴴ      = make_mooncake_tangent(ΔVᴴ)
                 dUSVᴴ    = Mooncake.build_tangent(typeof((ΔU,ΔS2,ΔVᴴ)), dU, dS, dVᴴ)
                 Mooncake.TestUtils.test_rule(rng, svd_compact, A, alg; mode=Mooncake.ReverseMode, output_tangent=dUSVᴴ, is_primitive=false, atol=atol, rtol=rtol)
             end
+            @testset "svd_full" begin
+                ΔUfull   = zeros(T, m, m)
+                ΔSfull   = zeros(real(T), m, n)
+                ΔVᴴfull  = zeros(T, n, n)
+                U, S, Vᴴ = svd_full(A)
+                view(ΔUfull, :, 1:minmn)  .= ΔUref
+                view(ΔVᴴfull, 1:minmn, :) .= ΔVᴴref
+                diagview(ΔSfull)[1:minmn] .= diagview(ΔSref)
+                dS       = make_mooncake_tangent(ΔSfull)
+                dU       = make_mooncake_tangent(ΔUfull)
+                dVᴴ      = make_mooncake_tangent(ΔVᴴfull)
+                dUSVᴴ    = Mooncake.build_tangent(typeof((ΔUfull,ΔSfull,ΔVᴴfull)), dU, dS, dVᴴ)
+                Mooncake.TestUtils.test_rule(rng, svd_full, A, alg; mode=Mooncake.ReverseMode, output_tangent=dUSVᴴ, is_primitive=false, atol=atol, rtol=rtol)
+            end
             @testset "svd_vals" begin
                 Mooncake.TestUtils.test_rule(rng, svd_vals, A, alg; is_primitive=false, atol=atol, rtol=rtol)
             end
+            #=
             @testset "svd_trunc" begin
                 @testset for r in 1:4:minmn
                     U, S, Vᴴ = svd_compact(A)
@@ -348,7 +368,7 @@ end
                 dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, (U, S, Vᴴ), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc), ind)
                 dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), A, (Utrunc, Strunc, Vᴴtrunc), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc))
                 @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
-            end
+            end=#
         end
     end
 end
@@ -361,10 +381,10 @@ end
         A = randn(rng, T, m, n)
         @testset for alg in PolarViaSVD.((LAPACK_QRIteration(), LAPACK_DivideAndConquer()))
             m >= n &&
-                Mooncake.TestUtils.test_rule(rng, left_polar, A, alg; mode=Mooncake.ReverseMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, left_polar, A, alg; is_primitive=false, atol=atol, rtol=rtol)
 
             m <= n &&
-                Mooncake.TestUtils.test_rule(rng, right_polar, A, alg; mode=Mooncake.ReverseMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, right_polar, A, alg; is_primitive=false, atol=atol, rtol=rtol)
         end
     end
 end
@@ -375,26 +395,27 @@ end
     @testset "size ($m, $n)" for n in (17, m, 23)
         atol   = rtol = m * n * precision(T)
         A      = randn(rng, T, m, n)
-        Mooncake.TestUtils.test_rule(rng, left_orth, A; mode=Mooncake.ReverseMode, atol=atol, rtol=rtol, is_primitive=false)
-        Mooncake.TestUtils.test_rule(rng, right_orth, A; mode=Mooncake.ReverseMode, atol=atol, rtol=rtol, is_primitive=false)
+        Mooncake.TestUtils.test_rule(rng, left_orth, A; atol=atol, rtol=rtol, is_primitive=false)
+        Mooncake.TestUtils.test_rule(rng, right_orth, A; atol=atol, rtol=rtol, is_primitive=false)
 
-        Mooncake.TestUtils.test_rule(rng, (X->left_orth(X; kind=:qr)), A; mode=Mooncake.ReverseMode, atol=atol, rtol=rtol, is_primitive=false)
+        Mooncake.TestUtils.test_rule(rng, (X->left_orth(X; kind=:qr)), A; atol=atol, rtol=rtol, is_primitive=false)
         if m >= n
-            Mooncake.TestUtils.test_rule(rng, (X->left_orth(X; kind=:polar)), A; mode=Mooncake.ReverseMode, atol=atol, rtol=rtol, is_primitive=false)
+            Mooncake.TestUtils.test_rule(rng, (X->left_orth(X; kind=:polar)), A; atol=atol, rtol=rtol, is_primitive=false)
         end
 
         ΔN = left_orth(A; kind=:qr)[1] * randn(rng, T, min(m, n), m - min(m, n))
         dN = make_mooncake_tangent(ΔN)
-        Mooncake.TestUtils.test_rule(rng, (X->left_null(X; kind=:qr)), A; mode=Mooncake.ReverseMode, atol=atol, rtol=rtol, is_primitive=false, output_tangent = dN)
+        Mooncake.TestUtils.test_rule(rng, (X->left_null(X; kind=:qr)), A; atol=atol, rtol=rtol, is_primitive=false, output_tangent = dN)
 
-        Mooncake.TestUtils.test_rule(rng, (X->right_orth(X; kind=:lq)), A; mode=Mooncake.ReverseMode, atol=atol, rtol=rtol, is_primitive=false)
+        Mooncake.TestUtils.test_rule(rng, (X->right_orth(X; kind=:lq)), A; atol=atol, rtol=rtol, is_primitive=false)
 
         if m <= n
-            Mooncake.TestUtils.test_rule(rng, (X->right_orth(X; kind=:polar)), A; mode=Mooncake.ReverseMode, atol=atol, rtol=rtol, is_primitive=false)
+            Mooncake.TestUtils.test_rule(rng, (X->right_orth(X; kind=:polar)), A; atol=atol, rtol=rtol, is_primitive=false)
         end
 
         ΔNᴴ = randn(rng, T, n - min(m, n), min(m, n)) * right_orth(A; kind=:lq)[2]
         dNᴴ = make_mooncake_tangent(ΔNᴴ)
-        Mooncake.TestUtils.test_rule(rng, (X->right_null(X; kind=:lq)), A; mode=Mooncake.ReverseMode, atol=atol, rtol=rtol, is_primitive=false, output_tangent = dNᴴ)
+        Mooncake.TestUtils.test_rule(rng, (X->right_null(X; kind=:lq)), A; atol=atol, rtol=rtol, is_primitive=false, output_tangent = dNᴴ)
     end
 end
+

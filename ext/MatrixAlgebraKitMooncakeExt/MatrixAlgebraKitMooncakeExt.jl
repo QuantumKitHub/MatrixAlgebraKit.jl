@@ -4,22 +4,22 @@ using Mooncake
 using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
 using MatrixAlgebraKit
 using MatrixAlgebraKit: inv_safe, diagview
-using MatrixAlgebraKit: svd_pullfwd! 
-using MatrixAlgebraKit: qr_pullback!, lq_pullback!, qr_pullfwd!, lq_pullfwd!
-using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!, qr_null_pullfwd!, lq_null_pullfwd!
-using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_pullfwd!, eigh_pullfwd!
-using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!, left_polar_pullfwd!, right_polar_pullfwd!
+using MatrixAlgebraKit: svd_pushforward! 
+using MatrixAlgebraKit: qr_pullback!, lq_pullback!, qr_pushforward!, lq_pushforward!
+using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!, qr_null_pushforward!, lq_null_pushforward!
+using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_pushforward!, eigh_pushforward!
+using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!, left_polar_pushforward!, right_polar_pushforward!
 using LinearAlgebra
 
 # two-argument factorizations like LQ, QR, EIG
-for (f, pb, pf, adj) in ((qr_full!,    qr_pullback!, qr_pullfwd!, :dqr_adjoint), 
-                         (qr_compact!, qr_pullback!, qr_pullfwd!, :dqr_adjoint),
-                         (lq_full!,    lq_pullback!, lq_pullfwd!, :dlq_adjoint), 
-                         (lq_compact!, lq_pullback!, lq_pullfwd!, :dlq_adjoint),
-                         (eig_full!,   eig_pullback!, eig_pullfwd!, :deig_adjoint),
-                         (eigh_full!,  eigh_pullback!, eigh_pullfwd!, :deigh_adjoint),
-                         (left_polar!, left_polar_pullback!, left_polar_pullfwd!, :dleft_polar_adjoint),
-                         (right_polar!, right_polar_pullback!, right_polar_pullfwd!, :dright_polar_adjoint),
+for (f, pb, pf, adj) in ((qr_full!,    qr_pullback!, qr_pushforward!, :dqr_adjoint), 
+                         (qr_compact!, qr_pullback!, qr_pushforward!, :dqr_adjoint),
+                         (lq_full!,    lq_pullback!, lq_pushforward!, :dlq_adjoint), 
+                         (lq_compact!, lq_pullback!, lq_pushforward!, :dlq_adjoint),
+                         (eig_full!,   eig_pullback!, eig_pushforward!, :deig_adjoint),
+                         (eigh_full!,  eigh_pullback!, eigh_pushforward!, :deigh_adjoint),
+                         (left_polar!, left_polar_pullback!, left_polar_pushforward!, :dleft_polar_adjoint),
+                         (right_polar!, right_polar_pullback!, right_polar_pushforward!, :dright_polar_adjoint),
                         )
 
     @eval begin
@@ -55,14 +55,14 @@ for (f, pb, pf, adj) in ((qr_full!,    qr_pullback!, qr_pullfwd!, :dqr_adjoint),
     end
 end
 
-for (f, pb, pf, adj) in ((qr_null!, qr_null_pullback!, qr_null_pullfwd!, :dqr_null_adjoint), 
-                         (lq_null!, lq_null_pullback!, lq_null_pullfwd!, :dlq_null_adjoint), 
-                        )
+for (f, f_full, pb, pf, adj) in ((qr_null!, qr_full, qr_null_pullback!, qr_null_pushforward!, :dqr_null_adjoint), 
+                                 (lq_null!, lq_full, lq_null_pullback!, lq_null_pushforward!, :dlq_null_adjoint), 
+                                )
     @eval begin
         @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), AbstractMatrix, AbstractMatrix, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual{<:AbstractMatrix}, arg_darg::CoDual{<:AbstractMatrix}, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
             A, dA     = arrayify(A_dA)
-            Ac        = MatrixAlgebraKit.copy_input(lq_full, A)
+            Ac        = MatrixAlgebraKit.copy_input($f_full, A)
             arg, darg = arrayify(Mooncake.primal(arg_darg), Mooncake.tangent(arg_darg))
             arg       = $f(Ac, arg, Mooncake.primal(alg_dalg))
             function $adj(::Mooncake.NoRData)
@@ -72,7 +72,16 @@ for (f, pb, pf, adj) in ((qr_null!, qr_null_pullback!, qr_null_pullfwd!, :dqr_nu
             end
             return arg_darg, $adj 
         end
-        #forward mode not implemented yet
+        @is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof($f), AbstractMatrix, AbstractMatrix, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.frule!!(f_df::Dual{typeof($f)}, A_dA::Dual{<:AbstractMatrix}, arg_darg::Dual{<:AbstractMatrix}, alg_dalg::Dual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
+            A, dA     = arrayify(A_dA)
+            Ac        = MatrixAlgebraKit.copy_input($f_full, A)
+            arg, darg = arrayify(Mooncake.primal(arg_darg), Mooncake.tangent(arg_darg))
+            arg       = $f(Ac, arg, Mooncake.primal(alg_dalg))
+            $pf(dA, A, arg, darg; kwargs...)
+            dA       .= zero(dA)
+            return arg_darg
+        end
     end
 end
 
@@ -145,7 +154,7 @@ function Mooncake.frule!!(::Dual{typeof(MatrixAlgebraKit.eigh_full!)}, A_dA::Dua
     D, dD   = arrayify(DV[1], dDV[1])
     V, dV   = arrayify(DV[2], dDV[2])
     (D, V)  = eigh_full!(A, DV, Mooncake.primal(alg_dalg); kwargs...)
-    (dD, dV) = eigh_pullfwd!(dA, A, (D, V), (dD, dV); kwargs...)
+    (dD, dV) = eigh_pushforward!(dA, A, (D, V), (dD, dV); kwargs...)
     return Mooncake.Dual(DV, dDV)
 end
 =#
@@ -209,10 +218,13 @@ for (f, St) in ((svd_full!, :AbstractMatrix), (svd_compact!, :Diagonal))
                     vdU   = view(dU, :, 1:minmn)
                     vdS   = Diagonal(diagview(dS)[1:minmn])
                     vdVᴴ  = view(dVᴴ, 1:minmn, :)
-                    dA    = MatrixAlgebraKit.svd_pullback!(dA, A, (U, S, Vᴴ), (vdU, vdS, vdVᴴ))
+                    dA    = MatrixAlgebraKit.svd_pullback!(dA, A, (vU, vS, vVᴴ), (vdU, vdS, vdVᴴ))
                 end
                 return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
             end
+            dU  .= zero(dU)
+            dS  .= zero(dS)
+            dVᴴ .= zero(dVᴴ)
             return Mooncake.CoDual(USVᴴ, dUSVᴴ), dsvd_adjoint
         end
         @is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof($f), AbstractMatrix, Tuple{<:AbstractMatrix, <:$St, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
@@ -228,10 +240,10 @@ for (f, St) in ((svd_full!, :AbstractMatrix), (svd_compact!, :Diagonal))
             # update tangents
             U_, S_, Vᴴ_    = USVᴴ
             dU_, dS_, dVᴴ_ = dUSVᴴ
-            U, dU   = arrayify(U_, dU_) 
-            S, dS   = arrayify(S_, dS_) 
-            Vᴴ, dVᴴ = arrayify(Vᴴ_, dVᴴ_) 
-            (dU, dS, dVᴴ) = svd_pullfwd!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ); kwargs...)
+            U, dU          = arrayify(U_, dU_) 
+            S, dS          = arrayify(S_, dS_) 
+            Vᴴ, dVᴴ        = arrayify(Vᴴ_, dVᴴ_) 
+            (dU, dS, dVᴴ)  = svd_pushforward!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ); kwargs...)
             return USVᴴ_dUSVᴴ
         end
     end

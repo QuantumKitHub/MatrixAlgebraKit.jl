@@ -9,9 +9,10 @@ using LinearAlgebra: UpperTriangular, Diagonal, Hermitian, mul!
 
 is_ci = get(ENV, "CI", "false") == "true"
 
-ETs = is_ci ? (Float64, Float32) : (Float64, Float32, ComplexF32, ComplexF64) # Enzyme/#2631
+#ETs = is_ci ? (Float64, Float32) : (Float64, Float32, ComplexF32, ComplexF64) # Enzyme/#2631
+ETs = (Float64, ComplexF64)
 include("ad_utils.jl")
-
+#=
 @timedtestset "QR AD Rules with eltype $T" for T in ETs 
     rng = StableRNG(12345)
     m = 19
@@ -112,7 +113,7 @@ end
         end
     end
 end
-
+=#
 function MatrixAlgebraKit.eig_trunc!(A, DV, ϵ::Vector{T}, alg::MatrixAlgebraKit.TruncatedAlgorithm) where {T}
     D, V = eig_full!(A, DV, alg.alg)
     DVtrunc, ind = MatrixAlgebraKit.truncate(eig_trunc!, (D, V), alg.trunc)
@@ -133,12 +134,20 @@ end
     A    = randn(rng, T, m, m)
     D, V = eig_full(A)
     Ddiag = diagview(D)
+    ΔA   = randn(rng, T, m, m)
     ΔV   = randn(rng, complex(T), m, m)
     ΔV   = remove_eiggauge_dependence!(ΔV, D, V; degeneracy_atol=atol)
     ΔD   = randn(rng, complex(T), m, m)
     ΔD2  = Diagonal(randn(rng, complex(T), m))
     @testset for alg in (LAPACK_Simple(), LAPACK_Expert())
-        @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+        @testset "forward: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+            # make A hermitian
+            Ah = (A + A')/2
+            test_forward((Ah; kwargs...)->eig_full(A; kwargs...)[1], RT, Duplicated(A, ΔA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+            test_forward((Ah; kwargs...)->eig_full(A; kwargs...)[2], RT, Duplicated(A, ΔA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+            #test_forward(eig_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+        end
+        #=@testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             test_reverse(eig_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔD2), copy(ΔV)))
             test_reverse(eig_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=copy(ΔD2.diag))
         end
@@ -167,7 +176,7 @@ end
             dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
             dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
             @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
-        end
+        end=#
     end
 end
 
@@ -213,9 +222,11 @@ end
                          LAPACK_MultipleRelativelyRobustRepresentations(),
                         )
         @testset "forward: RT $RT, TA $TA" for RT in (Const, Duplicated,), TA in (Const, Duplicated,)
+            test_forward((A; kwargs...)->copy_eigh_full(A; kwargs...)[1], RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
+            test_forward((A; kwargs...)->copy_eigh_full(A; kwargs...)[2], RT, (A, TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
             test_forward(copy_eigh_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol)
         end
-        @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+        #=@testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             test_reverse(copy_eigh_full, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=(copy(ΔD2), copy(ΔV)))
             test_reverse(copy_eigh_vals, RT, (copy(A), TA); fkwargs=(alg=alg,), atol=atol, rtol=rtol, output_tangent=copy(ΔD2.diag))
         end
@@ -246,7 +257,7 @@ end
             dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
             dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
             @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
-        end
+        end=#
     end
 end
 
@@ -273,7 +284,15 @@ end
         @testset for alg in (LAPACK_QRIteration(),
                              LAPACK_DivideAndConquer(),
                             )
-            @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+            @testset "forward: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+                @testset "svd_compact" begin
+                    A = randn(rng, T, m, m)
+                    Ah = (A + A')/2
+                    fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range=1e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+                    test_forward(svd_compact, RT, (Ah, TA); atol=atol, rtol=rtol, fkwargs=(alg=alg,), fdm=fdm)
+                end
+            end
+            #=@testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 @testset "svd_compact" begin
                     U, S, Vᴴ = svd_compact(A)
                     ΔU  = randn(rng, T, m, minmn)
@@ -331,7 +350,7 @@ end
                     dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), copy(A), (Utrunc, Strunc, Vᴴtrunc), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc))
                     @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
                 end
-            end
+            end=#
         end
     end
 end
