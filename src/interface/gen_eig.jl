@@ -60,7 +60,7 @@ See also [`gen_eig_full(!)`](@ref gen_eig_full).
 default_gen_eig_algorithm(A, B; kwargs...) = default_gen_eig_algorithm(typeof(A), typeof(B); kwargs...)
 default_gen_eig_algorithm(::Type{TA}, ::Type{TB}; kwargs...) where {TA, TB} =
     throw(MethodError(default_gen_eig_algorithm, (TA, TB)))
-default_gen_eig_algorithm(::Type{TA}, ::Type{TB}; kwargs...) where {TA <: YALAPACK.BlasMat, TB <: YALAPACK.BlasMat} =
+default_gen_eig_algorithm(::Type{TA}, ::Type{TB}; kwargs...) where {TA <: YALAPACK.MaybeBlasMat, TB <: YALAPACK.MaybeBlasMat} =
     LAPACK_Simple(; kwargs...)
 
 for f in (:gen_eig_full!, :gen_eig_vals!)

@@ -72,7 +72,7 @@ default_qr_algorithm(A; kwargs...) = default_qr_algorithm(typeof(A); kwargs...)
 function default_qr_algorithm(T::Type; kwargs...)
     throw(MethodError(default_qr_algorithm, (T,)))
 end
-function default_qr_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.BlasMat}
+function default_qr_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
     return LAPACK_HouseholderQR(; kwargs...)
 end
 function default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}

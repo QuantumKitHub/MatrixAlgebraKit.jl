@@ -55,22 +55,28 @@ square diagonal matrix of size `(k, k)`, with `k` is set by the truncation strat
 The function also returns `ϵ`, the truncation error defined as the 2-norm of the 
 discarded singular values.
 
+## Truncation
+The truncation strategy can be controlled via the `trunc` keyword argument. This can be
+either a `NamedTuple` or a [`TruncationStrategy`](@ref). If `trunc` is not provided or
+nothing, all values will be kept.
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$docs_truncation_kwargs
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly.
+By default, MatrixAlgebraKit supplies the following:
+
+$docs_truncation_strategies
+
 ## Keyword arguments
-The behavior of this function is controlled by the following keyword arguments:
-
-- `trunc`: Specifies the truncation strategy. This can be:
-  - A `NamedTuple` with fields `atol`, `rtol`, and/or `maxrank`, which will be converted to
-    a [`TruncationStrategy`](@ref). For details on available truncation strategies, see
-    [Truncations](@ref).
-  - A `TruncationStrategy` object directly (e.g., `truncrank(10)`, `trunctol(atol=1e-6)`, or
-    combinations using `&`).
-  - `nothing` (default), which keeps all singular values.
-
-- Other keyword arguments are passed to the algorithm selection procedure. If no explicit
-  `alg` is provided, these keywords are used to select and configure the algorithm through
-  [`MatrixAlgebraKit.select_algorithm`](@ref). The remaining keywords after algorithm
-  selection are passed to the algorithm constructor. See [`MatrixAlgebraKit.default_algorithm`](@ref)
-  for the default algorithm selection behavior.
+Other keyword arguments are passed to the algorithm selection procedure. If no explicit
+`alg` is provided, these keywords are used to select and configure the algorithm through
+[`MatrixAlgebraKit.select_algorithm`](@ref). The remaining keywords after algorithm
+selection are passed to the algorithm constructor. See [`MatrixAlgebraKit.default_algorithm`](@ref)
+for the default algorithm selection behavior.
 
 When `alg` is a [`TruncatedAlgorithm`](@ref), the `trunc` keyword cannot be specified as the
 truncation strategy is already embedded in the algorithm.
@@ -106,7 +112,7 @@ default_svd_algorithm(A; kwargs...) = default_svd_algorithm(typeof(A); kwargs...
 function default_svd_algorithm(T::Type; kwargs...)
     throw(MethodError(default_svd_algorithm, (T,)))
 end
-function default_svd_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.BlasMat}
+function default_svd_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
     return LAPACK_DivideAndConquer(; kwargs...)
 end
 function default_svd_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}

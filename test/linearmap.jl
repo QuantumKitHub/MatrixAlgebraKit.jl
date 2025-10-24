@@ -34,13 +34,6 @@ module LinearMaps
             LinearMap.(MAK.$f!(parent(A), parent.(F), alg))
     end
 
-    for f! in (:left_orth!, :right_orth!)
-        @eval MAK.check_input(::typeof($f!), A::LinearMap, F, alg) =
-            MAK.check_input($f!, parent(A), parent.(F), alg)
-        @eval MAK.initialize_output(::typeof($f!), A::LinearMap) =
-            LinearMap.(MAK.initialize_output($f!, parent(A)))
-    end
-
     for f in (:qr, :lq, :svd)
         default_f = Symbol(:default_, f, :_algorithm)
         @eval MAK.$default_f(::Type{LinearMap{A}}; kwargs...) where {A} = MAK.$default_f(A; kwargs...)
