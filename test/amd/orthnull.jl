@@ -206,7 +206,9 @@ end
         atol = eps(real(T))
         rtol = eps(real(T))
         C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); trunc = (; atol = atol))
-        Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; trunc = (; atol = atol))
+        AMDGPU.@allowscalar begin
+            Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; trunc = (; atol = atol))
+        end
         @test C2 * Vᴴ2 ≈ A
         @test isisometric(Vᴴ2; side = :right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
@@ -216,7 +218,9 @@ end
         @test hVᴴ2' * hVᴴ2 + hNᴴ2' * hNᴴ2 ≈ I
 
         C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); trunc = (; rtol = rtol))
-        Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; trunc = (; rtol = rtol))
+        AMDGPU.@allowscalar begin
+            Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; trunc = (; rtol = rtol))
+        end
         @test C2 * Vᴴ2 ≈ A
         @test isisometric(Vᴴ2; side = :right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
@@ -242,7 +246,9 @@ end
 
             if alg == :svd
                 C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg = $(QuoteNode(alg)), trunc = (; atol))
-                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg = $(QuoteNode(alg)), trunc = (; atol))
+                AMDGPU.@allowscalar begin
+                    Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg = $(QuoteNode(alg)), trunc = (; atol))
+                end
                 @test C2 * Vᴴ2 ≈ A
                 @test isisometric(Vᴴ2; side = :right)
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
@@ -252,7 +258,9 @@ end
                 @test hVᴴ2' * hVᴴ2 + hNᴴ2' * hNᴴ2 ≈ I
 
                 C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg = $(QuoteNode(alg)), trunc = (; rtol))
-                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg = $(QuoteNode(alg)), trunc = (; rtol))
+                AMDGPU.@allowscalar begin
+                    Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; alg = $(QuoteNode(alg)), trunc = (; rtol))
+                end
                 @test C2 * Vᴴ2 ≈ A
                 @test isisometric(Vᴴ2; side = :right)
                 @test LinearAlgebra.norm(A * adjoint(Nᴴ2)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
