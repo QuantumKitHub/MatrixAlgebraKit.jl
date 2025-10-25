@@ -111,6 +111,6 @@ end
 
 # randomized algorithms don't currently work for smallest values:
 left_null!(A, N, alg::LeftNullViaSVD{<:TruncatedAlgorithm{<:GPU_Randomized}}) =
-    throw(ArgumentError("Randomized SVD ($alg) cannot be used for null spaces"))
+    throw(ArgumentError("Randomized SVD ($alg) cannot be used for null spaces yet"))
 right_null!(A, Nᴴ, alg::RightNullViaSVD{<:TruncatedAlgorithm{<:GPU_Randomized}}) =
-    throw(ArgumentError("Randomized SVD ($alg) cannot be used for null spaces"))
+    throw(ArgumentError("Randomized SVD ($alg) cannot be used for null spaces yet"))
