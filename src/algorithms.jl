@@ -59,7 +59,8 @@ end
 """
     does_truncate(alg::AbstractAlgorithm) -> Bool
 
-Check whether or not an algorithm can be used for a truncated decomposition.
+Indicate whether or not an algorithm will compute a truncated decomposition
+(such that composing the factors only approximates the input up to some tolerance).
 """
 does_truncate(alg::AbstractAlgorithm) = false
 
