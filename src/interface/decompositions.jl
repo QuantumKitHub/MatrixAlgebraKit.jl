@@ -140,7 +140,7 @@ until convergence up to tolerance `tol`.
 @algdef PolarNewton
 
 # =========================
-# DIAGONAL ALGORITHMS
+# Varia
 # =========================
 """
     DiagonalAlgorithm(; kwargs...)
@@ -149,6 +149,21 @@ Algorithm type to denote a native Julia implementation of the decompositions mak
 the diagonal structure of the input and outputs.
 """
 @algdef DiagonalAlgorithm
+
+"""
+    LQViaTransposedQR(qr_alg)
+
+Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
+The `qr_alg` specifies which QR-decomposition implementation to use.
+"""
+struct LQViaTransposedQR{A <: AbstractAlgorithm} <: AbstractAlgorithm
+    qr_alg::A
+end
+function Base.show(io::IO, alg::LQViaTransposedQR)
+    print(io, "LQViaTransposedQR(")
+    _show_alg(io, alg.qr_alg)
+    return print(io, ")")
+end
 
 # =========================
 # CUSOLVER ALGORITHMS
@@ -276,22 +291,6 @@ Divide and Conquer algorithm.
 @algdef ROCSOLVER_DivideAndConquer
 
 const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
-
-# Alternative algorithm (necessary for CUDA)
-"""
-    LQViaTransposedQR(qr_alg)
-
-Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
-The `qr_alg` specifies which QR-decomposition implementation to use.
-"""
-struct LQViaTransposedQR{A <: AbstractAlgorithm} <: AbstractAlgorithm
-    qr_alg::A
-end
-function Base.show(io::IO, alg::LQViaTransposedQR)
-    print(io, "LQViaTransposedQR(")
-    _show_alg(io, alg.qr_alg)
-    return print(io, ")")
-end
 
 # Various consts and unions
 # -------------------------
