@@ -140,7 +140,9 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
             # with alg and tol kwargs
             if alg == :svd
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg = $(QuoteNode(alg)), trunc = (; atol))
-                N2 = @constinferred left_null!(copy!(Ac, A), N; alg, trunc = (; atol))
+                AMDGPU.@allowscalar begin
+                    N2 = @constinferred left_null!(copy!(Ac, A), N; alg, trunc = (; atol))
+                end
                 @test V2 * C2 ≈ A
                 @test isisometric(V2)
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
@@ -150,7 +152,9 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
                 @test hV2 * hV2' + hN2 * hN2' ≈ I
 
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); alg = $(QuoteNode(alg)), trunc = (; rtol))
-                N2 = @constinferred left_null!(copy!(Ac, A), N; alg, trunc = (; rtol))
+                AMDGPU.@allowscalar begin
+                    N2 = @constinferred left_null!(copy!(Ac, A), N; alg, trunc = (; rtol))
+                end
                 @test V2 * C2 ≈ A
                 @test isisometric(V2)
                 @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
