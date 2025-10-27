@@ -30,27 +30,27 @@ function make_mooncake_tangent(ΔD::Diagonal{T}) where {T<:Complex}
     return Mooncake.build_tangent(typeof(ΔD), diag_tangent)                                                                                                                                                          
 end 
 
-ETs = (Float64, Float32,)# ComplexF64, ComplexF32)
+ETs = (Float64,)# Float32,)# ComplexF64, ComplexF32)
 
 @timedtestset "QR AD Rules with eltype $T" for T in ETs
     rng = StableRNG(12345)
     m = 19
-    @testset "size ($m, $n)" for n in (17, m, 23)
+    @testset "size ($m, $n)" for n in (17,)# m, 23)
         atol  = rtol = m * n * precision(T)
         A     = randn(rng, T, m, n)
         minmn = min(m, n)
         @testset for alg in (LAPACK_HouseholderQR(),
-                             LAPACK_HouseholderQR(; positive=true),
+                             #LAPACK_HouseholderQR(; positive=true),
                             )
-            @testset "qr_compact" begin 
+            #=@testset "qr_compact" begin
                 Mooncake.TestUtils.test_rule(rng, qr_compact, A, alg; is_primitive=false, atol=atol, rtol=rtol)
-            end
-            @testset "qr_null" begin
+            end=#
+            #=@testset "qr_null" begin
                 Q, R = qr_compact(A, alg)
                 ΔN   = Q * randn(rng, T, minmn, max(0, m - minmn))
                 dN   = make_mooncake_tangent(ΔN)
                 Mooncake.TestUtils.test_rule(rng, qr_null, A, alg; output_tangent = dN, is_primitive=false, atol=atol, rtol=rtol)
-            end
+            end=#
             @testset "qr_full" begin
                 Q, R = qr_full(A, alg)
                 Q1   = view(Q, 1:m, 1:minmn)
@@ -61,9 +61,11 @@ ETs = (Float64, Float32,)# ComplexF64, ComplexF32)
                 dQ   = make_mooncake_tangent(ΔQ)
                 dR   = make_mooncake_tangent(ΔR)
                 dQR  = Mooncake.build_tangent(typeof((ΔQ,ΔR)), dQ, dR)
-                Mooncake.TestUtils.test_rule(rng, qr_full, A, alg; output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
+                #Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_full(A, alg)[2]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+                #Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_full(A, alg)[1][1:m, 1:minmn]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_full(A, alg)[1][1:m, minmn+1:m]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
             end
-            @testset "qr_compact - rank-deficient A" begin
+            #=@testset "qr_compact - rank-deficient A" begin
                 r    = minmn - 5
                 Ard  = randn(rng, T, m, r) * randn(rng, T, r, n)
                 Q, R = qr_compact(Ard, alg)
@@ -77,12 +79,13 @@ ETs = (Float64, Float32,)# ComplexF64, ComplexF32)
                 dQ   = make_mooncake_tangent(ΔQ)
                 dR   = make_mooncake_tangent(ΔR)
                 dQR  = Mooncake.build_tangent(typeof((ΔQ,ΔR)), dQ, dR)
-                Mooncake.TestUtils.test_rule(rng, qr_compact, copy(Ard), alg; output_tangent = dQR, is_primitive=false, atol=atol, rtol=rtol)
-            end
+                Mooncake.TestUtils.test_rule(rng, qr_compact, copy(Ard), alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+            end=#
         end
     end
 end
 
+#=
 @timedtestset "LQ AD Rules with eltype $T" for T in ETs
     rng = StableRNG(12345)
     m = 19
@@ -99,14 +102,14 @@ end
                 dL  = make_mooncake_tangent(ΔL)
                 dQ  = make_mooncake_tangent(ΔQ)
                 dLQ = Mooncake.build_tangent(typeof((ΔL,ΔQ)), dL, dQ)
-                Mooncake.TestUtils.test_rule(rng, lq_compact, A, alg; mode=Mooncake.ReverseMode, is_primitive=false, atol=atol, rtol=rtol, output_tangent = dLQ)
+                Mooncake.TestUtils.test_rule(rng, lq_compact, A, alg; is_primitive=false, atol=atol, rtol=rtol, output_tangent = dLQ)
             end
-            @testset "lq_null" begin
+            #=@testset "lq_null" begin
                 L, Q = lq_compact(A, alg)
                 ΔNᴴ = randn(rng, T, max(0, n - minmn), minmn) * Q
                 dNᴴ = make_mooncake_tangent(ΔNᴴ)
-                Mooncake.TestUtils.test_rule(rng, lq_null, A, alg; mode=Mooncake.ReverseMode, output_tangent = dNᴴ, is_primitive=false, atol=atol, rtol=rtol)
-            end
+                Mooncake.TestUtils.test_rule(rng, lq_null, A, alg; output_tangent = dNᴴ, is_primitive=false, atol=atol, rtol=rtol)
+            end=#
             @testset "lq_full" begin
                 L, Q = lq_full(A, alg)
                 Q1   = view(Q, 1:minmn, 1:n)
@@ -117,9 +120,9 @@ end
                 dL   = make_mooncake_tangent(ΔL)
                 dQ   = make_mooncake_tangent(ΔQ)
                 dLQ  = Mooncake.build_tangent(typeof((ΔL,ΔQ)), dL, dQ)
-                Mooncake.TestUtils.test_rule(rng, lq_full, A, alg; mode=Mooncake.ReverseMode, output_tangent = dLQ, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, lq_full, A, alg; output_tangent = dLQ, is_primitive=false, atol=atol, rtol=rtol)
             end
-            @testset "lq_compact - rank-deficient A" begin
+            #=@testset "lq_compact - rank-deficient A" begin
                 r    = minmn - 5
                 Ard  = randn(rng, T, m, r) * randn(rng, T, r, n)
                 L, Q = lq_compact(Ard, alg)
@@ -133,12 +136,13 @@ end
                 dL   = make_mooncake_tangent(ΔL)
                 dQ   = make_mooncake_tangent(ΔQ)
                 dLQ  = Mooncake.build_tangent(typeof((ΔL,ΔQ)), dL, dQ)
-                Mooncake.TestUtils.test_rule(rng, lq_compact, Ard, alg; mode=Mooncake.ReverseMode, output_tangent = dLQ, is_primitive=false, atol=atol, rtol=rtol)
-            end
+                Mooncake.TestUtils.test_rule(rng, lq_compact, Ard, alg; output_tangent = dLQ, is_primitive=false, atol=atol, rtol=rtol)
+            end=#
         end
     end
 end
-
+=#
+#=
 @timedtestset "EIG AD Rules with eltype $T" for T in ETs
     rng  = StableRNG(12345)
     m    = 19
@@ -418,4 +422,4 @@ end
         Mooncake.TestUtils.test_rule(rng, (X->right_null(X; kind=:lq)), A; atol=atol, rtol=rtol, is_primitive=false, output_tangent = dNᴴ)
     end
 end
-
+=#

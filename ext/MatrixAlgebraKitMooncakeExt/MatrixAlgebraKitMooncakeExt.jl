@@ -25,12 +25,12 @@ for (f, pb, pf, adj) in ((qr_full!,    qr_pullback!, qr_pushforward!, :dqr_adjoi
     @eval begin
         @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), AbstractMatrix, Tuple{<:AbstractMatrix, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual{<:AbstractMatrix}, args_dargs::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
-            A, dA  = arrayify(A_dA)
-            dA    .= zero(eltype(A))
-            args   = Mooncake.primal(args_dargs)
-            dargs  = Mooncake.tangent(args_dargs)
-            arg1, darg1  = arrayify(args[1], dargs[1])
-            arg2, darg2  = arrayify(args[2], dargs[2])
+            A, dA       = arrayify(A_dA)
+            dA         .= zero(eltype(A))
+            args        = Mooncake.primal(args_dargs)
+            dargs       = Mooncake.tangent(args_dargs)
+            arg1, darg1 = arrayify(args[1], dargs[1])
+            arg2, darg2 = arrayify(args[2], dargs[2])
             function $adj(::Mooncake.NoRData)
                 dA = $pb(dA, A, (arg1, arg2), (darg1, darg2); kwargs...)
                 return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
@@ -42,10 +42,10 @@ for (f, pb, pf, adj) in ((qr_full!,    qr_pullback!, qr_pushforward!, :dqr_adjoi
         end
         @is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof($f), AbstractMatrix, Tuple{<:AbstractMatrix, <:AbstractMatrix}, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.frule!!(::Dual{typeof($f)}, A_dA::Dual{<:AbstractMatrix}, args_dargs::Dual, alg_dalg::Dual{<:MatrixAlgebraKit.AbstractAlgorithm}; kwargs...)
-            A, dA = arrayify(A_dA)
-            args  = Mooncake.primal(args_dargs)
-            args  = $f(A, args, Mooncake.primal(alg_dalg); kwargs...)
-            dargs = Mooncake.tangent(args_dargs)
+            A, dA        = arrayify(A_dA)
+            args         = Mooncake.primal(args_dargs)
+            args         = $f(A, args, Mooncake.primal(alg_dalg); kwargs...)
+            dargs        = Mooncake.tangent(args_dargs)
             arg1, darg1  = arrayify(args[1], dargs[1])
             arg2, darg2  = arrayify(args[2], dargs[2])
             darg1, darg2 = $pf(dA, A, (arg1, arg2), (darg1, darg2))
