@@ -27,13 +27,18 @@ include("ad_utils.jl")
                 @testset "qr_compact" begin
                     ΔQ = randn(rng, T, m, minmn)
                     ΔR = randn(rng, T, minmn, n)
+                    Q, R = qr_compact(A, alg)
                     fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                     test_reverse(qr_compact, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔQ, ΔR), fdm = fdm)
+                    test_reverse(qr_compact!, RT, TA(copy(A), zero(A)), ((Q, R), TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔQ, ΔR), fdm = fdm)
                 end
                 @testset "qr_null" begin
                     Q, R = qr_compact(A, alg)
-                    ΔN = Q * randn(rng, T, minmn, max(0, m - minmn))
+                    N    = zeros(T, m, max(0, m - minmn))
+                    ΔN   = Q * randn(rng, T, minmn, max(0, m - minmn))
                     test_reverse(qr_null, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = ΔN)
+                    ΔN   = Q * randn(rng, T, minmn, max(0, m - minmn))
+                    test_reverse(qr_null!, RT, TA(copy(A), zero(A)), (N, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = ΔN)
                 end
                 @testset "qr_full" begin
                     Q, R = qr_full(A, alg)
@@ -44,6 +49,7 @@ include("ad_utils.jl")
                     ΔR = randn(rng, T, m, n)
                     fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                     test_reverse(qr_full, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔQ, ΔR), fdm = fdm)
+                    test_reverse(qr_full!, RT, TA(copy(A), zero(A)), ((Q, R), TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔQ, ΔR), fdm = fdm)
                 end
                 @testset "qr_compact - rank-deficient A" begin
                     r = minmn - 5
@@ -56,7 +62,9 @@ include("ad_utils.jl")
                     ΔQ2 .= 0
                     ΔR = randn(rng, T, minmn, n)
                     view(ΔR, (r + 1):minmn, :) .= 0
-                    test_reverse(qr_compact, RT, (Ard, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔQ, ΔR))
+                    fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+                    test_reverse(qr_compact, RT, (Ard, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔQ, ΔR), fdm=fdm)
+                    test_reverse(qr_compact!, RT, TA(copy(Ard), zero(Ard)), ((Q, R), TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔQ, ΔR), fdm=fdm)
                 end
             end
         end
@@ -78,13 +86,17 @@ end
                 @testset "lq_compact" begin
                     ΔL = randn(rng, T, m, minmn)
                     ΔQ = randn(rng, T, minmn, n)
+                    L, Q = lq_compact(A, alg)
                     fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                     test_reverse(lq_compact, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔL, ΔQ), fdm = fdm)
+                    test_reverse(lq_compact!, RT, TA(copy(A), zero(A)), ((L, Q), TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔL, ΔQ), fdm = fdm)
                 end
                 @testset "lq_null" begin
                     L, Q = lq_compact(A, alg)
                     ΔNᴴ = randn(rng, T, max(0, n - minmn), minmn) * Q
+                    N   = randn(rng, T, max(0, n - minmn), minmn) * Q
                     test_reverse(lq_null, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = ΔNᴴ)
+                    test_reverse(lq_null!, RT, TA(copy(A), zero(A)), (N, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = ΔNᴴ)
                 end
                 @testset "lq_full" begin
                     L, Q = lq_full(A, alg)
@@ -95,6 +107,7 @@ end
                     ΔL = randn(rng, T, m, n)
                     fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                     test_reverse(lq_full, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔL, ΔQ), fdm = fdm)
+                    test_reverse(lq_full!, RT, TA(copy(A), zero(A)), ((L, Q), TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔL, ΔQ), fdm = fdm)
                 end
                 @testset "lq_compact -- rank-deficient A" begin
                     r = minmn - 5
@@ -109,6 +122,7 @@ end
                     view(ΔL, :, (r + 1):minmn) .= 0
                     fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                     test_reverse(lq_compact, RT, (Ard, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔL, ΔQ), fdm = fdm)
+                    test_reverse(lq_compact!, RT, TA(copy(Ard), zero(A)), ((L, Q), TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔL, ΔQ), fdm = fdm)
                 end
             end
         end
@@ -141,8 +155,9 @@ end
     ΔD2 = Diagonal(randn(rng, complex(T), m))
     @testset for alg in (LAPACK_Simple(), LAPACK_Expert())
         @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-            test_reverse(eig_full, RT, (copy(A), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
-            test_reverse(eig_vals, RT, (copy(A), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag))
+            test_reverse(eig_full, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
+            test_reverse(eig_full!, RT, TA(copy(A), zero(A)), ((D, V), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
+            test_reverse(eig_vals, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag))
         end
         @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             for r in 1:4:m
@@ -176,6 +191,11 @@ end
 function copy_eigh_full(A; kwargs...)
     A = (A + A') / 2
     return eigh_full(A; kwargs...)
+end
+
+function copy_eigh_full!(A, DV; kwargs...)
+    A = (A + A') / 2
+    return eigh_full!(A, DV; kwargs...)
 end
 
 function copy_eigh_vals(A; kwargs...)
@@ -216,8 +236,9 @@ end
             LAPACK_MultipleRelativelyRobustRepresentations(),
         )
         @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-            test_reverse(copy_eigh_full, RT, (copy(A), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
-            test_reverse(copy_eigh_vals, RT, (copy(A), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag))
+            test_reverse(copy_eigh_full, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
+            test_reverse(copy_eigh_full!, RT, (copy(A), TA), ((D, V), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
+            test_reverse(copy_eigh_vals, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag))
         end
         @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             for r in 1:4:m
@@ -283,6 +304,7 @@ end
                     ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ; degeneracy_atol = atol)
                     fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                     test_reverse(svd_compact, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔU, ΔS, ΔVᴴ), fdm = fdm)
+                    test_reverse(svd_compact!, RT, TA(copy(A), zero(A)), ((U, S, Vᴴ), TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔU, ΔS, ΔVᴴ), fdm = fdm)
                 end
                 @testset "svd_full" begin
                     U, S, Vᴴ = svd_compact(A)
@@ -299,6 +321,7 @@ end
                     diagview(ΔSfull)[1:minmn] .= diagview(ΔS)
                     fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
                     test_reverse(svd_full, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔUfull, ΔSfull, ΔVᴴfull), fdm = fdm)
+                    test_reverse(svd_full!, RT, TA(copy(A), zero(A)), ((U, S, Vᴴ), TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,), output_tangent = (ΔUfull, ΔSfull, ΔVᴴfull), fdm = fdm)
                 end
                 @testset "svd_trunc" begin
                     for r in 1:4:minmn
@@ -359,10 +382,15 @@ end
         A = randn(rng, T, m, n)
         @testset for alg in PolarViaSVD.((LAPACK_QRIteration(), LAPACK_DivideAndConquer()))
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-                m >= n &&
+                if m >= n
+                    WP = left_polar(A; alg=alg)
                     test_reverse(left_polar, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,))
-                m <= n &&
+                    test_reverse(left_polar!, RT, TA(copy(A), zero(A)), (WP, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,))
+                elseif m <= n
+                    PWᴴ = right_polar(A; alg=alg)
                     test_reverse(right_polar, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,))
+                    test_reverse(right_polar!, RT, TA(copy(A), zero(A)), (PWᴴ, TA); atol = atol, rtol = rtol, fkwargs = (alg = alg,))
+                end
             end
         end
     end
@@ -378,22 +406,30 @@ end
             @testset "left_orth" begin
                 @testset for kind in (:polar, :qr)
                     n > m && kind == :polar && continue
+                    VC = left_orth(A; kind=kind)
                     test_reverse(left_orth, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (kind = kind,))
+                    test_reverse(left_orth!, RT, TA(copy(A), zero(A)), (VC, TA); atol = atol, rtol = rtol, fkwargs = (kind = kind,))
                 end
             end
             @testset "right_orth" begin
                 @testset for kind in (:polar, :lq)
                     n < m && kind == :polar && continue
+                    CVᴴ = right_orth(A; kind=kind)
                     test_reverse(right_orth, RT, (A, TA); atol = atol, rtol = rtol, fkwargs = (kind = kind,))
+                    test_reverse(right_orth!, RT, TA(copy(A), zero(A)), (CVᴴ, TA); atol = atol, rtol = rtol, fkwargs = (kind = kind,))
                 end
             end
             @testset "left_null" begin
                 ΔN = left_orth(A; kind = :qr)[1] * randn(rng, T, min(m, n), m - min(m, n))
+                N  = similar(ΔN)
                 test_reverse(left_null, RT, (A, TA); fkwargs = (; kind = :qr), output_tangent = ΔN, atol = atol, rtol = rtol)
+                test_reverse(left_null!, RT, TA(copy(A), zero(A)), (N, TA); fkwargs = (; kind = :qr), output_tangent = ΔN, atol = atol, rtol = rtol)
             end
             @testset "right_null" begin
                 ΔNᴴ = randn(rng, T, n - min(m, n), min(m, n)) * right_orth(A; kind = :lq)[2]
+                Nᴴ  = similar(ΔNᴴ)
                 test_reverse(right_null, RT, (A, TA); fkwargs = (; kind = :lq), output_tangent = ΔNᴴ, atol = atol, rtol = rtol)
+                test_reverse(right_null!, RT, TA(copy(A), zero(A)), (Nᴴ, TA); fkwargs = (; kind = :lq), output_tangent = ΔNᴴ, atol = atol, rtol = rtol)
             end
         end
     end
