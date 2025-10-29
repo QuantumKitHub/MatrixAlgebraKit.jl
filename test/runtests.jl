@@ -108,6 +108,7 @@ if AMDGPU.functional()
     end
 end
 
+using GenericLinearAlgebra, GenericSchur
 @safetestset "QR / LQ Decomposition" begin
     include("bigfloats/qr.jl")
     include("bigfloats/lq.jl")
