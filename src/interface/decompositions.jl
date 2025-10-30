@@ -329,12 +329,13 @@ struct LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
 end
 LeftOrthAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = LeftOrthAlgorithm{Kind, Alg}(alg)
 
+# Note: specific algorithm selection is handled by `left_orth_alg` in orthnull.jl
 LeftOrthAlgorithm(alg::AbstractAlgorithm) = error(
     """
     Unkown or invalid `left_orth` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `left_orth`, define
 
-        MatrixAlgebraKit.LeftOrthAlgorithm(alg) = LeftOrthAlgorithm{kind}(alg)
+        MatrixAlgebraKit.left_orth_alg(alg::CustomAlgorithm) = LeftOrthAlgorithm{kind}(alg)
 
     where `kind` selects the factorization type that will be used.
     By default, this is either `:qr`, `:polar` or `:svd`, to select [`qr_compact!`](@ref),
@@ -343,14 +344,8 @@ LeftOrthAlgorithm(alg::AbstractAlgorithm) = error(
 )
 
 const LeftOrthViaQR = LeftOrthAlgorithm{:qr}
-LeftOrthAlgorithm(alg::QRAlgorithms) = LeftOrthViaQR{typeof(alg)}(alg)
-
 const LeftOrthViaPolar = LeftOrthAlgorithm{:polar}
-LeftOrthAlgorithm(alg::PolarAlgorithms) = LeftOrthViaPolar{typeof(alg)}(alg)
-
 const LeftOrthViaSVD = LeftOrthAlgorithm{:svd}
-LeftOrthAlgorithm(alg::SVDAlgorithms) = LeftOrthViaSVD{typeof(alg)}(alg)
-LeftOrthAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = LeftOrthViaSVD{typeof(alg)}(alg)
 
 """
     RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
@@ -363,12 +358,13 @@ struct RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
 end
 RightOrthAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = RightOrthAlgorithm{Kind, Alg}(alg)
 
+# Note: specific algorithm selection is handled by `right_orth_alg` in orthnull.jl
 RightOrthAlgorithm(alg::AbstractAlgorithm) = error(
     """
     Unkown or invalid `right_orth` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `right_orth`, define
 
-        MatrixAlgebraKit.RightOrthAlgorithm(alg) = RightOrthAlgorithm{kind}(alg)
+        MatrixAlgebraKit.right_orth_alg(alg::CustomAlgorithm) = RightOrthAlgorithm{kind}(alg)
 
     where `kind` selects the factorization type that will be used.
     By default, this is either `:lq`, `:polar` or `:svd`, to select [`lq_compact!`](@ref),
@@ -377,14 +373,8 @@ RightOrthAlgorithm(alg::AbstractAlgorithm) = error(
 )
 
 const RightOrthViaLQ = RightOrthAlgorithm{:lq}
-RightOrthAlgorithm(alg::LQAlgorithms) = RightOrthViaLQ{typeof(alg)}(alg)
-
 const RightOrthViaPolar = RightOrthAlgorithm{:polar}
-RightOrthAlgorithm(alg::PolarAlgorithms) = RightOrthViaPolar{typeof(alg)}(alg)
-
 const RightOrthViaSVD = RightOrthAlgorithm{:svd}
-RightOrthAlgorithm(alg::SVDAlgorithms) = RightOrthViaSVD{typeof(alg)}(alg)
-RightOrthAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = RightOrthViaSVD{typeof(alg)}(alg)
 
 """
     LeftNullAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
@@ -397,12 +387,13 @@ struct LeftNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
 end
 LeftNullAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = LeftNullAlgorithm{Kind, Alg}(alg)
 
+# Note: specific algorithm selection is handled by `left_null_alg` in orthnull.jl
 LeftNullAlgorithm(alg::AbstractAlgorithm) = error(
     """
     Unkown or invalid `left_null` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `left_null`, define
 
-        MatrixAlgebraKit.LeftNullAlgorithm(alg) = LeftNullAlgorithm{kind}(alg)
+        MatrixAlgebraKit.left_null_alg(alg::CustomAlgorithm) = LeftNullAlgorithm{kind}(alg)
 
     where `kind` selects the factorization type that will be used.
     By default, this is either `:qr` or `:svd`, to select [`qr_null!`](@ref),
@@ -411,11 +402,7 @@ LeftNullAlgorithm(alg::AbstractAlgorithm) = error(
 )
 
 const LeftNullViaQR = LeftNullAlgorithm{:qr}
-LeftNullAlgorithm(alg::QRAlgorithms) = LeftNullViaQR{typeof(alg)}(alg)
-
 const LeftNullViaSVD = LeftNullAlgorithm{:svd}
-LeftNullAlgorithm(alg::SVDAlgorithms) = LeftNullViaSVD{typeof(alg)}(alg)
-LeftNullAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = LeftNullViaSVD{typeof(alg)}(alg)
 
 """
     RightNullAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
@@ -428,12 +415,13 @@ struct RightNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
 end
 RightNullAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = RightNullAlgorithm{Kind, Alg}(alg)
 
+# Note: specific algorithm selection is handled by `right_null_alg` in orthnull.jl
 RightNullAlgorithm(alg::AbstractAlgorithm) = error(
     """
     Unkown or invalid `right_null` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `right_null`, define
 
-        MatrixAlgebraKit.RightNullAlgorithm(alg) = RightNullAlgorithm{kind}(alg)
+        MatrixAlgebraKit.right_null_alg(alg::CustomAlgorithm) = RightNullAlgorithm{kind}(alg)
 
     where `kind` selects the factorization type that will be used.
     By default, this is either `:lq` or `:svd`, to select [`lq_null!`](@ref),
@@ -442,8 +430,4 @@ RightNullAlgorithm(alg::AbstractAlgorithm) = error(
 )
 
 const RightNullViaLQ = RightNullAlgorithm{:lq}
-RightNullAlgorithm(alg::LQAlgorithms) = RightNullViaLQ{typeof(alg)}(alg)
-
 const RightNullViaSVD = RightNullAlgorithm{:svd}
-RightNullAlgorithm(alg::SVDAlgorithms) = RightNullViaSVD{typeof(alg)}(alg)
-RightNullAlgorithm(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = RightNullViaSVD{typeof(alg)}(alg)
