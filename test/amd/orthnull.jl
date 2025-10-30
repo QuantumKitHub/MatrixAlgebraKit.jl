@@ -51,8 +51,8 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         end
 
         # passing a kind and some kwargs
-        V, C = @constinferred left_orth(A; alg = :qr, qr = (; positive = true))
-        N = @constinferred left_null(A; alg = :qr, qr = (; positive = true))
+        V, C = @constinferred left_orth(A; alg = :qr, positive = true)
+        N = @constinferred left_null(A; alg = :qr, positive = true)
         @test V isa ROCMatrix{T} && size(V) == (m, minmn)
         @test C isa ROCMatrix{T} && size(C) == (minmn, n)
         @test N isa ROCMatrix{T} && size(N) == (m, m - minmn)
@@ -66,7 +66,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
 
         # passing an algorithm
         V, C = @constinferred left_orth(A; alg = CUSOLVER_HouseholderQR())
-        N = @constinferred left_null(A; alg = :qr, qr = (; positive = true))
+        N = @constinferred left_null(A; alg = :qr, positive = true)
         @test V isa ROCMatrix{T} && size(V) == (m, minmn)
         @test C isa ROCMatrix{T} && size(C) == (minmn, n)
         @test N isa ROCMatrix{T} && size(N) == (m, m - minmn)
