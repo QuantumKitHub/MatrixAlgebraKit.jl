@@ -34,7 +34,6 @@ elements of `L` are non-negative.
 
 # TODO:
 @algdef BigFloat_QR_Householder
-@algdef BigFloat_LQ_Householder
 @algdef LAPACK_HouseholderQL
 @algdef LAPACK_HouseholderRQ
 
