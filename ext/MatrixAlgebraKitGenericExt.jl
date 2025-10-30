@@ -10,16 +10,16 @@ using GenericSchur
 using LinearAlgebra: I, Diagonal
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return BigFloat_svd_QRIteration()
+    return GLA_svd_QRIteration()
 end
 
-function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix{T}, USVᴴ, alg::BigFloat_svd_QRIteration) where {T <: Union{BigFloat, Complex{BigFloat}}}
+function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_QRIteration) where {T}
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, V = GenericLinearAlgebra.svd(A)
     return U, Diagonal(S), V' # conjugation to account for difference in convention
 end
 
-function MatrixAlgebraKit.svd_full!(A::AbstractMatrix{T}, USVᴴ, alg::BigFloat_svd_QRIteration) where {T <: Union{BigFloat, Complex{BigFloat}}}
+function MatrixAlgebraKit.svd_full!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_QRIteration) where {T}
     check_input(svd_full!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     m, n = size(A)
@@ -41,7 +41,7 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix{T}, USVᴴ, alg::BigFloat_
     return MatrixAlgebraKit.gaugefix!(svd_full!, U, S, Vᴴ, m, n)
 end
 
-function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix{T}, S, alg::BigFloat_svd_QRIteration) where {T <: Union{BigFloat, Complex{BigFloat}}}
+function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix{T}, S, alg::GLA_svd_QRIteration) where {T}
     check_input(svd_vals!, A, S, alg)
     S̃ = GenericLinearAlgebra.svdvals!(A)
     copyto!(S, S̃)
@@ -49,10 +49,11 @@ function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix{T}, S, alg::BigFloat_svd_Q
 end
 
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return BigFloat_eig_Francis(; kwargs...)
+    return GLA_eig_Francis(; kwargs...)
 end
 
-function MatrixAlgebraKit.eig_full!(A::AbstractMatrix{T}, DV, alg::BigFloat_eig_Francis) where {T <: Union{BigFloat, Complex{BigFloat}}}
+function MatrixAlgebraKit.eig_full!(A::AbstractMatrix{T}, DV, alg::GLA_eig_Francis) where {T}
+    check_input(eig_full!, A, DV, alg)
     D, V = DV
     D̃, Ṽ = GenericSchur.eigen!(A)
     copyto!(D, Diagonal(D̃))
@@ -60,33 +61,33 @@ function MatrixAlgebraKit.eig_full!(A::AbstractMatrix{T}, DV, alg::BigFloat_eig_
     return D, V
 end
 
-function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix{T}, D, alg::BigFloat_eig_Francis) where {T <: Union{BigFloat, Complex{BigFloat}}}
+function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix{T}, D, alg::GLA_eig_Francis) where {T}
     check_input(eig_vals!, A, D, alg)
     eigval = GenericSchur.eigvals!(A)
     return eigval
 end
 
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return BigFloat_eigh_Francis(; kwargs...)
+    return GLA_eigh_Francis(; kwargs...)
 end
 
-function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::BigFloat_eigh_Francis)::Tuple{Diagonal{BigFloat}, Matrix{T}} where {T <: Union{BigFloat, Complex{BigFloat}}}
+function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_eigh_Francis)::Tuple{Diagonal{real(T)}, Matrix{T}} where {T}
     check_input(eigh_full!, A, DV, alg)
     eigval, eigvec = GenericLinearAlgebra.eigen(A; sortby = real)
     return Diagonal(eigval), eigvec
 end
 
-function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix{T}, D, alg::BigFloat_eigh_Francis) where {T <: Union{BigFloat, Complex{BigFloat}}}
+function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix{T}, D, alg::GLA_eigh_Francis) where {T}
     check_input(eigh_vals!, A, D, alg)
     D = GenericLinearAlgebra.eigvals(A; sortby = real)
     return real.(D)
 end
 
 function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return BigFloat_QR_Householder(; kwargs...)
+    return GLA_QR_Householder(; kwargs...)
 end
 
-function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::BigFloat_QR_Householder)
+function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::GLA_QR_Householder)
     Q, R = QR
     m, n = size(A)
     minmn = min(m, n)
@@ -94,7 +95,7 @@ function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::BigFloat_QR_House
 
     Q_zero = zeros(eltype(Q), (m, minmn))
     R_zero = zeros(eltype(R), (minmn, n))
-    Q_compact, R_compact = _bigfloat_householder_qr!(A, Q_zero, R_zero; alg.kwargs...)
+    Q_compact, R_compact = _gla_householder_qr!(A, Q_zero, R_zero; alg.kwargs...)
     Q = _gram_schmidt!(Q, Q_compact[:, 1:min(m, n)])
     if computeR
         R = fill!(R, zero(eltype(R)))
@@ -103,16 +104,16 @@ function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::BigFloat_QR_House
     return Q, R
 end
 
-function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR, alg::BigFloat_QR_Householder)
+function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR, alg::GLA_QR_Householder)
     check_input(qr_compact!, A, QR, alg)
     Q, R = QR
-    Q, R = _bigfloat_householder_qr!(A, Q, R; alg.kwargs...)
+    Q, R = _gla_householder_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
 
-function _bigfloat_householder_qr!(A::AbstractMatrix{T}, Q, R; positive = false, blocksize = 1, pivoted = false) where {T <: Union{BigFloat, Complex{BigFloat}}}
-    pivoted && throw(ArgumentError("Only pivoted = false implemented for BigFloats."))
-    (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for BigFloats."))
+function _gla_householder_qr!(A::AbstractMatrix{T}, Q, R; positive = false, blocksize = 1, pivoted = false) where {T}
+    pivoted && throw(ArgumentError("Only pivoted = false implemented for GLA_QR_Householder."))
+    (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for GLA_QR_Householder."))
 
     m, n = size(A)
     k = min(m, n)
@@ -170,7 +171,7 @@ function _gram_schmidt!(Q, Q_compact; adjoint = false)
 end
 
 function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return MatrixAlgebraKit.LQViaTransposedQR(BigFloat_QR_Householder(; kwargs...))
+    return MatrixAlgebraKit.LQViaTransposedQR(GLA_QR_Householder(; kwargs...))
 end
 
 end

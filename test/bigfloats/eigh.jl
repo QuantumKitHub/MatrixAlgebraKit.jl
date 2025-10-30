@@ -12,7 +12,7 @@ const eltypes = (BigFloat, Complex{BigFloat})
 @testset "eigh_full! for T = $T" for T in eltypes
     rng = StableRNG(123)
     m = 54
-    alg = BigFloat_eigh_Francis()
+    alg = GLA_eigh_Francis()
 
     A = randn(rng, T, m, m)
     A = (A + A') / 2
@@ -33,7 +33,7 @@ end
 @testset "eigh_trunc! for T = $T" for T in eltypes
     rng = StableRNG(123)
     m = 54
-    alg = BigFloat_eigh_Francis()
+    alg = GLA_eigh_Francis()
     A = randn(rng, T, m, m)
     A = A * A'
     A = (A + A') / 2
@@ -81,13 +81,13 @@ end
     D = Diagonal(real(T)[0.9, 0.3, 0.1, 0.01])
     A = V * D * V'
     A = (A + A') / 2
-    alg = TruncatedAlgorithm(BigFloat_eigh_Francis(), truncrank(2))
+    alg = TruncatedAlgorithm(GLA_eigh_Francis(), truncrank(2))
     D2, V2, ϵ2 = @constinferred eigh_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2]
     @test_throws ArgumentError eigh_trunc(A; alg, trunc = (; maxrank = 2))
     @test ϵ2 ≈ norm(diagview(D)[3:4]) atol = atol
 
-    alg = TruncatedAlgorithm(BigFloat_eigh_Francis(), truncerror(; atol = 0.2))
+    alg = TruncatedAlgorithm(GLA_eigh_Francis(), truncerror(; atol = 0.2))
     D3, V3, ϵ3 = @constinferred eigh_trunc(A; alg)
     @test diagview(D3) ≈ diagview(D)[1:2]
     @test ϵ3 ≈ norm(diagview(D)[3:4]) atol = atol
@@ -111,7 +111,7 @@ end
     @test diagview(D) ≈ D2
 
     A2 = Diagonal(T[0.9, 0.3, 0.1, 0.01])
-    alg = TruncatedAlgorithm(BigFloat_eigh_Francis(), truncrank(2))
+    alg = TruncatedAlgorithm(GLA_eigh_Francis(), truncrank(2))
     D2, V2, ϵ2 = @constinferred eigh_trunc(A2; alg)
     @test diagview(D2) ≈ diagview(A2)[1:2]
     @test ϵ2 ≈ norm(diagview(A2)[3:4]) atol = atol

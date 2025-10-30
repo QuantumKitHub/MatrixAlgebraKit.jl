@@ -12,7 +12,7 @@ const eltypes = (BigFloat, Complex{BigFloat})
 @testset "eig_full! for T = $T" for T in eltypes
     rng = StableRNG(123)
     m = 24
-    alg = BigFloat_eig_Francis()
+    alg = GLA_eig_Francis()
     A = randn(rng, T, m, m)
     Tc = complex(T)
 
@@ -36,7 +36,7 @@ end
 @testset "eig_trunc! for T = $T" for T in eltypes
     rng = StableRNG(123)
     m = 6
-    alg = BigFloat_eig_Francis()
+    alg = GLA_eig_Francis()
     A = randn(rng, T, m, m)
     A *= A' # TODO: deal with eigenvalue ordering etc
     # eigenvalues are sorted by ascending real component...
@@ -81,13 +81,13 @@ end
     V = randn(rng, T, m, m)
     D = Diagonal(real(T)[0.9, 0.3, 0.1, 0.01])
     A = V * D * inv(V)
-    alg = TruncatedAlgorithm(BigFloat_eig_Francis(), truncrank(2))
+    alg = TruncatedAlgorithm(GLA_eig_Francis(), truncrank(2))
     D2, V2, ϵ2 = @constinferred eig_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2]
     @test ϵ2 ≈ norm(diagview(D)[3:4]) atol = atol
     @test_throws ArgumentError eig_trunc(A; alg, trunc = (; maxrank = 2))
 
-    alg = TruncatedAlgorithm(BigFloat_eig_Francis(), truncerror(; atol = 0.2, p = 1))
+    alg = TruncatedAlgorithm(GLA_eig_Francis(), truncerror(; atol = 0.2, p = 1))
     D3, V3, ϵ3 = @constinferred eig_trunc(A; alg)
     @test diagview(D3) ≈ diagview(D)[1:2]
     @test ϵ3 ≈ norm(diagview(D)[3:4]) atol = atol

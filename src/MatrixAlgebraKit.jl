@@ -33,7 +33,7 @@ export left_orth!, right_orth!, left_null!, right_null!
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
     LAPACK_DivideAndConquer, LAPACK_Jacobi
-export BigFloat_QR_Householder, BigFloat_eig_Francis, BigFloat_eigh_Francis, BigFloat_svd_QRIteration
+export GLA_QR_Householder, GLA_eig_Francis, GLA_eigh_Francis, GLA_svd_QRIteration
 export LQViaTransposedQR
 export PolarViaSVD, PolarNewton
 export DiagonalAlgorithm

@@ -14,7 +14,7 @@ eltypes = (BigFloat, Complex{BigFloat})
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63, 0)
         k = min(m, n)
-        alg = BigFloat_svd_QRIteration()
+        alg = GLA_svd_QRIteration()
         minmn = min(m, n)
         A = randn(rng, T, m, n)
 
@@ -53,7 +53,7 @@ end
     rng = StableRNG(123)
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63, 0)
-        alg = BigFloat_svd_QRIteration()
+        alg = GLA_svd_QRIteration()
         A = randn(rng, T, m, n)
         U, S, Vᴴ = svd_full(A; alg)
         @test U isa Matrix{T} && size(U) == (m, m)
@@ -99,7 +99,7 @@ end
     rng = StableRNG(123)
     m = 54
     atol = sqrt(eps(real(T)))
-    alg = BigFloat_svd_QRIteration()
+    alg = GLA_svd_QRIteration()
 
     @testset "size ($m, $n)" for n in (37, m, 63)
         n > m && alg isa LAPACK_Jacobi && continue # not supported
@@ -137,7 +137,7 @@ end
 
 @testset "svd_trunc! mix maxrank and tol for T = $T" for T in eltypes
     rng = StableRNG(123)
-    alg = BigFloat_svd_QRIteration()
+    alg = GLA_svd_QRIteration()
     m = 4
     U = qr_compact(randn(rng, T, m, m))[1]
     S = Diagonal(T[0.9, 0.3, 0.1, 0.01])
@@ -166,7 +166,7 @@ end
     S = Diagonal(real(T)[0.9, 0.3, 0.1, 0.01])
     Vᴴ = qr_compact(randn(rng, T, m, m))[1]
     A = U * S * Vᴴ
-    alg = TruncatedAlgorithm(BigFloat_svd_QRIteration(), trunctol(; atol = 0.2))
+    alg = TruncatedAlgorithm(GLA_svd_QRIteration(), trunctol(; atol = 0.2))
     U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg)
     @test diagview(S2) ≈ diagview(S)[1:2]
     @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
