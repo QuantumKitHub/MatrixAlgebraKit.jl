@@ -394,34 +394,18 @@ function select_algorithm(::typeof(right_null!), A, ::Val{:svd}; trunc = nothing
     return RightNullViaSVD(alg)
 end
 
-default_algorithm(::typeof(left_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
-    isnothing(trunc) ? select_algorithm(left_orth!, A, Val(:qr); kwargs...) :
-    select_algorithm(left_orth!, A, Val(:svd); trunc, kwargs...)
-# disambiguate
 default_algorithm(::typeof(left_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(left_orth!, A, Val(:qr); kwargs...) :
     select_algorithm(left_orth!, A, Val(:svd); trunc, kwargs...)
 
-default_algorithm(::typeof(right_orth!), A::TA; trunc = nothing, kwargs...) where {TA} =
-    isnothing(trunc) ? select_algorithm(right_orth!, A, Val(:lq); kwargs...) :
-    select_algorithm(right_orth!, A, Val(:svd); trunc, kwargs...)
-# disambiguate
 default_algorithm(::typeof(right_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(right_orth!, A, Val(:lq); kwargs...) :
     select_algorithm(right_orth!, A, Val(:svd); trunc, kwargs...)
 
-default_algorithm(::typeof(left_null!), A::TA; trunc = nothing, kwargs...) where {TA} =
-    isnothing(trunc) ? select_algorithm(left_null!, A, Val(:qr); kwargs...) :
-    select_algorithm(left_null!, A, Val(:svd); trunc, kwargs...)
-# disambiguate
 default_algorithm(::typeof(left_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(left_null!, A, Val(:qr); kwargs...) :
     select_algorithm(left_null!, A, Val(:svd); trunc, kwargs...)
 
-default_algorithm(::typeof(right_null!), A::TA; trunc = nothing, kwargs...) where {TA} =
-    isnothing(trunc) ? select_algorithm(right_null!, A, Val(:lq); kwargs...) :
-    select_algorithm(right_null!, A, Val(:svd); trunc, kwargs...)
-# disambiguate
 default_algorithm(::typeof(right_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(right_null!, A, Val(:lq); kwargs...) :
     select_algorithm(right_null!, A, Val(:svd); trunc, kwargs...)
