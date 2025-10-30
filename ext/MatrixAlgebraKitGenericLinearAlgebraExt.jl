@@ -1,12 +1,8 @@
-module MatrixAlgebraKitGenericExt
+module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: LAPACK_SVDAlgorithm, LAPACK_EigAlgorithm, LAPACK_EighAlgorithm, LAPACK_QRIteration
-using MatrixAlgebraKit: uppertriangular!
-using MatrixAlgebraKit: @algdef, Algorithm, check_input
-using MatrixAlgebraKit: sign_safe
+using MatrixAlgebraKit: sign_safe, check_input
 using GenericLinearAlgebra
-using GenericSchur
 using LinearAlgebra: I, Diagonal
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
@@ -50,21 +46,6 @@ end
 
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
     return GLA_eig_Francis(; kwargs...)
-end
-
-function MatrixAlgebraKit.eig_full!(A::AbstractMatrix{T}, DV, alg::GLA_eig_Francis) where {T}
-    check_input(eig_full!, A, DV, alg)
-    D, V = DV
-    D̃, Ṽ = GenericSchur.eigen!(A)
-    copyto!(D, Diagonal(D̃))
-    copyto!(V, Ṽ)
-    return D, V
-end
-
-function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix{T}, D, alg::GLA_eig_Francis) where {T}
-    check_input(eig_vals!, A, D, alg)
-    eigval = GenericSchur.eigvals!(A)
-    return eigval
 end
 
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}

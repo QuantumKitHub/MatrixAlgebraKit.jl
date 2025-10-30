@@ -5,7 +5,6 @@ using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef, norm
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview, isisometric
 using GenericLinearAlgebra
-using GenericSchur
 
 eltypes = (BigFloat, Complex{BigFloat})
 

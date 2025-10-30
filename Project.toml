@@ -17,7 +17,8 @@ GenericSchur = "c145ed77-6b09-5dd9-b285-bf645a82121e"
 MatrixAlgebraKitChainRulesCoreExt = "ChainRulesCore"
 MatrixAlgebraKitAMDGPUExt = "AMDGPU"
 MatrixAlgebraKitCUDAExt = "CUDA"
-MatrixAlgebraKitGenericExt = ["GenericLinearAlgebra", "GenericSchur"]
+MatrixAlgebraKitGenericLinearAlgebraExt = "GenericLinearAlgebra"
+MatrixAlgebraKitGenericSchurExt = "GenericSchur"
 
 [compat]
 AMDGPU = "2"

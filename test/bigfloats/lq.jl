@@ -4,7 +4,6 @@ using TestExtras
 using StableRNGs
 using LinearAlgebra: diag, I, Diagonal
 using GenericLinearAlgebra
-using GenericSchur
 
 eltypes = (BigFloat, Complex{BigFloat})
 

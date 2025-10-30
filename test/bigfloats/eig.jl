@@ -4,7 +4,6 @@ using TestExtras
 using StableRNGs
 using LinearAlgebra: Diagonal
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview, norm
-using GenericLinearAlgebra
 using GenericSchur
 
 const eltypes = (BigFloat, Complex{BigFloat})
