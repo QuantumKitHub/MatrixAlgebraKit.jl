@@ -75,7 +75,7 @@ end
 
 function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::BigFloat_eigh_Francis)::Tuple{Diagonal{BigFloat}, Matrix{T}} where {T <: Union{BigFloat, Complex{BigFloat}}}
     check_input(eigh_full!, A, DV, alg)
-    eigval, eigvec = GenericLinearAlgebra.eigen(A; sortby = λ -> real(λ))
+    eigval, eigvec = GenericLinearAlgebra.eigen(A; sortby = real)
     return Diagonal(eigval), eigvec
 end
 
