@@ -426,7 +426,78 @@ default_algorithm(::typeof(right_null!), ::Type{A}; trunc = nothing, kwargs...) 
     isnothing(trunc) ? select_algorithm(right_null!, A, Val(:lq); kwargs...) :
     select_algorithm(right_null!, A, Val(:svd); trunc, kwargs...)
 
+"""
+    left_orth_alg(alg::AbstractAlgorithm) -> LeftOrthAlgorithm
+
+Convert an algorithm to a [`LeftOrthAlgorithm`](@ref) wrapper for use with [`left_orth`](@ref).
+
+This function attempts to deduce the appropriate factorization kind (`:qr`, `:polar`, or `:svd`)
+from the algorithm type and wraps it in a `LeftOrthAlgorithm`. Custom algorithm types can be
+registered by defining:
+
+```julia
+MatrixAlgebraKit.LeftOrthAlgorithm(alg::CustomAlgorithm) = LeftOrthAlgorithm{kind}(alg)
+```
+
+where `kind` specifies the factorization backend to use.
+
+See also [`LeftOrthAlgorithm`](@ref), [`left_orth`](@ref).
+"""
 left_orth_alg(alg::AbstractAlgorithm) = LeftOrthAlgorithm(alg)
+
+"""
+    right_orth_alg(alg::AbstractAlgorithm) -> RightOrthAlgorithm
+
+Convert an algorithm to a [`RightOrthAlgorithm`](@ref) wrapper for use with [`right_orth`](@ref).
+
+This function attempts to deduce the appropriate factorization kind (`:lq`, `:polar`, or `:svd`)
+from the algorithm type and wraps it in a `RightOrthAlgorithm`. Custom algorithm types can be
+registered by defining:
+
+```julia
+MatrixAlgebraKit.RightOrthAlgorithm(alg::CustomAlgorithm) = RightOrthAlgorithm{kind}(alg)
+```
+
+where `kind` specifies the factorization backend to use.
+
+See also [`RightOrthAlgorithm`](@ref), [`right_orth`](@ref).
+"""
 right_orth_alg(alg::AbstractAlgorithm) = RightOrthAlgorithm(alg)
+
+"""
+    left_null_alg(alg::AbstractAlgorithm) -> LeftNullAlgorithm
+
+Convert an algorithm to a [`LeftNullAlgorithm`](@ref) wrapper for use with [`left_null`](@ref).
+
+This function attempts to deduce the appropriate factorization kind (`:qr` or `:svd`) from
+the algorithm type and wraps it in a `LeftNullAlgorithm`. Custom algorithm types can be
+registered by defining:
+
+```julia
+MatrixAlgebraKit.LeftNullAlgorithm(alg::CustomAlgorithm) = LeftNullAlgorithm{kind}(alg)
+```
+
+where `kind` specifies the factorization backend to use.
+
+See also [`LeftNullAlgorithm`](@ref), [`left_null`](@ref).
+"""
 left_null_alg(alg::AbstractAlgorithm) = LeftNullAlgorithm(alg)
+
+"""
+    right_null_alg(alg::AbstractAlgorithm) -> RightNullAlgorithm
+
+Convert an algorithm to a [`RightNullAlgorithm`](@ref) wrapper for use with [`right_null`](@ref).
+
+This function attempts to deduce the appropriate factorization kind (`:lq` or `:svd`) from
+the algorithm type and wraps it in a `RightNullAlgorithm`. Custom algorithm types can be
+registered by defining:
+
+```julia
+MatrixAlgebraKit.RightNullAlgorithm(alg::CustomAlgorithm) = RightNullAlgorithm{kind}(alg)
+```
+
+where `kind` specifies the factorization backend to use.
+
+See also [`RightNullAlgorithm`](@ref), [`right_null`](@ref).
+"""
 right_null_alg(alg::AbstractAlgorithm) = RightNullAlgorithm(alg)
