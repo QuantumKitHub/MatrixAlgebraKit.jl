@@ -81,7 +81,7 @@ end
 
 function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix{T}, D, alg::BigFloat_eigh_Francis)::Vector{BigFloat} where {T <: Union{BigFloat, Complex{BigFloat}}}
     check_input(eigh_vals!, A, D, alg)
-    D = GenericLinearAlgebra.eigvals(A; sortby = λ -> real(λ))
+    D = GenericLinearAlgebra.eigvals(A; sortby = real)
     return real.(D)
 end
 
