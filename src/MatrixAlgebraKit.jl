@@ -72,6 +72,7 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
 end
 
 include("common/defaults.jl")
+include("common/householder.jl")
 include("common/initialization.jl")
 include("common/pullbacks.jl")
 include("common/safemethods.jl")

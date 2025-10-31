@@ -233,10 +233,9 @@ end
 
 _diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool = false) = N
 
-### GPU logic
-# placed here to avoid code duplication since much of the logic is replicable across
-# CUDA and AMDGPU
-###
+# GPU logic
+# --------------
+# placed here to avoid code duplication since much of the logic is replicable across CUDA and AMDGPU
 function MatrixAlgebraKit.qr_full!(
         A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
     )
@@ -323,5 +322,85 @@ function _gpu_qr_null!(
     one!(view(N, (minmn + 1):m, 1:(m - minmn)))
     A, τ = _gpu_geqrf!(A)
     N = _gpu_unmqr!('L', 'N', A, τ, N)
+    return N
+end
+
+# Native logic
+# --------------
+function qr_full!(A::AbstractMatrix, QR, alg::Native_HouseholderQR)
+    check_input(qr_full!, A, QR, alg)
+    Q, R = QR
+    A === Q &&
+        throw(ArgumentError("inplace Q not supported with native QR implementation"))
+    _native_qr!(A, Q, R; alg.kwargs...)
+    return Q, R
+end
+function qr_compact!(A::AbstractMatrix, QR, alg::Native_HouseholderQR)
+    check_input(qr_compact!, A, QR, alg)
+    Q, R = QR
+    A === Q &&
+        throw(ArgumentError("inplace Q not supported with native QR implementation"))
+    _native_qr!(A, Q, R; alg.kwargs...)
+    return Q, R
+end
+function qr_null!(A::AbstractMatrix, N, alg::Native_HouseholderQR)
+    check_input(qr_null!, A, N, alg)
+    _native_qr_null!(A, N; alg.kwargs...)
+    return N
+end
+
+function _native_qr!(
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix
+    )
+    m, n = size(A)
+    minmn = min(m, n)
+    @inbounds for j in 1:minmn
+        for i in 1:(j - 1)
+            R[i, j] = A[i, j]
+        end
+        β, v, R[j, j] = _householder!(view(A, j:m, j), 1)
+        for i in (j + 1):size(R, 1)
+            R[i, j] = 0
+        end
+        H = Householder(β, v, j:m)
+        lmul!(H, A; cols = (j + 1):n)
+        # A[j,j] == 1; store β instead
+        A[j, j] = β
+    end
+    @inbounds for j in (minmn + 1):n
+        for i in 1:size(R, 1)
+            R[i, j] = A[i, j]
+        end
+    end
+    # build Q
+    one!(Q)
+    for j in minmn:-1:1
+        β = A[j, j]
+        A[j, j] = 1
+        Hᴴ = Householder(conj(β), view(A, j:m, j), j:m)
+        lmul!(Hᴴ, Q)
+    end
+    return Q, R
+end
+
+function _native_qr_null!(A::AbstractMatrix, N::AbstractMatrix)
+    m, n = size(A)
+    minmn = min(m, n)
+    @inbounds for j in 1:minmn
+        β, v, ν = _householder!(view(A, j:m, j), 1)
+        H = Householder(β, v, j:m)
+        lmul!(H, A; cols = (j + 1):n)
+        # A[j,j] == 1; store β instead
+        A[j, j] = β
+    end
+    # build Q
+    fill!(N, zero(eltype(N)))
+    one!(view(N, (minmn + 1):m, 1:(m - minmn)))
+    for j in minmn:-1:1
+        β = A[j, j]
+        A[j, j] = 1
+        Hᴴ = Householder(conj(β), view(A, j:m, j), j:m)
+        lmul!(Hᴴ, N)
+    end
     return N
 end
