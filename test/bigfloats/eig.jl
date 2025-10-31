@@ -23,8 +23,8 @@ const eltypes = (BigFloat, Complex{BigFloat})
 
     Ac = similar(A)
     D2, V2 = @constinferred eig_full!(copy!(Ac, A), (D, V), alg′)
-    @test D2 ≈ D
-    @test V2 ≈ V
+    @test D2 === D
+    @test V2 === V
     @test A * V ≈ V * D
 
     Dc = @constinferred eig_vals(A, alg′)

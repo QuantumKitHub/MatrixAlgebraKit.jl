@@ -35,9 +35,9 @@ eltypes = (BigFloat, Complex{BigFloat})
         Sc = similar(A, real(T), min(m, n))
         alg′ = @constinferred MatrixAlgebraKit.select_algorithm(svd_compact!, A, $alg)
         U2, S2, V2ᴴ = @constinferred svd_compact!(copy!(Ac, A), (U, S, Vᴴ), alg′)
-        @test U2 ≈ U
-        @test S2 ≈ S
-        @test V2ᴴ ≈ Vᴴ
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
         @test U * S * Vᴴ ≈ A
         @test isisometric(U)
         @test isisometric(Vᴴ; side = :right)

@@ -11,8 +11,12 @@ end
 
 function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_QRIteration) where {T}
     check_input(svd_compact!, A, USVᴴ, alg)
-    U, S, V = GenericLinearAlgebra.svd(A)
-    return U, Diagonal(S), V' # conjugation to account for difference in convention
+    U, S, Vᴴ = USVᴴ
+    Ũ, S̃, Ṽ = GenericLinearAlgebra.svd(A)
+    copyto!(U, Ũ)
+    copyto!(S, Diagonal(S̃))
+    copyto!(Vᴴ, Ṽ') # conjugation to account for difference in convention
+    return U, S, Vᴴ
 end
 
 function MatrixAlgebraKit.svd_full!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_QRIteration) where {T}
@@ -54,8 +58,11 @@ end
 
 function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_eigh_Francis)::Tuple{Diagonal{real(T)}, Matrix{T}} where {T}
     check_input(eigh_full!, A, DV, alg)
+    D, V = DV
     eigval, eigvec = GenericLinearAlgebra.eigen(A; sortby = real)
-    return Diagonal(eigval), eigvec
+    copyto!(D, Diagonal(eigval))
+    copyto!(V, eigvec)
+    return D, V
 end
 
 function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix{T}, D, alg::GLA_eigh_Francis) where {T}

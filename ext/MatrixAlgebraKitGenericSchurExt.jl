@@ -17,7 +17,8 @@ end
 function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix{T}, D, alg::GLA_eig_Francis) where {T}
     check_input(eig_vals!, A, D, alg)
     eigval = GenericSchur.eigvals!(A)
-    return eigval
+    copyto!(D, eigval)
+    return D
 end
 
 end
