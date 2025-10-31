@@ -2,7 +2,7 @@ module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: sign_safe, check_input
-using GenericLinearAlgebra
+using GenericLinearAlgebra: svd, svdvals!, eigen, eigvals, Hermitian, qr
 using LinearAlgebra: I, Diagonal
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
@@ -12,7 +12,7 @@ end
 function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_QRIteration) where {T}
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
-    Ũ, S̃, Ṽ = GenericLinearAlgebra.svd(A)
+    Ũ, S̃, Ṽ = svd(A)
     copyto!(U, Ũ)
     copyto!(S, Diagonal(S̃))
     copyto!(Vᴴ, Ṽ') # conjugation to account for difference in convention
@@ -31,7 +31,7 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_Q
         return USVᴴ
     end
     S̃ = fill!(S, zero(T))
-    U_compact, S_compact, V_compact = GenericLinearAlgebra.svd(A)
+    U_compact, S_compact, V_compact = svd(A)
     S̃[1:minmn, 1:minmn] .= Diagonal(S_compact)
     copyto!(S, S̃)
 
@@ -43,7 +43,7 @@ end
 
 function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix{T}, S, alg::GLA_svd_QRIteration) where {T}
     check_input(svd_vals!, A, S, alg)
-    S̃ = GenericLinearAlgebra.svdvals!(A)
+    S̃ = svdvals!(A)
     copyto!(S, S̃)
     return S
 end
@@ -56,10 +56,10 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return GLA_eigh_Francis(; kwargs...)
 end
 
-function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_eigh_Francis)::Tuple{Diagonal{real(T)}, Matrix{T}} where {T}
+function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_eigh_Francis) where {T}
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
-    eigval, eigvec = GenericLinearAlgebra.eigen(A; sortby = real)
+    eigval, eigvec = eigen(Hermitian(A); sortby = real)
     copyto!(D, Diagonal(eigval))
     copyto!(V, eigvec)
     return D, V
@@ -67,7 +67,7 @@ end
 
 function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix{T}, D, alg::GLA_eigh_Francis) where {T}
     check_input(eigh_vals!, A, D, alg)
-    D = GenericLinearAlgebra.eigvals(A; sortby = real)
+    D = eigvals(A; sortby = real)
     return real.(D)
 end
 
@@ -106,7 +106,7 @@ function _gla_householder_qr!(A::AbstractMatrix{T}, Q, R; positive = false, bloc
     m, n = size(A)
     k = min(m, n)
     computeR = length(R) > 0
-    Q̃, R̃ = GenericLinearAlgebra.qr(A)
+    Q̃, R̃ = qr(A)
     Q̃ = convert(Array, Q̃)
     if positive
         @inbounds for j in 1:k
