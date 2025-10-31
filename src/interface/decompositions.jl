@@ -58,7 +58,7 @@ eigenvalue decomposition of a matrix.
 const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
 
 # TODO:
-@algdef GLA_eig_Francis
+@algdef GS_eig_Francis
 
 # Hermitian Eigenvalue Decomposition
 # ----------------------------------
