@@ -10,11 +10,15 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
+GenericSchur = "c145ed77-6b09-5dd9-b285-bf645a82121e"
 
 [extensions]
 MatrixAlgebraKitChainRulesCoreExt = "ChainRulesCore"
 MatrixAlgebraKitAMDGPUExt = "AMDGPU"
 MatrixAlgebraKitCUDAExt = "CUDA"
+MatrixAlgebraKitGenericLinearAlgebraExt = "GenericLinearAlgebra"
+MatrixAlgebraKitGenericSchurExt = "GenericSchur"
 
 [compat]
 AMDGPU = "2"
@@ -22,6 +26,8 @@ Aqua = "0.6, 0.7, 0.8"
 ChainRulesCore = "1"
 ChainRulesTestUtils = "1"
 CUDA = "5"
+GenericLinearAlgebra = "0.3.19"
+GenericSchur = "0.5.6"
 JET = "0.9, 0.10"
 LinearAlgebra = "1"
 SafeTestsets = "0.1"
@@ -42,4 +48,4 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras","ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote", "CUDA", "AMDGPU"]
+test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur"]

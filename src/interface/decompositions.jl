@@ -33,6 +33,7 @@ elements of `L` are non-negative.
 @algdef LAPACK_HouseholderLQ
 
 # TODO:
+@algdef GLA_QR_Householder
 @algdef LAPACK_HouseholderQL
 @algdef LAPACK_HouseholderRQ
 
@@ -55,6 +56,9 @@ eigenvalue decomposition of a matrix.
 @algdef LAPACK_Expert
 
 const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
+
+# TODO:
+@algdef GS_eig_Francis
 
 # Hermitian Eigenvalue Decomposition
 # ----------------------------------
@@ -100,6 +104,9 @@ const LAPACK_EighAlgorithm = Union{
     LAPACK_MultipleRelativelyRobustRepresentations,
 }
 
+# TODO:
+@algdef GLA_eigh_Francis
+
 # Singular Value Decomposition
 # ----------------------------
 """
@@ -116,6 +123,9 @@ const LAPACK_SVDAlgorithm = Union{
     LAPACK_DivideAndConquer,
     LAPACK_Jacobi,
 }
+
+# TODO:
+@algdef GLA_svd_QRIteration
 
 # =========================
 # Polar decompositions
