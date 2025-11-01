@@ -140,7 +140,7 @@ until convergence up to tolerance `tol`.
 @algdef PolarNewton
 
 # =========================
-# DIAGONAL ALGORITHMS
+# Varia
 # =========================
 """
     DiagonalAlgorithm(; kwargs...)
@@ -149,6 +149,21 @@ Algorithm type to denote a native Julia implementation of the decompositions mak
 the diagonal structure of the input and outputs.
 """
 @algdef DiagonalAlgorithm
+
+"""
+    LQViaTransposedQR(qr_alg)
+
+Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
+The `qr_alg` specifies which QR-decomposition implementation to use.
+"""
+struct LQViaTransposedQR{A <: AbstractAlgorithm} <: AbstractAlgorithm
+    qr_alg::A
+end
+function Base.show(io::IO, alg::LQViaTransposedQR)
+    print(io, "LQViaTransposedQR(")
+    _show_alg(io, alg.qr_alg)
+    return print(io, ")")
+end
 
 # =========================
 # CUSOLVER ALGORITHMS
@@ -203,6 +218,8 @@ for more information.
 """
 @algdef CUSOLVER_Randomized
 
+does_truncate(::TruncatedAlgorithm{<:CUSOLVER_Randomized}) = true
+
 """
     CUSOLVER_Simple()
 
@@ -221,6 +238,10 @@ Hermitian matrix, or the singular value decomposition of a general matrix using 
 Divide and Conquer algorithm.
 """
 @algdef CUSOLVER_DivideAndConquer
+
+const CUSOLVER_SVDAlgorithm = Union{
+    CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
+}
 
 # =========================
 # ROCSOLVER ALGORITHMS
@@ -269,6 +290,10 @@ Divide and Conquer algorithm.
 """
 @algdef ROCSOLVER_DivideAndConquer
 
+const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
+
+# Various consts and unions
+# -------------------------
 
 const GPU_Simple = Union{CUSOLVER_Simple}
 const GPU_EigAlgorithm = Union{GPU_Simple}
@@ -277,8 +302,132 @@ const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
 const GPU_Bisection = Union{ROCSOLVER_Bisection}
 const GPU_EighAlgorithm = Union{
-    GPU_QRIteration,
-    GPU_Jacobi,
-    GPU_DivideAndConquer,
-    GPU_Bisection,
+    GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
 }
+const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
+
+const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
+const GPU_Randomized = Union{CUSOLVER_Randomized}
+
+const QRAlgorithms = Union{LAPACK_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
+const LQAlgorithms = Union{LAPACK_HouseholderLQ, LQViaTransposedQR}
+const SVDAlgorithms = Union{LAPACK_SVDAlgorithm, GPU_SVDAlgorithm}
+const PolarAlgorithms = Union{PolarViaSVD, PolarNewton}
+
+# ================================
+# ORTHOGONALIZATION ALGORITHMS
+# ================================
+
+"""
+    LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
+
+Wrapper type to denote the `Kind` of factorization that is used as a backend for [`left_orth`](@ref).
+By default `Kind` is a symbol, which can be either `:qr`, `:polar` or `:svd`.
+"""
+struct LeftOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+LeftOrthAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = LeftOrthAlgorithm{Kind, Alg}(alg)
+
+# Note: specific algorithm selection is handled by `left_orth_alg` in orthnull.jl
+LeftOrthAlgorithm(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `left_orth` algorithm type `$(typeof(alg))`.
+    To register the algorithm type for `left_orth`, define
+
+        MatrixAlgebraKit.left_orth_alg(alg::CustomAlgorithm) = LeftOrthAlgorithm{kind}(alg)
+
+    where `kind` selects the factorization type that will be used.
+    By default, this is either `:qr`, `:polar` or `:svd`, to select [`qr_compact!`](@ref),
+    [`left_polar!`](@ref), [`svd_compact!`](@ref) or [`svd_trunc!`](@ref) respectively.
+    """
+)
+
+const LeftOrthViaQR = LeftOrthAlgorithm{:qr}
+const LeftOrthViaPolar = LeftOrthAlgorithm{:polar}
+const LeftOrthViaSVD = LeftOrthAlgorithm{:svd}
+
+"""
+    RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
+
+Wrapper type to denote the `Kind` of factorization that is used as a backend for [`right_orth`](@ref).
+By default `Kind` is a symbol, which can be either `:lq`, `:polar` or `:svd`.
+"""
+struct RightOrthAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+RightOrthAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = RightOrthAlgorithm{Kind, Alg}(alg)
+
+# Note: specific algorithm selection is handled by `right_orth_alg` in orthnull.jl
+RightOrthAlgorithm(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `right_orth` algorithm type `$(typeof(alg))`.
+    To register the algorithm type for `right_orth`, define
+
+        MatrixAlgebraKit.right_orth_alg(alg::CustomAlgorithm) = RightOrthAlgorithm{kind}(alg)
+
+    where `kind` selects the factorization type that will be used.
+    By default, this is either `:lq`, `:polar` or `:svd`, to select [`lq_compact!`](@ref),
+    [`right_polar!`](@ref), [`svd_compact!`](@ref) or [`svd_trunc!`](@ref) respectively.
+    """
+)
+
+const RightOrthViaLQ = RightOrthAlgorithm{:lq}
+const RightOrthViaPolar = RightOrthAlgorithm{:polar}
+const RightOrthViaSVD = RightOrthAlgorithm{:svd}
+
+"""
+    LeftNullAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
+
+Wrapper type to denote the `Kind` of factorization that is used as a backend for [`left_null`](@ref).
+By default `Kind` is a symbol, which can be either `:qr` or `:svd`.
+"""
+struct LeftNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+LeftNullAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = LeftNullAlgorithm{Kind, Alg}(alg)
+
+# Note: specific algorithm selection is handled by `left_null_alg` in orthnull.jl
+LeftNullAlgorithm(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `left_null` algorithm type `$(typeof(alg))`.
+    To register the algorithm type for `left_null`, define
+
+        MatrixAlgebraKit.left_null_alg(alg::CustomAlgorithm) = LeftNullAlgorithm{kind}(alg)
+
+    where `kind` selects the factorization type that will be used.
+    By default, this is either `:qr` or `:svd`, to select [`qr_null!`](@ref),
+    [`svd_compact!`](@ref) or [`svd_trunc!`](@ref) respectively.
+    """
+)
+
+const LeftNullViaQR = LeftNullAlgorithm{:qr}
+const LeftNullViaSVD = LeftNullAlgorithm{:svd}
+
+"""
+    RightNullAlgorithm{Kind, Alg <: AbstractAlgorithm}(alg)
+
+Wrapper type to denote the `Kind` of factorization that is used as a backend for [`right_null`](@ref).
+By default `Kind` is a symbol, which can be either `:lq` or `:svd`.
+"""
+struct RightNullAlgorithm{Kind, Alg <: AbstractAlgorithm} <: AbstractAlgorithm
+    alg::Alg
+end
+RightNullAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = RightNullAlgorithm{Kind, Alg}(alg)
+
+# Note: specific algorithm selection is handled by `right_null_alg` in orthnull.jl
+RightNullAlgorithm(alg::AbstractAlgorithm) = error(
+    """
+    Unkown or invalid `right_null` algorithm type `$(typeof(alg))`.
+    To register the algorithm type for `right_null`, define
+
+        MatrixAlgebraKit.right_null_alg(alg::CustomAlgorithm) = RightNullAlgorithm{kind}(alg)
+
+    where `kind` selects the factorization type that will be used.
+    By default, this is either `:lq` or `:svd`, to select [`lq_null!`](@ref),
+    [`svd_compact!`](@ref) or [`svd_trunc!`](@ref) respectively.
+    """
+)
+
+const RightNullViaLQ = RightNullAlgorithm{:lq}
+const RightNullViaSVD = RightNullAlgorithm{:svd}

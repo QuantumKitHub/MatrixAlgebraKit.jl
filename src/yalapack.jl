@@ -17,6 +17,8 @@ using LinearAlgebra.LAPACK: chkfinite, chktrans, chkside, chkuplofinite, chklapa
 
 # type alias for matrices that are definitely supported by YALAPACK
 const BlasMat{T <: BlasFloat} = StridedMatrix{T}
+# type alias for matrices that are possibly supported by YALAPACK, after conversion
+const MaybeBlasMat = Union{BlasMat, AbstractMatrix{<:Integer}}
 
 # LU factorisation
 for (getrf, getrs, elty) in (
