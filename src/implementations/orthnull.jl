@@ -7,7 +7,6 @@ copy_input(::typeof(right_null), A) = copy_input(lq_null, A) # do we ever need a
 
 check_input(::typeof(left_orth!), A, VC, alg::AbstractAlgorithm) =
     check_input(left_orth!, A, VC, left_orth_alg(alg))
-
 check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaQR) =
     check_input(qr_compact!, A, VC, alg.alg)
 check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaPolar) =
@@ -16,7 +15,6 @@ check_input(::typeof(left_orth!), A, VC, alg::LeftOrthViaSVD) = nothing
 
 check_input(::typeof(right_orth!), A, CVᴴ, alg::AbstractAlgorithm) =
     check_input(right_orth!, A, CVᴴ, right_orth_alg(alg))
-
 check_input(::typeof(right_orth!), A, VC, alg::RightOrthViaLQ) =
     check_input(lq_compact!, A, VC, alg.alg)
 check_input(::typeof(right_orth!), A, VC, alg::RightOrthViaPolar) =
@@ -39,7 +37,6 @@ check_input(::typeof(right_null!), A, Nᴴ, alg::RightNullViaSVD) = nothing
 # -------
 initialize_output(::typeof(left_orth!), A, alg::AbstractAlgorithm) =
     initialize_output(left_orth!, A, left_orth_alg(alg))
-
 initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaQR) =
     initialize_output(qr_compact!, A, alg.alg)
 initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaPolar) =
@@ -48,7 +45,6 @@ initialize_output(::typeof(left_orth!), A, alg::LeftOrthViaSVD) = nothing
 
 initialize_output(::typeof(right_orth!), A, alg::AbstractAlgorithm) =
     initialize_output(right_orth!, A, right_orth_alg(alg))
-
 initialize_output(::typeof(right_orth!), A, alg::RightOrthViaLQ) =
     initialize_output(lq_compact!, A, alg.alg)
 initialize_output(::typeof(right_orth!), A, alg::RightOrthViaPolar) =

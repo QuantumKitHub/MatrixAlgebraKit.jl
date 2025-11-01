@@ -270,7 +270,7 @@ true
 ## Null Spaces
 
 Similarly, it can be convenient to obtain an orthogonal basis for the kernel or cokernel of a matrix.
-These are the complements of the coimage and image, respectively, and can be computed using the [`left_null`](@ref) and [`right_null`](@ref) functions.
+These are the orthogonal complements of the coimage and image, respectively, and can be computed using the [`left_null`](@ref) and [`right_null`](@ref) functions.
 
 ### Overview
 

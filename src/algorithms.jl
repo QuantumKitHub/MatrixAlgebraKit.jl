@@ -55,7 +55,6 @@ end
 
 # Algorithm traits
 # ----------------
-
 """
     does_truncate(alg::AbstractAlgorithm) -> Bool
 

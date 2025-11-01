@@ -60,7 +60,7 @@ the chosen decomposition type. By default, the supported kinds are:
   and is roughly equivalent to:
 ```julia
         V, S, C = svd_trunc(A; trunc, kwargs...)
-        C = S * C
+        C = lmul!(S, C)
 ```
 
 ### `alg::AbstractAlgorithm`
@@ -141,7 +141,7 @@ the chosen decomposition type. By default, the supported kinds are:
   and is roughly equivalent to:
 ```julia
         C, S, Vᴴ = svd_trunc(A; trunc, kwargs...)
-        C = C * S
+        C = rmul!(C, S)
 ```
 
 ### `alg::AbstractAlgorithm`
