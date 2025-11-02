@@ -4,9 +4,10 @@ using TestExtras
 using StableRNGs
 using LinearAlgebra: diag, I, Diagonal
 
-eltypes = (Float32, Float64, ComplexF32, ComplexF64)
+lapack_eltypes = (Float32, Float64, ComplexF32, ComplexF64)
+native_eltypes = (lapack_eltypes..., BigFloat, Complex{BigFloat})
 
-@testset "qr_compact! and qr_null! for T = $T" for T in eltypes
+@testset "qr_compact! and qr_null! for T = $T" for T in lapack_eltypes
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
@@ -99,7 +100,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
     end
 end
 
-@testset "qr_full! for T = $T" for T in eltypes
+@testset "qr_full! for T = $T" for T in lapack_eltypes
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
@@ -176,7 +177,7 @@ end
     end
 end
 
-@testset "qr_compact, qr_full and qr_null for Diagonal{$T}" for T in eltypes
+@testset "qr_compact, qr_full and qr_null for Diagonal{$T}" for T in native_eltypes
     rng = StableRNG(123)
     atol = eps(real(T))^(3 / 4)
     for m in (54, 0)
@@ -218,5 +219,55 @@ end
         # null
         N = @constinferred qr_null(A)
         @test N isa AbstractMatrix{T} && size(N) == (m, 0)
+    end
+end
+
+
+@testset "native qr_compact! and qr_null! for T = $T" for T in native_eltypes
+    rng = StableRNG(123)
+    m = 54
+    for n in (37, m, 63)
+        minmn = min(m, n)
+        A = randn(rng, T, m, n)
+        Q, R = @constinferred qr_compact(A, Native_HouseholderQR())
+        @test Q isa Matrix{T} && size(Q) == (m, minmn)
+        @test R isa Matrix{T} && size(R) == (minmn, n)
+        @test Q * R ≈ A
+        @test all(>=(zero(real(T))), real(diag(R)))
+        N = @constinferred qr_null(A, Native_HouseholderQR())
+        @test N isa Matrix{T} && size(N) == (m, m - minmn)
+        @test isisometric(Q)
+        @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
+        @test isisometric(N)
+
+        Ac = similar(A)
+        Q2, R2 = @constinferred qr_compact!(copy!(Ac, A), (Q, R), Native_HouseholderQR())
+        @test Q2 === Q
+        @test R2 === R
+        N2 = @constinferred qr_null!(copy!(Ac, A), N, Native_HouseholderQR())
+        @test N2 === N
+    end
+end
+
+@testset "native qr_full! for T = $T" for T in native_eltypes
+    rng = StableRNG(123)
+    m = 54
+    for n in (37, m, 63)
+        minmn = min(m, n)
+        A = randn(rng, T, m, n)
+        Q, R = qr_full(A, Native_HouseholderQR())
+        @test Q isa Matrix{T} && size(Q) == (m, m)
+        @test R isa Matrix{T} && size(R) == (m, n)
+        @test Q * R ≈ A
+        @test all(>=(zero(real(T))), real(diag(R)))
+        @test isunitary(Q)
+
+        Ac = similar(A)
+        Q2 = similar(Q)
+        Q2, R2 = @constinferred qr_full!(copy!(Ac, A), (Q, R), Native_HouseholderQR())
+        @test Q2 === Q
+        @test R2 === R
+        @test Q * R ≈ A
+        @test isunitary(Q)
     end
 end

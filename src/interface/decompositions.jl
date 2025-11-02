@@ -10,6 +10,24 @@
 # QR, LQ, QL, RQ Decomposition
 # ----------------------------
 """
+    Native_HouseholderQR()
+
+Algorithm type to denote a native implementation for computing the QR decomposition of
+a matrix using Householder reflectors. The diagonal elements of `R` will be non-negative
+by construction.
+"""
+@algdef Native_HouseholderQR
+
+"""
+    Native_HouseholderLQ()
+
+Algorithm type to denote a native implementation for computing the LQ decomposition of
+a matrix using Householder reflectors. The diagonal elements of `L` will be non-negative
+by construction.
+"""
+@algdef Native_HouseholderLQ
+
+"""
     LAPACK_HouseholderQR(; blocksize, positive = false, pivoted = false)
 
 Algorithm type to denote the standard LAPACK algorithm for computing the QR decomposition of
