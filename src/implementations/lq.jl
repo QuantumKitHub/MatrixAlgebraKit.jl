@@ -270,3 +270,85 @@ function _diagonal_lq!(
 end
 
 _diagonal_lq_null!(A::AbstractMatrix, N; positive::Bool = false) = N
+
+# Native logic
+# -------------
+function lq_full!(A::AbstractMatrix, LQ, alg::Native_HouseholderLQ)
+    check_input(lq_full!, A, LQ, alg)
+    L, Q = LQ
+    A === Q &&
+        throw(ArgumentError("inplace Q not supported with native LQ implementation"))
+    _native_lq!(A, L, Q; alg.kwargs...)
+    return L, Q
+end
+function lq_compact!(A::AbstractMatrix, LQ, alg::Native_HouseholderLQ)
+    check_input(lq_compact!, A, LQ, alg)
+    L, Q = LQ
+    A === Q &&
+        throw(ArgumentError("inplace Q not supported with native LQ implementation"))
+    _native_lq!(A, L, Q; alg.kwargs...)
+    return L, Q
+end
+function lq_null!(A::AbstractMatrix, N, alg::Native_HouseholderLQ)
+    check_input(lq_null!, A, N, alg)
+    _native_lq_null!(A, N; alg.kwargs...)
+    return N
+end
+
+function _native_lq!(
+        A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
+        positive::Bool = true # always true regardless of setting
+    )
+    m, n = size(A)
+    minmn = min(m, n)
+    @inbounds for i in 1:minmn
+        for j in 1:(i - 1)
+            L[i, j] = A[i, j]
+        end
+        β, v, L[i, i] = _householder!(conj!(view(A, i, i:n)), 1)
+        for j in (i + 1):size(L, 2)
+            L[i, j] = 0
+        end
+        H = Householder(conj(β), v, i:n)
+        rmul!(A, H; rows = (i + 1):m)
+        # A[i, i] == 1; store β instead
+        A[i, i] = β
+    end
+    # copy remaining rows for m > n
+    @inbounds for j in 1:size(L, 2)
+        for i in (minmn + 1):m
+            L[i, j] = A[i, j]
+        end
+    end
+    # build Q
+    one!(Q)
+    @inbounds for i in minmn:-1:1
+        β = A[i, i]
+        A[i, i] = 1
+        Hᴴ = Householder(β, view(A, i, i:n), i:n)
+        rmul!(Q, Hᴴ)
+    end
+    return L, Q
+end
+
+function _native_lq_null!(A::AbstractMatrix, Nᴴ::AbstractMatrix; positive::Bool = true)
+    m, n = size(A)
+    minmn = min(m, n)
+    @inbounds for i in 1:minmn
+        β, v, ν = _householder!(conj!(view(A, i, i:n)), 1)
+        H = Householder(conj(β), v, i:n)
+        rmul!(A, H; rows = (i + 1):m)
+        # A[i, i] == 1; store β instead
+        A[i, i] = β
+    end
+    # build Nᴴ
+    fill!(Nᴴ, zero(eltype(Nᴴ)))
+    one!(view(Nᴴ, 1:(n - minmn), (minmn + 1):n))
+    @inbounds for i in minmn:-1:1
+        β = A[i, i]
+        A[i, i] = 1
+        Hᴴ = Householder(β, view(A, i, i:n), i:n)
+        rmul!(Nᴴ, Hᴴ)
+    end
+    return Nᴴ
+end
