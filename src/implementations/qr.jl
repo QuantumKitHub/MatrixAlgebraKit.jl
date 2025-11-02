@@ -350,7 +350,8 @@ function qr_null!(A::AbstractMatrix, N, alg::Native_HouseholderQR)
 end
 
 function _native_qr!(
-        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+        positive::Bool = true # always true regardless of setting
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -367,6 +368,7 @@ function _native_qr!(
         # A[j,j] == 1; store β instead
         A[j, j] = β
     end
+    # copy remaining columns if m < n
     @inbounds for j in (minmn + 1):n
         for i in 1:size(R, 1)
             R[i, j] = A[i, j]
@@ -374,7 +376,7 @@ function _native_qr!(
     end
     # build Q
     one!(Q)
-    for j in minmn:-1:1
+    @inbounds for j in minmn:-1:1
         β = A[j, j]
         A[j, j] = 1
         Hᴴ = Householder(conj(β), view(A, j:m, j), j:m)
@@ -383,7 +385,7 @@ function _native_qr!(
     return Q, R
 end
 
-function _native_qr_null!(A::AbstractMatrix, N::AbstractMatrix)
+function _native_qr_null!(A::AbstractMatrix, N::AbstractMatrix; positive::Bool = true)
     m, n = size(A)
     minmn = min(m, n)
     @inbounds for j in 1:minmn
@@ -393,10 +395,10 @@ function _native_qr_null!(A::AbstractMatrix, N::AbstractMatrix)
         # A[j,j] == 1; store β instead
         A[j, j] = β
     end
-    # build Q
+    # build N
     fill!(N, zero(eltype(N)))
     one!(view(N, (minmn + 1):m, 1:(m - minmn)))
-    for j in minmn:-1:1
+    @inbounds for j in minmn:-1:1
         β = A[j, j]
         A[j, j] = 1
         Hᴴ = Householder(conj(β), view(A, j:m, j), j:m)
