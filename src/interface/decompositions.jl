@@ -32,8 +32,17 @@ elements of `L` are non-negative.
 """
 @algdef LAPACK_HouseholderLQ
 
+"""
+    GLA_HouseholderQR(; positive = false)
+
+Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the QR decomposition 
+of a matrix using Householder reflectors. Currenlty, only `blocksize = 1` and `pivoted == false` 
+are supported. The keyword `positive=true` can be used to ensure that the diagonal elements 
+of `R` are non-negative.
+"""
+@algdef GLA_HouseholderQR
+
 # TODO:
-@algdef GLA_QR_Householder
 @algdef LAPACK_HouseholderQL
 @algdef LAPACK_HouseholderRQ
 
@@ -57,7 +66,12 @@ eigenvalue decomposition of a matrix.
 
 const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
 
-# TODO:
+"""
+    GS_QRIteration()
+
+Algorithm type to denote the GenericSchur.jl implementation for computing the 
+eigenvalue decomposition of a non-Hermitian matrix.
+"""
 @algdef GS_QRIteration
 
 # Hermitian Eigenvalue Decomposition
@@ -104,7 +118,13 @@ const LAPACK_EighAlgorithm = Union{
     LAPACK_MultipleRelativelyRobustRepresentations,
 }
 
-# TODO:
+"""
+    GLA_QRIteration()
+
+Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the 
+eigenvalue decomposition of a Hermitian matrix, or the singular value decomposition of 
+a general matrix.
+"""
 @algdef GLA_QRIteration
 
 # Singular Value Decomposition

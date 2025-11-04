@@ -32,7 +32,7 @@ eltypes = (BigFloat, Complex{BigFloat})
         @test Q == Q2
 
         # Transposed QR algorithm
-        qr_alg = GLA_QR_Householder()
+        qr_alg = GLA_HouseholderQR()
         lq_alg = LQViaTransposedQR(qr_alg)
         L2, Q2 = @constinferred lq_compact!(copy!(Ac, A), (L, Q), lq_alg)
         @test L2 === L
@@ -80,7 +80,7 @@ end
         @test Q[1:minmn, n] ≈ Q2[1:minmn, n]
 
         # Transposed QR algorithm
-        qr_alg = GLA_QR_Householder()
+        qr_alg = GLA_HouseholderQR()
         lq_alg = LQViaTransposedQR(qr_alg)
         L2, Q2 = @constinferred lq_full!(copy!(Ac, A), (L, Q), lq_alg)
         @test L2 === L
@@ -104,7 +104,7 @@ end
         lq_full!(copy!(Ac, A), (noL, Q2); positive = true)
         @test Q[1:minmn, n] ≈ Q2[1:minmn, n]
 
-        qr_alg = GLA_QR_Householder(; positive = true)
+        qr_alg = GLA_HouseholderQR(; positive = true)
         lq_alg = LQViaTransposedQR(qr_alg)
         lq_full!(copy!(Ac, A), (L, Q), lq_alg)
         @test L * Q ≈ A
