@@ -2,24 +2,24 @@ module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: sign_safe, check_input
-using GenericLinearAlgebra: svd, svdvals!, eigen, eigvals, Hermitian, qr
-using LinearAlgebra: I, Diagonal
+using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
+using LinearAlgebra: I, Diagonal, rmul!, lmul!, transpose!, dot
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return GLA_svd_QRIteration()
+    return GLA_QRIteration()
 end
 
-function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_QRIteration) where {T}
+function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
-    Ũ, S̃, Ṽ = svd!(A)
-    copyto!(U, Ũ)
-    copyto!(S, Diagonal(S̃))
-    copyto!(Vᴴ, Ṽ') # conjugation to account for difference in convention
+    F = svd!(A)
+    copyto!(U, F.U)
+    copyto!(S, Diagonal(F.S))
+    copyto!(Vᴴ, F.Vt) # conjugation to account for difference in convention
     return U, S, Vᴴ
 end
 
-function MatrixAlgebraKit.svd_full!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_QRIteration) where {T}
+function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration)
     check_input(svd_full!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
     m, n = size(A)
@@ -30,18 +30,17 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_Q
         MatrixAlgebraKit.one!(Vᴴ)
         return USVᴴ
     end
-    S̃ = fill!(S, zero(T))
-    U_compact, S_compact, V_compact = svd(A)
-    S̃[1:minmn, 1:minmn] .= Diagonal(S_compact)
-    copyto!(S, S̃)
+    S = MatrixAlgebraKit.zero!(S)
+    U_compact, S_compact, Vᴴ_compact = svd!(A)
+    S[1:minmn, 1:minmn] .= Diagonal(S_compact)
 
     U = _gram_schmidt!(U, U_compact)
-    Vᴴ = _gram_schmidt!(Vᴴ, V_compact; adjoint = true)
+    Vᴴ = _gram_schmidt!(Vᴴ, Vᴴ_compact; adjoint = true)
 
     return MatrixAlgebraKit.gaugefix!(svd_full!, U, S, Vᴴ, m, n)
 end
 
-function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix{T}, S, alg::GLA_svd_QRIteration) where {T}
+function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix{T}, S, alg::GLA_QRIteration) where {T}
     check_input(svd_vals!, A, S, alg)
     S̃ = svdvals!(A)
     copyto!(S, S̃)
@@ -49,10 +48,10 @@ function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix{T}, S, alg::GLA_svd_QRIter
 end
 
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return GLA_eigh_Francis(; kwargs...)
+    return GLA_QRIteration(; kwargs...)
 end
 
-function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_eigh_Francis) where {T}
+function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_QRIteration) where {T}
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
     eigval, eigvec = eigen!(Hermitian(A); sortby = real)
@@ -61,10 +60,9 @@ function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_eigh_Fra
     return D, V
 end
 
-function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix{T}, D, alg::GLA_eigh_Francis) where {T}
+function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix{T}, D, alg::GLA_QRIteration) where {T}
     check_input(eigh_vals!, A, D, alg)
-    D = eigvals(A; sortby = real)
-    return real.(D)
+    return eigvals!(Hermitian(A); sortby = real)
 end
 
 function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
@@ -80,10 +78,10 @@ function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::GLA_QR_Householde
     Q_zero = zeros(eltype(Q), (m, minmn))
     R_zero = zeros(eltype(R), (minmn, n))
     Q_compact, R_compact = _gla_householder_qr!(A, Q_zero, R_zero; alg.kwargs...)
-    Q = _gram_schmidt!(Q, Q_compact[:, 1:min(m, n)])
+    Q = _gram_schmidt!(Q, view(Q_compact, :, 1:minmn))
     if computeR
-        R = fill!(R, zero(eltype(R)))
-        R[1:minmn, 1:n] .= R_compact
+        R[1:minmn, :] .= R_compact
+        R[(minmn + 1):end, :] .= zero(eltype(R))
     end
     return Q, R
 end
@@ -103,16 +101,20 @@ function _gla_householder_qr!(A::AbstractMatrix{T}, Q, R; positive = false, bloc
     k = min(m, n)
     computeR = length(R) > 0
     Q̃, R̃ = qr!(A)
-    Q̃ = convert(Array, Q̃)
+
+    if k < m
+        copyto!(Q, Q̃)
+    else
+        rmul!(MatrixAlgebraKit.one!(Q), Q̃)
+    end
     if positive
         @inbounds for j in 1:k
             s = sign_safe(R̃[j, j])
             @simd for i in 1:m
-                Q̃[i, j] *= s
+                Q[i, j] *= s
             end
         end
     end
-    copyto!(Q, Q̃)
     if computeR
         if positive
             @inbounds for j in n:-1:1
@@ -126,30 +128,19 @@ function _gla_householder_qr!(A::AbstractMatrix{T}, Q, R; positive = false, bloc
     return Q, R
 end
 
-function _gram_schmidt(Q_compact)
+function _gram_schmidt!(Q, Q_compact; adjoint = false)
     m, minmn = size(Q_compact)
-    if minmn >= m
-        return Q_compact
-    end
-    Q = zeros(eltype(Q_compact), (m, m))
     Q[:, 1:minmn] .= Q_compact
     for j in (minmn + 1):m
         v = rand(eltype(Q), m)
         for i in 1:(j - 1)
-            r = sum([v[k] * conj(Q[k, i])] for k in 1:size(v)[1])[1]
-            v .= v .- r * Q[:, i]
+            r = dot(view(Q, :, i), v)
+            v .-= r * view(Q, :, i)
         end
         Q[:, j] = v ./ MatrixAlgebraKit.norm(v)
     end
-    return Q
-end
-
-function _gram_schmidt!(Q, Q_compact; adjoint = false)
-    Q̃ = _gram_schmidt(Q_compact)
     if adjoint
-        copyto!(Q, Q̃')
-    else
-        copyto!(Q, Q̃)
+        copyto!(Q, Q')
     end
     return Q
 end

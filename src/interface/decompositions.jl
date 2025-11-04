@@ -58,7 +58,7 @@ eigenvalue decomposition of a matrix.
 const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
 
 # TODO:
-@algdef GS_eig_Francis
+@algdef GS_QRIteration
 
 # Hermitian Eigenvalue Decomposition
 # ----------------------------------
@@ -105,7 +105,7 @@ const LAPACK_EighAlgorithm = Union{
 }
 
 # TODO:
-@algdef GLA_eigh_Francis
+@algdef GLA_QRIteration
 
 # Singular Value Decomposition
 # ----------------------------
@@ -123,9 +123,6 @@ const LAPACK_SVDAlgorithm = Union{
     LAPACK_DivideAndConquer,
     LAPACK_Jacobi,
 }
-
-# TODO:
-@algdef GLA_svd_QRIteration
 
 # =========================
 # Polar decompositions
