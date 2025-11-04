@@ -35,9 +35,9 @@ eltypes = (BigFloat, Complex{BigFloat})
         Sc = similar(A, real(T), min(m, n))
         alg′ = @constinferred MatrixAlgebraKit.select_algorithm(svd_compact!, A, $alg)
         U2, S2, V2ᴴ = @constinferred svd_compact!(copy!(Ac, A), (U, S, Vᴴ), alg′)
-        @test U2 === U
-        @test S2 === S
-        @test V2ᴴ === Vᴴ
+        @test U2 ≈ U
+        @test S2 ≈ S
+        @test V2ᴴ ≈ Vᴴ
         @test U * S * Vᴴ ≈ A
         @test isisometric(U)
         @test isisometric(Vᴴ; side = :right)
@@ -65,17 +65,15 @@ end
 
         Ac = similar(A)
         U2, S2, V2ᴴ = @constinferred svd_full!(copy!(Ac, A), (U, S, Vᴴ), alg)
-        @test U2 === U
-        @test S2 === S
-        @test V2ᴴ === Vᴴ
+        @test U2 ≈ U
+        @test S2 ≈ S
+        @test V2ᴴ ≈ Vᴴ
         @test U * S * Vᴴ ≈ A
         @test isunitary(U)
         @test isunitary(Vᴴ)
         @test all(isposdef, diagview(S))
 
-        Sc = similar(A, real(T), min(m, n))
-        Sc2 = svd_vals!(copy!(Ac, A), Sc, alg)
-        @test Sc === Sc2
+        Sc = svd_vals!(copy!(Ac, A), alg)
         @test diagview(S) ≈ Sc
     end
     @testset "size (0, 0)" begin

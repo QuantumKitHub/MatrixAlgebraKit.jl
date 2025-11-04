@@ -1,7 +1,7 @@
 module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: sign_safe, check_input
+using MatrixAlgebraKit: sign_safe, check_input, diagview
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, rmul!, lmul!, transpose!, dot
 
@@ -9,42 +9,26 @@ function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <
     return GLA_QRIteration()
 end
 
-function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration)
-    check_input(svd_compact!, A, USVᴴ, alg)
-    U, S, Vᴴ = USVᴴ
+for f! in (:svd_compact!, :svd_full!, :svd_vals!)
+    @eval MatrixAlgebraKit.initialize_output(::typeof($f!), A::AbstractMatrix, ::GLA_QRIteration) = nothing
+end
+
+function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, ::GLA_QRIteration)
     F = svd!(A)
-    copyto!(U, F.U)
-    copyto!(S, Diagonal(F.S))
-    copyto!(Vᴴ, F.Vt) # conjugation to account for difference in convention
-    return U, S, Vᴴ
+    U, S, Vᴴ = F.U, Diagonal(F.S), F.Vt
+    return MatrixAlgebraKit.gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
 end
 
-function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration)
-    check_input(svd_full!, A, USVᴴ, alg)
-    U, S, Vᴴ = USVᴴ
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        MatrixAlgebraKit.one!(U)
-        MatrixAlgebraKit.zero!(S)
-        MatrixAlgebraKit.one!(Vᴴ)
-        return USVᴴ
-    end
-    S = MatrixAlgebraKit.zero!(S)
-    U_compact, S_compact, Vᴴ_compact = svd!(A)
-    S[1:minmn, 1:minmn] .= Diagonal(S_compact)
-
-    U = _gram_schmidt!(U, U_compact)
-    Vᴴ = _gram_schmidt!(Vᴴ, Vᴴ_compact; adjoint = true)
-
-    return MatrixAlgebraKit.gaugefix!(svd_full!, U, S, Vᴴ, m, n)
+function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, ::GLA_QRIteration)
+    F = svd!(A; full = true)
+    U, Vᴴ = F.U, F.Vt
+    S = MatrixAlgebraKit.zero!(similar(F.S, (size(U, 2), size(Vᴴ, 1))))
+    diagview(S) .= F.S
+    return MatrixAlgebraKit.gaugefix!(svd_full!, U, S, Vᴴ, size(A)...)
 end
 
-    check_input(svd_vals!, A, S, alg)
 function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, ::GLA_QRIteration)
-    S̃ = svdvals!(A)
-    copyto!(S, S̃)
-    return S
+    return svdvals!(A)
 end
 
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
