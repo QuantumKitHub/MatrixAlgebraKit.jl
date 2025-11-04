@@ -12,7 +12,7 @@ end
 function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix{T}, USVᴴ, alg::GLA_svd_QRIteration) where {T}
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
-    Ũ, S̃, Ṽ = svd(A)
+    Ũ, S̃, Ṽ = svd!(A)
     copyto!(U, Ũ)
     copyto!(S, Diagonal(S̃))
     copyto!(Vᴴ, Ṽ') # conjugation to account for difference in convention
