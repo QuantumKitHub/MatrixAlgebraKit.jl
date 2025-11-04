@@ -102,7 +102,7 @@ function _gla_householder_qr!(A::AbstractMatrix{T}, Q, R; positive = false, bloc
     m, n = size(A)
     k = min(m, n)
     computeR = length(R) > 0
-    Q̃, R̃ = qr(A)
+    Q̃, R̃ = qr!(A)
     Q̃ = convert(Array, Q̃)
     if positive
         @inbounds for j in 1:k
