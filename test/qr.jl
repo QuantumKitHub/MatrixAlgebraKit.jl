@@ -5,7 +5,7 @@ using StableRNGs
 using LinearAlgebra: diag, I, Diagonal
 
 lapack_eltypes = (Float32, Float64, ComplexF32, ComplexF64)
-native_eltypes = (lapack_eltypes..., BigFloat, Complex{BigFloat})
+native_eltypes = (lapack_eltypes..., Float16, BigFloat, Complex{BigFloat})
 
 @testset "qr_compact! and qr_null! for T = $T" for T in lapack_eltypes
     rng = StableRNG(123)
@@ -269,5 +269,10 @@ end
         @test R2 === R
         @test Q * R ≈ A
         @test isunitary(Q)
+
+        if !(T ∈ lapack_eltypes)
+            alg = MatrixAlgebraKit.select_algorithm(qr_compact!, A)
+            @test alg == Native_HouseholderQR()
+        end
     end
 end

@@ -6,7 +6,7 @@ using LinearAlgebra: diag, I, Diagonal
 using MatrixAlgebraKit: LQViaTransposedQR, LAPACK_HouseholderQR
 
 lapack_eltypes = (Float32, Float64, ComplexF32, ComplexF64)
-native_eltypes = (lapack_eltypes..., BigFloat, Complex{BigFloat})
+native_eltypes = (lapack_eltypes..., Float16, BigFloat, Complex{BigFloat})
 
 @testset "lq_compact! for T = $T" for T in lapack_eltypes
     rng = StableRNG(123)
@@ -299,5 +299,10 @@ end
         @test Q2 === Q
         @test L * Q ≈ A
         @test isunitary(Q)
+
+        if !(T ∈ lapack_eltypes)
+            alg = MatrixAlgebraKit.select_algorithm(lq_compact!, A)
+            @test alg == Native_HouseholderLQ()
+        end
     end
 end
