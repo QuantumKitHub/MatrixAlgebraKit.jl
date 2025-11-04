@@ -108,17 +108,19 @@ if AMDGPU.functional()
     end
 end
 
-using GenericLinearAlgebra, GenericSchur
+using GenericLinearAlgebra
 @safetestset "QR / LQ Decomposition" begin
-    include("bigfloats/qr.jl")
-    include("bigfloats/lq.jl")
+    include("genericlinearalgebra/qr.jl")
+    include("genericlinearalgebra/lq.jl")
 end
 @safetestset "Singular Value Decomposition" begin
-    include("bigfloats/svd.jl")
+    include("genericlinearalgebra/svd.jl")
 end
 @safetestset "Hermitian Eigenvalue Decomposition" begin
-    include("bigfloats/eigh.jl")
+    include("genericlinearalgebra/eigh.jl")
 end
+
+using GenericSchur
 @safetestset "General Eigenvalue Decomposition" begin
-    include("bigfloats/eig.jl")
+    include("genericschur/eig.jl")
 end
