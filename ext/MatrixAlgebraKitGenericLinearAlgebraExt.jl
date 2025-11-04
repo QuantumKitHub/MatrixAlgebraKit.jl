@@ -40,8 +40,8 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIterat
     return MatrixAlgebraKit.gaugefix!(svd_full!, U, S, Vᴴ, m, n)
 end
 
-function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix{T}, S, alg::GLA_QRIteration) where {T}
     check_input(svd_vals!, A, S, alg)
+function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, ::GLA_QRIteration)
     S̃ = svdvals!(A)
     copyto!(S, S̃)
     return S
@@ -51,7 +51,7 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return GLA_QRIteration(; kwargs...)
 end
 
-function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_QRIteration) where {T}
+function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix, DV, alg::GLA_QRIteration)
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
     eigval, eigvec = eigen!(Hermitian(A); sortby = real)
@@ -60,7 +60,7 @@ function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_QRIterat
     return D, V
 end
 
-function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix{T}, D, alg::GLA_QRIteration) where {T}
+function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix, D, alg::GLA_QRIteration)
     check_input(eigh_vals!, A, D, alg)
     return eigvals!(Hermitian(A); sortby = real)
 end
@@ -93,7 +93,7 @@ function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR, alg::GLA_Householde
     return Q, R
 end
 
-function _gla_householder_qr!(A::AbstractMatrix{T}, Q, R; positive = false, blocksize = 1, pivoted = false) where {T}
+function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksize = 1, pivoted = false)
     pivoted && throw(ArgumentError("Only pivoted = false implemented for GLA_HouseholderQR."))
     (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for GLA_HouseholderQR."))
 
