@@ -22,8 +22,8 @@ const eltypes = (BigFloat, Complex{BigFloat})
     @test all(isreal, D)
 
     D2, V2 = eigh_full!(copy(A), (D, V), alg)
-    @test D2 === D
-    @test V2 === V
+    @test D2 ≈ D
+    @test V2 ≈ V
 
     D3 = @constinferred eigh_vals(A, alg)
     @test D ≈ Diagonal(D3)

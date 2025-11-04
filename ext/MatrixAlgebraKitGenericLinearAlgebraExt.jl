@@ -35,17 +35,16 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return GLA_QRIteration(; kwargs...)
 end
 
-function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix, DV, alg::GLA_QRIteration)
-    check_input(eigh_full!, A, DV, alg)
-    D, V = DV
-    eigval, eigvec = eigen!(Hermitian(A); sortby = real)
-    copyto!(D, Diagonal(eigval))
-    copyto!(V, eigvec)
-    return D, V
+for f! in (:eigh_full!, :eigh_vals!)
+    @eval MatrixAlgebraKit.initialize_output(::typeof($f!), A::AbstractMatrix, ::GLA_QRIteration) = nothing
 end
 
-function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix, D, alg::GLA_QRIteration)
-    check_input(eigh_vals!, A, D, alg)
+function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix, DV, ::GLA_QRIteration)
+    eigval, eigvec = eigen!(Hermitian(A); sortby = real)
+    return Diagonal(eigval::AbstractVector{real(eltype(A))}), eigvec::AbstractMatrix{eltype(A)}
+end
+
+function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix, D, ::GLA_QRIteration)
     return eigvals!(Hermitian(A); sortby = real)
 end
 
