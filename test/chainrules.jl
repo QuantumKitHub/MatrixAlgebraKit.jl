@@ -541,18 +541,18 @@ end
         )
         test_rrule(
             config, left_orth, A;
-            fkwargs = (; kind = :qr), atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+            fkwargs = (; alg = :qr), atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
         m >= n &&
             test_rrule(
             config, left_orth, A;
-            fkwargs = (; kind = :polar), atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+            fkwargs = (; alg = :polar), atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
 
-        ΔN = left_orth(A; kind = :qr)[1] * randn(rng, T, min(m, n), m - min(m, n))
+        ΔN = left_orth(A; alg = :qr)[1] * randn(rng, T, min(m, n), m - min(m, n))
         test_rrule(
             config, left_null, A;
-            fkwargs = (; kind = :qr), output_tangent = ΔN, atol = atol, rtol = rtol,
+            fkwargs = (; alg = :qr), output_tangent = ΔN, atol = atol, rtol = rtol,
             rrule_f = rrule_via_ad, check_inferred = false
         )
 
@@ -561,19 +561,19 @@ end
             atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
         test_rrule(
-            config, right_orth, A; fkwargs = (; kind = :lq),
+            config, right_orth, A; fkwargs = (; alg = :lq),
             atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
         m <= n &&
             test_rrule(
-            config, right_orth, A; fkwargs = (; kind = :polar),
+            config, right_orth, A; fkwargs = (; alg = :polar),
             atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
 
-        ΔNᴴ = randn(rng, T, n - min(m, n), min(m, n)) * right_orth(A; kind = :lq)[2]
+        ΔNᴴ = randn(rng, T, n - min(m, n), min(m, n)) * right_orth(A; alg = :lq)[2]
         test_rrule(
             config, right_null, A;
-            fkwargs = (; kind = :lq), output_tangent = ΔNᴴ,
+            fkwargs = (; alg = :lq), output_tangent = ΔNᴴ,
             atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
     end

@@ -4,7 +4,7 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
-using MatrixAlgebraKit: LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
+using MatrixAlgebraKit: LQViaTransposedQR, TruncationStrategy, NoTruncation, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_gesvdj!
 import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!, _gpu_heev!, _gpu_heevx!
@@ -161,7 +161,9 @@ function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
     return A, B
 end
 
-function MatrixAlgebraKit.truncate(::typeof(MatrixAlgebraKit.left_null!), US::Tuple{TU, TS}, strategy::MatrixAlgebraKit.TruncationStrategy) where {TU <: ROCArray, TS}
+function MatrixAlgebraKit.truncate(
+        ::typeof(left_null!), US::Tuple{TU, TS}, strategy::TruncationStrategy
+    ) where {TU <: ROCMatrix, TS}
     # TODO: avoid allocation?
     U, S = US
     extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 1) - size(S, 2))))
@@ -169,6 +171,33 @@ function MatrixAlgebraKit.truncate(::typeof(MatrixAlgebraKit.left_null!), US::Tu
     trunc_cols = collect(1:size(U, 2))[ind]
     Utrunc = U[:, trunc_cols]
     return Utrunc, ind
+end
+function MatrixAlgebraKit.truncate(
+        ::typeof(right_null!), SVᴴ::Tuple{TS, TVᴴ}, strategy::TruncationStrategy
+    ) where {TS, TVᴴ <: ROCMatrix}
+    # TODO: avoid allocation?
+    S, Vᴴ = SVᴴ
+    extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 2) - size(S, 1))))
+    ind = MatrixAlgebraKit.findtruncated(extended_S, strategy)
+    trunc_rows = collect(1:size(Vᴴ, 1))[ind]
+    Vᴴtrunc = Vᴴ[trunc_rows, :]
+    return Vᴴtrunc, ind
+end
+
+# disambiguate:
+function MatrixAlgebraKit.truncate(
+        ::typeof(left_null!), (U, S)::Tuple{TU, TS}, ::NoTruncation
+    ) where {TU <: ROCMatrix, TS}
+    m, n = size(S)
+    ind = (n + 1):m
+    return U[:, ind], ind
+end
+function MatrixAlgebraKit.truncate(
+        ::typeof(right_null!), (S, Vᴴ)::Tuple{TS, TVᴴ}, ::NoTruncation
+    ) where {TS, TVᴴ <: ROCMatrix}
+    m, n = size(S)
+    ind = (m + 1):n
+    return Vᴴ[ind, :], ind
 end
 
 end

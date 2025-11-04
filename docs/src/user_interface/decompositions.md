@@ -169,23 +169,205 @@ PolarNewton
 
 ## Orthogonal Subspaces
 
-Often it is useful to compute orthogonal bases for a particular subspace defined by a matrix.
-Given a matrix `A` we can compute an orthonormal basis for its image or coimage, and factorize the matrix accordingly.
+Often it is useful to compute orthogonal bases for particular subspaces defined by a matrix.
+Given a matrix `A`, we can compute an orthonormal basis for its image or coimage, and factorize the matrix accordingly.
 These bases are accessible through [`left_orth`](@ref) and [`right_orth`](@ref) respectively.
-This is implemented through a combination of the decompositions mentioned above, and serves as a convenient interface to these operations.
+
+### Overview
+
+The [`left_orth`](@ref) function computes an orthonormal basis `V` for the image (column space) of `A`, along with a corestriction matrix `C` such that `A = V * C`.
+The resulting `V` has orthonormal columns (`V' * V ≈ I` or `isisometric(V)`).
+
+Similarly, [`right_orth`](@ref) computes an orthonormal basis for the coimage (row space) of `A`, i.e., the image of `A'`.
+It returns matrices `C` and `Vᴴ` such that `A = C * Vᴴ`, where `V = (Vᴴ)'` has orthonormal columns (`isisometric(Vᴴ; side = :right)`).
+
+These functions serve as high-level interfaces that automatically select the most appropriate decomposition based on the specified options, making them convenient for users who want orthonormalization without worrying about the underlying implementation details.
 
 ```@docs; canonical=false
 left_orth
 right_orth
 ```
 
+### Algorithm Selection
+
+Both functions support multiple decomposition drivers, which can be selected through the `alg` keyword argument:
+
+**For `left_orth`:**
+- `alg = :qr` (default without truncation): Uses QR decomposition via [`qr_compact`](@ref)
+- `alg = :polar`: Uses polar decomposition via [`left_polar`](@ref)
+- `alg = :svd` (default with truncation): Uses SVD via [`svd_compact`](@ref) or [`svd_trunc`](@ref)
+
+**For `right_orth`:**
+- `alg = :lq` (default without truncation): Uses LQ decomposition via [`lq_compact`](@ref)
+- `alg = :polar`: Uses polar decomposition via [`right_polar`](@ref)
+- `alg = :svd` (default with truncation): Uses SVD via [`svd_compact`](@ref) or [`svd_trunc`](@ref)
+
+When `alg` is not specified, the function automatically selects `:qr`/`:lq` for exact orthogonalization, or `:svd` when a truncation strategy is provided.
+
+### Extending with Custom Algorithms
+
+To register a custom algorithm type for use with these functions, you need to define the appropriate conversion function, for example:
+
+```julia
+# For left_orth
+MatrixAlgebraKit.left_orth_alg(alg::MyCustomAlgorithm) = LeftOrthAlgorithm{:qr}(alg)
+
+# For right_orth
+MatrixAlgebraKit.right_orth_alg(alg::MyCustomAlgorithm) = RightOrthAlgorithm{:lq}(alg)
+```
+
+The type parameter (`:qr`, `:lq`, `:polar`, or `:svd`) indicates which factorization backend will be used.
+The wrapper algorithm types handle the dispatch to the appropriate implementation:
+
+```@docs; canonical=false
+left_orth_alg
+right_orth_alg
+LeftOrthAlgorithm
+RightOrthAlgorithm
+```
+
+### Examples
+
+Basic orthogonalization:
+
+```jldoctest orthnull; output=false
+using MatrixAlgebraKit
+using LinearAlgebra
+
+A = [1.0 2.0; 3.0 4.0; 5.0 6.0]
+V, C = left_orth(A)
+(V' * V) ≈ I && A ≈ V * C
+
+# output
+true
+```
+
+Using different algorithms:
+
+```jldoctest orthnull; output=false
+A = randn(4, 3)
+V1, C1 = left_orth(A; alg = :qr)
+V2, C2 = left_orth(A; alg = :polar)
+V3, C3 = left_orth(A; alg = :svd)
+A ≈ V1 * C1 ≈ V2 * C2 ≈ V3 * C3
+
+# output
+true
+```
+
+With truncation:
+
+```jldoctest orthnull; output=false
+A = [1.0 0.0; 0.0 1e-10; 0.0 0.0]
+V, C = left_orth(A; trunc = (atol = 1e-8,))
+size(V, 2) == 1  # Only one column retained
+
+# output
+true
+```
+
+
 ## Null Spaces
 
 Similarly, it can be convenient to obtain an orthogonal basis for the kernel or cokernel of a matrix.
-These are the compliments of the coimage and image, respectively, and can be computed using the [`left_null`](@ref) and [`right_null`](@ref) functions.
-Again, this is typically implemented through a combination of the decompositions mentioned above, and serves as a convenient interface to these operations.
+These are the orthogonal complements of the coimage and image, respectively, and can be computed using the [`left_null`](@ref) and [`right_null`](@ref) functions.
+
+### Overview
+
+The [`left_null`](@ref) function computes an orthonormal basis `N` for the cokernel (left nullspace) of `A`, which is the nullspace of `A'`.
+This means `A' * N ≈ 0` and `N' * N ≈ I`.
+
+Similarly, [`right_null`](@ref) computes an orthonormal basis for the kernel (right nullspace) of `A`.
+It returns `Nᴴ` such that `A * Nᴴ' ≈ 0` and `Nᴴ * Nᴴ' ≈ I`, where `N = (Nᴴ)'` has orthonormal columns.
+
+These functions automatically handle rank determination and provide convenient access to nullspace computation without requiring detailed knowledge of the underlying decomposition methods.
 
 ```@docs; canonical=false
 left_null
 right_null
+```
+
+### Algorithm Selection
+
+Both functions support multiple decomposition drivers, which can be selected through the `alg` keyword argument:
+
+**For `left_null`:**
+- `alg = :qr` (default without truncation): Uses QR-based nullspace computation via [`qr_null`](@ref)
+- `alg = :svd` (default with truncation): Uses SVD via [`svd_full`](@ref) with appropriate truncation
+
+**For `right_null`:**
+- `alg = :lq` (default without truncation): Uses LQ-based nullspace computation via [`lq_null`](@ref)
+- `alg = :svd` (default with truncation): Uses SVD via [`svd_full`](@ref) with appropriate truncation
+
+When `alg` is not specified, the function automatically selects `:qr`/`:lq` for exact nullspace computation, or `:svd` when a truncation strategy is provided to handle numerical rank determination.
+
+!!! note
+    For nullspace functions, [`notrunc`](@ref) has special meaning when used with the default QR/LQ algorithms.
+    It indicates that the nullspace should be computed from the exact zeros determined by the additional rows/columns of the extended matrix, without any tolerance-based truncation.
+
+### Extending with Custom Algorithms
+
+To register a custom algorithm type for use with these functions, you need to define the appropriate conversion function:
+
+```julia
+# For left_null
+MatrixAlgebraKit.left_null_alg(alg::MyCustomAlgorithm) = LeftNullAlgorithm{:qr}(alg)
+
+# For right_null
+MatrixAlgebraKit.right_null_alg(alg::MyCustomAlgorithm) = RightNullAlgorithm{:lq}(alg)
+```
+
+The type parameter (`:qr`, `:lq`, or `:svd`) indicates which factorization backend will be used.
+The wrapper algorithm types handle the dispatch to the appropriate implementation:
+
+```@docs; canonical=false
+LeftNullAlgorithm
+RightNullAlgorithm
+left_null_alg
+right_null_alg
+```
+
+### Examples
+
+Basic nullspace computation:
+
+```jldoctest orthnull; output=false
+A = [1.0 2.0 3.0; 4.0 5.0 6.0]  # Rank 2 matrix
+N = left_null(A)
+size(N) == (2, 0)
+
+# output
+true
+```
+
+```jldoctest orthnull; output=false
+Nᴴ = right_null(A)
+size(Nᴴ) == (1, 3) && norm(A * Nᴴ') < 1e-14 && isisometric(Nᴴ; side = :right)
+
+# output
+true
+```
+
+Computing nullspace with rank detection:
+
+```jldoctest orthnull; output=false
+A = [1.0 2.0; 2.0 4.0; 3.0 6.0]  # Rank 1 matrix (second column = 2*first)
+N = left_null(A; alg = :svd, trunc = (atol = 1e-10,))
+size(N) == (3, 2) && norm(A' * N) < 1e-12 && isisometric(N)
+
+# output
+true
+```
+
+Using different algorithms:
+
+```jldoctest orthnull; output=false
+A = [1.0 0.0 0.0; 0.0 1.0 0.0]
+N1 = right_null(A; alg = :lq)
+N2 = right_null(A; alg = :svd)
+norm(A * N1') < 1e-14 && norm(A * N2') < 1e-14 &&
+    isisometric(N1; side = :right) && isisometric(N2; side = :right)
+
+# output
+true
 ```

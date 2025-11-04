@@ -53,6 +53,18 @@ function _show_alg(io::IO, alg::Algorithm)
     return print(io, ")")
 end
 
+# Algorithm traits
+# ----------------
+"""
+    does_truncate(alg::AbstractAlgorithm) -> Bool
+
+Indicate whether or not an algorithm will compute a truncated decomposition
+(such that composing the factors only approximates the input up to some tolerance).
+"""
+does_truncate(alg::AbstractAlgorithm) = false
+
+# Algorithm selection
+# -------------------
 @doc """
     MatrixAlgebraKit.select_algorithm(f, A, alg::AbstractAlgorithm)
     MatrixAlgebraKit.select_algorithm(f, A, alg::Symbol; kwargs...)
@@ -83,7 +95,7 @@ function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
         return Algorithm{alg}(; kwargs...)
     elseif alg isa Type
         return alg(; kwargs...)
-    elseif alg isa NamedTuple
+    elseif alg isa NamedTuple || alg isa Base.Pairs
         isempty(kwargs) ||
             throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
         return default_algorithm(f, A; alg...)
@@ -161,6 +173,24 @@ function select_truncation(trunc)
 end
 
 @doc """
+    MatrixAlgebraKit.select_null_truncation(trunc)
+
+Construct a [`TruncationStrategy`](@ref) from the given `NamedTuple` of keywords or input strategy, to implement a nullspace selection.
+""" select_null_truncation
+
+function select_null_truncation(trunc)
+    if isnothing(trunc)
+        return NoTruncation()
+    elseif trunc isa NamedTuple
+        return null_truncation_strategy(; trunc...)
+    elseif trunc isa TruncationStrategy
+        return trunc
+    else
+        return throw(ArgumentError("Unknown truncation strategy: $trunc"))
+    end
+end
+
+@doc """
     MatrixAlgebraKit.findtruncated(values::AbstractVector, strategy::TruncationStrategy)
 
 Generic interface for finding truncated values of the spectrum of a decomposition
@@ -200,6 +230,8 @@ struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
     trunc::T
 end
 
+does_truncate(::TruncatedAlgorithm) = true
+
 # Utility macros
 # --------------
 
@@ -230,14 +262,14 @@ end
 
 function _arg_expr(::Val{1}, f, f!)
     return quote # out of place to inplace
-        $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
+        @inline $f(A; alg = nothing, kwargs...) = $f(A, select_algorithm($f, A, alg; kwargs...))
         $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
 
         # fill in arguments
-        function $f!(A; alg = nothing, kwargs...)
+        @inline function $f!(A; alg = nothing, kwargs...)
             return $f!(A, select_algorithm($f!, A, alg; kwargs...))
         end
-        function $f!(A, out; alg = nothing, kwargs...)
+        @inline function $f!(A, out; alg = nothing, kwargs...)
             return $f!(A, out, select_algorithm($f!, A, alg; kwargs...))
         end
         function $f!(A, alg::AbstractAlgorithm)

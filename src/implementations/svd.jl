@@ -285,20 +285,6 @@ end
 # placed here to avoid code duplication since much of the logic is replicable across
 # CUDA and AMDGPU
 ###
-const CUSOLVER_SVDAlgorithm = Union{
-    CUSOLVER_QRIteration,
-    CUSOLVER_SVDPolar,
-    CUSOLVER_Jacobi,
-    CUSOLVER_Randomized,
-}
-const ROCSOLVER_SVDAlgorithm = Union{
-    ROCSOLVER_QRIteration,
-    ROCSOLVER_Jacobi,
-}
-const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
-
-const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
-const GPU_Randomized = Union{CUSOLVER_Randomized}
 
 function check_input(
         ::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
