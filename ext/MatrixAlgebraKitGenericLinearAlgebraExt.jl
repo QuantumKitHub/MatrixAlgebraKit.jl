@@ -55,7 +55,7 @@ end
 function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix{T}, DV, alg::GLA_eigh_Francis) where {T}
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
-    eigval, eigvec = eigen(Hermitian(A); sortby = real)
+    eigval, eigvec = eigen!(Hermitian(A); sortby = real)
     copyto!(D, Diagonal(eigval))
     copyto!(V, eigvec)
     return D, V
