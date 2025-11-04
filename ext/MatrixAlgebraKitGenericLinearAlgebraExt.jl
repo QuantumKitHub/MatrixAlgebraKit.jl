@@ -53,27 +53,15 @@ function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <:
 end
 
 function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::GLA_HouseholderQR)
+    check_input(qr_full!, A, QR, alg)
     Q, R = QR
-    m, n = size(A)
-    minmn = min(m, n)
-    computeR = length(R) > 0
-
-    Q_zero = zeros(eltype(Q), (m, minmn))
-    R_zero = zeros(eltype(R), (minmn, n))
-    Q_compact, R_compact = _gla_householder_qr!(A, Q_zero, R_zero; alg.kwargs...)
-    Q = _gram_schmidt!(Q, view(Q_compact, :, 1:minmn))
-    if computeR
-        R[1:minmn, :] .= R_compact
-        R[(minmn + 1):end, :] .= zero(eltype(R))
-    end
-    return Q, R
+    return _gla_householder_qr!(A, Q, R; alg.kwargs...)
 end
 
 function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR, alg::GLA_HouseholderQR)
     check_input(qr_compact!, A, QR, alg)
     Q, R = QR
-    Q, R = _gla_householder_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
+    return _gla_householder_qr!(A, Q, R; alg.kwargs...)
 end
 
 function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksize = 1, pivoted = false)
@@ -83,13 +71,10 @@ function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksi
     m, n = size(A)
     k = min(m, n)
     computeR = length(R) > 0
+    compact = k < m
     Q̃, R̃ = qr!(A)
 
-    if k < m
-        copyto!(Q, Q̃)
-    else
-        rmul!(MatrixAlgebraKit.one!(Q), Q̃)
-    end
+    Q = compact ? copyto!(Q, Q̃) : rmul!(MatrixAlgebraKit.one!(Q), Q̃)
     if positive
         @inbounds for j in 1:k
             s = sign_safe(R̃[j, j])
@@ -102,30 +87,18 @@ function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksi
         if positive
             @inbounds for j in n:-1:1
                 @simd for i in 1:min(k, j)
-                    R̃[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
+                    R[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
+                end
+                @simd for i in (min(k, j) + 1):size(R, 1)
+                    R[i, j] = zero(eltype(R))
                 end
             end
+        else
+            R[1:k, :] .= R̃
+            MatrixAlgebraKit.zero!(@view(R[(k + 1):end, :]))
         end
-        copyto!(R, R̃)
     end
     return Q, R
-end
-
-function _gram_schmidt!(Q, Q_compact; adjoint = false)
-    m, minmn = size(Q_compact)
-    Q[:, 1:minmn] .= Q_compact
-    for j in (minmn + 1):m
-        v = rand(eltype(Q), m)
-        for i in 1:(j - 1)
-            r = dot(view(Q, :, i), v)
-            v .-= r * view(Q, :, i)
-        end
-        Q[:, j] = v ./ MatrixAlgebraKit.norm(v)
-    end
-    if adjoint
-        copyto!(Q, Q')
-    end
-    return Q
 end
 
 function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
