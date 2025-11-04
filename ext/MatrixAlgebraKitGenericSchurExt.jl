@@ -9,20 +9,17 @@ function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <
     return GS_QRIteration(; kwargs...)
 end
 
-function MatrixAlgebraKit.eig_full!(A::AbstractMatrix{T}, DV, alg::GS_QRIteration) where {T}
-    check_input(eig_full!, A, DV, alg)
-    D, V = DV
-    D̃, Ṽ = GenericSchur.eigen!(A)
-    copyto!(D, Diagonal(D̃))
-    copyto!(V, Ṽ)
-    return D, V
+for f! in (:eig_full!, :eig_vals!)
+    @eval MatrixAlgebraKit.initialize_output(::typeof($f!), A::AbstractMatrix, ::GS_QRIteration) = nothing
 end
 
-function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix{T}, D, alg::GS_QRIteration) where {T}
-    check_input(eig_vals!, A, D, alg)
-    eigval = GenericSchur.eigvals!(A)
-    copyto!(D, eigval)
-    return D
+function MatrixAlgebraKit.eig_full!(A::AbstractMatrix, DV, ::GS_QRIteration)
+    D, V = GenericSchur.eigen!(A)
+    return Diagonal(D), V
+end
+
+function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix, D, ::GS_QRIteration)
+    return GenericSchur.eigvals!(A)
 end
 
 end
