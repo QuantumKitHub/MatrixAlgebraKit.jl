@@ -2,8 +2,8 @@
     qr_pullback!(
         ΔA, A, QR, ΔQR;
         tol::Real = default_pullback_gaugetol(QR[2]),
-        rank_atol::Real = tol,
-        gauge_atol::Real = tol
+        rank_atol::Real = default_pullback_rank_atol(QR[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(QR[2])
     )
 
 Adds the pullback from the QR decomposition of `A` to `ΔA` given the output `QR` and
@@ -18,9 +18,8 @@ and also the adjoint variables `ΔQ` and `ΔR` should have nonzero values only i
 """
 function qr_pullback!(
         ΔA::AbstractMatrix, A, QR, ΔQR;
-        tol::Real = default_pullback_gaugetol(QR[2]),
-        rank_atol::Real = tol,
-        gauge_atol::Real = tol
+        rank_atol::Real = default_pullback_rank_atol(QR[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(QR[2])
     )
     # process
     Q, R = QR
@@ -28,7 +27,7 @@ function qr_pullback!(
     n = size(R, 2)
     minmn = min(m, n)
     Rd = diagview(R)
-    p = findlast(>=(rank_atol) ∘ abs, Rd)
+    p = @something findlast(>=(rank_atol) ∘ abs, Rd) 0
 
     ΔQ, ΔR = ΔQR
 
@@ -71,7 +70,7 @@ function qr_pullback!(
             # Q2' * ΔQ2 as a gauge dependent quantity.
             Q1dΔQ2 = Q1' * ΔQ2
             Δgauge = norm(mul!(copy(ΔQ2), Q1, Q1dΔQ2, -1, 1), Inf)
-            Δgauge < tol ||
+            Δgauge < gauge_atol ||
                 @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
             ΔQ̃ = mul!(ΔQ̃, Q2, Q1dΔQ2', -1, 1)
         end
@@ -104,7 +103,10 @@ function qr_pullback!(
 end
 
 """
-    qr_null_pullback(ΔA, A, N, ΔN)
+    qr_null_pullback!(
+        ΔA::AbstractMatrix, A, N, ΔN;
+        gauge_atol::Real = default_pullback_gauge_atol(A)
+    )
 
 Adds the pullback from the right nullspace of `A` to `ΔA`, given the nullspace basis
 `N` and its cotangent `ΔN` of `qr_null(A)`.
@@ -113,13 +115,12 @@ See also [`qr_pullback!`](@ref).
 """
 function qr_null_pullback!(
         ΔA::AbstractMatrix, A, N, ΔN;
-        tol::Real = default_pullback_gaugetol(A),
-        gauge_atol::Real = tol
+        gauge_atol::Real = default_pullback_gauge_atol(A)
     )
     if !iszerotangent(ΔN) && size(N, 2) > 0
         aNᴴΔN = project_antihermitian!(N' * ΔN)
         Δgauge = norm(aNᴴΔN)
-        Δgauge < tol ||
+        Δgauge < gauge_atol ||
             @warn "`qr_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
         Q, R = qr_compact(A; positive = true)

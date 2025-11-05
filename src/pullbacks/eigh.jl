@@ -1,9 +1,8 @@
 """
     eigh_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, [ind];
-        tol = default_pullback_gaugetol(DV[1]),
-        degeneracy_atol = tol,
-        gauge_atol = tol
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(DV[1])
     )
 
 Adds the pullback from the Hermitian eigenvalue decomposition of `A` to `ΔA`, given the
@@ -22,9 +21,8 @@ anti-hermitian part of `V' * ΔV`, restricted to rows `i` and columns `j` for wh
 """
 function eigh_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, ind = Colon();
-        tol::Real = default_pullback_gaugetol(DV[1]),
-        degeneracy_atol::Real = tol,
-        gauge_atol::Real = tol
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(DV[1])
     )
 
     # Basic size checks and determination
@@ -49,7 +47,7 @@ function eigh_pullback!(
         Δgauge < gauge_atol ||
             @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-        aVᴴΔV .*= inv_safe.(D' .- D, tol)
+        aVᴴΔV .*= inv_safe.(D' .- D, degeneracy_atol)
 
         if !iszerotangent(ΔDmat)
             ΔDvec = diagview(ΔDmat)
@@ -74,9 +72,8 @@ end
 """
     eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
-        tol=default_pullback_gaugetol(DV[1]),
-        degeneracy_atol=tol,
-        gauge_atol=tol
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(DV[1])
     )
 
 Adds the pullback from the truncated Hermitian eigenvalue decomposition of `A` to `ΔA`,
@@ -96,9 +93,8 @@ not small compared to `gauge_atol`.
 """
 function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
-        tol::Real = default_pullback_gaugetol(DV[1]),
-        degeneracy_atol::Real = tol,
-        gauge_atol::Real = tol
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(DV[1])
     )
 
     # Basic size checks and determination
@@ -119,7 +115,7 @@ function eigh_trunc_pullback!(
         Δgauge < gauge_atol ||
             @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-        aVᴴΔV .*= inv_safe.(D' .- D, tol)
+        aVᴴΔV .*= inv_safe.(D' .- D, degeneracy_atol)
 
         if !iszerotangent(ΔDmat)
             ΔDvec = diagview(ΔDmat)

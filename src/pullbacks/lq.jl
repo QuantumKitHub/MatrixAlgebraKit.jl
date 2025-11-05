@@ -1,9 +1,8 @@
 """
     lq_pullback!(
         ΔA, A, LQ, ΔLQ;
-        tol::Real = default_pullback_gaugetol(LQ[1]),
-        rank_atol::Real = tol,
-        gauge_atol::Real = tol
+        rank_atol::Real = default_pullback_rank_atol(LQ[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(LQ[1])
     )
 
 Adds the pullback from the LQ decomposition of `A` to `ΔA` given the output `LQ` and
@@ -18,9 +17,8 @@ or rows exceed `gauge_atol`, a warning will be printed.
 """
 function lq_pullback!(
         ΔA::AbstractMatrix, A, LQ, ΔLQ;
-        tol::Real = default_pullback_gaugetol(LQ[1]),
-        rank_atol::Real = tol,
-        gauge_atol::Real = tol
+        rank_atol::Real = default_pullback_rank_atol(LQ[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(LQ[1])
     )
     # process
     L, Q = LQ
@@ -28,7 +26,7 @@ function lq_pullback!(
     n = size(Q, 2)
     minmn = min(m, n)
     Ld = diagview(L)
-    p = findlast(>=(rank_atol) ∘ abs, Ld)
+    p = @something findlast(>=(rank_atol) ∘ abs, Ld) 0
 
     ΔL, ΔQ = ΔLQ
 
@@ -72,7 +70,7 @@ function lq_pullback!(
             # Q2' * ΔQ2 as a gauge dependent quantity.
             ΔQ2Q1ᴴ = ΔQ2 * Q1'
             Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
-            Δgauge < tol ||
+            Δgauge < gauge_atol ||
                 @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
             ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1ᴴ', Q2, -1, 1)
         end
@@ -105,7 +103,10 @@ function lq_pullback!(
 end
 
 """
-    lq_null_pullback(ΔA, A, Nᴴ, ΔNᴴ)
+    lq_null_pullback!(
+        ΔA::AbstractMatrix, A, Nᴴ, ΔNᴴ;
+        gauge_atol::Real = default_pullback_gauge_atol(A)
+    )
 
 Adds the pullback from the left nullspace of `A` to `ΔA`, given the nullspace basis
  `Nᴴ` and its cotangent `ΔNᴴ` of `lq_null(A)`.
@@ -114,13 +115,12 @@ See also [`lq_pullback!`](@ref).
 """
 function lq_null_pullback!(
         ΔA::AbstractMatrix, A, Nᴴ, ΔNᴴ;
-        tol::Real = default_pullback_gaugetol(A),
-        gauge_atol::Real = tol
+        gauge_atol::Real = default_pullback_gauge_atol(A)
     )
     if !iszerotangent(ΔNᴴ) && size(Nᴴ, 1) > 0
         aNᴴΔN = project_antihermitian!(Nᴴ * ΔNᴴ')
         Δgauge = norm(aNᴴΔN)
-        Δgauge < tol ||
+        Δgauge < gauge_atol ||
             @warn "`lq_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
         L, Q = lq_compact(A; positive = true) # should we be able to provide algorithm here?
         X = ldiv!(LowerTriangular(L)', Q * ΔNᴴ')
