@@ -3,7 +3,7 @@ module MatrixAlgebraKitGenericLinearAlgebraExt
 using MatrixAlgebraKit
 using MatrixAlgebraKit: sign_safe, check_input, diagview
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
-using LinearAlgebra: I, Diagonal, rmul!, lmul!, transpose!, dot
+using LinearAlgebra: I, Diagonal, lmul!
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
     return GLA_QRIteration()
@@ -70,11 +70,9 @@ function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksi
 
     m, n = size(A)
     k = min(m, n)
-    computeR = length(R) > 0
-    compact = k < m
     Q̃, R̃ = qr!(A)
+    lmul!(Q̃, MatrixAlgebraKit.one!(Q))
 
-    Q = compact ? copyto!(Q, Q̃) : rmul!(MatrixAlgebraKit.one!(Q), Q̃)
     if positive
         @inbounds for j in 1:k
             s = sign_safe(R̃[j, j])
@@ -83,6 +81,8 @@ function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksi
             end
         end
     end
+
+    computeR = length(R) > 0
     if computeR
         if positive
             @inbounds for j in n:-1:1
