@@ -20,14 +20,14 @@ default_pullback_gauge_atol(A) = eps(real(eltype(A)))^(3 / 4)
 """
     default_pullback_degeneracy_atol(A)
 
-Default tolerance for deciding which singular values should be considered as degenerate.
+Default tolerance for deciding when values should be considered as degenerate.
 """
 default_pullback_degeneracy_atol(A) = eps(norm(A, Inf))^(3 / 4)
 
 """
     default_pullback_rank_atol(A)
 
-Default tolerance for deciding what singular values should be considered equal to 0.
+Default tolerance for deciding what values should be considered equal to 0.
 """
 default_pullback_rank_atol(A) = eps(norm(A, Inf))^(3 / 4)
 
