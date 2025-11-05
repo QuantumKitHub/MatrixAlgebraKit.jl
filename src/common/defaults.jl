@@ -37,7 +37,4 @@ default_pullback_rank_atol(A) = eps(norm(A, Inf))^(3 / 4)
 
 Default tolerance for deciding to warn if the provided `A` is not hermitian.
 """
-function default_hermitian_tol(A)
-    n = norm(A, Inf)
-    return eps(eltype(n))^(3 / 4) * max(n, one(n))
-end
+default_hermitian_tol(A) = eps(norm(A, Inf))^(3 / 4)
