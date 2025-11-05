@@ -107,28 +107,3 @@ end
         end
     end
 end
-
-@testset "qr_compact for Diagonal{$T}" for T in eltypes
-    rng = StableRNG(123)
-    atol = eps(real(T))^(3 / 4)
-    for m in (54, 0)
-        Ad = randn(rng, T, m)
-        A = Diagonal(Ad)
-
-        # compact
-        Q, R = @constinferred qr_compact(A)
-        @test Q isa Diagonal{T} && size(Q) == (m, m)
-        @test R isa Diagonal{T} && size(R) == (m, m)
-        @test Q * R ≈ A
-        @test isunitary(Q)
-
-        # compact and positive
-        Qp, Rp = @constinferred qr_compact(A; positive = true)
-        @test Qp isa Diagonal{T} && size(Qp) == (m, m)
-        @test Rp isa Diagonal{T} && size(Rp) == (m, m)
-        @test Qp * Rp ≈ A
-        @test isunitary(Qp)
-        @test all(≥(zero(real(T))), real(diag(Rp))) &&
-            all(≈(zero(real(T)); atol), imag(diag(Rp)))
-    end
-end

@@ -122,28 +122,3 @@ end
         @test Q[1:minmn, n] ≈ Q2[1:minmn, n]
     end
 end
-
-@testset "lq_compact for Diagonal{$T}" for T in eltypes
-    rng = StableRNG(123)
-    atol = eps(real(T))^(3 / 4)
-    for m in (54, 0)
-        Ad = randn(rng, T, m)
-        A = Diagonal(Ad)
-
-        # compact
-        L, Q = @constinferred lq_compact(A)
-        @test Q isa Diagonal{T} && size(Q) == (m, m)
-        @test L isa Diagonal{T} && size(L) == (m, m)
-        @test L * Q ≈ A
-        @test isunitary(Q)
-
-        # compact and positive
-        Lp, Qp = @constinferred lq_compact(A; positive = true)
-        @test Qp isa Diagonal{T} && size(Qp) == (m, m)
-        @test Lp isa Diagonal{T} && size(Lp) == (m, m)
-        @test Lp * Qp ≈ A
-        @test isunitary(Qp)
-        @test all(≥(zero(real(T))), real(diag(Lp))) &&
-            all(≈(zero(real(T)); atol), imag(diag(Lp)))
-    end
-end

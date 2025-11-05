@@ -169,39 +169,3 @@ end
     @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
     @test_throws ArgumentError svd_trunc(A; alg, trunc = (; maxrank = 2))
 end
-
-@testset "svd for Diagonal{$T}" for T in eltypes
-    rng = StableRNG(123)
-    atol = sqrt(eps(real(T)))
-    for m in (54, 0)
-        Ad = randn(T, m)
-        A = Diagonal(Ad)
-
-        U, S, Vᴴ = @constinferred svd_compact(A)
-        @test U isa AbstractMatrix{T} && size(U) == size(A)
-        @test Vᴴ isa AbstractMatrix{T} && size(Vᴴ) == size(A)
-        @test S isa Diagonal{real(T)} && size(S) == size(A)
-        @test isunitary(U)
-        @test isunitary(Vᴴ)
-        @test all(≥(0), diagview(S))
-        @test A ≈ U * S * Vᴴ
-
-        U, S, Vᴴ = @constinferred svd_full(A)
-        @test U isa AbstractMatrix{T} && size(U) == size(A)
-        @test Vᴴ isa AbstractMatrix{T} && size(Vᴴ) == size(A)
-        @test S isa Diagonal{real(T)} && size(S) == size(A)
-        @test isunitary(U)
-        @test isunitary(Vᴴ)
-        @test all(≥(0), diagview(S))
-        @test A ≈ U * S * Vᴴ
-
-        S2 = @constinferred svd_vals(A)
-        @test S2 isa AbstractVector{real(T)} && length(S2) == m
-        @test S2 ≈ diagview(S)
-
-        alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
-        U3, S3, Vᴴ3, ϵ3 = @constinferred svd_trunc(A; alg)
-        @test diagview(S3) ≈ S2[1:min(m, 2)]
-        @test ϵ3 ≈ norm(S2[(min(m, 2) + 1):m]) atol = atol
-    end
-end

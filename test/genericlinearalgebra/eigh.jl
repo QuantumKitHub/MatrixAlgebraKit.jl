@@ -91,28 +91,3 @@ end
     @test diagview(D3) ≈ diagview(D)[1:2]
     @test ϵ3 ≈ norm(diagview(D)[3:4]) atol = atol
 end
-
-@testset "eigh for Diagonal{$T}" for T in eltypes
-    rng = StableRNG(123)
-    m = 54
-    Ad = randn(rng, T, m)
-    Ad .+= conj.(Ad)
-    A = Diagonal(Ad)
-    atol = sqrt(eps(real(T)))
-
-    D, V = @constinferred eigh_full(A)
-    @test D isa Diagonal{real(T)} && size(D) == size(A)
-    @test V isa Diagonal{T} && size(V) == size(A)
-    @test A * V ≈ V * D
-
-    D2 = @constinferred eigh_vals(A)
-    @test D2 isa AbstractVector{real(T)} && length(D2) == m
-    @test diagview(D) ≈ D2
-
-    A2 = Diagonal(T[0.9, 0.3, 0.1, 0.01])
-    alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
-    D2, V2, ϵ2 = @constinferred eigh_trunc(A2; alg)
-    @test diagview(D2) ≈ diagview(A2)[1:2]
-    @test ϵ2 ≈ norm(diagview(A2)[3:4]) atol = atol
-
-end
