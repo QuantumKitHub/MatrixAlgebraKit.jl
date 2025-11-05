@@ -5,7 +5,8 @@ using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview, norm
 
-const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+GenericFloats = (Float16, BigFloat, Complex{BigFloat})
 
 @testset "eigh_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
@@ -100,7 +101,7 @@ end
     @test ϵ3 ≈ norm(diagview(D)[3:4]) atol = atol
 end
 
-@testset "eigh for Diagonal{$T}" for T in BLASFloats
+@testset "eigh for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
     rng = StableRNG(123)
     m = 54
     Ad = randn(rng, T, m)

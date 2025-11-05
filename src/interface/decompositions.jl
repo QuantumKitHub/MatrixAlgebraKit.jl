@@ -16,7 +16,7 @@ Algorithm type to denote the standard LAPACK algorithm for computing the QR deco
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
 the keyword arugments, i.e.  `?geqrt` will be chosen if `blocksize > 1`. With
 `blocksize == 1`, `?geqrf` will be chosen if `pivoted == false` and `?geqp3` will be chosen
-if `pivoted == true`. The keyword `positive=true` can be used to ensure that the diagonal
+if `pivoted == true`. The keyword `positive = true` can be used to ensure that the diagonal
 elements of `R` are non-negative.
 """
 @algdef LAPACK_HouseholderQR
@@ -27,10 +27,20 @@ elements of `R` are non-negative.
 Algorithm type to denote the standard LAPACK algorithm for computing the LQ decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
 the keyword arugments, i.e. `?gelqt` will be chosen if `blocksize > 1` or `?gelqf` will be
-chosen if `blocksize == 1`. The keyword `positive=true` can be used to ensure that the diagonal
+chosen if `blocksize == 1`. The keyword `positive = true` can be used to ensure that the diagonal
 elements of `L` are non-negative.
 """
 @algdef LAPACK_HouseholderLQ
+
+"""
+    GLA_HouseholderQR(; positive = false)
+
+Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the QR decomposition
+of a matrix using Householder reflectors. Currently, only `blocksize = 1` and `pivoted == false`
+are supported. The keyword `positive = true` can be used to ensure that the diagonal elements
+of `R` are non-negative.
+"""
+@algdef GLA_HouseholderQR
 
 # TODO:
 @algdef LAPACK_HouseholderQL
@@ -55,6 +65,14 @@ eigenvalue decomposition of a matrix.
 @algdef LAPACK_Expert
 
 const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
+
+"""
+    GS_QRIteration()
+
+Algorithm type to denote the GenericSchur.jl implementation for computing the
+eigenvalue decomposition of a non-Hermitian matrix.
+"""
+@algdef GS_QRIteration
 
 # Hermitian Eigenvalue Decomposition
 # ----------------------------------
@@ -99,6 +117,15 @@ const LAPACK_EighAlgorithm = Union{
     LAPACK_DivideAndConquer,
     LAPACK_MultipleRelativelyRobustRepresentations,
 }
+
+"""
+    GLA_QRIteration()
+
+Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the
+eigenvalue decomposition of a Hermitian matrix, or the singular value decomposition of
+a general matrix.
+"""
+@algdef GLA_QRIteration
 
 # Singular Value Decomposition
 # ----------------------------

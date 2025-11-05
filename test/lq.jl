@@ -5,9 +5,10 @@ using StableRNGs
 using LinearAlgebra: diag, I, Diagonal
 using MatrixAlgebraKit: LQViaTransposedQR, LAPACK_HouseholderQR
 
-eltypes = (Float32, Float64, ComplexF32, ComplexF64)
+BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+GenericFloats = (Float16, BigFloat, Complex{BigFloat})
 
-@testset "lq_compact! for T = $T" for T in eltypes
+@testset "lq_compact! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
@@ -114,7 +115,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
     end
 end
 
-@testset "lq_full! for T = $T" for T in eltypes
+@testset "lq_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
@@ -208,7 +209,7 @@ end
     end
 end
 
-@testset "lq_compact, lq_full and lq_null for Diagonal{$T}" for T in eltypes
+@testset "lq_compact, lq_full and lq_null for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
     rng = StableRNG(123)
     atol = eps(real(T))^(3 / 4)
     for m in (54, 0)

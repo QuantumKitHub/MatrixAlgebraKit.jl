@@ -5,7 +5,8 @@ using StableRNGs
 using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef, norm
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview, isisometric
 
-const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+GenericFloats = (Float16, BigFloat, Complex{BigFloat})
 
 @testset "svd_compact! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
@@ -202,7 +203,7 @@ end
     @test_throws ArgumentError svd_trunc(A; alg, trunc = (; maxrank = 2))
 end
 
-@testset "svd for Diagonal{$T}" for T in BLASFloats
+@testset "svd for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
     rng = StableRNG(123)
     atol = sqrt(eps(real(T)))
     for m in (54, 0)

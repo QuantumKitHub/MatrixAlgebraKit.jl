@@ -107,3 +107,20 @@ if AMDGPU.functional()
         include("amd/orthnull.jl")
     end
 end
+
+using GenericLinearAlgebra
+@safetestset "QR / LQ Decomposition" begin
+    include("genericlinearalgebra/qr.jl")
+    include("genericlinearalgebra/lq.jl")
+end
+@safetestset "Singular Value Decomposition" begin
+    include("genericlinearalgebra/svd.jl")
+end
+@safetestset "Hermitian Eigenvalue Decomposition" begin
+    include("genericlinearalgebra/eigh.jl")
+end
+
+using GenericSchur
+@safetestset "General Eigenvalue Decomposition" begin
+    include("genericschur/eig.jl")
+end
