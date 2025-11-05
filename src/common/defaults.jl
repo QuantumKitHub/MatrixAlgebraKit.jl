@@ -10,12 +10,13 @@ quantity needs to be computed.
 defaulttol(x::Any) = eps(real(float(one(eltype(x)))))^(2 / 3)
 
 """
-    default_pullback_gauge_atol(A)
+    default_pullback_gauge_atol(ΔA...)
 
 Default tolerance for deciding to warn if incoming adjoints of a pullback rule
 has components that are not gauge-invariant.
 """
-default_pullback_gauge_atol(A) = eps(real(eltype(A)))^(3 / 4)
+default_pullback_gauge_atol(A) = eps(norm(A, Inf))^(3 / 4)
+default_pullback_gauge_atol(A, As...) = maximum(default_pullback_gauge_atol, (A, As...))
 
 """
     default_pullback_degeneracy_atol(A)

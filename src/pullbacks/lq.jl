@@ -2,7 +2,7 @@
     lq_pullback!(
         ΔA, A, LQ, ΔLQ;
         rank_atol::Real = default_pullback_rank_atol(LQ[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(LQ[1])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔLQ[2])
     )
 
 Adds the pullback from the LQ decomposition of `A` to `ΔA` given the output `LQ` and
@@ -18,7 +18,7 @@ or rows exceed `gauge_atol`, a warning will be printed.
 function lq_pullback!(
         ΔA::AbstractMatrix, A, LQ, ΔLQ;
         rank_atol::Real = default_pullback_rank_atol(LQ[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(LQ[1])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔLQ[2])
     )
     # process
     L, Q = LQ
@@ -105,7 +105,7 @@ end
 """
     lq_null_pullback!(
         ΔA::AbstractMatrix, A, Nᴴ, ΔNᴴ;
-        gauge_atol::Real = default_pullback_gauge_atol(A)
+        gauge_atol::Real = default_pullback_gauge_atol(ΔNᴴ)
     )
 
 Adds the pullback from the left nullspace of `A` to `ΔA`, given the nullspace basis
@@ -115,7 +115,7 @@ See also [`lq_pullback!`](@ref).
 """
 function lq_null_pullback!(
         ΔA::AbstractMatrix, A, Nᴴ, ΔNᴴ;
-        gauge_atol::Real = default_pullback_gauge_atol(A)
+        gauge_atol::Real = default_pullback_gauge_atol(ΔNᴴ)
     )
     if !iszerotangent(ΔNᴴ) && size(Nᴴ, 1) > 0
         aNᴴΔN = project_antihermitian!(Nᴴ * ΔNᴴ')

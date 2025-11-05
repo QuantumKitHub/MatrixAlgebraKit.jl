@@ -3,7 +3,7 @@
         ΔA, A, USVᴴ, ΔUSVᴴ, [ind];
         rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
-        gauge_atol::Real = default_pullback_gauge_atol(USVᴴ[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
 Adds the pullback from the SVD of `A` to `ΔA` given the output USVᴴ of `svd_compact` or
@@ -24,7 +24,7 @@ function svd_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ, ind = Colon();
         rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
-        gauge_atol::Real = default_pullback_gauge_atol(USVᴴ[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
     # Extract the SVD components
@@ -106,7 +106,7 @@ end
         ΔA, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
-        gauge_atol::Real = default_pullback_gauge_atol(USVᴴ[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
 Adds the pullback from the truncated SVD of `A` to `ΔA`, given the output `USVᴴ` and the
@@ -127,7 +127,7 @@ function svd_trunc_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
-        gauge_atol::Real = default_pullback_gauge_atol(USVᴴ[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
     # Extract the SVD components

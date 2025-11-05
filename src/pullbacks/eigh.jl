@@ -2,7 +2,7 @@
     eigh_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, [ind];
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(DV[1])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
 
 Adds the pullback from the Hermitian eigenvalue decomposition of `A` to `ΔA`, given the
@@ -22,7 +22,7 @@ anti-hermitian part of `V' * ΔV`, restricted to rows `i` and columns `j` for wh
 function eigh_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, ind = Colon();
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(DV[1])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
 
     # Basic size checks and determination
@@ -73,7 +73,7 @@ end
     eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(DV[1])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
 
 Adds the pullback from the truncated Hermitian eigenvalue decomposition of `A` to `ΔA`,
@@ -94,7 +94,7 @@ not small compared to `gauge_atol`.
 function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(DV[1])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
 
     # Basic size checks and determination

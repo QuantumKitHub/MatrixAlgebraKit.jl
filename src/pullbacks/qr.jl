@@ -3,7 +3,7 @@
         ΔA, A, QR, ΔQR;
         tol::Real = default_pullback_gaugetol(QR[2]),
         rank_atol::Real = default_pullback_rank_atol(QR[2]),
-        gauge_atol::Real = default_pullback_gauge_atol(QR[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔQR[1])
     )
 
 Adds the pullback from the QR decomposition of `A` to `ΔA` given the output `QR` and
@@ -19,7 +19,7 @@ and also the adjoint variables `ΔQ` and `ΔR` should have nonzero values only i
 function qr_pullback!(
         ΔA::AbstractMatrix, A, QR, ΔQR;
         rank_atol::Real = default_pullback_rank_atol(QR[2]),
-        gauge_atol::Real = default_pullback_gauge_atol(QR[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔQR[1])
     )
     # process
     Q, R = QR
@@ -105,7 +105,7 @@ end
 """
     qr_null_pullback!(
         ΔA::AbstractMatrix, A, N, ΔN;
-        gauge_atol::Real = default_pullback_gauge_atol(A)
+        gauge_atol::Real = default_pullback_gauge_atol(ΔN)
     )
 
 Adds the pullback from the right nullspace of `A` to `ΔA`, given the nullspace basis
@@ -115,7 +115,7 @@ See also [`qr_pullback!`](@ref).
 """
 function qr_null_pullback!(
         ΔA::AbstractMatrix, A, N, ΔN;
-        gauge_atol::Real = default_pullback_gauge_atol(A)
+        gauge_atol::Real = default_pullback_gauge_atol(ΔN)
     )
     if !iszerotangent(ΔN) && size(N, 2) > 0
         aNᴴΔN = project_antihermitian!(N' * ΔN)
