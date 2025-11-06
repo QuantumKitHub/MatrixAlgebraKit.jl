@@ -16,7 +16,10 @@ Default tolerance for deciding to warn if incoming adjoints of a pullback rule
 has components that are not gauge-invariant.
 """
 default_pullback_gauge_atol(A) = iszerotangent(A) ? 0 : eps(norm(A, Inf))^(3 / 4)
-default_pullback_gauge_atol(A, As...) = maximum(default_pullback_gauge_atol, (A, As...))
+function default_pullback_gauge_atol(A, As...)
+    As′ = filter(!iszerotangent, (A, As...))
+    return isempty(As′) ? 0 : eps(norm(As′, Inf))^(3 / 4)
+end
 
 """
     default_pullback_degeneracy_atol(A)
