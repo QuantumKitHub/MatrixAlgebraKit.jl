@@ -270,10 +270,12 @@ function _gpu_unmqr!(
 end
 
 function _gpu_qr!(
-        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive = false, blocksize = 1
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; pivoted = false, positive = false, blocksize = 1
     )
     blocksize > 1 &&
         throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
+    pivoted &&
+        throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a pivoted implementation for a QR decomposition"))
     m, n = size(A)
     minmn = min(m, n)
     computeR = length(R) > 0
@@ -309,10 +311,12 @@ function _gpu_qr!(
 end
 
 function _gpu_qr_null!(
-        A::AbstractMatrix, N::AbstractMatrix; positive = false, blocksize = 1
+        A::AbstractMatrix, N::AbstractMatrix; positive = false, blocksize = 1, pivoted = false
     )
     blocksize > 1 &&
         throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
+    pivoted &&
+        throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a pivoted implementation for a QR decomposition"))
     m, n = size(A)
     minmn = min(m, n)
     fill!(N, zero(eltype(N)))

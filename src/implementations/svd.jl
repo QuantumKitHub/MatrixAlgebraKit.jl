@@ -152,6 +152,12 @@ end
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
+    if length(A) == 0
+        one!(U)
+        zero!(S)
+        one!(Vᴴ)
+        return USVᴴ
+    end
 
     do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
     alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
@@ -398,6 +404,12 @@ end
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
+    if length(A) == 0
+        one!(U)
+        zero!(S)
+        one!(Vᴴ)
+        return USVᴴ
+    end
 
     do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
     alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
@@ -422,6 +434,10 @@ _largest(x, y) = abs(x) < abs(y) ? y : x
 
 function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
+    if length(A) == 0
+        zero!(S)
+        return S
+    end
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
 
     alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})

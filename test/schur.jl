@@ -2,30 +2,35 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using StableRNGs
-using LinearAlgebra: I
+using LinearAlgebra: I, Diagonal
 
-@testset "schur_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    rng = StableRNG(123)
-    m = 54
-    for alg in (LAPACK_Simple(), LAPACK_Expert())
-        A = randn(rng, T, m, m)
-        Tc = complex(T)
+BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+GenericFloats = (Float16, BigFloat, Complex{BigFloat})
 
-        TA, Z, vals = @constinferred schur_full(A; alg)
-        @test eltype(TA) == eltype(Z) == T
-        @test eltype(vals) == Tc
-        @test isisometric(Z)
-        @test A * Z ≈ Z * TA
+@isdefined(TestSuite) || include("testsuite/TestSuite.jl")
+using .TestSuite
 
-        Ac = similar(A)
-        TA2, Z2, vals2 = @constinferred schur_full!(copy!(Ac, A), (TA, Z, vals), alg)
-        @test TA2 === TA
-        @test Z2 === Z
-        @test vals2 === vals
-        @test A * Z ≈ Z * TA
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
-        valsc = @constinferred schur_vals(A, alg)
-        @test eltype(valsc) == Tc
-        @test valsc ≈ eig_vals(A, alg)
+m = 54
+for T in BLASFloats
+    TestSuite.seed_rng!(123)
+    if is_buildkite
+        #=if CUDA.functional()
+            TestSuite.test_schur(CuMatrix{T}, (m, m); test_blocksize = false)
+            TestSuite.test_schur(Diagonal{T, CuVector{T}}, m; test_blocksize = false)
+        end
+        if AMDGPU.functional()
+            TestSuite.test_schur(ROCMatrix{T}, (m, m); test_blocksize = false)
+            TestSuite.test_schur(Diagonal{T, ROCVector{T}}, m; test_blocksize = false)
+        end=# # not yet supported
+    else
+        TestSuite.test_schur(T, (m, m))
+    end
+end
+if !is_buildkite
+    for T in (BLASFloats..., GenericFloats...)
+        AT = Diagonal{T, Vector{T}}
+        TestSuite.test_schur(AT, m; test_blocksize = false)
     end
 end
