@@ -216,7 +216,7 @@ for (f, St) in ((svd_full!, :AbstractMatrix), (svd_compact!, :Diagonal))
                     vS    = Diagonal(diagview(S)[1:minmn])
                     vVᴴ   = view(Vᴴ, 1:minmn, :)
                     vdU   = view(dU, :, 1:minmn)
-                    vdS   = Diagonal(diagview(dS)[1:minmn])
+                    vdS   = view(dS, 1:minmn, 1:minmn)
                     vdVᴴ  = view(dVᴴ, 1:minmn, :)
                     dA    = MatrixAlgebraKit.svd_pullback!(dA, A, (vU, vS, vVᴴ), (vdU, vdS, vdVᴴ))
                 end
@@ -243,7 +243,18 @@ for (f, St) in ((svd_full!, :AbstractMatrix), (svd_compact!, :Diagonal))
             U, dU          = arrayify(U_, dU_) 
             S, dS          = arrayify(S_, dS_) 
             Vᴴ, dVᴴ        = arrayify(Vᴴ_, dVᴴ_) 
-            (dU, dS, dVᴴ)  = svd_pushforward!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ); kwargs...)
+            minmn          = min(size(A)...)
+            if ($f == svd_compact!) # compact
+                svd_pushforward!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ); kwargs...)
+            else # full
+                vU    = view(U, :, 1:minmn)
+                vS    = view(S, 1:minmn, 1:minmn)
+                vVᴴ   = view(Vᴴ, 1:minmn, :)
+                vdU   = view(dU, :, 1:minmn)
+                vdS   = view(dS, 1:minmn, 1:minmn)
+                vdVᴴ  = view(dVᴴ, 1:minmn, :)
+                svd_pushforward!(dA, A, (vU, vS, vVᴴ), (vdU, vdS, vdVᴴ); kwargs...)
+            end
             return USVᴴ_dUSVᴴ
         end
     end
