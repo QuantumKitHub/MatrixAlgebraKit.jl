@@ -46,4 +46,6 @@ macro testinferred(ex)
     return esc(:(@inferred $ex))
 end
 
+include("qr.jl")
+
 end
