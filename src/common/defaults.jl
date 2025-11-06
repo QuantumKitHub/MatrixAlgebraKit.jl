@@ -15,7 +15,7 @@ defaulttol(x::Any) = eps(real(float(one(eltype(x)))))^(2 / 3)
 Default tolerance for deciding to warn if incoming adjoints of a pullback rule
 has components that are not gauge-invariant.
 """
-default_pullback_gauge_atol(A) = eps(norm(A, Inf))^(3 / 4)
+default_pullback_gauge_atol(A) = iszerotangent(A) ? 0 : eps(norm(A, Inf))^(3 / 4)
 default_pullback_gauge_atol(A, As...) = maximum(default_pullback_gauge_atol, (A, As...))
 
 """
