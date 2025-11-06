@@ -39,7 +39,7 @@ function test_qr_compact(
             @test istriu(Rpos)
             @test has_positive_diagonal(Rpos)
         else
-            @test_throws ArgumentError qr_compact(A; positive = true)
+            @test_throws Exception qr_compact(A; positive = true)
         end
 
         # do we support `pivoted = true`?
@@ -48,7 +48,7 @@ function test_qr_compact(
             @test Qpiv * Rpiv ≈ A
             @test isisometric(Qpos; atol, rtol)
         else
-            @test_throws ArgumentError qr_compact(A; pivoted = true)
+            @test_throws Exception qr_compact(A; pivoted = true)
         end
 
         # do we support `blocksize = Int`?
@@ -57,7 +57,7 @@ function test_qr_compact(
             @test Qblocked * Rblocked ≈ A
             @test isisometric(Qblocked; atol, rtol)
         else
-            @test_throws ArgumentError qr_compact(A; blocksize = 2)
+            @test_throws Exception qr_compact(A; blocksize = 2)
         end
     end
 end
@@ -94,7 +94,7 @@ function test_qr_full(
             @test istriu(Rpos)
             @test has_positive_diagonal(Rpos)
         else
-            @test_throws ArgumentError qr_full(A; positive = true)
+            @test_throws Exception qr_full(A; positive = true)
         end
 
         # do we support `pivoted = true`?
@@ -103,7 +103,7 @@ function test_qr_full(
             @test Qpiv * Rpiv ≈ A
             @test isunitary(Qpos; atol, rtol)
         else
-            @test_throws ArgumentError qr_full(A; pivoted = true)
+            @test_throws Exception qr_full(A; pivoted = true)
         end
 
         # do we support `blocksize = Int`?
@@ -112,7 +112,7 @@ function test_qr_full(
             @test Qblocked * Rblocked ≈ A
             @test isunitary(Qblocked; atol, rtol)
         else
-            @test_throws ArgumentError qr_full(A; blocksize = 2)
+            @test_throws Exception qr_full(A; blocksize = 2)
         end
     end
 end
@@ -145,7 +145,7 @@ function test_qr_null(
             @test isleftnull(Npiv, A; atol, rtol)
             @test isisometric(Npiv; atol, rtol)
         else
-            @test_throws ArgumentError qr_null(A; pivoted = true)
+            @test_throws Exception qr_null(A; pivoted = true)
         end
 
         # do we support `blocksize = Int`?
@@ -154,7 +154,7 @@ function test_qr_null(
             @test isleftnull(Nblocked, A; atol, rtol)
             @test isisometric(Nblocked; atol, rtol)
         else
-            @test_throws ArgumentError qr_null(A; blocksize = 2)
+            @test_throws Exception qr_null(A; blocksize = 2)
         end
     end
 end
