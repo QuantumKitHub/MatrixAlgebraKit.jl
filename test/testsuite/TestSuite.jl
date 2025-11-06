@@ -30,6 +30,9 @@ testargs_summary(args...) = string(args)
 instantiate_matrix(::Type{T}, size) where {T <: Number} = randn(T, size)
 instantiate_matrix(::Type{AT}, size) where {AT <: Array} = randn(eltype(AT), size)
 
+precision(::Type{T}) where {T <: Number} = sqrt(eps(real(T)))
+precision(::Type{T}) where {T} = precision(eltype(T))
+
 function has_positive_diagonal(A)
     T = eltype(A)
     return if T <: Real
@@ -39,7 +42,8 @@ function has_positive_diagonal(A)
             all(≈(zero(real(T))), imag(diagview(A)))
     end
 end
-isleftnull(N, A; kwargs...) = isapprox(norm(N' * A), 0; kwargs...)
+isleftnull(N, A; atol::Real = 0, rtol::Real = precision(eltype(A))) =
+    isapprox(norm(A' * N), 0; atol = max(atol, norm(A) * rtol))
 
 # TODO: actually make this a test
 macro testinferred(ex)
