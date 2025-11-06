@@ -319,6 +319,47 @@ Divide and Conquer algorithm.
 
 const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 
+# ================================
+# EXPONENTIAL ALGORITHMS
+# ================================
+"""
+    LA_exponential()
+
+Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
+The `qr_alg` specifies which QR-decomposition implementation to use.
+"""
+@algdef LA_exponential
+
+"""
+    ExponentialViaEigh()
+
+Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
+The `qr_alg` specifies which QR-decomposition implementation to use.
+"""
+struct ExponentialViaEigh{A <: AbstractAlgorithm} <: AbstractAlgorithm
+    eigh_alg::A
+end
+function Base.show(io::IO, alg::ExponentialViaEigh)
+    print(io, "ExponentialViaEigh(")
+    _show_alg(io, alg.eigh_alg)
+    return print(io, ")")
+end
+
+"""
+    ExponentialViaEig()
+
+Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
+The `qr_alg` specifies which QR-decomposition implementation to use.
+"""
+struct ExponentialViaEig{A <: AbstractAlgorithm} <: AbstractAlgorithm
+    eig_alg::A
+end
+function Base.show(io::IO, alg::ExponentialViaEig)
+    print(io, "ExponentialViaEigh(")
+    _show_alg(io, alg.eig_alg)
+    return print(io, ")")
+end
+
 # Various consts and unions
 # -------------------------
 
