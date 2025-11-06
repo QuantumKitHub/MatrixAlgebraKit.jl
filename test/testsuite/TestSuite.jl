@@ -11,7 +11,7 @@ module TestSuite
 using Test, TestExtras
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
-using LinearAlgebra: norm, istriu
+using LinearAlgebra: Diagonal, norm, istriu
 using Random, StableRNGs
 
 const tests = Dict()
@@ -33,6 +33,7 @@ seed_rng!(seed) = Random.seed!(rng, seed)
 
 instantiate_matrix(::Type{T}, size) where {T <: Number} = randn(rng, T, size)
 instantiate_matrix(::Type{AT}, size) where {AT <: Array} = randn(rng, eltype(AT), size)
+instantiate_matrix(::Type{AT}, size) where {AT <: Diagonal} = Diagonal(randn(rng, eltype(AT), size))
 
 precision(::Type{T}) where {T <: Number} = sqrt(eps(real(T)))
 precision(::Type{T}) where {T} = precision(eltype(T))
