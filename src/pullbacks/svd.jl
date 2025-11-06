@@ -1,10 +1,9 @@
 """
     svd_pullback!(
         ΔA, A, USVᴴ, ΔUSVᴴ, [ind];
-        tol::Real=default_pullback_gaugetol(USVᴴ[2]),
-        rank_atol::Real = tol,
-        degeneracy_atol::Real = tol,
-        gauge_atol::Real = tol
+        rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
 Adds the pullback from the SVD of `A` to `ΔA` given the output USVᴴ of `svd_compact` or
@@ -23,10 +22,9 @@ which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol
 """
 function svd_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ, ind = Colon();
-        tol::Real = default_pullback_gaugetol(USVᴴ[2]),
-        rank_atol::Real = tol,
-        degeneracy_atol::Real = tol,
-        gauge_atol::Real = tol
+        rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
     # Extract the SVD components
@@ -106,10 +104,9 @@ end
 """
     svd_trunc_pullback!(
         ΔA, A, USVᴴ, ΔUSVᴴ;
-        tol::Real=default_pullback_gaugetol(S),
-        rank_atol::Real = tol,
-        degeneracy_atol::Real = tol,
-        gauge_atol::Real = tol
+        rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
 Adds the pullback from the truncated SVD of `A` to `ΔA`, given the output `USVᴴ` and the
@@ -128,10 +125,9 @@ which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol
 """
 function svd_trunc_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
-        tol::Real = default_pullback_gaugetol(USVᴴ[2]),
-        rank_atol::Real = tol,
-        degeneracy_atol::Real = tol,
-        gauge_atol::Real = tol
+        rank_atol::Real = 0,
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
     # Extract the SVD components
