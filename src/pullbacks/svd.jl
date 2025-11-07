@@ -26,14 +26,13 @@ function svd_pullback!(
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
-
     # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ
     m, n = size(U, 1), size(Vᴴ, 2)
-    (m, n) == size(ΔA) || throw(DimensionMismatch())
+    (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of U*S*Vᴴ ($m, $n)"))
     minmn = min(m, n)
     S = diagview(Smat)
-    length(S) == minmn || throw(DimensionMismatch())
+    length(S) == minmn || throw(DimensionMismatch("length of S ($(length(S))) does not matrix minimum dimension of U, Vᴴ ($minmn)"))
     r = searchsortedlast(S, rank_atol; rev = true) # rank
     Ur = view(U, :, 1:r)
     Vᴴr = view(Vᴴ, 1:r, :)
@@ -44,22 +43,22 @@ function svd_pullback!(
     UΔU = fill!(similar(U, (r, r)), 0)
     VΔV = fill!(similar(Vᴴ, (r, r)), 0)
     if !iszerotangent(ΔU)
-        m == size(ΔU, 1) || throw(DimensionMismatch())
+        m == size(ΔU, 1) || throw(DimensionMismatch("first dimension of ΔU ($(size(ΔU, 1))) does not match first dimension of U ($m)"))
         pU = size(ΔU, 2)
-        pU > r && throw(DimensionMismatch())
+        pU > r && throw(DimensionMismatch("second dimension of ΔU ($(size(ΔU, 2))) does not match rank of S ($r)"))
         indU = axes(U, 2)[ind]
-        length(indU) == pU || throw(DimensionMismatch())
+        length(indU) == pU || throw(DimensionMismatch("length of selected U columns ($(length(indU))) does not match second dimension of ΔU ($(size(ΔU, 2)))"))
         UΔUp = view(UΔU, :, indU)
         mul!(UΔUp, Ur', ΔU)
         # ΔU -= Ur * UΔUp but one less allocation without overwriting ΔU
         ΔU = mul!(copy(ΔU), Ur, UΔUp, -1, 1)
     end
     if !iszerotangent(ΔVᴴ)
-        n == size(ΔVᴴ, 2) || throw(DimensionMismatch())
+        n == size(ΔVᴴ, 2) || throw(DimensionMismatch("second dimension of ΔVᴴ ($(size(ΔVᴴ, 2))) does not match second dimension of Vᴴ ($n)"))
         pV = size(ΔVᴴ, 1)
-        pV > r && throw(DimensionMismatch())
+        pV > r && throw(DimensionMismatch("first dimension of ΔVᴴ ($(size(ΔVᴴ, 1))) does not match rank of S ($r)"))
         indV = axes(Vᴴ, 1)[ind]
-        length(indV) == pV || throw(DimensionMismatch())
+        length(indV) == pV || throw(DimensionMismatch("length of selected Vᴴ rows ($(length(indV))) does not match first dimension of ΔVᴴ ($(size(ΔVᴴ, 1)))"))
         VΔVp = view(VΔV, :, indV)
         mul!(VΔVp, Vᴴr, ΔVᴴ')
         # ΔVᴴ -= VΔVp' * Vᴴr but one less allocation without overwriting ΔVᴴ
@@ -82,7 +81,7 @@ function svd_pullback!(
         ΔS = diagview(ΔSmat)
         pS = length(ΔS)
         indS = axes(S, 1)[ind]
-        length(indS) == pS || throw(DimensionMismatch())
+        length(indS) == pS || throw(DimensionMismatch("length of selected S diagonals ($(length(indS))) does not match length of ΔS diagonal ($(length(ΔS)))"))
         view(diagview(UdΔAV), indS) .+= real.(ΔS)
     end
     ΔA = mul!(ΔA, Ur, UdΔAV * Vᴴr, 1, 1) # add the contribution to ΔA

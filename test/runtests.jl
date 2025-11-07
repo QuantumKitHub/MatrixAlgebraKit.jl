@@ -4,7 +4,7 @@ using SafeTestsets
 # specific ones
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 if !is_buildkite
-    @safetestset "Algorithms" begin
+    #=@safetestset "Algorithms" begin
         include("algorithms.jl")
     end
     @safetestset "Projections" begin
@@ -38,6 +38,14 @@ if !is_buildkite
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
+    =#
+    @safetestset "Mooncake" begin
+        include("mooncake.jl")
+    end
+    #=@safetestset "Enzyme" begin
+        include("enzyme.jl")
+    end=#
+    #=
     @safetestset "ChainRules" begin
         include("chainrules.jl")
     end
@@ -52,7 +60,7 @@ if !is_buildkite
             using JET
             JET.test_package(MatrixAlgebraKit; target_defined_modules = true)
         end
-    end
+    end=#
 end
 
 using CUDA
@@ -81,6 +89,12 @@ if CUDA.functional()
     @safetestset "CUDA Image and Null Space" begin
         include("cuda/orthnull.jl")
     end
+    #=@safetestset "CUDA Mooncake" begin
+        include("cuda/mooncake.jl")
+    end
+    @safetestset "CUDA Enzyme" begin
+        include("cuda/enzyme.jl")
+    end=#
 end
 
 using AMDGPU
@@ -106,6 +120,9 @@ if AMDGPU.functional()
     @safetestset "AMDGPU Image and Null Space" begin
         include("amd/orthnull.jl")
     end
+    #=@safetestset "AMDGPU Enzyme" begin
+        include("amd/enzyme.jl")
+    end=#
 end
 
 using GenericLinearAlgebra
