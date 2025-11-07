@@ -1,4 +1,6 @@
 function eigh_pushforward!(dA, A, DV, dDV; kwargs...)
+    D, V         = DV
+    dD, dV       = dDV
     tmpV         = V \ dA
     ∂K           = tmpV * V
     ∂Kdiag       = diag(∂K)

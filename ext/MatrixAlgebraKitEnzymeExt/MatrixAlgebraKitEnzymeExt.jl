@@ -5,6 +5,7 @@ using MatrixAlgebraKit: diagview, inv_safe, eig_trunc!, eigh_trunc!
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!, qr_pushforward!, lq_pushforward!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!, qr_null_pushforward!, lq_null_pushforward!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_pushforward!, eigh_pushforward!
+using MatrixAlgebraKit: svd_pushforward!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!, left_polar_pushforward!, right_polar_pushforward!
 using Enzyme
 using Enzyme.EnzymeCore
@@ -179,23 +180,7 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
                             ) where {RT}
     ret    = EnzymeRules.needs_primal(config) || EnzymeRules.needs_shadow(config) ? func.val(A.val, USVᴴ.val; kwargs...) : nothing
     shadow = if EnzymeRules.needs_shadow(config)
-        U, S, Vᴴ = ret
-        V        = adjoint(Vᴴ)
-        ∂S       = Diagonal(diag(real.(U' * A.dval * V)))
-        m, n     = size(A.val)
-        F        = one(eltype(S)) ./ ((diagview(S).^2)'  .- (diagview(S) .^ 2))
-        diagview(F) .= zero(eltype(F))
-        invSdiag = zeros(eltype(S), length(S.diag))
-        for i in 1:length(S.diag)
-            @inbounds invSdiag[i] = inv(diagview(S)[i])
-        end
-        invS = Diagonal(invSdiag)
-        ∂U = U * (F .* (U' * A.dval * V * S + S * Vᴴ * A.dval' * U)) + (diagm(ones(eltype(U), m)) - U*U') * A.dval * V * invS
-        #∂Vᴴ  = (FSdS' * Vᴴ) + (invS * U' * A.dval * (diagm(ones(eltype(U), size(V, 2))) - Vᴴ*V))
-        ∂V = V * (F .* (S * U' * A.dval * V + Vᴴ * A.dval' * U * S)) + (diagm(ones(eltype(V), n)) - V*Vᴴ) * A.dval' * U * invS
-        ∂Vᴴ = similar(Vᴴ)
-        adjoint!(∂Vᴴ, ∂V)
-        (∂U, ∂S, ∂Vᴴ)
+        svd_pushforward!(A.dval, A.val, ret, USVᴴ.dval)
     else
         nothing
     end
@@ -221,46 +206,7 @@ function EnzymeRules.forward(config::EnzymeRules.FwdConfig,
                             ) where {RT}
     ret        = EnzymeRules.needs_primal(config) || EnzymeRules.needs_shadow(config) ? func.val(A.val, USVᴴ.val; kwargs...) : nothing
     shadow = if EnzymeRules.needs_shadow(config)
-            fatU, fatS, fatVᴴ = ret
-            ∂Ufat  = zeros(eltype(fatU), size(fatU))
-            ∂Sfat  = zeros(eltype(fatS), size(fatS))
-            ∂Vᴴfat = zeros(eltype(fatVᴴ), size(fatVᴴ))
-            m, n       = size(A.val)
-            minmn      = min(m, n)
-            #U = view(fatU, :, 1:minmn)
-            #S = Diagonal(diagview(fatS))
-            #Vᴴ = view(fatVᴴ, 1:minmn, :)
-            U = fatU 
-            S = fatS 
-            Vᴴ = fatVᴴ
-            V        = adjoint(Vᴴ)
-            ∂S       = Diagonal(diag(real.(U' * A.dval * V)))
-            diagview(∂Sfat) .= diagview(∂S)
-            m, n     = size(A.val)
-            F        = one(eltype(S)) ./ ((diagview(S).^2)'  .- (diagview(S) .^ 2))
-            diagview(F) .= zero(eltype(F))
-            invSdiag = zeros(eltype(S), size(S))
-            for ix in diagind(S)
-                @inbounds invSdiag[ix] = inv(S[ix])
-            end
-            invS = invSdiag
-            #FSdS = F .* (∂S * S .+ S * ∂S)
-            ∂U = U * (F .* (U' * A.dval * V * S + S * Vᴴ * A.dval' * U)) + (diagm(ones(eltype(U), m)) - U*U') * A.dval * V * invS
-            #view(∂Ufat, :, 1:minmn) .= view(∂U, :, :)
-            ∂Ufat .= ∂U
-            
-
-            #∂Vᴴ  = (FSdS' * Vᴴ) + (invS * U' * A.dval * (diagm(ones(eltype(U), size(V, 2))) - Vᴴ*V))
-            ∂V = V * (F .* (S * U' * A.dval * V + Vᴴ * A.dval' * U * S)) + (diagm(ones(eltype(V), n)) - V*Vᴴ) * A.dval' * U * invS
-            ∂Vᴴ = similar(Vᴴ)
-            adjoint!(∂Vᴴ, ∂V)
-            #view(∂Vᴴfat, 1:minmn, :)   .= view(∂Vᴴ, :, :)
-            ∂Vᴴfat .= ∂Vᴴ
-            #=view(∂Ufat, :, minmn+1:m)  .= zero(eltype(fatU))
-            view(∂Vᴴfat, minmn+1:n, :) .= zero(eltype(fatVᴴ))
-            view(∂Sfat, minmn+1:m, :)  .= zero(eltype(fatVᴴ))
-            view(∂Sfat, :, minmn+1:n)  .= zero(eltype(fatVᴴ))=#
-            (∂Ufat, ∂Sfat, ∂Vᴴfat)
+            svd_pushforward!(A.dval, A.val, ret, USVᴴ.dval)
         else
             nothing
         end

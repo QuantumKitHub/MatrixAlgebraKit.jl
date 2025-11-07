@@ -38,23 +38,22 @@ function qr_pushforward!(dA, A, QR, dQR; tol::Real=MatrixAlgebraKit.default_pull
     dR11   .= Rtmp * R11
     dQ1    .= dA1 * invR11 - Q1 * dR11 * invR11
     dR12   .= adjoint(Q1) * (dA2 - dQ1 * R12)
-    dQ2    .= -Q1 * (Q1' * dQ2)
     if size(Q2, 2) > 0
+        dQ2  .= -Q1 * (Q1' * Q2)
         dQ2  .+= Q2 * (Q2' * dQ2)
     end
     if m3 > 0 && size(Q, 2) > minmn
         # only present for qr_full or rank-deficient qr_compact
         Q′   = view(Q, :, 1:minmn)
-        println("minmn $minmn m $m")
         Q3   = view(Q, :, minmn+1:m)
         #dQ3  .= Q′ * (Q′' * Q3)
         dQ3  .= Q3
     end
-    #=if !isempty(dR22)
+    if !isempty(dR22)
         _, r22 = qr_full(dA2 - dQ1*R12 - Q1*dR12, MatrixAlgebraKit.LAPACK_HouseholderQR(; positive=true))
         dR22  .= view(r22, 1:size(dR22, 1), 1:size(dR22, 2))
-    end=#
+    end
     return (dQ, dR)
 end
 
-function qr_null_pushforward!(dA, A, QR, dQR; tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(QR[2]), rank_atol::Real=tol, gauge_atol::Real=tol) end
+function qr_null_pushforward!(dA, A, N, dN; tol::Real=MatrixAlgebraKit.default_pullback_gaugetol(N), rank_atol::Real=tol, gauge_atol::Real=tol) end

@@ -1,12 +1,12 @@
-function eig_pushforward!(dA, A, DV, dDV; kwargs...)
+function eig_pushforward!(ΔA, A, DV, ΔDV; kwargs...)
     D, V     = DV
-    dD, dV   = dDV
-    ∂K       = inv(V) * dA * V
-    ∂Kdiag   = diagview(∂K)
-    dD.diag .= ∂Kdiag
-    ∂K     ./= transpose(diagview(D)) .- diagview(D)
-    fill!(∂Kdiag, zero(eltype(D)))
-    mul!(dV, V, ∂K, 1, 0)
-    dA      .= zero(eltype(dA))
-    return dDV
+    ΔD, ΔV   = ΔDV
+    iVΔAV    = inv(V) * ΔA * V
+    diagview(ΔD) .= diagview(iVΔAV)
+    F        = 1 ./ (transpose(diagview(D)) .- diagview(D))
+    fill!(diagview(F), zero(eltype(F)))
+    K̇        = F .* iVΔAV
+    mul!(ΔV, V, K̇, 1, 0)
+    zero!(ΔA)
+    return ΔDV
 end

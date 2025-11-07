@@ -15,9 +15,7 @@ function right_polar_pushforward!(ΔA, A, PWᴴ, ΔPWᴴ; kwargs...)
     ΔP, ΔWᴴ = ΔPWᴴ
     dAW     = ΔA * adjoint(Wᴴ)
     K̇       = sylvester(P, P, -(dAW - adjoint(dAW)))
-    ImW     = (Diagonal(ones(eltype(Wᴴ), size(Wᴴ, 2))) - adjoint(Wᴴ) * Wᴴ)
-    @show size(P), size(ΔA), size(ImW), size(Wᴴ)
-    L̇       = inv(P)*ΔA*ImW
+    L̇       = inv(P)*ΔA*(Diagonal(ones(eltype(Wᴴ), size(Wᴴ, 2))) - adjoint(Wᴴ) * Wᴴ)
     ΔWᴴ    .= K̇ * Wᴴ + L̇
     ΔP     .= dAW - P * K̇
     MatrixAlgebraKit.zero!(ΔA)
