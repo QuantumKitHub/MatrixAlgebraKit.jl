@@ -13,8 +13,6 @@ using CUDA: i32
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
 
-using CUDA: i32
-
 include("yacusolver.jl")
 
 function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}

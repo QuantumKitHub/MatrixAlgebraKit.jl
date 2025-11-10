@@ -12,7 +12,7 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
     m = 54
     noisefactor = eps(real(T))^(3 / 4)
     for alg in (NativeBlocked(blocksize = 16), NativeBlocked(blocksize = 32), NativeBlocked(blocksize = 64))
-        A  = CuArray(randn(rng, T, m, m))
+        A = CuArray(randn(rng, T, m, m))
         Ah = (A + A') / 2
         Aa = (A - A') / 2
         Ac = copy(A)
@@ -69,7 +69,7 @@ end
             # test that W is closer to A then any other isometry
             for k in 1:10
                 δA = CuArray(randn(rng, T, m, n))
-                W  = project_isometric(A, alg)
+                W = project_isometric(A, alg)
                 W2 = project_isometric(A + δA / 100, alg)
                 @test norm(A - W2) > norm(A - W)
             end

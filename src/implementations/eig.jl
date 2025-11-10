@@ -137,7 +137,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
     D, V = DV
     if alg isa GPU_Simple
         isempty(alg.kwargs) ||
-            throw(ArgumentError("GPU_Simple (geev) does not accept any keyword arguments"))
+            @warn "GPU_Simple (geev) does not accept any keyword arguments"
         _gpu_geev!(A, D.diag, V)
     end
     # TODO: make this controllable using a `gaugefix` keyword argument
@@ -149,9 +149,8 @@ function eig_vals!(A::AbstractMatrix, D, alg::GPU_EigAlgorithm)
     check_input(eig_vals!, A, D, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
     if alg isa GPU_Simple
-        # TODO filter out nothing kwargs
-        #isempty(alg.kwargs) ||
-        #    throw(ArgumentError("GPU_Simple (geev) does not accept any keyword arguments"))
+        isempty(alg.kwargs) ||
+            @warn "GPU_Simple (geev) does not accept any keyword arguments"
         _gpu_geev!(A, D, V)
     end
     return D
