@@ -28,8 +28,6 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return ROCSOLVER_DivideAndConquer(; kwargs...)
 end
 
-MatrixAlgebraKit.ishermitian_exact(A::StridedROCMatrix) = ishermitian(A)
-
 _gpu_geqrf!(A::StridedROCMatrix) = YArocSOLVER.geqrf!(A)
 _gpu_ungqr!(A::StridedROCMatrix, τ::StridedROCVector) = YArocSOLVER.ungqr!(A, τ)
 _gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::StridedROCMatrix, τ::StridedROCVector, C::StridedROCVecOrMat) =
