@@ -22,7 +22,6 @@ using AMDGPU
             @test isisometric(W)
             # work around extremely strict Julia criteria for Hermiticity
             @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P)) && isposdef(Hermitian(P))
-            @test isposdef(P)
 
             Ac = similar(A)
             W2, P2 = @constinferred left_polar!(copy!(Ac, A), (W, P), alg)
