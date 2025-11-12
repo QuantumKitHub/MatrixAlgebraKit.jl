@@ -8,7 +8,6 @@ using LinearAlgebra: isposdef, issymmetric
 using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
-# import LinearAlgebra: exp, exp!
 
 export isisometric, isunitary, ishermitian, isantihermitian
 
