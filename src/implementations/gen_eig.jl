@@ -69,7 +69,7 @@ function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_Eig
         throw(ArgumentError("LAPACK_Expert is not supported for ggev"))
     end
 
-    dogaugefix && (V = gaugefix!(V))
+    dogaugefix && (V = gaugefix!(gen_eig_full!, V))
 
     return W, V
 end

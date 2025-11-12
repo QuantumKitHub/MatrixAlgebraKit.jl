@@ -105,7 +105,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
         YALAPACK.heevx!(A, Dd, V; lapack_kwargs...)
     end
 
-    dogaugefix && (V = gaugefix!(V))
+    dogaugefix && (V = gaugefix!(eigh_full!, V))
 
     return D, V
 end
@@ -183,7 +183,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::GPU_EighAlgorithm)
         throw(ArgumentError("Unsupported eigh algorithm"))
     end
 
-    dogaugefix && (V = gaugefix!(V))
+    dogaugefix && (V = gaugefix!(eigh_full!, V))
 
     return D, V
 end

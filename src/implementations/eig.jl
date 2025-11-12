@@ -93,7 +93,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
         YALAPACK.geevx!(A, D.diag, V; lapack_kwargs...)
     end
 
-    dogaugefix && (V = gaugefix!(V))
+    dogaugefix && (V = gaugefix!(eig_full!, V))
 
     return D, V
 end
@@ -153,7 +153,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
         _gpu_geev!(A, D.diag, V)
     end
 
-    dogaugefix && (V = gaugefix!(V))
+    dogaugefix && (V = gaugefix!(eig_full!, V))
 
     return D, V
 end
