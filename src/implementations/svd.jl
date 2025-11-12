@@ -105,6 +105,8 @@ function initialize_output(::typeof(svd_vals!), A::Diagonal, ::DiagonalAlgorithm
     return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
+# Gauge fixation
+# --------------
 function gaugefix!(::typeof(svd_full!), U, S, Vᴴ, m::Int, n::Int)
     for j in 1:max(m, n)
         if j <= min(m, n)
@@ -126,8 +128,6 @@ function gaugefix!(::typeof(svd_full!), U, S, Vᴴ, m::Int, n::Int)
     return (U, S, Vᴴ)
 end
 
-# Gauge fixation
-# --------------
 function gaugefix!(::typeof(svd_compact!), U, S, Vᴴ, m::Int, n::Int)
     for j in 1:size(U, 2)
         u = view(U, :, j)
