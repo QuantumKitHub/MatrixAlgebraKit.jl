@@ -323,12 +323,12 @@ const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 # EXPONENTIAL ALGORITHMS
 # ================================
 """
-    LA_exponential()
+    ExponentialViaLA()
 
 Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
 The `qr_alg` specifies which QR-decomposition implementation to use.
 """
-@algdef LA_exponential
+@algdef ExponentialViaLA
 
 """
     ExponentialViaEigh()

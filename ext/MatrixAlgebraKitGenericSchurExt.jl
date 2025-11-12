@@ -22,4 +22,8 @@ function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix, D, ::GS_QRIteration)
     return GenericSchur.eigvals!(A)
 end
 
+function MatrixAlgebraKit.default_exponential_algorithm(E::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
+    return ExponentialViaEig(GS_QRIteration(; kwargs...))
+end
+
 end

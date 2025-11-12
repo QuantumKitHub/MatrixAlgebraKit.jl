@@ -8,6 +8,7 @@ using LinearAlgebra: isposdef, issymmetric
 using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
+# import LinearAlgebra: exp, exp!
 
 export isisometric, isunitary, ishermitian, isantihermitian
 
@@ -29,7 +30,7 @@ export left_polar, right_polar
 export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
-export exp, exp!
+export exponential, exponential!
 
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
@@ -37,7 +38,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
 export GLA_HouseholderQR, GLA_QRIteration, GS_QRIteration
 export LQViaTransposedQR
 export PolarViaSVD, PolarNewton
-export LA_exponential, ExponentialViaEig, ExponentialViaEigh
+export ExponentialViaLA, ExponentialViaEig, ExponentialViaEigh
 export DiagonalAlgorithm
 export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
@@ -94,7 +95,7 @@ include("interface/gen_eig.jl")
 include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
-include("interface/exp.jl")
+include("interface/exponential.jl")
 
 include("implementations/projections.jl")
 include("implementations/truncation.jl")
@@ -107,7 +108,7 @@ include("implementations/gen_eig.jl")
 include("implementations/schur.jl")
 include("implementations/polar.jl")
 include("implementations/orthnull.jl")
-include("implementations/exp.jl")
+include("implementations/exponential.jl")
 
 include("pullbacks/qr.jl")
 include("pullbacks/lq.jl")
