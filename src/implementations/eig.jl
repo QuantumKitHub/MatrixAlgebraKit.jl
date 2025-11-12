@@ -81,28 +81,37 @@ end
 function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
+
+    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa LAPACK_Simple
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple (geev) does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
         YALAPACK.geev!(A, D.diag, V)
     else # alg isa LAPACK_Expert
-        YALAPACK.geevx!(A, D.diag, V; alg.kwargs...)
+        YALAPACK.geevx!(A, D.diag, V; lapack_kwargs...)
     end
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    V = gaugefix!(V)
+
+    dogaugefix && (V = gaugefix!(V))
+
     return D, V
 end
 
 function eig_vals!(A::AbstractMatrix, D, alg::LAPACK_EigAlgorithm)
     check_input(eig_vals!, A, D, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
+
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa LAPACK_Simple
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple (geev) does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
         YALAPACK.geev!(A, D, V)
     else # alg isa LAPACK_Expert
-        YALAPACK.geevx!(A, D, V; alg.kwargs...)
+        YALAPACK.geevx!(A, D, V; lapack_kwargs...)
     end
+
     return D
 end
 
@@ -135,23 +144,30 @@ _gpu_geev!(A, D, V) = throw(MethodError(_gpu_geev!, (A, D, V)))
 function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
+
+    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa GPU_Simple
-        isempty(alg.kwargs) ||
-            @warn "GPU_Simple (geev) does not accept any keyword arguments"
+        isempty(lapack_kwargs) || @warn "invalid keyword arguments for GPU_Simple"
         _gpu_geev!(A, D.diag, V)
     end
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    V = gaugefix!(V)
+
+    dogaugefix && (V = gaugefix!(V))
+
     return D, V
 end
 
 function eig_vals!(A::AbstractMatrix, D, alg::GPU_EigAlgorithm)
     check_input(eig_vals!, A, D, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
+
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa GPU_Simple
-        isempty(alg.kwargs) ||
-            @warn "GPU_Simple (geev) does not accept any keyword arguments"
+        isempty(lapack_kwargs) || @warn "invalid keyword arguments for GPU_Simple"
         _gpu_geev!(A, D, V)
     end
+
     return D
 end
