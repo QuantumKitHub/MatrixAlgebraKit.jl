@@ -1,7 +1,7 @@
 module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: sign_safe, check_input, diagview
+using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
@@ -13,18 +13,26 @@ for f! in (:svd_compact!, :svd_full!, :svd_vals!)
     @eval MatrixAlgebraKit.initialize_output(::typeof($f!), A::AbstractMatrix, ::GLA_QRIteration) = nothing
 end
 
-function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, ::GLA_QRIteration)
+function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration)
     F = svd!(A)
     U, S, Vᴴ = F.U, Diagonal(F.S), F.Vt
-    return MatrixAlgebraKit.gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
+
+    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ)
+
+    return U, S, Vᴴ
 end
 
-function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, ::GLA_QRIteration)
+function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration)
     F = svd!(A; full = true)
     U, Vᴴ = F.U, F.Vt
     S = MatrixAlgebraKit.zero!(similar(F.S, (size(U, 2), size(Vᴴ, 1))))
     diagview(S) .= F.S
-    return MatrixAlgebraKit.gaugefix!(svd_full!, U, S, Vᴴ, size(A)...)
+
+    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    dogaugefix && gaugefix!(svd_full!, U, Vᴴ)
+
+    return U, S, Vᴴ
 end
 
 function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, ::GLA_QRIteration)

@@ -131,11 +131,13 @@ const LAPACK_EighAlgorithm = Union{
 }
 
 """
-    GLA_QRIteration()
+    GLA_QRIteration(; gaugefix::Bool = true)
 
 Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the
 eigenvalue decomposition of a Hermitian matrix, or the singular value decomposition of
 a general matrix.
+The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef GLA_QRIteration
 
