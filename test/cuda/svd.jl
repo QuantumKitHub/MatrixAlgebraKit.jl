@@ -41,7 +41,7 @@ include(joinpath("..", "utilities.jl"))
             @test CuArray(diagview(S)) ≈ Sd
             # CuArray is necessary because norm of CuArray view with non-unit step is broken
             if alg isa CUSOLVER_QRIteration
-                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_compact!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_compact!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
             end
         end
     end
@@ -84,8 +84,8 @@ end
             @test CuArray(diagview(S)) ≈ Sc
             # CuArray is necessary because norm of CuArray view with non-unit step is broken
             if alg isa CUSOLVER_QRIteration
-                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_full!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
-                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_vals!(copy!(Ac, A), Sc, CUSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_full!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_vals!(copy!(Ac, A), Sc, CUSOLVER_QRIteration(; bad = "bad"))
             end
         end
     end
