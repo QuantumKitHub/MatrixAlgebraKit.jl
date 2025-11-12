@@ -144,7 +144,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         S[i, 1] = zero(eltype(S))
     end
 
-    dogaugefix && gaugefix!(svd_full!, U, Vᴴ, m, n)
+    dogaugefix && gaugefix!(svd_full!, U, Vᴴ)
 
     return USVᴴ
 end
@@ -174,7 +174,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
 
-    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ, size(A)...)
+    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ)
 
     return USVᴴ
 end
@@ -352,7 +352,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     diagview(S) .= view(S, 1:minmn, 1)
     view(S, 2:minmn, 1) .= zero(eltype(S))
 
-    dogaugefix && gaugefix!(svd_full!, U, Vᴴ, m, n)
+    dogaugefix && gaugefix!(svd_full!, U, Vᴴ)
 
     return USVᴴ
 end
@@ -363,7 +363,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
 
     dogaugefix = get(alg.alg.kwargs, :gaugefix, true)::Bool
-    dogaugefix && gaugefix!(svd_trunc!, U, S, Vᴴ, size(A)...)
+    dogaugefix && gaugefix!(svd_trunc!, U, Vᴴ)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
@@ -391,7 +391,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
 
-    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ, size(A)...)
+    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ)
 
     return USVᴴ
 end
