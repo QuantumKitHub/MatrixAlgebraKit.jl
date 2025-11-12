@@ -105,51 +105,6 @@ function initialize_output(::typeof(svd_vals!), A::Diagonal, ::DiagonalAlgorithm
     return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
-# Gauge fixation
-# --------------
-function gaugefix!(::typeof(svd_full!), U, S, Vᴴ, m::Int, n::Int)
-    for j in 1:max(m, n)
-        if j <= min(m, n)
-            u = view(U, :, j)
-            v = view(Vᴴ, j, :)
-            s = conj(sign(_argmaxabs(u)))
-            u .*= s
-            v .*= conj(s)
-        elseif j <= m
-            u = view(U, :, j)
-            s = conj(sign(_argmaxabs(u)))
-            u .*= s
-        else
-            v = view(Vᴴ, j, :)
-            s = conj(sign(_argmaxabs(v)))
-            v .*= s
-        end
-    end
-    return (U, S, Vᴴ)
-end
-
-function gaugefix!(::typeof(svd_compact!), U, S, Vᴴ, m::Int, n::Int)
-    for j in 1:size(U, 2)
-        u = view(U, :, j)
-        v = view(Vᴴ, j, :)
-        s = conj(sign(_argmaxabs(u)))
-        u .*= s
-        v .*= conj(s)
-    end
-    return (U, S, Vᴴ)
-end
-
-function gaugefix!(::typeof(svd_trunc!), U, S, Vᴴ, m::Int, n::Int)
-    for j in 1:min(m, n)
-        u = view(U, :, j)
-        v = view(Vᴴ, j, :)
-        s = conj(sign(_argmaxabs(u)))
-        u .*= s
-        v .*= conj(s)
-    end
-    return (U, S, Vᴴ)
-end
-
 # Implementation
 # --------------
 function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
@@ -189,7 +144,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         S[i, 1] = zero(eltype(S))
     end
 
-    dogaugefix && gaugefix!(svd_full!, U, S, Vᴴ, m, n)
+    dogaugefix && gaugefix!(svd_full!, U, Vᴴ, m, n)
 
     return USVᴴ
 end
@@ -219,7 +174,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
 
-    dogaugefix && gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
+    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ, size(A)...)
 
     return USVᴴ
 end
@@ -397,7 +352,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     diagview(S) .= view(S, 1:minmn, 1)
     view(S, 2:minmn, 1) .= zero(eltype(S))
 
-    dogaugefix && gaugefix!(svd_full!, U, S, Vᴴ, m, n)
+    dogaugefix && gaugefix!(svd_full!, U, Vᴴ, m, n)
 
     return USVᴴ
 end
@@ -436,7 +391,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
 
-    dogaugefix && gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
+    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ, size(A)...)
 
     return USVᴴ
 end
