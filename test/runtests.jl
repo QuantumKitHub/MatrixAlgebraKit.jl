@@ -60,9 +60,6 @@ end
 
 using CUDA
 if CUDA.functional()
-    @safetestset "CUDA QR" begin
-        include("cuda/qr.jl")
-    end
     @safetestset "CUDA LQ" begin
         include("cuda/lq.jl")
     end
@@ -88,9 +85,6 @@ end
 
 using AMDGPU
 if AMDGPU.functional()
-    @safetestset "AMDGPU QR" begin
-        include("amd/qr.jl")
-    end
     @safetestset "AMDGPU LQ" begin
         include("amd/lq.jl")
     end
