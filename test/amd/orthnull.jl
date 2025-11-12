@@ -25,7 +25,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
         @test N isa ROCMatrix{T} && size(N) == (m, m - minmn)
         @test V * C ≈ A
         @test isisometric(V)
-        @test norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
+        @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test isisometric(N)
         hV = collect(V)
         hN = collect(N)

@@ -13,7 +13,6 @@ using AMDGPU
         k = min(m, n)
         svd_algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
         @testset "algorithm $svd_alg" for svd_alg in svd_algs
-            n < m && svd_alg isa ROCSOLVER_QRIteration && continue
             A = ROCArray(randn(rng, T, m, n))
             alg = PolarViaSVD(svd_alg)
             W, P = left_polar(A; alg)
@@ -52,7 +51,6 @@ end
         k = min(m, n)
         svd_algs = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
         @testset "algorithm $svd_alg" for svd_alg in svd_algs
-            n > m && svd_alg isa ROCSOLVER_QRIteration && continue
             A = ROCArray(randn(rng, T, m, n))
             alg = PolarViaSVD(svd_alg)
             P, Wᴴ = right_polar(A; alg)

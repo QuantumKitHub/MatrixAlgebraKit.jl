@@ -1,9 +1,8 @@
 """
     eig_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, [ind];
-        tol = default_pullback_gaugetol(DV[1]),
-        degeneracy_atol = tol,
-        gauge_atol = tol
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
 
 Adds the pullback from the full eigenvalue decomposition of `A` to `ΔA`, given the output
@@ -22,9 +21,8 @@ not small compared to `gauge_atol`.
 """
 function eig_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, ind = Colon();
-        tol::Real = default_pullback_gaugetol(DV[1]),
-        degeneracy_atol::Real = tol,
-        gauge_atol::Real = tol
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
 
     # Basic size checks and determination
@@ -84,9 +82,8 @@ end
 """
     eig_trunc_pullback!(
         ΔA::AbstractMatrix, ΔDV, A, DV;
-        tol = default_pullback_gaugetol(DV[1]),
-        degeneracy_atol = tol,
-        gauge_atol = tol
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
 
 Adds the pullback from the truncated eigenvalue decomposition of `A` to `ΔA`, given the
@@ -106,9 +103,8 @@ not small compared to `gauge_atol`.
 """
 function eig_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
-        tol::Real = default_pullback_gaugetol(DV[1]),
-        degeneracy_atol::Real = tol,
-        gauge_atol::Real = tol
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
 
     # Basic size checks and determination
