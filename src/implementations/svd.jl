@@ -164,13 +164,17 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         one!(Vᴴ)
         return USVᴴ
     end
+
+    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa LAPACK_QRIteration
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_QRIteration does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
         YALAPACK.gesvd!(A, view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa LAPACK_DivideAndConquer
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_DivideAndConquer does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa LAPACK_Bisection
         throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
@@ -179,60 +183,71 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
+
     for i in 2:minmn
         S[i, i] = S[i, 1]
         S[i, 1] = zero(eltype(S))
     end
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(svd_full!, U, S, Vᴴ, m, n)
+
+    dogaugefix && gaugefix!(svd_full!, U, S, Vᴴ, m, n)
+
     return USVᴴ
 end
 
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
+
+    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa LAPACK_QRIteration
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_QRIteration does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
         YALAPACK.gesvd!(A, S.diag, U, Vᴴ)
     elseif alg isa LAPACK_DivideAndConquer
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_DivideAndConquer does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, S.diag, U, Vᴴ)
     elseif alg isa LAPACK_Bisection
-        YALAPACK.gesvdx!(A, S.diag, U, Vᴴ; alg.kwargs...)
+        YALAPACK.gesvdx!(A, S.diag, U, Vᴴ; lapack_kwargs...)
     elseif alg isa LAPACK_Jacobi
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Jacobi does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_Jacobi"))
         YALAPACK.gesvj!(A, S.diag, U, Vᴴ)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
+
+    dogaugefix && gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
+
     return USVᴴ
 end
 
 function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
+
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa LAPACK_QRIteration
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_QRIteration does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
         YALAPACK.gesvd!(A, S, U, Vᴴ)
     elseif alg isa LAPACK_DivideAndConquer
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_DivideAndConquer does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, S, U, Vᴴ)
     elseif alg isa LAPACK_Bisection
-        YALAPACK.gesvdx!(A, S, U, Vᴴ; alg.kwargs...)
+        YALAPACK.gesvdx!(A, S, U, Vᴴ; lapack_kwargs...)
     elseif alg isa LAPACK_Jacobi
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Jacobi does not accept any keyword arguments"))
+        isempty(lapack_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_Jacobi"))
         YALAPACK.gesvj!(A, S, U, Vᴴ)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
+
     return S
 end
 
@@ -365,21 +380,25 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
         one!(Vᴴ)
         return USVᴴ
     end
+
+    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa GPU_QRIteration
-        isempty(alg.kwargs) ||
-            @warn "GPU_QRIteration does not accept any keyword arguments"
+        isempty(lapack_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
         _gpu_gesvd_maybe_transpose!(A, view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, view(S, 1:minmn, 1), U, Vᴴ; alg.kwargs...)
+        _gpu_Xgesvdp!(A, view(S, 1:minmn, 1), U, Vᴴ; lapack_kwargs...)
     elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, view(S, 1:minmn, 1), U, Vᴴ; alg.kwargs...)
+        _gpu_gesvdj!(A, view(S, 1:minmn, 1), U, Vᴴ; lapack_kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
     diagview(S) .= view(S, 1:minmn, 1)
     view(S, 2:minmn, 1) .= zero(eltype(S))
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(svd_full!, U, S, Vᴴ, m, n)
+
+    dogaugefix && gaugefix!(svd_full!, U, S, Vᴴ, m, n)
+
     return USVᴴ
 end
 
@@ -387,8 +406,10 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     check_input(svd_trunc!, A, USVᴴ, alg.alg)
     U, S, Vᴴ = USVᴴ
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(svd_trunc!, U, S, Vᴴ, size(A)...)
+
+    dogaugefix = get(alg.alg.kwargs, :gaugefix, true)::Bool
+    dogaugefix && gaugefix!(svd_trunc!, U, S, Vᴴ, size(A)...)
+
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
     Strunc = diagview(USVᴴtrunc[2])
@@ -400,19 +421,23 @@ end
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
+
+    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa GPU_QRIteration
-        isempty(alg.kwargs) ||
-            @warn "GPU_QRIteration does not accept any keyword arguments"
+        isempty(lapack_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
         _gpu_gesvd_maybe_transpose!(A, S.diag, U, Vᴴ)
     elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; alg.kwargs...)
+        _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; lapack_kwargs...)
     elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, S.diag, U, Vᴴ; alg.kwargs...)
+        _gpu_gesvdj!(A, S.diag, U, Vᴴ; lapack_kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
+
+    dogaugefix && gaugefix!(svd_compact!, U, S, Vᴴ, size(A)...)
+
     return USVᴴ
 end
 _argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
@@ -421,16 +446,19 @@ _largest(x, y) = abs(x) < abs(y) ? y : x
 function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
+
+    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa GPU_QRIteration
-        isempty(alg.kwargs) ||
-            @warn "GPU_QRIteration does not accept any keyword arguments"
+        isempty(lapack_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
         _gpu_gesvd_maybe_transpose!(A, S, U, Vᴴ)
     elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, S, U, Vᴴ; alg.kwargs...)
+        _gpu_Xgesvdp!(A, S, U, Vᴴ; lapack_kwargs...)
     elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, S, U, Vᴴ; alg.kwargs...)
+        _gpu_gesvdj!(A, S, U, Vᴴ; lapack_kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
+
     return S
 end
