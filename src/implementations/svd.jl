@@ -120,7 +120,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         return USVᴴ
     end
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_QRIteration
@@ -153,7 +153,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_QRIteration
@@ -336,7 +336,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
         return USVᴴ
     end
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_QRIteration
@@ -362,7 +362,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     U, S, Vᴴ = USVᴴ
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
 
-    do_gauge_fix = get(alg.alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.alg.kwargs, :gaugefix, default_gaugefix())::Bool
     do_gauge_fix && gaugefix!(svd_trunc!, U, Vᴴ)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
@@ -377,7 +377,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_QRIteration

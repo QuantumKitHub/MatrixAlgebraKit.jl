@@ -82,7 +82,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_Simple
@@ -145,7 +145,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_Simple

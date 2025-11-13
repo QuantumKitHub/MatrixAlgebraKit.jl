@@ -1,7 +1,7 @@
 module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!
+using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, default_gaugefix
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
@@ -17,7 +17,7 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIte
     F = svd!(A)
     U, S, Vᴴ = F.U, Diagonal(F.S), F.Vt
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
     do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
 
     return U, S, Vᴴ
@@ -29,7 +29,7 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIterat
     S = MatrixAlgebraKit.zero!(similar(F.S, (size(U, 2), size(Vᴴ, 1))))
     diagview(S) .= F.S
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
     do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
 
     return U, S, Vᴴ

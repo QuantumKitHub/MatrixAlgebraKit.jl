@@ -424,9 +424,10 @@ D, V = eigh_full(A; gaugefix = false)
 ```
 
 The same keyword is available for `eig_full`, `eig_trunc`, `svd_full`, `svd_compact`, and `svd_trunc` functions.
+Additionally, the default value can also be controlled with a global toggle using [`MatrixAlgebraKit.default_gaugefix`](@ref).
 
 ```@docs; canonical=false
 MatrixAlgebraKit.gaugefix!
+MatrixAlgebraKit.default_gaugefix
 ```
-
 
