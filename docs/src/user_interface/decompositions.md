@@ -413,7 +413,7 @@ This preserves the decomposition `A = U * Σ * Vᴴ` while fixing the gauge.
 ### Disabling Gauge Fixing
 
 Gauge fixing is enabled by default for all eigenvalue and singular value decompositions.
-If you prefer to obtain the raw results from the underlying LAPACK routines without gauge fixing, you can disable it using the `gaugefix` keyword argument:
+If you prefer to obtain the raw results from the underlying computational routines without gauge fixing, you can disable it using the `gaugefix` keyword argument:
 
 ```julia
 # With gauge fixing (default)
