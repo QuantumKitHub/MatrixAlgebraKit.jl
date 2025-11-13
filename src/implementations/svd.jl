@@ -120,7 +120,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         return USVᴴ
     end
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_QRIteration
@@ -144,7 +144,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         S[i, 1] = zero(eltype(S))
     end
 
-    dogaugefix && gaugefix!(svd_full!, U, Vᴴ)
+    do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
 
     return USVᴴ
 end
@@ -153,7 +153,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_QRIteration
@@ -174,7 +174,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
 
-    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ)
+    do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
 
     return USVᴴ
 end
@@ -336,7 +336,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
         return USVᴴ
     end
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_QRIteration
@@ -352,7 +352,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     diagview(S) .= view(S, 1:minmn, 1)
     view(S, 2:minmn, 1) .= zero(eltype(S))
 
-    dogaugefix && gaugefix!(svd_full!, U, Vᴴ)
+    do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
 
     return USVᴴ
 end
@@ -362,8 +362,8 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     U, S, Vᴴ = USVᴴ
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
 
-    dogaugefix = get(alg.alg.kwargs, :gaugefix, true)::Bool
-    dogaugefix && gaugefix!(svd_trunc!, U, Vᴴ)
+    do_gauge_fix = get(alg.alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix && gaugefix!(svd_trunc!, U, Vᴴ)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
@@ -377,7 +377,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_QRIteration
@@ -391,7 +391,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
 
-    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ)
+    do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
 
     return USVᴴ
 end

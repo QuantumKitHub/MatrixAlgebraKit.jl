@@ -92,7 +92,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
     D, V = DV
     Dd = D.diag
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
@@ -105,7 +105,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
         YALAPACK.heevx!(A, Dd, V; lapack_kwargs...)
     end
 
-    dogaugefix && (V = gaugefix!(eigh_full!, V))
+    do_gauge_fix && (V = gaugefix!(eigh_full!, V))
 
     return D, V
 end
@@ -168,7 +168,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::GPU_EighAlgorithm)
     D, V = DV
     Dd = D.diag
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_Jacobi
@@ -183,7 +183,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::GPU_EighAlgorithm)
         throw(ArgumentError("Unsupported eigh algorithm"))
     end
 
-    dogaugefix && (V = gaugefix!(eigh_full!, V))
+    do_gauge_fix && (V = gaugefix!(eigh_full!, V))
 
     return D, V
 end

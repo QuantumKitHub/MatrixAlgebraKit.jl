@@ -17,8 +17,8 @@ function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIte
     F = svd!(A)
     U, S, Vᴴ = F.U, Diagonal(F.S), F.Vt
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
-    dogaugefix && gaugefix!(svd_compact!, U, Vᴴ)
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
 
     return U, S, Vᴴ
 end
@@ -29,8 +29,8 @@ function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIterat
     S = MatrixAlgebraKit.zero!(similar(F.S, (size(U, 2), size(Vᴴ, 1))))
     diagview(S) .= F.S
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
-    dogaugefix && gaugefix!(svd_full!, U, Vᴴ)
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
 
     return U, S, Vᴴ
 end

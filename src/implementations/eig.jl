@@ -82,7 +82,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_Simple
@@ -93,7 +93,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
         YALAPACK.geevx!(A, D.diag, V; lapack_kwargs...)
     end
 
-    dogaugefix && (V = gaugefix!(eig_full!, V))
+    do_gauge_fix && (V = gaugefix!(eig_full!, V))
 
     return D, V
 end
@@ -145,7 +145,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_Simple
@@ -153,7 +153,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
         _gpu_geev!(A, D.diag, V)
     end
 
-    dogaugefix && (V = gaugefix!(eig_full!, V))
+    do_gauge_fix && (V = gaugefix!(eig_full!, V))
 
     return D, V
 end

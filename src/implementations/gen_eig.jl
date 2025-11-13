@@ -58,7 +58,7 @@ function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_Eig
     check_input(gen_eig_full!, A, B, WV, alg)
     W, V = WV
 
-    dogaugefix = get(alg.kwargs, :gaugefix, true)::Bool
+    do_gauge_fix = get(alg.kwargs, :gaugefix, true)::Bool
     lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_Simple
@@ -69,7 +69,7 @@ function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_Eig
         throw(ArgumentError("LAPACK_Expert is not supported for ggev"))
     end
 
-    dogaugefix && (V = gaugefix!(gen_eig_full!, V))
+    do_gauge_fix && (V = gaugefix!(gen_eig_full!, V))
 
     return W, V
 end
