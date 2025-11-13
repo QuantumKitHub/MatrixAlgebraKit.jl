@@ -1,4 +1,4 @@
-# Inputs
+# Input
 # ------
 copy_input(::typeof(svd_full), A::AbstractMatrix) = copy!(similar(A, float(eltype(A))), A)
 copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
@@ -362,15 +362,16 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     U, S, Vᴴ = USVᴴ
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
 
-    do_gauge_fix = get(alg.alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    do_gauge_fix && gaugefix!(svd_trunc!, U, Vᴴ)
-
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
-    USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
-    Strunc = diagview(USVᴴtrunc[2])
+    (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+
     # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
-    ϵ = sqrt(norm(A)^2 - norm(Strunc)^2) # is there a more accurate way to do this?
-    return USVᴴtrunc..., ϵ
+    ϵ = sqrt(norm(A)^2 - norm(diagview(Str))^2) # is there a more accurate way to do this?
+
+    do_gauge_fix = get(alg.alg.kwargs, :gaugefix, default_gaugefix())::Bool
+    do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
+
+    return Utr, Str, Vᴴtr, ϵ
 end
 
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
