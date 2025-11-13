@@ -325,16 +325,15 @@ const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 """
     ExponentialViaLA()
 
-Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
-The `qr_alg` specifies which QR-decomposition implementation to use.
+Algorithm type to denote finding the exponential of `A` via the implementation of `LinearAlgebra`.
 """
 @algdef ExponentialViaLA
 
 """
     ExponentialViaEigh()
 
-Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
-The `qr_alg` specifies which QR-decomposition implementation to use.
+Algorithm type to denote finding the exponential `A` by computing the hermitian eigendecomposition of `A`.
+The `eigh_alg` specifies which hermitian eigendecomposition implementation to use.
 """
 struct ExponentialViaEigh{A <: AbstractAlgorithm} <: AbstractAlgorithm
     eigh_alg::A
@@ -348,8 +347,8 @@ end
 """
     ExponentialViaEig()
 
-Algorithm type to denote finding the LQ decomposition of `A` by computing the QR decomposition of `Aᵀ`.
-The `qr_alg` specifies which QR-decomposition implementation to use.
+Algorithm type to denote finding the exponential `A` by computing the eigendecomposition of `A`.
+The `eig_alg` specifies which eigendecomposition implementation to use.
 """
 struct ExponentialViaEig{A <: AbstractAlgorithm} <: AbstractAlgorithm
     eig_alg::A

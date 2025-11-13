@@ -1,7 +1,6 @@
 # Exponential functions
 # --------------
 @functiondef exponential
-# @algdef exponential!
 
 # Algorithm selection
 # -------------------

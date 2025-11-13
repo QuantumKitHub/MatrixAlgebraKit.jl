@@ -6,9 +6,9 @@ using MatrixAlgebraKit: diagview
 using LinearAlgebra
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
-GenericFloats = (Float16, BigFloat, Complex{BigFloat})
+GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
 
-@testset "exp! for T = $T" for T in BLASFloats
+@testset "exponential! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 2
 
@@ -30,7 +30,7 @@ GenericFloats = (Float16, BigFloat, Complex{BigFloat})
     end
 end
 
-@testset "svd for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
+@testset "exponential! for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
     rng = StableRNG(123)
     atol = sqrt(eps(real(T)))
     m = 54
