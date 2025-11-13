@@ -359,11 +359,11 @@ for (f!, f_full!, pb!) in (
             ) where {RT}
             cache_A = nothing
             cache_D = nothing
-            nD, V   = MatrixAlgebraKit.initialize_output($f_full!, A.val, alg.val)
-            nD, V   = $f_full!(A.val, (nD, V), alg.val)
+            nD, V = MatrixAlgebraKit.initialize_output($f_full!, A.val, alg.val)
+            nD, V = $f_full!(A.val, (nD, V), alg.val)
             copy!(D.val, diagview(nD))
-            primal  = EnzymeRules.needs_primal(config) ? D.val : nothing
-            shadow  = EnzymeRules.needs_shadow(config) ? D.dval : nothing
+            primal = EnzymeRules.needs_primal(config) ? D.val : nothing
+            shadow = EnzymeRules.needs_shadow(config) ? D.dval : nothing
             return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_D, V))
         end
         function EnzymeRules.reverse(
@@ -379,9 +379,9 @@ for (f!, f_full!, pb!) in (
             cache_A, cache_D, V = cache
             Dval = !isnothing(cache_D) ? cache_D : D.val
             Aval = !isnothing(cache_A) ? cache_A : A.val
-            ∂D   = isa(D, Const) ? nothing : D.dval
+            ∂D = isa(D, Const) ? nothing : D.dval
             if !isa(A, Const) && !isa(D, Const)
-                $pb!(A.dval, Aval, (Dval, V), (∂D, nothing))
+                $pb!(A.dval, Aval, (Diagonal(Dval), V), (Diagonal(∂D), nothing))
             end
             !isa(D, Const) && make_zero!(D.dval)
             return (nothing, nothing, nothing)
