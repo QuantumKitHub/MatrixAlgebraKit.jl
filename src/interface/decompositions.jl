@@ -319,6 +319,46 @@ Divide and Conquer algorithm.
 
 const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 
+# ================================
+# EXPONENTIAL ALGORITHMS
+# ================================
+"""
+    ExponentialViaLA()
+
+Algorithm type to denote finding the exponential of `A` via the implementation of `LinearAlgebra`.
+"""
+@algdef ExponentialViaLA
+
+"""
+    ExponentialViaEigh()
+
+Algorithm type to denote finding the exponential `A` by computing the hermitian eigendecomposition of `A`.
+The `eigh_alg` specifies which hermitian eigendecomposition implementation to use.
+"""
+struct ExponentialViaEigh{A <: AbstractAlgorithm} <: AbstractAlgorithm
+    eigh_alg::A
+end
+function Base.show(io::IO, alg::ExponentialViaEigh)
+    print(io, "ExponentialViaEigh(")
+    _show_alg(io, alg.eigh_alg)
+    return print(io, ")")
+end
+
+"""
+    ExponentialViaEig()
+
+Algorithm type to denote finding the exponential `A` by computing the eigendecomposition of `A`.
+The `eig_alg` specifies which eigendecomposition implementation to use.
+"""
+struct ExponentialViaEig{A <: AbstractAlgorithm} <: AbstractAlgorithm
+    eig_alg::A
+end
+function Base.show(io::IO, alg::ExponentialViaEig)
+    print(io, "ExponentialViaEigh(")
+    _show_alg(io, alg.eig_alg)
+    return print(io, ")")
+end
+
 # Various consts and unions
 # -------------------------
 
