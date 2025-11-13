@@ -1,15 +1,9 @@
 function test_qr(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "qr $summary_str" begin
-        if T <: Union{CuArray, ROCArray}
-            test_qr_compact(T, sz; pivoted = false, kwargs...)
-            test_qr_full(T, sz; pivoted = false, kwargs...)
-            test_qr_null(T, sz; pivoted = false, kwargs...)
-        else
-            test_qr_compact(T, sz; kwargs...)
-            test_qr_full(T, sz; kwargs...)
-            test_qr_null(T, sz; kwargs...)
-        end
+        test_qr_compact(T, sz; kwargs...)
+        test_qr_full(T, sz; kwargs...)
+        test_qr_null(T, sz; kwargs...)
     end
 end
 

@@ -11,7 +11,7 @@ module TestSuite
 using Test, TestExtras
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
-using LinearAlgebra: Diagonal, norm, istriu
+using LinearAlgebra: Diagonal, norm, istriu, istril
 using Random, StableRNGs
 using AMDGPU, CUDA
 
@@ -55,11 +55,15 @@ end
 isleftnull(N, A; atol::Real = 0, rtol::Real = precision(eltype(A))) =
     isapprox(norm(A' * N), 0; atol = max(atol, norm(A) * rtol))
 
+isrightnull(Nᴴ, A; atol::Real = 0, rtol::Real = precision(eltype(A))) =
+    isapprox(norm(A * Nᴴ'), 0; atol = max(atol, norm(A) * rtol))
+
 # TODO: actually make this a test
 macro testinferred(ex)
     return esc(:(@inferred $ex))
 end
 
 include("qr.jl")
+include("lq.jl")
 
 end

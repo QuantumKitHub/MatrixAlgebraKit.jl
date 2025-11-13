@@ -4,10 +4,30 @@ using TestExtras
 using StableRNGs
 using LinearAlgebra: diag, I, Diagonal
 using MatrixAlgebraKit: LQViaTransposedQR, LAPACK_HouseholderQR
+using CUDA, AMDGPU
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (Float16, BigFloat, Complex{BigFloat})
 
+m = 54
+for T in BLASFloats, n in (37, m, 63)
+    TestSuite.seed_rng!(123)
+    TestSuite.test_lq(T, (m, n); test_pivoted = false)
+    if CUDA.functional()
+        TestSuite.test_lq(CuMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
+        TestSuite.test_lq(Diagonal{T, CuVector{T}}, m; test_pivoted = false, test_blocksize = false)
+    end
+    if AMDGPU.functional()
+        TestSuite.test_lq(ROCMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
+        TestSuite.test_lq(Diagonal{T, ROCVector{T}}, m; test_pivoted = false, test_blocksize = false)
+    end
+end
+for T in (BLASFloats..., GenericFloats...)
+    AT = Diagonal{T, Vector{T}}
+    TestSuite.test_lq(AT, m; test_pivoted = false, test_blocksize = false)
+end
+
+#=
 @testset "lq_compact! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
@@ -253,3 +273,4 @@ end
         @test N isa AbstractMatrix{T} && size(N) == (0, m)
     end
 end
+=#
