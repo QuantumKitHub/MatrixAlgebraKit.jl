@@ -72,7 +72,7 @@ function svd_pullback!(
     # check whether cotangents arise from gauge-invariance objective function
     mask = abs.(Sr' .- Sr) .< degeneracy_atol
     Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
-    Δgauge < gauge_atol ||
+    Δgauge ≤ gauge_atol ||
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
     UdΔAV = (aUΔU .+ aVΔV) .* inv_safe.(Sr' .- Sr, degeneracy_atol) .+
@@ -160,7 +160,7 @@ function svd_trunc_pullback!(
     # check whether cotangents arise from gauge-invariance objective function
     mask = abs.(S' .- S) .< degeneracy_atol
     Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
-    Δgauge < gauge_atol ||
+    Δgauge ≤ gauge_atol ||
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
     UdΔAV = (aUΔU .+ aVΔV) .* inv_safe.(S' .- S, degeneracy_atol) .+

@@ -50,7 +50,7 @@ function lq_pullback!(
             ΔL22 = view(ΔL, (p + 1):m, (p + 1):minmn)
             Δgauge = max(Δgauge, norm(ΔL22, Inf))
         end
-        Δgauge < gauge_atol ||
+        Δgauge ≤ gauge_atol ||
             @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     end
 
@@ -70,7 +70,7 @@ function lq_pullback!(
             # Q2' * ΔQ2 as a gauge dependent quantity.
             ΔQ2Q1ᴴ = ΔQ2 * Q1'
             Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
-            Δgauge < gauge_atol ||
+            Δgauge ≤ gauge_atol ||
                 @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
             ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1ᴴ', Q2, -1, 1)
         end
@@ -120,7 +120,7 @@ function lq_null_pullback!(
     if !iszerotangent(ΔNᴴ) && size(Nᴴ, 1) > 0
         aNᴴΔN = project_antihermitian!(Nᴴ * ΔNᴴ')
         Δgauge = norm(aNᴴΔN)
-        Δgauge < gauge_atol ||
+        Δgauge ≤ gauge_atol ||
             @warn "`lq_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
         L, Q = lq_compact(A; positive = true) # should we be able to provide algorithm here?
         X = ldiv!(LowerTriangular(L)', Q * ΔNᴴ')
