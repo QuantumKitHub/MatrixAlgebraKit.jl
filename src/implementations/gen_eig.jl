@@ -58,8 +58,8 @@ function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_Eig
     check_input(gen_eig_full!, A, B, WV, alg)
     W, V = WV
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_Simple
         isempty(alg_kwargs) ||
@@ -78,7 +78,7 @@ function gen_eig_vals!(A::AbstractMatrix, B::AbstractMatrix, W, alg::LAPACK_EigA
     check_input(gen_eig_vals!, A, B, W, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_Simple
         isempty(alg_kwargs) ||

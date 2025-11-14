@@ -120,8 +120,8 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         return USVᴴ
     end
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_QRIteration
         isempty(alg_kwargs) ||
@@ -153,8 +153,8 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_QRIteration
         isempty(alg_kwargs) ||
@@ -183,7 +183,7 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_QRIteration
         isempty(alg_kwargs) ||
@@ -336,8 +336,8 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
         return USVᴴ
     end
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa GPU_QRIteration
         isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
@@ -368,7 +368,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
     ϵ = sqrt(norm(A)^2 - norm(diagview(Str))^2) # is there a more accurate way to do this?
 
-    do_gauge_fix = get(alg.alg.kwargs, :gaugefix, default_gaugefix())::Bool
+    do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
     do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
 
     return Utr, Str, Vᴴtr, ϵ
@@ -378,8 +378,8 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
     U, S, Vᴴ = USVᴴ
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa GPU_QRIteration
         isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
@@ -403,7 +403,7 @@ function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa GPU_QRIteration
         isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"

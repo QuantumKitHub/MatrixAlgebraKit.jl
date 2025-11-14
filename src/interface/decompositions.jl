@@ -49,21 +49,21 @@ of `R` are non-negative.
 # General Eigenvalue Decomposition
 # -------------------------------
 """
-    LAPACK_Simple(; gaugefix::Bool = true)
+    LAPACK_Simple(; fixgauge::Bool = true)
 
 Algorithm type to denote the simple LAPACK driver for computing the Schur or non-Hermitian
 eigenvalue decomposition of a matrix.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
 see also [`gaugefix!`](@ref).
 """
 @algdef LAPACK_Simple
 
 """
-    LAPACK_Expert(; gaugefix::Bool = true)
+    LAPACK_Expert(; fixgauge::Bool = true)
 
 Algorithm type to denote the expert LAPACK driver for computing the Schur or non-Hermitian
 eigenvalue decomposition of a matrix.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
 see also [`gaugefix!`](@ref).
 """
 @algdef LAPACK_Expert
@@ -81,44 +81,44 @@ eigenvalue decomposition of a non-Hermitian matrix.
 # Hermitian Eigenvalue Decomposition
 # ----------------------------------
 """
-    LAPACK_QRIteration(; gaugefix::Bool = true)
+    LAPACK_QRIteration(; fixgauge::Bool = true)
 
 Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 QR Iteration algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef LAPACK_QRIteration
 
 """
-    LAPACK_Bisection(; gaugefix::Bool = true)
+    LAPACK_Bisection(; fixgauge::Bool = true)
 
 Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 Bisection algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef LAPACK_Bisection
 
 """
-    LAPACK_DivideAndConquer(; gaugefix::Bool = true)
+    LAPACK_DivideAndConquer(; fixgauge::Bool = true)
 
 Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 Divide and Conquer algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef LAPACK_DivideAndConquer
 
 """
-    LAPACK_MultipleRelativelyRobustRepresentations(; gaugefix::Bool = true)
+    LAPACK_MultipleRelativelyRobustRepresentations(; fixgauge::Bool = true)
 
 Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a
 Hermitian matrix using the Multiple Relatively Robust Representations algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
 see also [`gaugefix!`](@ref).
 """
 @algdef LAPACK_MultipleRelativelyRobustRepresentations
@@ -131,12 +131,12 @@ const LAPACK_EighAlgorithm = Union{
 }
 
 """
-    GLA_QRIteration(; gaugefix::Bool = true)
+    GLA_QRIteration(; fixgauge::Bool = true)
 
 Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the
 eigenvalue decomposition of a Hermitian matrix, or the singular value decomposition of
 a general matrix.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef GLA_QRIteration
@@ -144,11 +144,11 @@ singular vectors, see also [`gaugefix!`](@ref).
 # Singular Value Decomposition
 # ----------------------------
 """
-    LAPACK_Jacobi(; gaugefix::Bool = true)
+    LAPACK_Jacobi(; fixgauge::Bool = true)
 
 Algorithm type to denote the LAPACK driver for computing the singular value decomposition of
 a general matrix using the Jacobi algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the singular vectors,
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular vectors,
 see also [`gaugefix!`](@ref).
 """
 @algdef LAPACK_Jacobi
@@ -221,33 +221,33 @@ the diagonal elements of `R` are non-negative.
 @algdef CUSOLVER_HouseholderQR
 
 """
-    CUSOLVER_QRIteration(; gaugefix::Bool = true)
+    CUSOLVER_QRIteration(; fixgauge::Bool = true)
 
 Algorithm type to denote the CUSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 QR Iteration algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef CUSOLVER_QRIteration
 
 """
-    CUSOLVER_SVDPolar(; gaugefix::Bool = true)
+    CUSOLVER_SVDPolar(; fixgauge::Bool = true)
 
 Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
 a general matrix by using Halley's iterative algorithm to compute the polar decompositon,
 followed by the hermitian eigenvalue decomposition of the positive definite factor.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the singular
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular
 vectors, see also [`gaugefix!`](@ref).
 """
 @algdef CUSOLVER_SVDPolar
 
 """
-    CUSOLVER_Jacobi(; gaugefix::Bool = true)
+    CUSOLVER_Jacobi(; fixgauge::Bool = true)
 
 Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
 a general matrix using the Jacobi algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the singular
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular
 vectors, see also [`gaugefix!`](@ref).
 """
 @algdef CUSOLVER_Jacobi
@@ -270,11 +270,11 @@ for more information.
 does_truncate(::TruncatedAlgorithm{<:CUSOLVER_Randomized}) = true
 
 """
-    CUSOLVER_Simple(; gaugefix::Bool = true)
+    CUSOLVER_Simple(; fixgauge::Bool = true)
 
 Algorithm type to denote the simple CUSOLVER driver for computing the non-Hermitian
 eigenvalue decomposition of a matrix.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
 see also [`gaugefix!`](@ref).
 """
 @algdef CUSOLVER_Simple
@@ -282,12 +282,12 @@ see also [`gaugefix!`](@ref).
 const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
 
 """
-    CUSOLVER_DivideAndConquer(; gaugefix::Bool = true)
+    CUSOLVER_DivideAndConquer(; fixgauge::Bool = true)
 
 Algorithm type to denote the CUSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 Divide and Conquer algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef CUSOLVER_DivideAndConquer
@@ -309,44 +309,44 @@ the diagonal elements of `R` are non-negative.
 @algdef ROCSOLVER_HouseholderQR
 
 """
-    ROCSOLVER_QRIteration(; gaugefix::Bool = true)
+    ROCSOLVER_QRIteration(; fixgauge::Bool = true)
 
 Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 QR Iteration algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef ROCSOLVER_QRIteration
 
 """
-    ROCSOLVER_Jacobi(; gaugefix::Bool = true)
+    ROCSOLVER_Jacobi(; fixgauge::Bool = true)
 
 Algorithm type to denote the ROCSOLVER driver for computing the singular value decomposition of
 a general matrix using the Jacobi algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the singular
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular
 vectors, see also [`gaugefix!`](@ref).
 """
 @algdef ROCSOLVER_Jacobi
 
 """
-    ROCSOLVER_Bisection(; gaugefix::Bool = true)
+    ROCSOLVER_Bisection(; fixgauge::Bool = true)
 
 Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 Bisection algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef ROCSOLVER_Bisection
 
 """
-    ROCSOLVER_DivideAndConquer(; gaugefix::Bool = true)
+    ROCSOLVER_DivideAndConquer(; fixgauge::Bool = true)
 
 Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 Divide and Conquer algorithm.
-The `gaugefix` keyword can be used to toggle whether or not to fix the gauge of the eigen or
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
 singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef ROCSOLVER_DivideAndConquer

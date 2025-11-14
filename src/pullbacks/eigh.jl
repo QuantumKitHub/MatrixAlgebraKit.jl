@@ -44,7 +44,7 @@ function eigh_pullback!(
 
         mask = abs.(D' .- D) .< degeneracy_atol
         Δgauge = norm(view(aVᴴΔV, mask))
-        Δgauge < gauge_atol ||
+        Δgauge ≤ gauge_atol ||
             @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
         aVᴴΔV .*= inv_safe.(D' .- D, degeneracy_atol)
@@ -112,7 +112,7 @@ function eigh_trunc_pullback!(
 
         mask = abs.(D' .- D) .< degeneracy_atol
         Δgauge = norm(view(aVᴴΔV, mask))
-        Δgauge < gauge_atol ||
+        Δgauge ≤ gauge_atol ||
             @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
         aVᴴΔV .*= inv_safe.(D' .- D, degeneracy_atol)

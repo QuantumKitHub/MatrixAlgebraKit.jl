@@ -51,7 +51,7 @@ function qr_pullback!(
             ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):n)
             Δgauge = max(Δgauge, norm(ΔR22, Inf))
         end
-        Δgauge < gauge_atol ||
+        Δgauge ≤ gauge_atol ||
             @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     end
 
@@ -70,7 +70,7 @@ function qr_pullback!(
             # Q2' * ΔQ2 as a gauge dependent quantity.
             Q1dΔQ2 = Q1' * ΔQ2
             Δgauge = norm(mul!(copy(ΔQ2), Q1, Q1dΔQ2, -1, 1), Inf)
-            Δgauge < gauge_atol ||
+            Δgauge ≤ gauge_atol ||
                 @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
             ΔQ̃ = mul!(ΔQ̃, Q2, Q1dΔQ2', -1, 1)
         end
@@ -120,7 +120,7 @@ function qr_null_pullback!(
     if !iszerotangent(ΔN) && size(N, 2) > 0
         aNᴴΔN = project_antihermitian!(N' * ΔN)
         Δgauge = norm(aNᴴΔN)
-        Δgauge < gauge_atol ||
+        Δgauge ≤ gauge_atol ||
             @warn "`qr_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
         Q, R = qr_compact(A; positive = true)

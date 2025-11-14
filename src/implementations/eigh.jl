@@ -92,8 +92,8 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
     D, V = DV
     Dd = D.diag
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
         YALAPACK.heevr!(A, Dd, V; alg_kwargs...)
@@ -114,7 +114,7 @@ function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
     check_input(eigh_vals!, A, D, alg)
     V = similar(A, (size(A, 1), 0))
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
         YALAPACK.heevr!(A, D, V; alg_kwargs...)
@@ -168,8 +168,8 @@ function eigh_full!(A::AbstractMatrix, DV, alg::GPU_EighAlgorithm)
     D, V = DV
     Dd = D.diag
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa GPU_Jacobi
         _gpu_heevj!(A, Dd, V; alg_kwargs...)
@@ -192,7 +192,7 @@ function eigh_vals!(A::AbstractMatrix, D, alg::GPU_EighAlgorithm)
     check_input(eigh_vals!, A, D, alg)
     V = similar(A, (size(A, 1), 0))
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa GPU_Jacobi
         _gpu_heevj!(A, D, V; alg_kwargs...)

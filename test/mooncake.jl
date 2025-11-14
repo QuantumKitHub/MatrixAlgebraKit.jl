@@ -504,6 +504,20 @@ end
     end
 end
 
+left_orth_qr(X) = left_orth(X; alg = :qr)
+left_orth_polar(X) = left_orth(X; alg = :polar)
+left_null_qr(X) = left_null(X; alg = :qr)
+right_orth_lq(X) = right_orth(X; alg = :lq)
+right_orth_polar(X) = right_orth(X; alg = :polar)
+right_null_lq(X) = right_null(X; alg = :lq)
+
+MatrixAlgebraKit.copy_input(::typeof(left_orth_qr), A) = MatrixAlgebraKit.copy_input(left_orth, A)
+MatrixAlgebraKit.copy_input(::typeof(left_orth_polar), A) = MatrixAlgebraKit.copy_input(left_orth, A)
+MatrixAlgebraKit.copy_input(::typeof(left_null_qr), A) = MatrixAlgebraKit.copy_input(left_null, A)
+MatrixAlgebraKit.copy_input(::typeof(right_orth_lq), A) = MatrixAlgebraKit.copy_input(right_orth, A)
+MatrixAlgebraKit.copy_input(::typeof(right_orth_polar), A) = MatrixAlgebraKit.copy_input(right_orth, A)
+MatrixAlgebraKit.copy_input(::typeof(right_null_lq), A) = MatrixAlgebraKit.copy_input(right_null, A)
+
 @timedtestset "Orth and null with eltype $T" for T in ETs
     rng = StableRNG(12345)
     m = 19
@@ -517,11 +531,6 @@ end
         Mooncake.TestUtils.test_rule(rng, right_orth, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
         test_pullbacks_match(rng, right_orth!, right_orth, A, CVᴴ, (randn(rng, T, size(CVᴴ[1])...), randn(rng, T, size(CVᴴ[2])...)))
 
-        left_orth_qr(X) = left_orth(X; alg = :qr)
-        left_orth_polar(X) = left_orth(X; alg = :polar)
-        MatrixAlgebraKit.copy_input(left_orth_qr, A) = MatrixAlgebraKit.copy_input(left_orth, A)
-        MatrixAlgebraKit.copy_input(left_orth_polar, A) = MatrixAlgebraKit.copy_input(left_orth, A)
-
         Mooncake.TestUtils.test_rule(rng, left_orth_qr, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
         test_pullbacks_match(rng, ((X, VC) -> left_orth!(X, VC; alg = :qr)), left_orth_qr, A, VC, (randn(rng, T, size(VC[1])...), randn(rng, T, size(VC[2])...)))
         if m >= n
@@ -529,18 +538,12 @@ end
             test_pullbacks_match(rng, ((X, VC) -> left_orth!(X, VC; alg = :polar)), left_orth_polar, A, VC, (randn(rng, T, size(VC[1])...), randn(rng, T, size(VC[2])...)))
         end
 
-        left_null_qr(X) = left_null(X; alg = :qr)
-        MatrixAlgebraKit.copy_input(left_null_qr, A) = MatrixAlgebraKit.copy_input(left_null, A)
         N = left_orth(A; alg = :qr)[1] * randn(rng, T, min(m, n), m - min(m, n))
         ΔN = left_orth(A; alg = :qr)[1] * randn(rng, T, min(m, n), m - min(m, n))
         dN = make_mooncake_tangent(ΔN)
         Mooncake.TestUtils.test_rule(rng, left_null_qr, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false, output_tangent = dN)
         test_pullbacks_match(rng, ((X, N) -> left_null!(X, N; alg = :qr)), left_null_qr, A, N, ΔN)
 
-        right_orth_lq(X) = right_orth(X; alg = :lq)
-        right_orth_polar(X) = right_orth(X; alg = :polar)
-        MatrixAlgebraKit.copy_input(right_orth_lq, A) = MatrixAlgebraKit.copy_input(right_orth, A)
-        MatrixAlgebraKit.copy_input(right_orth_polar, A) = MatrixAlgebraKit.copy_input(right_orth, A)
         Mooncake.TestUtils.test_rule(rng, right_orth_lq, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
         test_pullbacks_match(rng, ((X, CVᴴ) -> right_orth!(X, CVᴴ; alg = :lq)), right_orth_lq, A, CVᴴ, (randn(rng, T, size(CVᴴ[1])...), randn(rng, T, size(CVᴴ[2])...)))
 
@@ -549,8 +552,6 @@ end
             test_pullbacks_match(rng, ((X, CVᴴ) -> right_orth!(X, CVᴴ; alg = :polar)), right_orth_polar, A, CVᴴ, (randn(rng, T, size(CVᴴ[1])...), randn(rng, T, size(CVᴴ[2])...)))
         end
 
-        right_null_lq(X) = right_null(X; alg = :lq)
-        MatrixAlgebraKit.copy_input(right_null_lq, A) = MatrixAlgebraKit.copy_input(right_null, A)
         Nᴴ = randn(rng, T, n - min(m, n), min(m, n)) * right_orth(A; alg = :lq)[2]
         ΔNᴴ = randn(rng, T, n - min(m, n), min(m, n)) * right_orth(A; alg = :lq)[2]
         dNᴴ = make_mooncake_tangent(ΔNᴴ)
