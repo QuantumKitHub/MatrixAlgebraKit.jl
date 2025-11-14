@@ -18,23 +18,23 @@ Mooncake.tangent_type(::Type{<:MatrixAlgebraKit.AbstractAlgorithm}) = Mooncake.N
 function Mooncake.rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDual)
     Ac = copy_input(Mooncake.primal(f_df), Mooncake.primal(A_dA))
     dAc = Mooncake.zero_tangent(Ac)
-    function copy_input_pb(::Mooncake.NoRData)
+    function copy_input_pb(::NoRData)
         Mooncake.increment!!(Mooncake.tangent(A_dA), dAc)
-        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+        return NoRData(), NoRData(), NoRData()
     end
     return CoDual(Ac, dAc), copy_input_pb
 end
 
 # two-argument in-place factorizations like LQ, QR, EIG
 for (f!, f, pb, adj) in (
-        (qr_full!, qr_full, qr_pullback!, :dqr_adjoint),
-        (lq_full!, lq_full, lq_pullback!, :dlq_adjoint),
-        (qr_compact!, qr_compact, qr_pullback!, :dqr_adjoint),
-        (lq_compact!, lq_compact, lq_pullback!, :dlq_adjoint),
-        (eig_full!, eig_full, eig_pullback!, :deig_adjoint),
-        (eigh_full!, eigh_full, eigh_pullback!, :deigh_adjoint),
-        (left_polar!, left_polar, left_polar_pullback!, :dleft_polar_adjoint),
-        (right_polar!, right_polar, right_polar_pullback!, :dright_polar_adjoint),
+        (qr_full!, qr_full, qr_pullback!, :qr_adjoint),
+        (lq_full!, lq_full, lq_pullback!, :lq_adjoint),
+        (qr_compact!, qr_compact, qr_pullback!, :qr_adjoint),
+        (lq_compact!, lq_compact, lq_pullback!, :lq_adjoint),
+        (eig_full!, eig_full, eig_pullback!, :eig_adjoint),
+        (eigh_full!, eigh_full, eigh_pullback!, :eigh_adjoint),
+        (left_polar!, left_polar, left_polar_pullback!, :left_polar_adjoint),
+        (right_polar!, right_polar, right_polar_pullback!, :right_polar_adjoint),
     )
 
     @eval begin
@@ -49,14 +49,14 @@ for (f!, f, pb, adj) in (
             arg1c = copy(arg1)
             arg2c = copy(arg2)
             $f!(A, args, Mooncake.primal(alg_dalg))
-            function $adj(::Mooncake.NoRData)
+            function $adj(::NoRData)
                 copy!(A, Ac)
                 $pb(dA, A, (arg1, arg2), (darg1, darg2))
                 copy!(arg1, arg1c)
                 copy!(arg2, arg2c)
                 MatrixAlgebraKit.zero!(darg1)
                 MatrixAlgebraKit.zero!(darg2)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData(), NoRData()
             end
             return args_dargs, $adj
         end
@@ -68,16 +68,16 @@ for (f!, f, pb, adj) in (
             # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
             # pass). For many types this is done automatically when the forward step returns, but
             # not for nested structs with various fields (like Diagonal{Complex})
-            output_codual = Mooncake.CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
-            function $adj(::Mooncake.NoRData)
+            output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+            function $adj(::NoRData)
                 arg1, arg2 = Mooncake.primal(output_codual)
                 darg1_, darg2_ = Mooncake.tangent(output_codual)
-                arg1, darg1 = Mooncake.arrayify(arg1, darg1_)
-                arg2, darg2 = Mooncake.arrayify(arg2, darg2_)
+                arg1, darg1 = arrayify(arg1, darg1_)
+                arg2, darg2 = arrayify(arg2, darg2_)
                 $pb(dA, A, (arg1, arg2), (darg1, darg2))
                 MatrixAlgebraKit.zero!(darg1)
                 MatrixAlgebraKit.zero!(darg2)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData()
             end
             return output_codual, $adj
         end
@@ -85,8 +85,8 @@ for (f!, f, pb, adj) in (
 end
 
 for (f!, f, pb, adj) in (
-        (qr_null!, qr_null, qr_null_pullback!, :dqr_null_adjoint),
-        (lq_null!, lq_null, lq_null_pullback!, :dlq_null_adjoint),
+        (qr_null!, qr_null, qr_null_pullback!, :qr_null_adjoint),
+        (lq_null!, lq_null, lq_null_pullback!, :lq_null_adjoint),
     )
     @eval begin
         @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -96,12 +96,12 @@ for (f!, f, pb, adj) in (
             arg, darg = arrayify(arg_darg)
             argc = copy(arg)
             $f!(A, arg, Mooncake.primal(alg_dalg))
-            function $adj(::Mooncake.NoRData)
+            function $adj(::NoRData)
                 copy!(A, Ac)
                 $pb(dA, A, arg, darg)
                 copy!(arg, argc)
                 MatrixAlgebraKit.zero!(darg)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData(), NoRData()
             end
             return arg_darg, $adj
         end
@@ -109,12 +109,12 @@ for (f!, f, pb, adj) in (
         function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
-            output_codual = Mooncake.CoDual(output, Mooncake.zero_tangent(output))
-            function $adj(::Mooncake.NoRData)
-                arg, darg = Mooncake.arrayify(output_codual)
+            output_codual = CoDual(output, Mooncake.zero_tangent(output))
+            function $adj(::NoRData)
+                arg, darg = arrayify(output_codual)
                 $pb(dA, A, arg, darg)
                 MatrixAlgebraKit.zero!(darg)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData()
             end
             return output_codual, $adj
         end
@@ -122,8 +122,8 @@ for (f!, f, pb, adj) in (
 end
 
 for (f!, f, f_full, pb, adj) in (
-        (eig_vals!, eig_vals, eig_full, eig_pullback!, :deig_vals_adjoint),
-        (eigh_vals!, eigh_vals, eigh_full, eigh_pullback!, :deigh_vals_adjoint),
+        (eig_vals!, eig_vals, eig_full, eig_pullback!, :eig_vals_adjoint),
+        (eigh_vals!, eigh_vals, eigh_full, eigh_pullback!, :eigh_vals_adjoint),
     )
     @eval begin
         @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -135,10 +135,10 @@ for (f!, f, f_full, pb, adj) in (
             DV = $f_full(A, Mooncake.primal(alg_dalg))
             copy!(D, diagview(DV[1]))
             V = DV[2]
-            function $adj(::Mooncake.NoRData)
+            function $adj(::NoRData)
                 $pb(dA, A, (Diagonal(D), V), (Diagonal(dD), nothing))
                 MatrixAlgebraKit.zero!(dD)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData(), NoRData()
             end
             return D_dD, $adj
         end
@@ -150,12 +150,12 @@ for (f!, f, f_full, pb, adj) in (
             DV = $f_full(A, Mooncake.primal(alg_dalg))
             V = DV[2]
             output = diagview(DV[1])
-            output_codual = Mooncake.CoDual(output, Mooncake.zero_tangent(output))
-            function $adj(::Mooncake.NoRData)
-                D, dD = Mooncake.arrayify(output_codual)
+            output_codual = CoDual(output, Mooncake.zero_tangent(output))
+            function $adj(::NoRData)
+                D, dD = arrayify(output_codual)
                 $pb(dA, A, (Diagonal(D), V), (Diagonal(dD), nothing))
                 MatrixAlgebraKit.zero!(dD)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData()
             end
             return output_codual, $adj
         end
@@ -163,8 +163,8 @@ for (f!, f, f_full, pb, adj) in (
 end
 
 for (f, pb, adj) in (
-        (eig_trunc, eig_trunc_pullback!, :deig_trunc_adjoint),
-        (eigh_trunc, eigh_trunc_pullback!, :deigh_trunc_adjoint),
+        (eig_trunc, eig_trunc_pullback!, :eig_trunc_adjoint),
+        (eigh_trunc, eigh_trunc_pullback!, :eigh_trunc_adjoint),
     )
     @eval begin
         @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -177,17 +177,17 @@ for (f, pb, adj) in (
             # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
             # pass). For many types this is done automatically when the forward step returns, but
             # not for nested structs with various fields (like Diagonal{Complex})
-            output_codual = Mooncake.CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
-            function $adj(dy::Tuple{Mooncake.NoRData, Mooncake.NoRData, T}) where {T <: Real}
+            output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+            function $adj(dy::Tuple{NoRData, NoRData, T}) where {T <: Real}
                 Dtrunc, Vtrunc, ϵ = Mooncake.primal(output_codual)
                 dDtrunc_, dVtrunc_, dϵ = Mooncake.tangent(output_codual)
                 abs(dy[3]) > MatrixAlgebraKit.defaulttol(dy[3]) && @warn "Pullback for $f does not yet support non-zero tangent for the truncation error"
-                D, dD = Mooncake.arrayify(Dtrunc, dDtrunc_)
-                V, dV = Mooncake.arrayify(Vtrunc, dVtrunc_)
+                D, dD = arrayify(Dtrunc, dDtrunc_)
+                V, dV = arrayify(Vtrunc, dVtrunc_)
                 $pb(dA, A, (D, V), (dD, dV))
                 MatrixAlgebraKit.zero!(dD)
                 MatrixAlgebraKit.zero!(dV)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData()
             end
             return output_codual, $adj
         end
@@ -209,7 +209,7 @@ for (f!, f) in (
             S, dS = arrayify(USVᴴ[2], dUSVᴴ[2])
             Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
             output = $f!(A, Mooncake.primal(alg_dalg))
-            function dsvd_adjoint(::Mooncake.NoRData)
+            function svd_adjoint(::NoRData)
                 copy!(A, Ac)
                 if $(f! == svd_compact!)
                     svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
@@ -226,9 +226,9 @@ for (f!, f) in (
                 MatrixAlgebraKit.zero!(dU)
                 MatrixAlgebraKit.zero!(dS)
                 MatrixAlgebraKit.zero!(dVᴴ)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData(), NoRData()
             end
-            return Mooncake.CoDual(output, dUSVᴴ), dsvd_adjoint
+            return CoDual(output, dUSVᴴ), svd_adjoint
         end
         @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
@@ -238,13 +238,13 @@ for (f!, f) in (
             # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
             # pass). For many types this is done automatically when the forward step returns, but
             # not for nested structs with various fields (like Diagonal{Complex})
-            USVᴴ_codual = Mooncake.CoDual(USVᴴ, Mooncake.fdata(Mooncake.zero_tangent(USVᴴ)))
-            function dsvd_adjoint(::Mooncake.NoRData)
+            USVᴴ_codual = CoDual(USVᴴ, Mooncake.fdata(Mooncake.zero_tangent(USVᴴ)))
+            function svd_adjoint(::NoRData)
                 U, S, Vᴴ = Mooncake.primal(USVᴴ_codual)
                 dU_, dS_, dVᴴ_ = Mooncake.tangent(USVᴴ_codual)
-                U, dU = Mooncake.arrayify(U, dU_)
-                S, dS = Mooncake.arrayify(S, dS_)
-                Vᴴ, dVᴴ = Mooncake.arrayify(Vᴴ, dVᴴ_)
+                U, dU = arrayify(U, dU_)
+                S, dS = arrayify(S, dS_)
+                Vᴴ, dVᴴ = arrayify(Vᴴ, dVᴴ_)
                 if $(f == svd_compact)
                     svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
                 else # full
@@ -260,9 +260,9 @@ for (f!, f) in (
                 MatrixAlgebraKit.zero!(dU)
                 MatrixAlgebraKit.zero!(dS)
                 MatrixAlgebraKit.zero!(dVᴴ)
-                return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+                return NoRData(), NoRData(), NoRData()
             end
-            return USVᴴ_codual, dsvd_adjoint
+            return USVᴴ_codual, svd_adjoint
         end
     end
 end
@@ -274,12 +274,12 @@ function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.svd_vals!)}, A_dA::Co
     S, dS = arrayify(S_dS)
     U, nS, Vᴴ = svd_compact(A, Mooncake.primal(alg_dalg))
     copy!(S, diagview(nS))
-    function dsvd_vals_adjoint(::Mooncake.NoRData)
+    function svd_vals_adjoint(::NoRData)
         svd_pullback!(dA, A, (U, Diagonal(S), Vᴴ), (nothing, Diagonal(dS), nothing))
         MatrixAlgebraKit.zero!(dS)
-        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+        return NoRData(), NoRData(), NoRData(), NoRData()
     end
-    return S_dS, dsvd_vals_adjoint
+    return S_dS, svd_vals_adjoint
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.svd_vals), Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -291,14 +291,14 @@ function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.svd_vals)}, A_dA::CoD
     # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
     # pass). For many types this is done automatically when the forward step returns, but
     # not for nested structs with various fields (like Diagonal{Complex})
-    S_codual = Mooncake.CoDual(diagview(S), Mooncake.fdata(Mooncake.zero_tangent(diagview(S))))
-    function dsvd_vals_adjoint(::Mooncake.NoRData)
-        S, dS = Mooncake.arrayify(S_codual)
+    S_codual = CoDual(diagview(S), Mooncake.fdata(Mooncake.zero_tangent(diagview(S))))
+    function svd_vals_adjoint(::NoRData)
+        S, dS = arrayify(S_codual)
         svd_pullback!(dA, A, (U, Diagonal(S), Vᴴ), (nothing, Diagonal(dS), nothing))
         MatrixAlgebraKit.zero!(dS)
-        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+        return NoRData(), NoRData(), NoRData()
     end
-    return S_codual, dsvd_vals_adjoint
+    return S_codual, svd_vals_adjoint
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(MatrixAlgebraKit.svd_trunc), Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -313,21 +313,21 @@ function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.svd_trunc)}, A_dA::Co
     # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
     # pass). For many types this is done automatically when the forward step returns, but
     # not for nested structs with various fields (like Diagonal{Complex})
-    output_codual = Mooncake.CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
-    function dsvd_trunc_adjoint(dy::Tuple{Mooncake.NoRData, Mooncake.NoRData, Mooncake.NoRData, T}) where {T <: Real}
+    output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+    function svd_trunc_adjoint(dy::Tuple{NoRData, NoRData, NoRData, T}) where {T <: Real}
         Utrunc, Strunc, Vᴴtrunc, ϵ = Mooncake.primal(output_codual)
         dUtrunc_, dStrunc_, dVᴴtrunc_, dϵ = Mooncake.tangent(output_codual)
         abs(dy[4]) > MatrixAlgebraKit.defaulttol(dy[4]) && @warn "Pullback for svd_trunc! does not yet support non-zero tangent for the truncation error"
-        U, dU = Mooncake.arrayify(Utrunc, dUtrunc_)
-        S, dS = Mooncake.arrayify(Strunc, dStrunc_)
-        Vᴴ, dVᴴ = Mooncake.arrayify(Vᴴtrunc, dVᴴtrunc_)
+        U, dU = arrayify(Utrunc, dUtrunc_)
+        S, dS = arrayify(Strunc, dStrunc_)
+        Vᴴ, dVᴴ = arrayify(Vᴴtrunc, dVᴴtrunc_)
         svd_trunc_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
         MatrixAlgebraKit.zero!(dU)
         MatrixAlgebraKit.zero!(dS)
         MatrixAlgebraKit.zero!(dVᴴ)
-        return Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData()
+        return NoRData(), NoRData(), NoRData()
     end
-    return output_codual, dsvd_trunc_adjoint
+    return output_codual, svd_trunc_adjoint
 end
 
 end
