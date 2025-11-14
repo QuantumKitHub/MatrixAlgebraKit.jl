@@ -57,6 +57,7 @@ makedocs(;
         ],
         "Developer Interface" => "dev_interface.md",
         "Library" => "library.md",
+        "Changelog" => "changelog.md",
     ],
     checkdocs = :exports,
     doctest = true,
