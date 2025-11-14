@@ -82,8 +82,8 @@ function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_Simple
         isempty(alg_kwargs) ||
@@ -102,7 +102,7 @@ function eig_vals!(A::AbstractMatrix, D, alg::LAPACK_EigAlgorithm)
     check_input(eig_vals!, A, D, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa LAPACK_Simple
         isempty(alg_kwargs) ||
@@ -145,8 +145,8 @@ function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
 
-    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa GPU_Simple
         isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_Simple"
@@ -162,7 +162,7 @@ function eig_vals!(A::AbstractMatrix, D, alg::GPU_EigAlgorithm)
     check_input(eig_vals!, A, D, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
 
     if alg isa GPU_Simple
         isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_Simple"

@@ -43,18 +43,18 @@ Default tolerance for deciding to warn if the provided `A` is not hermitian.
 default_hermitian_tol(A) = eps(norm(A, Inf))^(3 / 4)
 
 
-const DEFAULT_GAUGEFIX = Ref(true)
+const DEFAULT_FIXGAUGE = Ref(true)
 
 @doc """
-    default_gaugefix() -> current_value
-    default_gaugefix(new_value::Bool) -> previous_value
+    default_fixgauge() -> current_value
+    default_fixgauge(new_value::Bool) -> previous_value
 
 Global toggle for enabling or disabling the default behavior of gauge fixing the output of the eigen- and singular value decompositions.
-""" default_gaugefix
+""" default_fixgauge
 
-default_gaugefix() = DEFAULT_GAUGEFIX[]
-function default_gaugefix(new_value::Bool)
-    previous_value = DEFAULT_GAUGEFIX[]
-    DEFAULT_GAUGEFIX[] = new_value
+default_fixgauge() = DEFAULT_FIXGAUGE[]
+function default_fixgauge(new_value::Bool)
+    previous_value = DEFAULT_FIXGAUGE[]
+    DEFAULT_FIXGAUGE[] = new_value
     return previous_value
 end
