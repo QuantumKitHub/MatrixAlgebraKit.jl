@@ -91,32 +91,41 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
     Dd = D.diag
+
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
-        YALAPACK.heevr!(A, Dd, V; alg.kwargs...)
+        YALAPACK.heevr!(A, Dd, V; alg_kwargs...)
     elseif alg isa LAPACK_DivideAndConquer
-        YALAPACK.heevd!(A, Dd, V; alg.kwargs...)
+        YALAPACK.heevd!(A, Dd, V; alg_kwargs...)
     elseif alg isa LAPACK_Simple
-        YALAPACK.heev!(A, Dd, V; alg.kwargs...)
+        YALAPACK.heev!(A, Dd, V; alg_kwargs...)
     else # alg isa LAPACK_Expert
-        YALAPACK.heevx!(A, Dd, V; alg.kwargs...)
+        YALAPACK.heevx!(A, Dd, V; alg_kwargs...)
     end
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    V = gaugefix!(V)
+
+    do_gauge_fix && (V = gaugefix!(eigh_full!, V))
+
     return D, V
 end
 
 function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
     check_input(eigh_vals!, A, D, alg)
     V = similar(A, (size(A, 1), 0))
+
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
-        YALAPACK.heevr!(A, D, V; alg.kwargs...)
+        YALAPACK.heevr!(A, D, V; alg_kwargs...)
     elseif alg isa LAPACK_DivideAndConquer
-        YALAPACK.heevd!(A, D, V; alg.kwargs...)
+        YALAPACK.heevd!(A, D, V; alg_kwargs...)
     elseif alg isa LAPACK_QRIteration # == LAPACK_Simple
-        YALAPACK.heev!(A, D, V; alg.kwargs...)
+        YALAPACK.heev!(A, D, V; alg_kwargs...)
     else # alg isa LAPACK_Bisection == LAPACK_Expert
-        YALAPACK.heevx!(A, D, V; alg.kwargs...)
+        YALAPACK.heevx!(A, D, V; alg_kwargs...)
     end
+
     return D
 end
 
@@ -158,35 +167,44 @@ function eigh_full!(A::AbstractMatrix, DV, alg::GPU_EighAlgorithm)
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
     Dd = D.diag
+
+    do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa GPU_Jacobi
-        _gpu_heevj!(A, Dd, V; alg.kwargs...)
+        _gpu_heevj!(A, Dd, V; alg_kwargs...)
     elseif alg isa GPU_DivideAndConquer
-        _gpu_heevd!(A, Dd, V; alg.kwargs...)
+        _gpu_heevd!(A, Dd, V; alg_kwargs...)
     elseif alg isa GPU_QRIteration # alg isa GPU_QRIteration == GPU_Simple
-        _gpu_heev!(A, Dd, V; alg.kwargs...)
+        _gpu_heev!(A, Dd, V; alg_kwargs...)
     elseif alg isa GPU_Bisection # alg isa GPU_Bisection == GPU_Expert
-        _gpu_heevx!(A, Dd, V; alg.kwargs...)
+        _gpu_heevx!(A, Dd, V; alg_kwargs...)
     else
         throw(ArgumentError("Unsupported eigh algorithm"))
     end
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    V = gaugefix!(V)
+
+    do_gauge_fix && (V = gaugefix!(eigh_full!, V))
+
     return D, V
 end
 
 function eigh_vals!(A::AbstractMatrix, D, alg::GPU_EighAlgorithm)
     check_input(eigh_vals!, A, D, alg)
     V = similar(A, (size(A, 1), 0))
+
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+
     if alg isa GPU_Jacobi
-        _gpu_heevj!(A, D, V; alg.kwargs...)
+        _gpu_heevj!(A, D, V; alg_kwargs...)
     elseif alg isa GPU_DivideAndConquer
-        _gpu_heevd!(A, D, V; alg.kwargs...)
+        _gpu_heevd!(A, D, V; alg_kwargs...)
     elseif alg isa GPU_QRIteration
-        _gpu_heev!(A, D, V; alg.kwargs...)
+        _gpu_heev!(A, D, V; alg_kwargs...)
     elseif alg isa GPU_Bisection
-        _gpu_heevx!(A, D, V; alg.kwargs...)
+        _gpu_heevx!(A, D, V; alg_kwargs...)
     else
         throw(ArgumentError("Unsupported eigh algorithm"))
     end
+
     return D
 end
