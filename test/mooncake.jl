@@ -24,23 +24,6 @@ make_mooncake_fdata(x::Diagonal) = Mooncake.FData((diag = make_mooncake_tangent(
 
 ETs = (Float64, Float32, ComplexF64, ComplexF32)
 
-"""
-    test_pullbacks_match(rng, f!, f, A, args, Δargs, alg = nothing; rdata = Mooncake.NoRData())
-
-Compare the result of running the *in-place, mutating* function `f!`'s reverse rule
-with the result of running its *non-mutating* partner function `f`'s reverse rule.
-We must compare directly because many of the mutating functions modify `A` as a
-scratch workspace, making testing `f!` against finite differences infeasible.
-
-The arguments to this function are:
-  - `f!` the mutating, in-place version of the function (accepts `args` for the function result)
-  - `f` the non-mutating version of the function (does not accept `args` for the function result)
-  - `A` the input matrix to factorize
-  - `args` preallocated output for `f!` (e.g. `Q` and `R` matrices for `qr_compact!`)
-  - `Δargs` precomputed derivatives of `args` for pullbacks of `f` and `f!`, to ensure they receive the same input
-  - `alg` optional algorithm keyword argument
-  - `rdata` Mooncake reverse data to supply to the pullback, in case `f` and `f!` return scalar results (as truncating functions do)
-"""
 # no `alg` argument
 function _get_copying_derivative(f_c, rrule, A, ΔA, args, Δargs, ::Nothing, rdata)
     dA_copy = make_mooncake_tangent(copy(ΔA))
@@ -99,6 +82,23 @@ function _get_inplace_derivative(f!, A, ΔA, args, Δargs, alg, rdata)
     return dA_inplace
 end
 
+"""
+    test_pullbacks_match(rng, f!, f, A, args, Δargs, alg = nothing; rdata = Mooncake.NoRData())
+
+Compare the result of running the *in-place, mutating* function `f!`'s reverse rule
+with the result of running its *non-mutating* partner function `f`'s reverse rule.
+We must compare directly because many of the mutating functions modify `A` as a
+scratch workspace, making testing `f!` against finite differences infeasible.
+
+The arguments to this function are:
+  - `f!` the mutating, in-place version of the function (accepts `args` for the function result)
+  - `f` the non-mutating version of the function (does not accept `args` for the function result)
+  - `A` the input matrix to factorize
+  - `args` preallocated output for `f!` (e.g. `Q` and `R` matrices for `qr_compact!`)
+  - `Δargs` precomputed derivatives of `args` for pullbacks of `f` and `f!`, to ensure they receive the same input
+  - `alg` optional algorithm keyword argument
+  - `rdata` Mooncake reverse data to supply to the pullback, in case `f` and `f!` return scalar results (as truncating functions do)
+"""
 function test_pullbacks_match(rng, f!, f, A, args, Δargs, alg = nothing; rdata = Mooncake.NoRData())
     f_c = isnothing(alg) ? (A, args) -> f!(MatrixAlgebraKit.copy_input(f, A), args) : (A, args, alg) -> f!(MatrixAlgebraKit.copy_input(f, A), args, alg)
     sig = isnothing(alg) ? Tuple{typeof(f_c), typeof(A), typeof(args)} : Tuple{typeof(f_c), typeof(A), typeof(args), typeof(alg)}
