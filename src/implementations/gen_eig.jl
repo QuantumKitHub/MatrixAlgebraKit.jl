@@ -59,10 +59,10 @@ function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_Eig
     W, V = WV
 
     do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_Simple
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
         YALAPACK.ggev!(A, B, W.diag, V, similar(W.diag, eltype(A)))
     else # alg isa LAPACK_Expert
@@ -78,10 +78,10 @@ function gen_eig_vals!(A::AbstractMatrix, B::AbstractMatrix, W, alg::LAPACK_EigA
     check_input(gen_eig_vals!, A, B, W, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
 
-    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_Simple
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
         YALAPACK.ggev!(A, B, W, V, similar(W, eltype(A)))
     else # alg isa LAPACK_Expert

@@ -121,14 +121,14 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     end
 
     do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_QRIteration
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
         YALAPACK.gesvd!(A, view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa LAPACK_DivideAndConquer
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa LAPACK_Bisection
@@ -154,20 +154,20 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     U, S, Vᴴ = USVᴴ
 
     do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_QRIteration
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
         YALAPACK.gesvd!(A, S.diag, U, Vᴴ)
     elseif alg isa LAPACK_DivideAndConquer
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, S.diag, U, Vᴴ)
     elseif alg isa LAPACK_Bisection
-        YALAPACK.gesvdx!(A, S.diag, U, Vᴴ; lapack_kwargs...)
+        YALAPACK.gesvdx!(A, S.diag, U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_Jacobi"))
         YALAPACK.gesvj!(A, S.diag, U, Vᴴ)
     else
@@ -183,20 +183,20 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
 
-    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa LAPACK_QRIteration
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
         YALAPACK.gesvd!(A, S, U, Vᴴ)
     elseif alg isa LAPACK_DivideAndConquer
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, S, U, Vᴴ)
     elseif alg isa LAPACK_Bisection
-        YALAPACK.gesvdx!(A, S, U, Vᴴ; lapack_kwargs...)
+        YALAPACK.gesvdx!(A, S, U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi
-        isempty(lapack_kwargs) ||
+        isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_Jacobi"))
         YALAPACK.gesvj!(A, S, U, Vᴴ)
     else
@@ -337,15 +337,15 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     end
 
     do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_QRIteration
-        isempty(lapack_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
+        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
         _gpu_gesvd_maybe_transpose!(A, view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, view(S, 1:minmn, 1), U, Vᴴ; lapack_kwargs...)
+        _gpu_Xgesvdp!(A, view(S, 1:minmn, 1), U, Vᴴ; alg_kwargs...)
     elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, view(S, 1:minmn, 1), U, Vᴴ; lapack_kwargs...)
+        _gpu_gesvdj!(A, view(S, 1:minmn, 1), U, Vᴴ; alg_kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
@@ -379,15 +379,15 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     U, S, Vᴴ = USVᴴ
 
     do_gauge_fix = get(alg.kwargs, :gaugefix, default_gaugefix())::Bool
-    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_QRIteration
-        isempty(lapack_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
+        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
         _gpu_gesvd_maybe_transpose!(A, S.diag, U, Vᴴ)
     elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; lapack_kwargs...)
+        _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; alg_kwargs...)
     elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, S.diag, U, Vᴴ; lapack_kwargs...)
+        _gpu_gesvdj!(A, S.diag, U, Vᴴ; alg_kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
@@ -403,15 +403,15 @@ function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
     check_input(svd_vals!, A, S, alg)
     U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
 
-    lapack_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:gaugefix,)})
 
     if alg isa GPU_QRIteration
-        isempty(lapack_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
+        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
         _gpu_gesvd_maybe_transpose!(A, S, U, Vᴴ)
     elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, S, U, Vᴴ; lapack_kwargs...)
+        _gpu_Xgesvdp!(A, S, U, Vᴴ; alg_kwargs...)
     elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, S, U, Vᴴ; lapack_kwargs...)
+        _gpu_gesvdj!(A, S, U, Vᴴ; alg_kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
