@@ -356,6 +356,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
 
     return USVᴴ
 end
+svd_full!(A::Diagonal, USVᴴ, alg::GPU_SVDAlgorithm) = svd_full!(diagm(A.diag), USVᴴ, alg)
 
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
     check_input(svd_trunc!, A, USVᴴ, alg.alg)
@@ -373,6 +374,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
 
     return Utr, Str, Vᴴtr, ϵ
 end
+svd_trunc!(A::Diagonal, USVᴴ, alg::GPU_SVDAlgorithm) = svd_trunc!(diagm(A.diag), USVᴴ, alg)
 
 function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     check_input(svd_compact!, A, USVᴴ, alg)
@@ -396,6 +398,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
 
     return USVᴴ
 end
+svd_compact!(A::Diagonal, USVᴴ, alg::GPU_SVDAlgorithm) = svd_compact!(diagm(A.diag), USVᴴ, alg)
 _argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
 _largest(x, y) = abs(x) < abs(y) ? y : x
 
@@ -416,5 +419,12 @@ function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
 
+    return S
+end
+function svd_vals!(A::Diagonal, S, alg::GPU_SVDAlgorithm)
+    check_input(svd_vals!, A, S, alg)
+    Ad = diagview(A)
+    S .= abs.(Ad)
+    sort!(S; rev = true)
     return S
 end
