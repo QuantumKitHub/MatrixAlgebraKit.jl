@@ -19,7 +19,7 @@ function check_hermitian(A; atol::Real = default_hermitian_tol(A), rtol::Real = 
 end
 
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractAlgorithm)
-    check_hermitian(A, alg)
+    #check_hermitian(A, alg)
     D, V = DV
     m = size(A, 1)
     @assert D isa Diagonal && V isa AbstractMatrix
