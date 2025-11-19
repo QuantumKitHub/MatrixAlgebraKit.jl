@@ -9,13 +9,15 @@ copy_input(::typeof(project_isometric), A) = copy_input(left_polar, A)
 
 function check_input(::typeof(project_hermitian!), A::AbstractMatrix, B::AbstractMatrix, ::AbstractAlgorithm)
     LinearAlgebra.checksquare(A)
-    n = Base.require_one_based_indexing(A)
+    Base.require_one_based_indexing(A)
+    n = size(A, 1)
     B === A || @check_size(B, (n, n))
     return nothing
 end
 function check_input(::typeof(project_antihermitian!), A::AbstractMatrix, B::AbstractMatrix, ::AbstractAlgorithm)
     LinearAlgebra.checksquare(A)
-    n = Base.require_one_based_indexing(A)
+    Base.require_one_based_indexing(A)
+    n = size(A, 1)
     B === A || @check_size(B, (n, n))
     return nothing
 end
@@ -59,6 +61,15 @@ function project_isometric!(A::AbstractMatrix, W, alg::AbstractAlgorithm)
     noP = similar(W, (0, 0))
     W, _ = left_polar!(A, (W, noP), alg)
     return W
+end
+
+function project_hermitian_native!(A::Diagonal, B::Diagonal, ::Val{anti}; kwargs...) where {anti}
+    if anti
+        diagview(A) .= imag.(diagview(B)) .* im
+    else
+        diagview(A) .= real.(diagview(B))
+    end
+    return A
 end
 
 function project_hermitian_native!(A::AbstractMatrix, B::AbstractMatrix, anti::Val; blocksize = 32)
