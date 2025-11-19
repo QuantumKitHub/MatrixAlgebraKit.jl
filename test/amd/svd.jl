@@ -41,7 +41,7 @@ include(joinpath("..", "utilities.jl"))
             @test ROCArray(diagview(S)) ≈ Sd
             # ROCArray is necessary because norm of ROCArray view with non-unit step is broken
             if alg isa ROCSOLVER_QRIteration
-                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_compact!(copy!(Ac, A), (U, S, Vᴴ), ROCSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_compact!(copy!(Ac, A), (U, S, Vᴴ), ROCSOLVER_QRIteration(; bad = "bad"))
             end
         end
     end
@@ -83,8 +83,8 @@ end
             @test ROCArray(diagview(S)) ≈ Sc
             # ROCArray is necessary because norm of ROCArray view with non-unit step is broken
             if alg isa ROCSOLVER_QRIteration
-                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_full!(copy!(Ac, A), (U, S, Vᴴ), ROCSOLVER_QRIteration(; bad = "bad"))
-                @test_warn "GPU_QRIteration does not accept any keyword arguments" svd_vals!(copy!(Ac, A), Sc, ROCSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_full!(copy!(Ac, A), (U, S, Vᴴ), ROCSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_vals!(copy!(Ac, A), Sc, ROCSOLVER_QRIteration(; bad = "bad"))
             end
         end
     end

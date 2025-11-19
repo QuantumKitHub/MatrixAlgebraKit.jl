@@ -42,9 +42,9 @@ using LinearAlgebra: Diagonal
     A = randn(rng, T, m, m)
     B = randn(rng, T, m, m)
     @test_throws ArgumentError("LAPACK_Expert is not supported for ggev") gen_eig_full(A, B; alg = LAPACK_Expert())
-    @test_throws ArgumentError("LAPACK_Simple (ggev) does not accept any keyword arguments") gen_eig_full(A, B; alg = LAPACK_Simple(bad = "sad"))
+    @test_throws ArgumentError("invalid keyword arguments for LAPACK_Simple") gen_eig_full(A, B; alg = LAPACK_Simple(bad = "sad"))
     @test_throws ArgumentError("LAPACK_Expert is not supported for ggev") gen_eig_vals(A, B; alg = LAPACK_Expert())
-    @test_throws ArgumentError("LAPACK_Simple (ggev) does not accept any keyword arguments") gen_eig_vals(A, B; alg = LAPACK_Simple(bad = "sad"))
+    @test_throws ArgumentError("invalid keyword arguments for LAPACK_Simple") gen_eig_vals(A, B; alg = LAPACK_Simple(bad = "sad"))
 
     # a tuple of the input types is passed to `default_algorithm`
     @test_throws MethodError MatrixAlgebraKit.default_algorithm(gen_eig_full, A, B)

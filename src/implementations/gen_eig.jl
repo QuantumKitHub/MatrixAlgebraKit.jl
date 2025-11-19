@@ -57,27 +57,36 @@ end
 function gen_eig_full!(A::AbstractMatrix, B::AbstractMatrix, WV, alg::LAPACK_EigAlgorithm)
     check_input(gen_eig_full!, A, B, WV, alg)
     W, V = WV
+
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
+
     if alg isa LAPACK_Simple
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple (ggev) does not accept any keyword arguments"))
+        isempty(alg_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
         YALAPACK.ggev!(A, B, W.diag, V, similar(W.diag, eltype(A)))
     else # alg isa LAPACK_Expert
         throw(ArgumentError("LAPACK_Expert is not supported for ggev"))
     end
-    # TODO: make this controllable using a `gaugefix` keyword argument
-    V = gaugefix!(V)
+
+    do_gauge_fix && (V = gaugefix!(gen_eig_full!, V))
+
     return W, V
 end
 
 function gen_eig_vals!(A::AbstractMatrix, B::AbstractMatrix, W, alg::LAPACK_EigAlgorithm)
     check_input(gen_eig_vals!, A, B, W, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
+
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
+
     if alg isa LAPACK_Simple
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple (ggev) does not accept any keyword arguments"))
+        isempty(alg_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
         YALAPACK.ggev!(A, B, W, V, similar(W, eltype(A)))
     else # alg isa LAPACK_Expert
         throw(ArgumentError("LAPACK_Expert is not supported for ggev"))
     end
+
     return W
 end

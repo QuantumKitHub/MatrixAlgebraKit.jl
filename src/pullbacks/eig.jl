@@ -43,7 +43,7 @@ function eig_pullback!(
 
         mask = abs.(transpose(D) .- D) .< degeneracy_atol
         Δgauge = norm(view(VᴴΔV, mask), Inf)
-        Δgauge < gauge_atol ||
+        Δgauge ≤ gauge_atol ||
             @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
         VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
@@ -121,7 +121,7 @@ function eig_trunc_pullback!(
         VᴴΔV = V' * ΔV
         mask = abs.(transpose(D) .- D) .< degeneracy_atol
         Δgauge = norm(view(VᴴΔV, mask), Inf)
-        Δgauge < gauge_atol ||
+        Δgauge ≤ gauge_atol ||
             @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
         ΔVperp = ΔV - V * inv(G) * VᴴΔV

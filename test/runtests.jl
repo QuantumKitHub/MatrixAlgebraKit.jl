@@ -41,6 +41,9 @@ if !is_buildkite
     @safetestset "Exponential" begin
         include("exponential.jl")
     end
+    @safetestset "Mooncake" begin
+        include("mooncake.jl")
+    end
     @safetestset "ChainRules" begin
         include("chainrules.jl")
     end

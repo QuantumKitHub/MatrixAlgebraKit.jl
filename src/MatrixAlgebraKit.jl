@@ -78,7 +78,6 @@ include("common/safemethods.jl")
 include("common/view.jl")
 include("common/regularinv.jl")
 include("common/matrixproperties.jl")
-include("common/gauge.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
@@ -95,6 +94,8 @@ include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
 include("interface/exponential.jl")
+
+include("common/gauge.jl") # needs to be defined after the functions are
 
 include("implementations/projections.jl")
 include("implementations/truncation.jl")

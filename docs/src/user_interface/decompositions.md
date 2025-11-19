@@ -72,6 +72,11 @@ eigh_trunc
 eigh_vals
 ```
 
+!!! note "Gauge Degrees of Freedom"
+    The eigenvectors returned by these functions have residual phase degrees of freedom.
+    By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
+    See [Gauge choices](@ref sec_gaugefix) for more details.
+
 Alongside these functions, we provide a LAPACK-based implementation for dense arrays, as provided by the following algorithms:
 
 ```@autodocs; canonical=false
@@ -88,6 +93,11 @@ eig_full
 eig_trunc
 eig_vals
 ```
+
+!!! note "Gauge Degrees of Freedom"
+    The eigenvectors returned by these functions have residual phase degrees of freedom.
+    By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
+    See [Gauge choices](@ref sec_gaugefix) for more details.
 
 Alongside these functions, we provide a LAPACK-based implementation for dense arrays, as provided by the following algorithms:
 
@@ -136,6 +146,11 @@ svd_compact
 svd_vals
 svd_trunc
 ```
+
+!!! note "Gauge Degrees of Freedom"
+    The singular vectors returned by these functions have residual phase degrees of freedom.
+    By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
+    See [Gauge choices](@ref sec_gaugefix) for more details.
 
 MatrixAlgebraKit again ships with LAPACK-based implementations for dense arrays:
 
@@ -371,3 +386,48 @@ norm(A * N1') < 1e-14 && norm(A * N2') < 1e-14 &&
 # output
 true
 ```
+
+## [Gauge choices](@id sec_gaugefix)
+
+Both eigenvalue and singular value decompositions have residual gauge degrees of freedom even when the eigenvalues or singular values are unique.
+These arise from the fact that even after normalization, the eigenvectors and singular vectors are only determined up to a phase factor.
+
+### Phase Ambiguity in Decompositions
+
+For the eigenvalue decomposition `A * V = V * D`, if `v` is an eigenvector with eigenvalue `λ` and `|v| = 1`, then so is `e^(iθ) * v` for any real phase `θ`.
+When `λ` is non-degenerate (i.e., has multiplicity 1), the eigenvector is unique up to this phase.
+
+Similarly, for the singular value decomposition `A = U * Σ * Vᴴ`, the singular vectors `u` and `v` corresponding to a non-degenerate singular value `σ` are unique only up to a common phase.
+We can replace `u → e^(iθ) * u` and `vᴴ → e^(-iθ) * vᴴ` simultaneously.
+
+### Gauge Fixing Convention
+
+To remove this phase ambiguity and ensure reproducible results, MatrixAlgebraKit implements a gauge fixing convention by default.
+The convention ensures that **the entry with the largest magnitude in each eigenvector or left singular vector is real and positive**.
+
+For eigenvectors, this means that for each column `v` of `V`, we multiply by `conj(sign(v[i]))` where `i` is the index of the entry with largest absolute value.
+
+For singular vectors, we apply the phase factor to both `u` and `v` based on the entry with largest magnitude in `u`.
+This preserves the decomposition `A = U * Σ * Vᴴ` while fixing the gauge.
+
+### Disabling Gauge Fixing
+
+Gauge fixing is enabled by default for all eigenvalue and singular value decompositions.
+If you prefer to obtain the raw results from the underlying computational routines without gauge fixing, you can disable it using the `fixgauge` keyword argument:
+
+```julia
+# With gauge fixing (default)
+D, V = eigh_full(A)
+
+# Without gauge fixing
+D, V = eigh_full(A; fixgauge = false)
+```
+
+The same keyword is available for `eig_full`, `eig_trunc`, `svd_full`, `svd_compact`, and `svd_trunc` functions.
+Additionally, the default value can also be controlled with a global toggle using [`MatrixAlgebraKit.default_fixgauge`](@ref).
+
+```@docs; canonical=false
+MatrixAlgebraKit.gaugefix!
+MatrixAlgebraKit.default_fixgauge
+```
+
