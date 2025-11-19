@@ -179,7 +179,6 @@ end
     end
 end
 
-#=
 @timedtestset "LQ AD Rules with eltype $T" for T in ETs
     rng = StableRNG(12345)
     m = 19
@@ -193,57 +192,50 @@ end
             )
             @testset "lq_compact" begin
                 L, Q = lq_compact(A, alg)
-                Mooncake.TestUtils.test_rule(rng, lq_compact, A, alg; is_primitive = false, atol = atol, rtol = rtol)
+                Mooncake.TestUtils.test_rule(rng, lq_compact, A, alg; atol = atol, rtol = rtol)
                 test_pullbacks_match(rng, lq_compact!, lq_compact, A, (L, Q), (randn(rng, T, m, minmn), randn(rng, T, minmn, n)), alg)
-                ΔL  = randn(rng, T, m, minmn)
-                ΔQ  = randn(rng, T, minmn, n)
-                dL  = make_mooncake_tangent(ΔL)
-                dQ  = make_mooncake_tangent(ΔQ)
-                dLQ = Mooncake.build_tangent(typeof((ΔL,ΔQ)), dL, dQ)
-                Mooncake.TestUtils.test_rule(rng, lq_compact, A, alg; is_primitive=false, atol=atol, rtol=rtol, output_tangent = dLQ)
             end
             @testset "lq_null" begin
                 L, Q = lq_compact(A, alg)
-                ΔNᴴ = randn(rng, T, max(0, n - minmn), minmn) * Q
-                Nᴴ = randn(rng, T, max(0, n - minmn), n)
-                dNᴴ = make_mooncake_tangent(ΔNᴴ)
-                Mooncake.TestUtils.test_rule(rng, lq_null, A, alg; output_tangent = dNᴴ, is_primitive = false, atol = atol, rtol = rtol)
+                ΔNᴴ  = randn(rng, T, max(0, n - minmn), minmn) * Q
+                Nᴴ   = randn(rng, T, max(0, n - minmn), n)
+                dNᴴ  = make_mooncake_tangent(ΔNᴴ)
+                Mooncake.TestUtils.test_rule(rng, lq_null, A, alg; output_tangent = dNᴴ, atol = atol, rtol = rtol)
                 test_pullbacks_match(rng, lq_null!, lq_null, A, Nᴴ, ΔNᴴ, alg)
             end
             @testset "lq_full" begin
                 L, Q = lq_full(A, alg)
-                Q1 = view(Q, 1:minmn, 1:n)
-                ΔQ = randn(rng, T, n, n)
-                ΔQ2 = view(ΔQ, (minmn + 1):n, 1:n)
+                Q1   = view(Q, 1:minmn, 1:n)
+                ΔQ   = randn(rng, T, n, n)
+                ΔQ2  = view(ΔQ, (minmn + 1):n, 1:n)
                 mul!(ΔQ2, ΔQ2 * Q1', Q1)
-                ΔL = randn(rng, T, m, n)
-                dL = make_mooncake_tangent(ΔL)
-                dQ = make_mooncake_tangent(ΔQ)
-                dLQ = Mooncake.build_tangent(typeof((ΔL, ΔQ)), dL, dQ)
-                Mooncake.TestUtils.test_rule(rng, lq_full, A, alg; output_tangent = dLQ, is_primitive = false, atol = atol, rtol = rtol)
+                ΔL   = randn(rng, T, m, n)
+                dL   = make_mooncake_tangent(ΔL)
+                dQ   = make_mooncake_tangent(ΔQ)
+                dLQ  = Mooncake.build_tangent(typeof((ΔL, ΔQ)), dL, dQ)
+                Mooncake.TestUtils.test_rule(rng, lq_full, A, alg; output_tangent = dLQ, atol = atol, rtol = rtol)
                 test_pullbacks_match(rng, lq_full!, lq_full, A, (L, Q), (ΔL, ΔQ), alg)
             end
             @testset "lq_compact - rank-deficient A" begin
-                r = minmn - 5
-                Ard = randn(rng, T, m, r) * randn(rng, T, r, n)
+                r    = minmn - 5
+                Ard  = randn(rng, T, m, r) * randn(rng, T, r, n)
                 L, Q = lq_compact(Ard, alg)
-                ΔL = randn(rng, T, m, minmn)
-                ΔQ = randn(rng, T, minmn, n)
-                Q1 = view(Q, 1:r, 1:n)
-                Q2 = view(Q, (r + 1):minmn, 1:n)
-                ΔQ2 = view(ΔQ, (r + 1):minmn, 1:n)
+                ΔL   = randn(rng, T, m, minmn)
+                ΔQ   = randn(rng, T, minmn, n)
+                Q1   = view(Q, 1:r, 1:n)
+                Q2   = view(Q, (r + 1):minmn, 1:n)
+                ΔQ2  = view(ΔQ, (r + 1):minmn, 1:n)
                 ΔQ2 .= 0
                 view(ΔL, :, (r + 1):minmn) .= 0
-                dL = make_mooncake_tangent(ΔL)
-                dQ = make_mooncake_tangent(ΔQ)
-                dLQ = Mooncake.build_tangent(typeof((ΔL, ΔQ)), dL, dQ)
-                Mooncake.TestUtils.test_rule(rng, lq_compact, Ard, alg; output_tangent = dLQ, is_primitive = false, atol = atol, rtol = rtol)
+                dL   = make_mooncake_tangent(ΔL)
+                dQ   = make_mooncake_tangent(ΔQ)
+                dLQ  = Mooncake.build_tangent(typeof((ΔL, ΔQ)), dL, dQ)
+                Mooncake.TestUtils.test_rule(rng, lq_compact, Ard, alg; output_tangent = dLQ, atol = atol, rtol = rtol)
                 test_pullbacks_match(rng, lq_compact!, lq_compact, Ard, (L, Q), (ΔL, ΔQ), alg)
             end
         end
     end
 end
-=#
 
 @timedtestset "EIG AD Rules with eltype $T" for T in ETs
     rng = StableRNG(12345)
@@ -283,7 +275,7 @@ end
                 dDtrunc = make_mooncake_tangent(ΔDtrunc)
                 dVtrunc = make_mooncake_tangent(ΔVtrunc)
                 dDVtrunc = Mooncake.build_tangent(typeof((ΔDtrunc, ΔVtrunc, zero(real(T)))), dDtrunc, dVtrunc, zero(real(T)))
-                Mooncake.TestUtils.test_rule(rng, eig_trunc, A, truncalg; output_tangent = dDVtrunc, atol = atol, rtol = rtol, is_primitive = false)
+                Mooncake.TestUtils.test_rule(rng, eig_trunc, A, truncalg; output_tangent = dDVtrunc, atol = atol, rtol = rtol)
                 test_pullbacks_match(rng, eig_trunc!, eig_trunc, A, (D, V), (ΔD2, ΔV), truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
             end
             truncalg = TruncatedAlgorithm(alg, truncrank(5; by = real))
@@ -295,7 +287,7 @@ end
             dDtrunc = make_mooncake_tangent(ΔDtrunc)
             dVtrunc = make_mooncake_tangent(ΔVtrunc)
             dDVtrunc = Mooncake.build_tangent(typeof((ΔDtrunc, ΔVtrunc, zero(real(T)))), dDtrunc, dVtrunc, zero(real(T)))
-            Mooncake.TestUtils.test_rule(rng, eig_trunc, A, truncalg; output_tangent = dDVtrunc, atol = atol, rtol = rtol, is_primitive = false)
+            Mooncake.TestUtils.test_rule(rng, eig_trunc, A, truncalg; output_tangent = dDVtrunc, atol = atol, rtol = rtol)
             test_pullbacks_match(rng, eig_trunc!, eig_trunc, A, (D, V), (ΔD2, ΔV), truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
         end
     end
@@ -357,11 +349,11 @@ MatrixAlgebraKit.copy_input(::typeof(copy_eigh_trunc), A) = MatrixAlgebraKit.cop
             LAPACK_MultipleRelativelyRobustRepresentations(),
         )
         @testset "eigh_full" begin
-            Mooncake.TestUtils.test_rule(rng, copy_eigh_full, A, alg; mode = Mooncake.ReverseMode, output_tangent = dDV, is_primitive = false, atol = atol, rtol = rtol)
+            Mooncake.TestUtils.test_rule(rng, copy_eigh_full, A, alg; output_tangent = dDV, is_primitive = false, atol = atol, rtol = rtol)
             test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, A, (D, V), (ΔD2, ΔV), alg)
         end
         @testset "eigh_vals" begin
-            Mooncake.TestUtils.test_rule(rng, copy_eigh_vals, A, alg; mode = Mooncake.ReverseMode, is_primitive = false, atol = atol, rtol = rtol)
+            Mooncake.TestUtils.test_rule(rng, copy_eigh_vals, A, alg; is_primitive = false, atol = atol, rtol = rtol)
             test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, A, D.diag, ΔD2.diag, alg)
         end
         @testset "eigh_trunc" begin
@@ -375,7 +367,7 @@ MatrixAlgebraKit.copy_input(::typeof(copy_eigh_trunc), A) = MatrixAlgebraKit.cop
                 dDtrunc = make_mooncake_tangent(ΔDtrunc)
                 dVtrunc = make_mooncake_tangent(ΔVtrunc)
                 dDVtrunc = Mooncake.build_tangent(typeof((ΔDtrunc, ΔVtrunc, zero(real(T)))), dDtrunc, dVtrunc, zero(real(T)))
-                Mooncake.TestUtils.test_rule(rng, copy_eigh_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dDVtrunc, atol = atol, rtol = rtol, is_primitive = false)
+                Mooncake.TestUtils.test_rule(rng, copy_eigh_trunc, A, truncalg; output_tangent = dDVtrunc, atol = atol, rtol = rtol, is_primitive = false)
                 test_pullbacks_match(rng, copy_eigh_trunc!, copy_eigh_trunc, A, (D, V), (ΔD2, ΔV), truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
             end
             truncalg = TruncatedAlgorithm(alg, trunctol(; atol = maximum(abs, Ddiag) / 2))
@@ -387,7 +379,7 @@ MatrixAlgebraKit.copy_input(::typeof(copy_eigh_trunc), A) = MatrixAlgebraKit.cop
             dDtrunc = make_mooncake_tangent(ΔDtrunc)
             dVtrunc = make_mooncake_tangent(ΔVtrunc)
             dDVtrunc = Mooncake.build_tangent(typeof((ΔDtrunc, ΔVtrunc, zero(real(T)))), dDtrunc, dVtrunc, zero(real(T)))
-            Mooncake.TestUtils.test_rule(rng, copy_eigh_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dDVtrunc, atol = atol, rtol = rtol, is_primitive = false)
+            Mooncake.TestUtils.test_rule(rng, copy_eigh_trunc, A, truncalg; output_tangent = dDVtrunc, atol = atol, rtol = rtol, is_primitive = false)
             test_pullbacks_match(rng, copy_eigh_trunc!, copy_eigh_trunc, A, (D, V), (ΔD2, ΔV), truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
         end
     end
@@ -523,12 +515,12 @@ right_orth_lq(X) = right_orth(X; alg = :lq)
 right_orth_polar(X) = right_orth(X; alg = :polar)
 right_null_lq(X) = right_null(X; alg = :lq)
 
-MatrixAlgebraKit.copy_input(::typeof(left_orth_qr), A) = MatrixAlgebraKit.copy_input(left_orth, A)
-MatrixAlgebraKit.copy_input(::typeof(left_orth_polar), A) = MatrixAlgebraKit.copy_input(left_orth, A)
-MatrixAlgebraKit.copy_input(::typeof(left_null_qr), A) = MatrixAlgebraKit.copy_input(left_null, A)
-MatrixAlgebraKit.copy_input(::typeof(right_orth_lq), A) = MatrixAlgebraKit.copy_input(right_orth, A)
+MatrixAlgebraKit.copy_input(::typeof(left_orth_qr), A)     = MatrixAlgebraKit.copy_input(left_orth, A)
+MatrixAlgebraKit.copy_input(::typeof(left_orth_polar), A)  = MatrixAlgebraKit.copy_input(left_orth, A)
+MatrixAlgebraKit.copy_input(::typeof(left_null_qr), A)     = MatrixAlgebraKit.copy_input(left_null, A)
+MatrixAlgebraKit.copy_input(::typeof(right_orth_lq), A)    = MatrixAlgebraKit.copy_input(right_orth, A)
 MatrixAlgebraKit.copy_input(::typeof(right_orth_polar), A) = MatrixAlgebraKit.copy_input(right_orth, A)
-MatrixAlgebraKit.copy_input(::typeof(right_null_lq), A) = MatrixAlgebraKit.copy_input(right_null, A)
+MatrixAlgebraKit.copy_input(::typeof(right_null_lq), A)    = MatrixAlgebraKit.copy_input(right_null, A)
 
 @timedtestset "Orth and null with eltype $T" for T in ETs
     rng = StableRNG(12345)

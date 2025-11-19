@@ -56,4 +56,6 @@ function qr_pushforward!(dA, A, QR, dQR; tol::Real=default_pullback_gauge_atol(Q
     return (dQ, dR)
 end
 
-function qr_null_pushforward!(dA, A, N, dN; tol::Real=default_pullback_gauge_atol(N), rank_atol::Real=tol, gauge_atol::Real=tol) end
+function qr_null_pushforward!(dA, A, N, dN; tol::Real=default_pullback_gauge_atol(N), rank_atol::Real=tol, gauge_atol::Real=tol)
+    iszero(min(size(N)...)) && return # nothing to do
+end

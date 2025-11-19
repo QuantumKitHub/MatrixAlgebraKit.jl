@@ -13,3 +13,5 @@ function eigh_pushforward!(dA, A, DV, dDV; kwargs...)
     copyto!(dV, ∂V)
     return (dD, dV)
 end
+
+function eigh_trunc_pushforward!(dA, A, DV, dDV; kwargs...) end
