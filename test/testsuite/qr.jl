@@ -1,3 +1,5 @@
+using TestExtras
+
 function test_qr(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "qr $summary_str" begin

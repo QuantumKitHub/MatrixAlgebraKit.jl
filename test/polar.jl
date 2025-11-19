@@ -1,6 +1,5 @@
 using MatrixAlgebraKit
 using Test
-using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, I, isposdef
 

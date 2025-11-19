@@ -8,7 +8,7 @@ Suite of tests that may be used for all packages inheriting from MatrixAlgebraKi
 """
 module TestSuite
 
-using Test, TestExtras
+using Test
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
 using LinearAlgebra: Diagonal, norm, istriu, istril
@@ -66,5 +66,6 @@ end
 include("qr.jl")
 include("lq.jl")
 include("polar.jl")
+include("projections.jl")
 
 end
