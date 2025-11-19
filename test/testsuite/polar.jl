@@ -1,3 +1,5 @@
+using TestExtras
+
 function test_polar(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "polar $summary_str" begin
