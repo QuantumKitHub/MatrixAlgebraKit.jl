@@ -56,7 +56,7 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     check_input(exponential!, A, expA, alg)
     D, V = eigh_full(A, alg.eigh_alg)
 
-    diagview(D) .= exp.( diagview(D) ./ 2)
+    diagview(D) .= exp.(diagview(D) ./ 2)
     rmul!(V, D)
     mul!(expA, V, adjoint(V))
     return expA
