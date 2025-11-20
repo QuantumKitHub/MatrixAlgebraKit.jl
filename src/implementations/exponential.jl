@@ -40,9 +40,7 @@ function initialize_output(::typeof(exponential!), A::AbstractMatrix, ::Abstract
     return expA
 end
 
-function initialize_output(::typeof(exponential!), A::Diagonal, ::DiagonalAlgorithm)
-    return similar(A)
-end
+initialize_output(::typeof(exponential!), A::Diagonal, ::DiagonalAlgorithm) = A
 
 # Implementation
 # --------------
