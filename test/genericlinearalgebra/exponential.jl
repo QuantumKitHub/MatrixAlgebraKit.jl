@@ -14,7 +14,7 @@ GenericFloats = (BigFloat, Complex{BigFloat})
     A = randn(rng, T, m, m)
     A = (A + A') / 2
     D, V = @constinferred eigh_full(A)
-    algs = (ExponentialViaEigh(GLA_QRIteration()),)
+    algs = (MatrixFunctionViaEigh(GLA_QRIteration()),)
     @testset "algorithm $alg" for alg in algs
         expA = similar(A)
 

@@ -6,7 +6,10 @@
 # -------------------
 default_exponential_algorithm(A; kwargs...) = default_exponential_algorithm(typeof(A); kwargs...)
 function default_exponential_algorithm(T::Type; kwargs...)
-    return ExponentialViaLA(; kwargs...)
+    return MatrixFunctionViaLA(; kwargs...)
+end
+function default_exponential_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
+    return DiagonalAlgorithm(; kwargs...)
 end
 
 for f in (:exponential!,)

@@ -13,7 +13,7 @@ GenericFloats = (BigFloat, Complex{BigFloat})
 
     A = randn(rng, T, m, m)
     D, V = @constinferred eig_full(A)
-    algs = (ExponentialViaEig(GS_QRIteration()),)
+    algs = (MatrixFunctionViaEig(GS_QRIteration()),)
     expA_LA = @constinferred exponential(A)
     @testset "algorithm $alg" for alg in algs
         expA = similar(A)

@@ -13,9 +13,8 @@ GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
     m = 2
 
     A = randn(rng, T, m, m)
-    A = (A + A') / 2
-    D, V = @constinferred eigh_full(A)
-    algs = (ExponentialViaLA(), ExponentialViaEig(LAPACK_Simple()), ExponentialViaEigh(LAPACK_QRIteration()))
+    D, V = @constinferred eig_full(A)
+    algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()))
     expA_LA = @constinferred exp(A)
     @testset "algorithm $alg" for alg in algs
         expA = similar(A)
@@ -25,9 +24,10 @@ GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
         @test expA ≈ expA_LA
         @test expA2 ≈ expA
 
-        Dexp, Vexp = @constinferred eigh_full(expA)
+        Dexp, Vexp = @constinferred eig_full(expA)
         @test diagview(Dexp) ≈ LinearAlgebra.exp.(diagview(D))
     end
+    @test_throws DomainError exponential(A; alg = MatrixFunctionViaEigh(LAPACK_QRIteration()))
 end
 
 @testset "exponential! for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)

@@ -13,6 +13,16 @@ function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMa
     return @check_scalar(expA, A)
 end
 
+function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+    if !ishermitian(A)
+        throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix)"))
+    end
+    m, n = size(A)
+    m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
+    @check_size(expA, (m, m))
+    return @check_scalar(expA, A)
+end
+
 function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
     m, n = size(A)
     @assert m == n && isdiag(A)
@@ -36,20 +46,33 @@ end
 
 # Implementation
 # --------------
-function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::ExponentialViaLA)
+function exponential!(A::AbstractMatrix{T}, expA::AbstractMatrix{T}, alg::MatrixFunctionViaLA) where {T <: BlasFloat}
+    check_input(exponential!, A, expA, alg)
     copyto!(expA, LinearAlgebra.exp(A))
     return expA
 end
 
-function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::ExponentialViaEigh)
+function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+    check_input(exponential!, A, expA, alg)
     D, V = eigh_full(A, alg.eigh_alg)
-    iV = inv(V)
-    map!(exp, diagview(D), diagview(D))
-    mul!(expA, rmul!(V, D), iV)
+
+    diagview(D) .= exp.( diagview(D) ./ 2)
+    rmul!(V, D)
+    mul!(expA, V, adjoint(V))
     return expA
 end
 
-function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::ExponentialViaEig)
+function exponential!(A::AbstractMatrix{T}, expA::AbstractMatrix{T}, alg::MatrixFunctionViaEig) where {T <: Real}
+    check_input(exponential!, A, expA, alg)
+    D, V = eig_full(A, alg.eig_alg)
+    iV = inv(V)
+    map!(exp, diagview(D), diagview(D))
+    expA .= real.(rmul!(V, D) * iV)
+    return expA
+end
+
+function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEig)
+    check_input(exponential!, A, expA, alg)
     D, V = eig_full(A, alg.eig_alg)
     iV = inv(V)
     map!(exp, diagview(D), diagview(D))
