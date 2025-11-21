@@ -50,7 +50,7 @@ function qr_pushforward!(dA, A, QR, dQR; tol::Real=default_pullback_gauge_atol(Q
         dQ3  .= Q3
     end
     if !isempty(dR22)
-        _, r22 = qr_full(dA2 - dQ1*R12 - Q1*dR12, LAPACK_HouseholderQR(; positive=true))
+        _, r22 = qr_compact(dA2 - dQ1*R12 - Q1*dR12; positive=true)
         dR22  .= view(r22, 1:size(dR22, 1), 1:size(dR22, 2))
     end
     return (dQ, dR)

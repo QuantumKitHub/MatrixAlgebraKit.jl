@@ -77,4 +77,6 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ; rank_atol=default_pullback_r
     return (ΔU, ΔS, ΔVᴴ)
 end
 
-function svd_trunc_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ; rank_atol=default_pullback_rank_atol(A), kwargs...) end
+function svd_trunc_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind; rank_atol=default_pullback_rank_atol(A), kwargs...)
+
+end

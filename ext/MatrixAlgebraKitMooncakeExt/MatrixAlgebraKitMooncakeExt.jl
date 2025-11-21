@@ -3,7 +3,7 @@ module MatrixAlgebraKitMooncakeExt
 using Mooncake
 using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
 using MatrixAlgebraKit
-using MatrixAlgebraKit: inv_safe, diagview, copy_input, zero!
+using MatrixAlgebraKit: inv_safe, diagview, copy_input, zero!, truncate, truncation_error!
 using MatrixAlgebraKit: qr_pullback!, qr_pushforward!, lq_pullback!, lq_pushforward!
 using MatrixAlgebraKit: qr_null_pullback!, qr_null_pushforward!, lq_null_pullback!, lq_null_pushforward!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_trunc_pullback!, eigh_trunc_pullback!
@@ -419,14 +419,25 @@ function Mooncake.frule!!(::Dual{typeof(svd_trunc)}, A_dA::Dual, alg_dalg::Dual)
     # compute primal
     A, dA  = Mooncake.arrayify(A_dA)
     alg    = Mooncake.primal(alg_dalg)
-    output = svd_trunc(A, alg)
+    USVᴴ   = svd_compact(A, alg.alg)
+    U, S, Vᴴ = USVᴴ
+    dUfull  = zeros(eltype(U), size(U))
+    dSfull  = Diagonal(zeros(eltype(S), length(diagview(S))))
+    dVᴴfull = zeros(eltype(Vᴴ), size(Vᴴ))
+    svd_pushforward!(dA, A, (U, S, Vᴴ), (dUfull, dSfull, dVᴴfull))
+
+    USVᴴtrunc, ind = truncate(svd_trunc!, USVᴴ, alg.trunc)
+    ϵ        = truncation_error!(diagview(S), ind)
+    output   = (USVᴴtrunc..., ϵ)
     output_dual = Mooncake.zero_dual(output)
-    U, S, Vᴴ, ϵ = output
+    Utrunc, Strunc, Vᴴtrunc, ϵ = output
     dU_, dS_, dVᴴ_, dϵ = Mooncake.tangent(output_dual)
-    dU = arrayify(U, dU_)
-    dS = arrayify(S, dS_)
-    dVᴴ = arrayify(Vᴴ, dVᴴ_)
-    svd_trunc_pushforward!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
+    Utrunc, dU  = arrayify(Utrunc, dU_)
+    Strunc, dS  = arrayify(Strunc, dS_)
+    Vᴴtrunc, dVᴴ = arrayify(Vᴴtrunc, dVᴴ_)
+    dU .= view(dUfull, :, ind)
+    diagview(dS) .= view(diagview(dSfull), ind)
+    dVᴴ .= view(dVᴴfull, ind, :)
     return output_dual
 end
 

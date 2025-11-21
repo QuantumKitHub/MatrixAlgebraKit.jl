@@ -151,9 +151,9 @@ end
                 dQ   = make_mooncake_tangent(copy(ΔQ))
                 dR   = make_mooncake_tangent(copy(ΔR))
                 dQR  = Mooncake.build_tangent(typeof((ΔQ, ΔR)), dQ, dR)
-                Mooncake.TestUtils.test_rule(rng, qr_full, A, alg; output_tangent = dQR, atol=atol, rtol=rtol)
-                #Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_full(A, alg)[2]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
-                #Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_full(A, alg)[1][1:m, 1:minmn]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+                #Mooncake.TestUtils.test_rule(rng, qr_full, A, alg; output_tangent = dQR, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_full(A, alg)[2]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_full(A, alg)[1][1:m, 1:minmn]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
                 Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_full(A, alg)[1][1:m, minmn+1:m]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
                 test_pullbacks_match(rng, qr_full!, qr_full, A, (Q, R), (ΔQ, ΔR), alg)
             end
@@ -173,6 +173,11 @@ end
                 dR   = make_mooncake_tangent(copy(ΔR))
                 dQR  = Mooncake.build_tangent(typeof((ΔQ, ΔR)), dQ, dR)
                 Mooncake.TestUtils.test_rule(rng, qr_compact, copy(Ard), alg; output_tangent = dQR, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_compact(A, alg)[2]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_compact(A, alg)[1][1:r, 1:r]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_compact(A, alg)[1][r+1:m, 1:r]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_compact(A, alg)[1][1:r, r+1:minmn]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
+                Mooncake.TestUtils.test_rule(rng, ((A, alg)->qr_compact(A, alg)[1][r+1:m, r+1:minmn]), A, alg; mode=Mooncake.ForwardMode, is_primitive=false, atol=atol, rtol=rtol)
                 test_pullbacks_match(rng, qr_compact!, qr_compact, Ard, (Q, R), (ΔQ, ΔR), alg)
             end
         end
