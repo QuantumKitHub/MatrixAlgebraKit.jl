@@ -7,9 +7,9 @@ using LinearAlgebra
 
 GenericFloats = (BigFloat, Complex{BigFloat})
 
-@testset "exp! for T = $T" for T in GenericFloats
+@testset "exponential! for T = $T" for T in GenericFloats
     rng = StableRNG(123)
-    m = 2
+    m = 54
 
     A = randn(rng, T, m, m)
     A = (A + A') / 2
@@ -24,5 +24,31 @@ GenericFloats = (BigFloat, Complex{BigFloat})
 
         Dexp, Vexp = @constinferred eigh_full(expA)
         @test diagview(Dexp) ≈ LinearAlgebra.exp.(diagview(D))
+    end
+end
+
+using GenericSchur
+@testset "exponentiali! for T = $T" for T in GenericFloats
+    rng = StableRNG(123)
+    m = 2
+
+    A = randn(rng, T, m, m)
+    A = (A + A') / 2
+    τ = randn(rng, real(T))
+
+    A = Complex{BigFloat}[1.0 0.0; 0.0 -1.0]
+    τ = Complex{BigFloat}(2.0)
+
+    D, V = @constinferred eigh_full(A)
+    algs = (MatrixFunctionViaEigh(GLA_QRIteration()),)
+    @testset "algorithm $alg" for alg in algs
+        expiτA = similar(complex(A))
+
+        @constinferred exponentiali!(τ, copy(A), expiτA; alg)
+        expiτA2 = @constinferred exponentiali(τ, A; alg)
+        @test expiτA2 ≈ expiτA
+
+        Dexp, Vexp = @constinferred eig_full(expiτA)
+        @test sort(diagview(Dexp); by = imag) ≈ sort(LinearAlgebra.exp.(diagview(D) .* (im*τ)); by = imag)
     end
 end
