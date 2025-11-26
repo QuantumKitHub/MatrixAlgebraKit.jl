@@ -29,6 +29,7 @@ export left_polar, right_polar
 export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
+export exponential, exponential!, exponentiali, exponentiali!
 
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
@@ -36,6 +37,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
 export GLA_HouseholderQR, GLA_QRIteration, GS_QRIteration
 export LQViaTransposedQR
 export PolarViaSVD, PolarNewton
+export MatrixFunctionViaLA, MatrixFunctionViaEig, MatrixFunctionViaEigh
 export DiagonalAlgorithm
 export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
@@ -80,7 +82,7 @@ include("common/matrixproperties.jl")
 include("yalapack.jl")
 include("algorithms.jl")
 include("interface/projections.jl")
-include("interface/decompositions.jl")
+include("interface/matrixfunctions.jl")
 include("interface/truncation.jl")
 include("interface/qr.jl")
 include("interface/lq.jl")
@@ -91,6 +93,7 @@ include("interface/gen_eig.jl")
 include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
+include("interface/exponential.jl")
 
 include("common/gauge.jl") # needs to be defined after the functions are
 
@@ -105,6 +108,7 @@ include("implementations/gen_eig.jl")
 include("implementations/schur.jl")
 include("implementations/polar.jl")
 include("implementations/orthnull.jl")
+include("implementations/exponential.jl")
 
 include("pullbacks/qr.jl")
 include("pullbacks/lq.jl")
