@@ -34,10 +34,7 @@ using GenericSchur
 
     A = randn(rng, T, m, m)
     A = (A + A') / 2
-    τ = randn(rng, real(T))
-
-    A = Complex{BigFloat}[1.0 0.0; 0.0 -1.0]
-    τ = Complex{BigFloat}(2.0)
+    τ = randn(rng, T)
 
     D, V = @constinferred eigh_full(A)
     algs = (MatrixFunctionViaEigh(GLA_QRIteration()),)
