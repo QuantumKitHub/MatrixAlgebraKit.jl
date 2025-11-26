@@ -65,7 +65,7 @@ end
 
 function project_hermitian_native!(A::Diagonal, B::Diagonal, ::Val{anti}; kwargs...) where {anti}
     if anti
-        diagview(A) .= imag.(diagview(B)) .* im
+        diagview(A) .= _imimag.(diagview(B))
     else
         diagview(A) .= real.(diagview(B))
     end
