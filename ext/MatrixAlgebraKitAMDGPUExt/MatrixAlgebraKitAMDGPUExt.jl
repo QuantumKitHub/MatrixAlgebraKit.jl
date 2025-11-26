@@ -143,7 +143,7 @@ MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedROCVector{T}}) wh
 MatrixAlgebraKit.isantihermitian_approx(A::StridedROCMatrix; kwargs...) =
     @invoke MatrixAlgebraKit.isantihermitian_approx(A::Any; kwargs...)
 function MatrixAlgebraKit.isantihermitian_approx(A::Diagonal{T, <:StridedROCVector{T}}; atol, rtol, kwargs...) where {T <: Real}
-    return sum(abs2, A.diag) ≤ max(atol, rtol * norm(A))
+    return norm(A) ≤ max(atol, rtol)
 end
 
 function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
