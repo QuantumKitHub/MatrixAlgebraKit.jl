@@ -45,6 +45,6 @@ end
         @test expiτA2 ≈ expiτA
 
         Dexp, Vexp = @constinferred eig_full(expiτA)
-        @test sort(diagview(Dexp); by = imag) ≈ sort(LinearAlgebra.exp.(diagview(D) .* (im*τ)); by = imag)
+        @test sort(diagview(Dexp); by = imag) ≈ sort(LinearAlgebra.exp.(diagview(D) .* (im * τ)); by = imag)
     end
 end

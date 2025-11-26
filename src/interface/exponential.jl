@@ -21,7 +21,7 @@ for f in (:exponential!,)
 end
 
 for f in (:exponentiali!,)
-    @eval function default_algorithm(::typeof($f), ::Tuple{A,B}; kwargs...) where {A, B}
+    @eval function default_algorithm(::typeof($f), ::Tuple{A, B}; kwargs...) where {A, B}
         return default_exponential_algorithm(B; kwargs...)
     end
 end

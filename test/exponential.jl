@@ -41,7 +41,7 @@ end
 
     D, V = @constinferred eig_full(A)
     algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()))
-    expiτA_LA = @constinferred exp(im*τ*A)
+    expiτA_LA = @constinferred exp(im * τ * A)
     @testset "algorithm $alg" for alg in algs
         expiτA = similar(complex(A))
 
@@ -51,7 +51,7 @@ end
         @test expiτA2 ≈ expiτA
 
         Dexp, Vexp = @constinferred eig_full(expiτA)
-        @test sort(diagview(Dexp); by = imag) ≈ sort(LinearAlgebra.exp.(diagview(D) .* (im*τ)); by = imag)
+        @test sort(diagview(Dexp); by = imag) ≈ sort(LinearAlgebra.exp.(diagview(D) .* (im * τ)); by = imag)
     end
     @test_throws DomainError exponentiali(τ, A; alg = MatrixFunctionViaEigh(LAPACK_QRIteration()))
 end
@@ -88,5 +88,5 @@ end
 
     D, V = @constinferred eig_full(A)
     Dexp, Vexp = @constinferred eig_full(expiτA)
-    @test diagview(Dexp) ≈ LinearAlgebra.exp.(diagview(D) .* (im*τ))
+    @test diagview(Dexp) ≈ LinearAlgebra.exp.(diagview(D) .* (im * τ))
 end
