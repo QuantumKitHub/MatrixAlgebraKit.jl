@@ -79,10 +79,13 @@ end
 
 ishermitian_exact(A) = A == A'
 ishermitian_exact(A::StridedMatrix; kwargs...) = strided_ishermitian_exact(A, Val(false); kwargs...)
+ishermitian_exact(A::Diagonal; kwargs...) = diagonal_ishermitian_exact(A, Val(false); kwargs...)
+
 function ishermitian_approx(A; atol, rtol, kwargs...)
     return norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 end
 ishermitian_approx(A::StridedMatrix; kwargs...) = strided_ishermitian_approx(A, Val(false); kwargs...)
+ishermitian_approx(A::Diagonal; kwargs...) = diagonal_ishermitian_approx(A, Val(false); kwargs...)
 
 """
     isantihermitian(A; isapprox_kwargs...)
@@ -97,16 +100,15 @@ function isantihermitian(A; atol::Real = 0, rtol::Real = 0, kwargs...)
         return isantihermitian_approx(A; atol, rtol, kwargs...)
     end
 end
-function isantihermitian_exact(A)
-    return A == -A'
-end
-function isantihermitian_exact(A::StridedMatrix; kwargs...)
-    return strided_ishermitian_exact(A, Val(true); kwargs...)
-end
+isantihermitian_exact(A) = A == -A'
+isantihermitian_exact(A::StridedMatrix; kwargs...) = strided_ishermitian_exact(A, Val(true); kwargs...)
+isantihermitian_exact(A::Diagonal; kwargs...) = diagonal_ishermitian_exact(A, Val(true); kwargs...)
+
 function isantihermitian_approx(A; atol, rtol, kwargs...)
     return norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 end
 isantihermitian_approx(A::StridedMatrix; kwargs...) = strided_ishermitian_approx(A, Val(true); kwargs...)
+isantihermitian_approx(A::Diagonal; kwargs...) = diagonal_ishermitian_approx(A, Val(true); kwargs...)
 
 # blocked implementation of exact checks for strided matrices
 # -----------------------------------------------------------
@@ -144,7 +146,6 @@ function _ishermitian_exact_offdiag(Al, Au, ::Val{anti}) where {anti}
     end
     return true
 end
-
 
 function strided_ishermitian_approx(
         A::AbstractMatrix, anti::Val;
@@ -191,4 +192,17 @@ function _ishermitian_approx_offdiag(Al, Au, ::Val{anti}) where {anti}
         end
     end
     return ϵ²
+end
+
+diagonal_ishermitian_exact(A, ::Val{anti}) where {anti} = all(iszero ∘ (anti ? real : imag), diagview(A))
+
+function diagonal_ishermitian_approx(
+        A, ::Val{anti}; atol::Real = default_hermitian_tol(A), rtol::Real = 0
+    ) where {anti}
+    m, n = size(A)
+    m == n || throw(DimensionMismatch())
+    init = abs2(zero(eltype(A)))
+    ϵ² = sum(abs2 ∘ (anti ? real : imag), diagview(A); init)
+    ϵ²max = oftype(ϵ², rtol > 0 ? max(atol, rtol * norm(A)) : atol)^2
+    return ϵ² ≤ ϵ²max
 end
