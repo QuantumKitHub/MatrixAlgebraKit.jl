@@ -79,7 +79,7 @@ end
 
 ishermitian_exact(A) = A == A'
 ishermitian_exact(A::StridedMatrix; kwargs...) = strided_ishermitian_exact(A, Val(false); kwargs...)
-ishermitian_exact(A::Diagonal; kwargs...) = diagonal_ishermitian_exact(A, Val(false); kwargs...)
+ishermitian_exact(A::Diagonal) = diagonal_ishermitian_exact(A, Val(false))
 
 function ishermitian_approx(A; atol, rtol, kwargs...)
     return norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
@@ -102,7 +102,7 @@ function isantihermitian(A; atol::Real = 0, rtol::Real = 0, kwargs...)
 end
 isantihermitian_exact(A) = A == -A'
 isantihermitian_exact(A::StridedMatrix; kwargs...) = strided_ishermitian_exact(A, Val(true); kwargs...)
-isantihermitian_exact(A::Diagonal; kwargs...) = diagonal_ishermitian_exact(A, Val(true); kwargs...)
+isantihermitian_exact(A::Diagonal) = diagonal_ishermitian_exact(A, Val(true))
 
 function isantihermitian_approx(A; atol, rtol, kwargs...)
     return norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
