@@ -21,11 +21,9 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
             @test ishermitian(Bh)
             @test Bh ≈ Ah
             @test A == Ac
-            # this is still hermitian for real Diagonals!
             Bh_approx = Bh + noisefactor * Aa
-            if !isa(A, Diagonal) && !(T <: Real)
-                @test !ishermitian(Bh_approx)
-            end
+            # this is still hermitian for real Diagonal: |A - A'| == 0
+            @test !ishermitian(Bh_approx) || norm(Aa) == 0
             @test ishermitian(Bh_approx; rtol = 10 * noisefactor)
 
             Ba = project_antihermitian(A, alg)
@@ -34,10 +32,8 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
             @test A == Ac
             Ba_approx = Ba + noisefactor * Ah
             @test !isantihermitian(Ba_approx)
-            # this is still hermitian for real Diagonals!
-            if !isa(A, Diagonal) && !(T <: Real)
-                @test isantihermitian(Ba_approx; rtol = 10 * noisefactor)
-            end
+            # this is never anti-hermitian for real Diagonal: |A - A'| == 0
+            @test isantihermitian(Ba_approx; rtol = 10 * noisefactor) || norm(Aa) == 0
 
             Bh = project_hermitian!(Ac, alg)
             @test Bh === Ac
