@@ -32,9 +32,12 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
             @test isantihermitian(Ba)
             @test Ba ≈ Aa
             @test A == Ac
+            # this is still hermitian for real Diagonals!
             Ba_approx = Ba + noisefactor * Ah
             @test !isantihermitian(Ba_approx)
-            @test isantihermitian(Ba_approx; rtol = 10 * noisefactor)
+            if !isa(A, Diagonal) && !(T <: Real)
+                @test isantihermitian(Ba_approx; rtol = 10 * noisefactor)
+            end
 
             Bh = project_hermitian!(Ac, alg)
             @test Bh === Ac

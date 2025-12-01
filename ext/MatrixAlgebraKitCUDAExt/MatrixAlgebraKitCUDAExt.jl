@@ -168,7 +168,7 @@ MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedCuVector{T}}) whe
 MatrixAlgebraKit.isantihermitian_approx(A::StridedCuMatrix; kwargs...) =
     @invoke MatrixAlgebraKit.isantihermitian_approx(A::Any; kwargs...)
 function MatrixAlgebraKit.isantihermitian_approx(A::Diagonal{T, <:StridedCuVector{T}}; atol, rtol, kwargs...) where {T <: Real}
-    return norm(A) ≤ max(atol, rtol)
+    return norm(A) ≤ atol
 end
 
 function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
