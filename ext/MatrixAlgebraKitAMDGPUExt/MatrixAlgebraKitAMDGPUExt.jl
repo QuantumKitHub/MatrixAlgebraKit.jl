@@ -132,19 +132,22 @@ MatrixAlgebraKit.ishermitian_exact(A::Diagonal{T, <:StridedROCVector{T}}) where 
 function MatrixAlgebraKit.ishermitian_exact(A::Diagonal{T, <:StridedROCVector{T}}) where {T <: Complex}
     return all(isreal.(A.diag))
 end
-MatrixAlgebraKit.ishermitian_approx(A::StridedROCMatrix; kwargs...) =
-    @invoke MatrixAlgebraKit.ishermitian_approx(A::Any; kwargs...)
 
 MatrixAlgebraKit.isantihermitian_exact(A::StridedROCMatrix) =
     all(A .== -adjoint(A))
 MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedROCVector{T}}) where {T <: Real} = all(iszero(A.diag))
 MatrixAlgebraKit.isantihermitian_exact(A::Diagonal{T, <:StridedROCVector{T}}) where {T <: Complex} =
     all(iszero.(real.(A.diag)))
-MatrixAlgebraKit.isantihermitian_approx(A::StridedROCMatrix; kwargs...) =
-    @invoke MatrixAlgebraKit.isantihermitian_approx(A::Any; kwargs...)
 function MatrixAlgebraKit.isantihermitian_approx(A::Diagonal{T, <:StridedROCVector{T}}; atol, rtol, kwargs...) where {T <: Real}
     return norm(A) ≤ atol
 end
+
+# avoids calling the `StridedMatrix` specialization to avoid scalar indexing,
+# use (allocating) fallback instead until we write a dedicated kernel
+MatrixAlgebraKit.ishermitian_approx(A::StridedROCMatrix; kwargs...) =
+    norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
+MatrixAlgebraKit.isantihermitian_approx(A::StridedROCMatrix; kwargs...) =
+    norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 
 function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
