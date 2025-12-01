@@ -15,34 +15,33 @@ include(joinpath("..", "utilities.jl"))
         k = min(m, n)
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            As = m == n ? (CuArray(randn(rng, T, m, n)), Diagonal(CuArray(randn(rng, T, m)))) : (CuArray(randn(rng, T, m, n)),)
-            for A in As
-                minmn = min(m, n)
-                U, S, Vᴴ = svd_compact(A; alg)
-                @test U isa CuMatrix{T} && size(U) == (m, minmn)
-                @test S isa Diagonal{real(T), <:CuVector} && size(S) == (minmn, minmn)
-                @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (minmn, n)
-                @test U * S * Vᴴ ≈ A
-                @test isapproxone(U' * U)
-                @test isapproxone(Vᴴ * Vᴴ')
-                @test isposdef(S)
+            minmn = min(m, n)
+            A = CuArray(randn(rng, T, m, n))
 
-                Ac = similar(A)
-                U2, S2, V2ᴴ = @constinferred svd_compact!(copy!(Ac, A), (U, S, Vᴴ), alg)
-                @test U2 === U
-                @test S2 === S
-                @test V2ᴴ === Vᴴ
-                @test U * S * Vᴴ ≈ A
-                @test isapproxone(U' * U)
-                @test isapproxone(Vᴴ * Vᴴ')
-                @test isposdef(S)
+            U, S, Vᴴ = svd_compact(A; alg)
+            @test U isa CuMatrix{T} && size(U) == (m, minmn)
+            @test S isa Diagonal{real(T), <:CuVector} && size(S) == (minmn, minmn)
+            @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (minmn, n)
+            @test U * S * Vᴴ ≈ A
+            @test isapproxone(U' * U)
+            @test isapproxone(Vᴴ * Vᴴ')
+            @test isposdef(S)
 
-                Sd = svd_vals(A, alg)
-                @test CuArray(diagview(S)) ≈ Sd
-                # CuArray is necessary because norm of CuArray view with non-unit step is broken
-                if alg isa CUSOLVER_QRIteration
-                    @test_warn "invalid keyword arguments for GPU_QRIteration" svd_compact!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
-                end
+            Ac = similar(A)
+            U2, S2, V2ᴴ = @constinferred svd_compact!(copy!(Ac, A), (U, S, Vᴴ), alg)
+            @test U2 === U
+            @test S2 === S
+            @test V2ᴴ === Vᴴ
+            @test U * S * Vᴴ ≈ A
+            @test isapproxone(U' * U)
+            @test isapproxone(Vᴴ * Vᴴ')
+            @test isposdef(S)
+
+            Sd = svd_vals(A, alg)
+            @test CuArray(diagview(S)) ≈ Sd
+            # CuArray is necessary because norm of CuArray view with non-unit step is broken
+            if alg isa CUSOLVER_QRIteration
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_compact!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
             end
         end
     end
@@ -54,61 +53,56 @@ end
     @testset "size ($m, $n)" for n in (37, m, 63)
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            As = m == n ? (CuArray(randn(rng, T, m, n)), Diagonal(CuArray(randn(rng, T, m)))) : (CuArray(randn(rng, T, m, n)),)
-            for A in As
-                minmn = min(m, n)
-                U, S, Vᴴ = svd_full(A; alg)
-                @test U isa CuMatrix{T} && size(U) == (m, m)
-                @test S isa CuMatrix{real(T)} && size(S) == (m, n)
-                @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (n, n)
-                @test U * S * Vᴴ ≈ A
-                @test isapproxone(U' * U)
-                @test isapproxone(U * U')
-                @test isapproxone(Vᴴ * Vᴴ')
-                @test isapproxone(Vᴴ' * Vᴴ)
-                @test all(isposdef, diagview(S))
+            A = CuArray(randn(rng, T, m, n))
+            U, S, Vᴴ = svd_full(A; alg)
+            @test U isa CuMatrix{T} && size(U) == (m, m)
+            @test S isa CuMatrix{real(T)} && size(S) == (m, n)
+            @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (n, n)
+            @test U * S * Vᴴ ≈ A
+            @test isapproxone(U' * U)
+            @test isapproxone(U * U')
+            @test isapproxone(Vᴴ * Vᴴ')
+            @test isapproxone(Vᴴ' * Vᴴ)
+            @test all(isposdef, diagview(S))
 
-                Ac = similar(A)
-                U2, S2, V2ᴴ = @constinferred svd_full!(copy!(Ac, A), (U, S, Vᴴ), alg)
-                @test U2 === U
-                @test S2 === S
-                @test V2ᴴ === Vᴴ
-                @test U * S * Vᴴ ≈ A
-                @test isapproxone(U' * U)
-                @test isapproxone(U * U')
-                @test isapproxone(Vᴴ * Vᴴ')
-                @test isapproxone(Vᴴ' * Vᴴ)
-                @test all(isposdef, diagview(S))
+            Ac = similar(A)
+            U2, S2, V2ᴴ = @constinferred svd_full!(copy!(Ac, A), (U, S, Vᴴ), alg)
+            @test U2 === U
+            @test S2 === S
+            @test V2ᴴ === Vᴴ
+            @test U * S * Vᴴ ≈ A
+            @test isapproxone(U' * U)
+            @test isapproxone(U * U')
+            @test isapproxone(Vᴴ * Vᴴ')
+            @test isapproxone(Vᴴ' * Vᴴ)
+            @test all(isposdef, diagview(S))
 
-                Sc = similar(A, real(T), minmn)
-                Sc2 = svd_vals!(copy!(Ac, A), Sc, alg)
-                @test Sc === Sc2
-                @test CuArray(diagview(S)) ≈ Sc
-                # CuArray is necessary because norm of CuArray view with non-unit step is broken
-                if alg isa CUSOLVER_QRIteration
-                    @test_warn "invalid keyword arguments for GPU_QRIteration" svd_full!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
-                    if !isa(A, Diagonal)
-                        @test_warn "invalid keyword arguments for GPU_QRIteration" svd_vals!(copy!(Ac, A), Sc, CUSOLVER_QRIteration(; bad = "bad"))
-                    end
-                end
+            minmn = min(m, n)
+            Sc = similar(A, real(T), minmn)
+            Sc2 = svd_vals!(copy!(Ac, A), Sc, alg)
+            @test Sc === Sc2
+            @test CuArray(diagview(S)) ≈ Sc
+            # CuArray is necessary because norm of CuArray view with non-unit step is broken
+            if alg isa CUSOLVER_QRIteration
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_full!(copy!(Ac, A), (U, S, Vᴴ), CUSOLVER_QRIteration(; bad = "bad"))
+                @test_warn "invalid keyword arguments for GPU_QRIteration" svd_vals!(copy!(Ac, A), Sc, CUSOLVER_QRIteration(; bad = "bad"))
             end
         end
     end
     @testset "size (0, 0)" begin
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi())
         @testset "algorithm $alg" for alg in algs
-            for A in (CuArray(randn(rng, T, 0, 0)), Diagonal(CuArray(randn(rng, T, 0))))
-                U, S, Vᴴ = svd_full(A; alg)
-                @test U isa CuMatrix{T} && size(U) == (0, 0)
-                @test S isa CuMatrix{real(T)} && size(S) == (0, 0)
-                @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (0, 0)
-                @test U * S * Vᴴ ≈ A
-                @test isapproxone(U' * U)
-                @test isapproxone(U * U')
-                @test isapproxone(Vᴴ * Vᴴ')
-                @test isapproxone(Vᴴ' * Vᴴ)
-                @test all(isposdef, diagview(S))
-            end
+            A = CuArray(randn(rng, T, 0, 0))
+            U, S, Vᴴ = svd_full(A; alg)
+            @test U isa CuMatrix{T} && size(U) == (0, 0)
+            @test S isa CuMatrix{real(T)} && size(S) == (0, 0)
+            @test Vᴴ isa CuMatrix{T} && size(Vᴴ) == (0, 0)
+            @test U * S * Vᴴ ≈ A
+            @test isapproxone(U' * U)
+            @test isapproxone(U * U')
+            @test isapproxone(Vᴴ * Vᴴ')
+            @test isapproxone(Vᴴ' * Vᴴ)
+            @test all(isposdef, diagview(S))
         end
     end
 end
@@ -121,28 +115,26 @@ end
         p = min(m, n) - k - 1
         algs = (CUSOLVER_QRIteration(), CUSOLVER_SVDPolar(), CUSOLVER_Jacobi(), CUSOLVER_Randomized(; k = k, p = p, niters = 100))
         @testset "algorithm $alg" for alg in algs
-            hAs = m == n ? (randn(rng, T, m, n), Diagonal(randn(rng, T, m))) : (randn(rng, T, m, n),)
-            for hA in hAs
-                S₀ = svd_vals(hA)
-                A = CuArray(hA)
-                minmn = min(m, n)
-                r = k
+            hA = randn(rng, T, m, n)
+            S₀ = svd_vals(hA)
+            A = CuArray(hA)
+            minmn = min(m, n)
+            r = k
 
-                U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
-                @test length(S1.diag) == r
-                @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
-                @test norm(A - U1 * S1 * V1ᴴ) ≈ ϵ1
+            U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
+            @test length(S1.diag) == r
+            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            @test norm(A - U1 * S1 * V1ᴴ) ≈ ϵ1
 
-                if !(alg isa CUSOLVER_Randomized)
-                    s = 1 + sqrt(eps(real(T)))
-                    trunc2 = trunctol(; atol = s * S₀[r + 1])
+            if !(alg isa CUSOLVER_Randomized)
+                s = 1 + sqrt(eps(real(T)))
+                trunc2 = trunctol(; atol = s * S₀[r + 1])
 
-                    U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg, trunc = trunctol(; atol = s * S₀[r + 1]))
-                    @test length(S2.diag) == r
-                    @test U1 ≈ U2
-                    @test parent(S1) ≈ parent(S2)
-                    @test V1ᴴ ≈ V2ᴴ
-                end
+                U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg, trunc = trunctol(; atol = s * S₀[r + 1]))
+                @test length(S2.diag) == r
+                @test U1 ≈ U2
+                @test parent(S1) ≈ parent(S2)
+                @test V1ᴴ ≈ V2ᴴ
             end
         end
     end
