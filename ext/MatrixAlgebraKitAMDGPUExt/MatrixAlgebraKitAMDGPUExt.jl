@@ -144,9 +144,9 @@ end
 
 # avoids calling the `StridedMatrix` specialization to avoid scalar indexing,
 # use (allocating) fallback instead until we write a dedicated kernel
-MatrixAlgebraKit.ishermitian_approx(A::StridedROCMatrix; kwargs...) =
+MatrixAlgebraKit.ishermitian_approx(A::StridedROCMatrix; atol, rtol, kwargs...) =
     norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
-MatrixAlgebraKit.isantihermitian_approx(A::StridedROCMatrix; kwargs...) =
+MatrixAlgebraKit.isantihermitian_approx(A::StridedROCMatrix; atol, rtol, kwargs...) =
     norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 
 function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
