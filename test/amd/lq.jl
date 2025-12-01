@@ -4,10 +4,13 @@ using Test
 using TestExtras
 using StableRNGs
 using AMDGPU
+using LinearAlgebra
 
 include(joinpath("..", "utilities.jl"))
 
-@testset "lq_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+
+@testset "lq_compact! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
@@ -65,7 +68,7 @@ include(joinpath("..", "utilities.jl"))
     end
 end
 
-@testset "lq_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+@testset "lq_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
@@ -113,5 +116,50 @@ end
         end
         # no blocked CUDA
         @test_throws ArgumentError lq_full!(copy!(Ac, A), (L, Q); blocksize = 8)
+    end
+end
+
+@testset "lq_compact, lq_full and lq_null for Diagonal{$T}" for T in BLASFloats
+    rng = StableRNG(123)
+    atol = eps(real(T))^(3 / 4)
+    for m in (54, 0)
+        Ad = ROCArray(randn(rng, T, m))
+        A = Diagonal(Ad)
+
+        # compact
+        L, Q = @constinferred lq_compact(A)
+        @test Q isa Diagonal{T} && size(Q) == (m, m)
+        @test L isa Diagonal{T} && size(L) == (m, m)
+        @test L * Q ≈ A
+        @test isunitary(Q)
+
+        # compact and positive
+        Lp, Qp = @constinferred lq_compact(A; positive = true)
+        @test Qp isa Diagonal{T} && size(Qp) == (m, m)
+        @test Lp isa Diagonal{T} && size(Lp) == (m, m)
+        @test Lp * Qp ≈ A
+        @test isunitary(Qp)
+        @test all(≥(zero(real(T))), real(diag(Lp))) &&
+            all(≈(zero(real(T)); atol), imag(diag(Lp)))
+
+        # full
+        L, Q = @constinferred lq_full(A)
+        @test Q isa Diagonal{T} && size(Q) == (m, m)
+        @test L isa Diagonal{T} && size(L) == (m, m)
+        @test L * Q ≈ A
+        @test isunitary(Q)
+
+        # full and positive
+        Lp, Qp = @constinferred lq_full(A; positive = true)
+        @test Qp isa Diagonal{T} && size(Qp) == (m, m)
+        @test Lp isa Diagonal{T} && size(Lp) == (m, m)
+        @test Lp * Qp ≈ A
+        @test isunitary(Qp)
+        @test all(≥(zero(real(T))), real(diag(Lp))) &&
+            all(≈(zero(real(T)); atol), imag(diag(Lp)))
+
+        # null
+        N = @constinferred lq_null(A)
+        @test N isa AbstractMatrix{T} && size(N) == (0, m)
     end
 end

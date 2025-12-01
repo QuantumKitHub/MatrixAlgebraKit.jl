@@ -27,6 +27,18 @@ end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
     return ROCSOLVER_DivideAndConquer(; kwargs...)
 end
+for f in (
+        :(MatrixAlgebraKit.default_lq_algorithm),
+        :(MatrixAlgebraKit.default_qr_algorithm),
+        :(MatrixAlgebraKit.default_eig_algorithm),
+        :(MatrixAlgebraKit.default_eigh_algorithm),
+        :(MatrixAlgebraKit.default_svd_algorithm),
+    )
+
+    @eval function $f(::Type{T}; kwargs...) where {S, T <: Diagonal{S, <:StridedROCVector}}
+        return DiagonalAlgorithm(; kwargs...)
+    end
+end
 
 _gpu_geqrf!(A::StridedROCMatrix) = YArocSOLVER.geqrf!(A)
 _gpu_ungqr!(A::StridedROCMatrix, τ::StridedROCVector) = YArocSOLVER.ungqr!(A, τ)

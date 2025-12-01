@@ -6,7 +6,9 @@ using LinearAlgebra: LinearAlgebra, Diagonal, I
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 using AMDGPU
 
-@testset "eigh_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+
+@testset "eigh_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for alg in (
@@ -32,11 +34,11 @@ using AMDGPU
     end
 end
 
-#=@testset "eigh_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+#=@testset "eigh_trunc! for T = $T" for T in BLASFloats 
     rng = StableRNG(123)
     m = 54
-    for alg in (CUSOLVER_QRIteration(),
-                CUSOLVER_DivideAndConquer(),
+    for alg in (ROCSOLVER_QRIteration(),
+                ROCSOLVER_DivideAndConquer(),
                 )
         A = ROCArray(randn(rng, T, m, m))
         A = A * A'
@@ -64,18 +66,40 @@ end
     end
 end
 
-@testset "eigh_trunc! specify truncation algorithm T = $T" for T in
-                                                               (Float32, Float64,
-                                                                ComplexF32,
-                                                                ComplexF64)
+@testset "eigh_trunc! specify truncation algorithm T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 4
     V = qr_compact(ROCArray(randn(rng, T, m, m)))[1]
     D = Diagonal([0.9, 0.3, 0.1, 0.01])
     A = V * D * V'
     A = (A + A') / 2
-    alg = TruncatedAlgorithm(CUSOLVER_QRIteration(), truncrank(2))
+    alg = TruncatedAlgorithm(ROCSOLVER_QRIteration(), truncrank(2))
     D2, V2, ϵ2 = @constinferred eigh_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2] rtol = sqrt(eps(real(T)))
     @test_throws ArgumentError eigh_trunc(A; alg, trunc=(; maxrank=2))
 end=#
+
+@testset "eigh for Diagonal{$T}" for T in BLASFloats
+    rng = StableRNG(123)
+    m = 54
+    Ad = randn(rng, T, m)
+    Ad .+= conj.(Ad)
+    A = Diagonal(ROCArray(Ad))
+    atol = sqrt(eps(real(T)))
+
+    D, V = @constinferred eigh_full(A)
+    @test D isa Diagonal{real(T)} && size(D) == size(A)
+    @test V isa Diagonal{T} && size(V) == size(A)
+    @test A * V ≈ V * D
+
+    D2 = @constinferred eigh_vals(A)
+    @test D2 isa AbstractVector{real(T)} && length(D2) == m
+    @test diagview(D) ≈ D2
+
+    # TODO partialsortperm
+    #=A2 = Diagonal(ROCArray(T[0.9, 0.3, 0.1, 0.01]))
+    alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
+    D2, V2, ϵ2 = @constinferred eigh_trunc(A2; alg)
+    @test diagview(D2) ≈ diagview(A2)[1:2]
+    @test ϵ2 ≈ norm(diagview(A2)[3:4]) atol = atol=#
+end
