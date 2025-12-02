@@ -63,8 +63,9 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
         Expr(
             :public, :left_polar_pullback!, :right_polar_pullback!,
             :qr_pullback!, :qr_null_pullback!, :lq_pullback!, :lq_null_pullback!,
-            :eig_pullback!, :eig_trunc_pullback!, :eigh_pullback!, :eigh_trunc_pullback!,
-            :svd_pullback!, :svd_trunc_pullback!
+            :eig_pullback!, :eig_trunc_pullback!, :eig_vals_pullback!,
+            :eigh_pullback!, :eigh_trunc_pullback!, :eigh_vals_pullback!,
+            :svd_pullback!, :svd_trunc_pullback!, :svd_vals_pullback!
         )
     )
     eval(Expr(:public, :is_left_isometric, :is_right_isometric))
