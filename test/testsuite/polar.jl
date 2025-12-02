@@ -1,10 +1,11 @@
 using TestExtras
+using LinearAlgebra: isposdef
 
 function test_polar(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "polar $summary_str" begin
-        test_left_polar(T, sz; kwargs...)
-        test_right_polar(T, sz; kwargs...)
+        (length(sz) == 1 || sz[1] ≥ sz[2]) && test_left_polar(T, sz; kwargs...)
+        (length(sz) == 1 || sz[2] ≥ sz[1]) && test_right_polar(T, sz; kwargs...)
     end
 end
 
@@ -15,7 +16,12 @@ function test_left_polar(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "left_polar! $summary_str" begin
-        algs = (PolarViaSVD(), PolarNewton())
+        A = instantiate_matrix(T, sz)
+        algs = if T <: Diagonal
+            (PolarNewton(),)
+        else
+            (PolarViaSVD(MatrixAlgebraKit.default_svd_algorithm(A)), PolarNewton())
+        end
         @testset "algorithm $alg" for alg in algs
             A = instantiate_matrix(T, sz)
             Ac = deepcopy(A)
@@ -26,7 +32,7 @@ function test_left_polar(
             @test isisometric(W)
             @test isposdef(P)
 
-            W2, P2 = @constinferred left_polar!(Ac, (W, P), alg)
+            W2, P2 = @testinferred left_polar!(Ac, (W, P), alg)
             @test W2 === W
             @test P2 === P
             @test W * P ≈ A
@@ -34,7 +40,7 @@ function test_left_polar(
             @test isposdef(P)
 
             noP = similar(P, (0, 0))
-            W2, P2 = @constinferred left_polar!(copy!(Ac, A), (W, noP), alg)
+            W2, P2 = @testinferred left_polar!(copy!(Ac, A), (W, noP), alg)
             @test P2 === noP
             @test W2 === W
             @test isisometric(W)
@@ -52,18 +58,23 @@ function test_right_polar(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "right_polar! $summary_str" begin
-        algs = (PolarViaSVD(), PolarNewton())
+        A = instantiate_matrix(T, sz)
+        algs = if T <: Diagonal
+            (PolarNewton(),)
+        else
+            (PolarViaSVD(MatrixAlgebraKit.default_svd_algorithm(A)), PolarNewton())
+        end
         @testset "algorithm $alg" for alg in algs
             A = instantiate_matrix(T, sz)
             Ac = deepcopy(A)
             P, Wᴴ = right_polar(A; alg)
             @test eltype(Wᴴ) == eltype(A) && size(Wᴴ) == (size(A, 1), size(A, 2))
-            @test eltype(P)  == eltype(A) && size(P)  == (size(A, 1), size(A, 1))
+            @test eltype(P) == eltype(A) && size(P) == (size(A, 1), size(A, 1))
             @test P * Wᴴ ≈ A
             @test isisometric(Wᴴ; side = :right)
             @test isposdef(P)
 
-            P2, Wᴴ2 = @constinferred right_polar!(Ac, (P, Wᴴ), alg)
+            P2, Wᴴ2 = @testinferred right_polar!(Ac, (P, Wᴴ), alg)
             @test P2 === P
             @test Wᴴ2 === Wᴴ
             @test P * Wᴴ ≈ A
@@ -71,7 +82,7 @@ function test_right_polar(
             @test isposdef(P)
 
             noP = similar(P, (0, 0))
-            P2, Wᴴ2 = @constinferred right_polar!(copy!(Ac, A), (noP, Wᴴ), alg)
+            P2, Wᴴ2 = @testinferred right_polar!(copy!(Ac, A), (noP, Wᴴ), alg)
             @test P2 === noP
             @test Wᴴ2 === Wᴴ
             @test isisometric(Wᴴ; side = :right)

@@ -1,7 +1,8 @@
 using MatrixAlgebraKit
 using Test
 using StableRNGs
-using LinearAlgebra: LinearAlgebra, I, isposdef
+using LinearAlgebra: LinearAlgebra, I, isposdef, Diagonal
+using CUDA, AMDGPU
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (Float16, BigFloat, Complex{BigFloat})
@@ -26,4 +27,3 @@ for T in (BLASFloats..., GenericFloats...)
     AT = Diagonal{T, Vector{T}}
     TestSuite.test_polar(AT, m; test_pivoted = false, test_blocksize = false)
 end
-

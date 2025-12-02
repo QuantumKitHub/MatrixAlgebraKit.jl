@@ -1,4 +1,5 @@
 using TestExtras
+using LinearAlgebra: Diagonal, normalize!
 
 function test_projections(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
@@ -16,7 +17,7 @@ function test_project_antihermitian(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "project_antihermitian! $summary_str" begin
-        noisefactor = eps(real(T))^(3 / 4)
+        noisefactor = eps(real(eltype(T)))^(3 / 4)
         algs = (NativeBlocked(blocksize = 16), NativeBlocked(blocksize = 32), NativeBlocked(blocksize = 64))
         @testset "algorithm $alg" for alg in algs
             A = instantiate_matrix(T, sz)
@@ -30,7 +31,8 @@ function test_project_antihermitian(
             @test A == Ac
             Ba_approx = Ba + noisefactor * Ah
             @test !isantihermitian(Ba_approx)
-            @test isantihermitian(Ba_approx; rtol = 10 * noisefactor)
+            # this is never anti-hermitian for real Diagonal: |A - A'| == 0
+            @test isantihermitian(Ba_approx; rtol = 10 * noisefactor) || norm(Aa) == 0
 
             copy!(Ac, A)
             Ba = project_antihermitian!(Ac, alg)
@@ -40,7 +42,7 @@ function test_project_antihermitian(
         end
 
         # test approximate error calculation
-        A = normalize!(randn(rng, T, m, m))
+        A = normalize!(randn(rng, eltype(T), size(A)...))
         Ah = project_hermitian(A)
         Aa = project_antihermitian(A)
 
@@ -63,7 +65,7 @@ function test_project_hermitian(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "project_hermitian! $summary_str" begin
-        noisefactor = eps(real(T))^(3 / 4)
+        noisefactor = eps(real(eltype(T)))^(3 / 4)
         algs = (NativeBlocked(blocksize = 16), NativeBlocked(blocksize = 32), NativeBlocked(blocksize = 64))
         @testset "algorithm $alg" for alg in algs
             A = instantiate_matrix(T, sz)
@@ -76,7 +78,8 @@ function test_project_hermitian(
             @test Bh ≈ Ah
             @test A == Ac
             Bh_approx = Bh + noisefactor * Aa
-            @test !ishermitian(Bh_approx)
+            # this is still hermitian for real Diagonal: |A - A'| == 0
+            @test !ishermitian(Bh_approx) || norm(Aa) == 0
             @test ishermitian(Bh_approx; rtol = 10 * noisefactor)
 
             Bh = project_hermitian!(Ac, alg)
@@ -86,7 +89,7 @@ function test_project_hermitian(
         end
 
         # test approximate error calculation
-        A  = normalize!(randn(rng, T, m, m))
+        A = normalize!(randn(rng, eltype(T), size(A)...))
         Ah = project_hermitian(A)
         Aa = project_antihermitian(A)
 
@@ -109,24 +112,29 @@ function test_project_isometric(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "project_isometric! $summary_str" begin
-        algs = (PolarViaSVD(), PolarNewton())
+        A = instantiate_matrix(T, sz)
+        algs = if T <: Diagonal
+            (PolarNewton(),)
+        else
+            (PolarViaSVD(MatrixAlgebraKit.default_svd_algorithm(A)), PolarNewton())
+        end
         @testset "algorithm $alg" for alg in algs
-            A    = instantiate_matrix(T, sz)
-            Ac   = deepcopy(A)
-            k    = min(size(A)...)
-            W    = project_isometric(A, alg)
+            A = instantiate_matrix(T, sz)
+            Ac = deepcopy(A)
+            k = min(size(A)...)
+            W = project_isometric(A, alg)
             @test isisometric(W)
-            W2   = project_isometric(W, alg)
+            W2 = project_isometric(W, alg)
             @test W2 ≈ W # stability of the projection
             @test W * (W' * A) ≈ A
 
-            W2 = @constinferred project_isometric!(Ac, W, alg)
+            W2 = @testinferred project_isometric!(Ac, W, alg)
             @test W2 === W
             @test isisometric(W)
 
             # test that W is closer to A then any other isometry
             for k in 1:10
-                δA = randn(rng, T, m, n)
+                δA = randn(rng, eltype(T), size(A)...)
                 W = project_isometric(A, alg)
                 W2 = project_isometric(A + δA / 100, alg)
                 @test norm(A - W2) > norm(A - W)

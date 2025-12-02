@@ -37,7 +37,7 @@ Random = "1"
 SafeTestsets = "0.1"
 StableRNGs = "1"
 Test = "1"
-TestExtras = "0.2,0.3"
+TestExtras = "0.3.2"
 Zygote = "0.7"
 julia = "1.10"
 
@@ -56,4 +56,4 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur", "Mooncake", "Random"]
+test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur", "Random", "Mooncake"]
