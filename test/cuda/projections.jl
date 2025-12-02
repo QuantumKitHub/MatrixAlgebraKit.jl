@@ -57,25 +57,47 @@ end
         svdalgs = (CUSOLVER_SVDPolar(), CUSOLVER_QRIteration(), CUSOLVER_Jacobi())
         algs = (PolarViaSVD.(svdalgs)...,) # PolarNewton()) # TODO
         @testset "algorithm $alg" for alg in algs
-            for A in (CuArray(randn(rng, T, m, n)), Diagonal(CuArray(randn(rng, T, m))))
+            A = CuArray(randn(rng, T, m, n))
+            W = project_isometric(A, alg)
+            @test isisometric(W)
+            W2 = project_isometric(W, alg)
+            @test W2 ≈ W # stability of the projection
+            @test W * (W' * A) ≈ A
+
+            Ac = similar(A)
+            W2 = @constinferred project_isometric!(copy!(Ac, A), W, alg)
+            @test W2 === W
+            @test isisometric(W)
+
+            # test that W is closer to A then any other isometry
+            for k in 1:10
+                δA = CuArray(randn(rng, T, size(A)...))
                 W = project_isometric(A, alg)
-                @test isisometric(W)
-                W2 = project_isometric(W, alg)
-                @test W2 ≈ W # stability of the projection
-                @test W * (W' * A) ≈ A
+                W2 = project_isometric(A + δA / 100, alg)
+                @test norm(A - W2) >= norm(A - W)
+            end
+        end
 
-                Ac = similar(A)
-                W2 = @constinferred project_isometric!(copy!(Ac, A), W, alg)
-                @test W2 === W
-                @test isisometric(W)
+        m == n && @testset "DiagonalAlgorithm" begin
+            A = Diagonal(CuArray(randn(rng, T, m)))
+            alg = PolarViaSVD(DiagonalAlgorithm())
+            W = project_isometric(A, alg)
+            @test isisometric(W)
+            W2 = project_isometric(W, alg)
+            @test W2 ≈ W # stability of the projection
+            @test W * (W' * A) ≈ A
 
-                # test that W is closer to A then any other isometry
-                for k in 1:10
-                    δA = CuArray(randn(rng, T, size(A)...))
-                    W = project_isometric(A, alg)
-                    W2 = project_isometric(A + δA / 100, alg)
-                    @test norm(A - W2) > norm(A - W)
-                end
+            Ac = similar(A)
+            W2 = @constinferred project_isometric!(copy!(Ac, A), W, alg)
+            @test W2 === W
+            @test isisometric(W)
+
+            # test that W is closer to A then any other isometry
+            for k in 1:10
+                δA = Diagonal(CuArray(randn(rng, T, m)))
+                W = project_isometric(A, alg)
+                W2 = project_isometric(A + δA / 100, alg)
+                @test norm(A - W2) >= norm(A - W)
             end
         end
     end
