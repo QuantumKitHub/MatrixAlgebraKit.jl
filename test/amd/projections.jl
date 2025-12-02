@@ -80,6 +80,7 @@ end
 
         m == n && @testset "DiagonalAlgorithm" begin
             A = Diagonal(ROCArray(randn(rng, T, m)))
+            alg = PolarViaSVD(DiagonalAlgorithm())
             W = project_isometric(A, alg)
             @test isisometric(W)
             W2 = project_isometric(W, alg)
