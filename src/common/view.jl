@@ -1,6 +1,24 @@
 # diagind: provided by LinearAlgebra.jl
+@doc """
+    diagview(D)
+
+Return a view of the diagonal elements of a matrix `D`.
+
+See also [`diagonal`](@ref).
+""" diagview
+
 diagview(D::Diagonal) = D.diag
 diagview(D::AbstractMatrix) = view(D, diagind(D))
+
+@doc """
+    diagonal(v)
+
+Construct a diagonal matrix view for the given diagonal vector.
+
+See also [`diagview`](@ref).
+""" diagonal
+
+diagonal(v::AbstractVector) = Diagonal(v)
 
 # triangularind
 function lowertriangularind(A::AbstractMatrix)

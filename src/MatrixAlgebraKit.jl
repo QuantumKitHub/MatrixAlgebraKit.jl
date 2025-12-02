@@ -10,6 +10,7 @@ using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
 export isisometric, isunitary, ishermitian, isantihermitian
+export diagview, diagonal
 
 export project_hermitian, project_antihermitian, project_isometric
 export project_hermitian!, project_antihermitian!, project_isometric!
