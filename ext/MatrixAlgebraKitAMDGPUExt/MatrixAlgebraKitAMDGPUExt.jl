@@ -112,31 +112,33 @@ function _project_hermitian_diag_kernel(A, B, ::Val{false})
 end
 # COV_EXCL_STOP
 
+const SupportedROCMatrix{T} = Union{AnyROCMatrix{T}, SubArray{T, 2, <:AnyROCMatrix{T}}}
+
 function MatrixAlgebraKit._project_hermitian_offdiag!(
-        Au::StridedROCMatrix, Al::StridedROCMatrix, Bu::StridedROCMatrix, Bl::StridedROCMatrix, ::Val{anti}
+        Au::SupportedROCMatrix, Al::SupportedROCMatrix, Bu::SupportedROCMatrix, Bl::SupportedROCMatrix, ::Val{anti}
     ) where {anti}
     thread_dim = 512
     block_dim = cld(size(Au, 2), thread_dim)
     @roc groupsize = thread_dim gridsize = block_dim _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, Val(anti))
     return nothing
 end
-function MatrixAlgebraKit._project_hermitian_diag!(A::StridedROCMatrix, B::StridedROCMatrix, ::Val{anti}) where {anti}
+function MatrixAlgebraKit._project_hermitian_diag!(A::SupportedROCMatrix, B::SupportedROCMatrix, ::Val{anti}) where {anti}
     thread_dim = 512
     block_dim = cld(size(A, 1), thread_dim)
     @roc groupsize = thread_dim gridsize = block_dim _project_hermitian_diag_kernel(A, B, Val(anti))
     return nothing
 end
 
-# avoids calling the `StridedMatrix` specialization to avoid scalar indexing,
+# avoids calling the `SupportedMatrix` specialization to avoid scalar indexing,
 # use (allocating) fallback instead until we write a dedicated kernel
-MatrixAlgebraKit.ishermitian_exact(A::StridedROCMatrix) = A == A'
-MatrixAlgebraKit.ishermitian_approx(A::StridedROCMatrix; atol, rtol, kwargs...) =
+MatrixAlgebraKit.ishermitian_exact(A::SupportedROCMatrix) = A == A'
+MatrixAlgebraKit.ishermitian_approx(A::SupportedROCMatrix; atol, rtol, kwargs...) =
     norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
-MatrixAlgebraKit.isantihermitian_exact(A::StridedROCMatrix) = A == -A'
-MatrixAlgebraKit.isantihermitian_approx(A::StridedROCMatrix; atol, rtol, kwargs...) =
+MatrixAlgebraKit.isantihermitian_exact(A::SupportedROCMatrix) = A == -A'
+MatrixAlgebraKit.isantihermitian_approx(A::SupportedROCMatrix; atol, rtol, kwargs...) =
     norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 
-function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
+function MatrixAlgebraKit._avgdiff!(A::SupportedROCMatrix, B::SupportedROCMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
     # COV_EXCL_START
     function _avgdiff_kernel(A, B)
