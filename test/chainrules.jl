@@ -287,6 +287,10 @@ end
         config, last ∘ eig_full, A;
         output_tangent = ΔV, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
     )
+    test_rrule(
+        config, eig_vals, A;
+        output_tangent = diagview(ΔD), atol, rtol, rrule_f = rrule_via_ad, check_inferred = false
+    )
 end
 
 @timedtestset "EIGH AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
@@ -364,6 +368,10 @@ end
     test_rrule(
         config, last ∘ eigh_full ∘ Matrix ∘ Hermitian, A;
         output_tangent = ΔV, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+    )
+    test_rrule(
+        config, eigh_vals ∘ Matrix ∘ Hermitian, A;
+        output_tangent = diagview(ΔD), atol, rtol, rrule_f = rrule_via_ad, check_inferred = false
     )
     eigh_trunc2(A; kwargs...) = eigh_trunc(Matrix(Hermitian(A)); kwargs...)
     for r in 1:4:m
@@ -458,6 +466,10 @@ end
             config, svd_compact, A;
             output_tangent = (ΔU, ΔS2, ΔVᴴ), atol = atol, rtol = rtol,
             rrule_f = rrule_via_ad, check_inferred = false
+        )
+        test_rrule(
+            config, svd_vals, A;
+            output_tangent = diagview(ΔS), atol, rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
         for r in 1:4:minmn
             trunc = truncrank(r)
