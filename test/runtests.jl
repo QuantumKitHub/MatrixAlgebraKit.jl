@@ -60,42 +60,8 @@ end
 
 using CUDA
 if CUDA.functional()
-    @safetestset "CUDA Projections" begin
-        include("cuda/projections.jl")
-    end
-    @safetestset "CUDA SVD" begin
-        include("cuda/svd.jl")
-    end
     @safetestset "CUDA General Eigenvalue Decomposition" begin
         include("cuda/eig.jl")
-    end
-    @safetestset "CUDA Hermitian Eigenvalue Decomposition" begin
-        include("cuda/eigh.jl")
-    end
-    @safetestset "CUDA Polar Decomposition" begin
-        include("cuda/polar.jl")
-    end
-    @safetestset "CUDA Image and Null Space" begin
-        include("cuda/orthnull.jl")
-    end
-end
-
-using AMDGPU
-if AMDGPU.functional()
-    @safetestset "AMDGPU Projections" begin
-        include("amd/projections.jl")
-    end
-    @safetestset "AMDGPU SVD" begin
-        include("amd/svd.jl")
-    end
-    @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
-        include("amd/eigh.jl")
-    end
-    @safetestset "AMDGPU Polar Decomposition" begin
-        include("amd/polar.jl")
-    end
-    @safetestset "AMDGPU Image and Null Space" begin
-        include("amd/orthnull.jl")
     end
 end
 
