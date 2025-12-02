@@ -1,4 +1,5 @@
 using TestExtras
+using MatrixAlgebraKit: ishermitian
 using LinearAlgebra: Diagonal, normalize!
 
 function test_projections(T::Type, sz; kwargs...)

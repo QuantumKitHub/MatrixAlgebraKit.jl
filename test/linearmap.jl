@@ -3,7 +3,7 @@ module LinearMaps
     export LinearMap
 
     using MatrixAlgebraKit
-    using MatrixAlgebraKit: AbstractAlgorithm
+    using MatrixAlgebraKit: AbstractAlgorithm, DiagonalAlgorithm
     import MatrixAlgebraKit as MAK
 
     using LinearAlgebra: LinearAlgebra, lmul!, rmul!
@@ -31,6 +31,12 @@ module LinearMaps
         @eval MAK.initialize_output(::typeof($f!), A::LinearMap, alg::AbstractAlgorithm) =
             LinearMap.(MAK.initialize_output($f!, parent(A), alg))
         @eval MAK.$f!(A::LinearMap, F, alg::AbstractAlgorithm) =
+            LinearMap.(MAK.$f!(parent(A), parent.(F), alg))
+        @eval MAK.check_input(::typeof($f!), A::LinearMap, F, alg::DiagonalAlgorithm) =
+            MAK.check_input($f!, parent(A), parent.(F), alg)
+        @eval MAK.initialize_output(::typeof($f!), A::LinearMap, alg::DiagonalAlgorithm) =
+            LinearMap.(MAK.initialize_output($f!, parent(A), alg))
+        @eval MAK.$f!(A::LinearMap, F, alg::DiagonalAlgorithm) =
             LinearMap.(MAK.$f!(parent(A), parent.(F), alg))
     end
 

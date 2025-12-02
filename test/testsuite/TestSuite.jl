@@ -68,5 +68,6 @@ include("lq.jl")
 include("polar.jl")
 include("orthnull.jl")
 include("projections.jl")
+include("eigh.jl")
 
 end
