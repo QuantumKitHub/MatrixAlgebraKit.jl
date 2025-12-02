@@ -11,21 +11,23 @@ include("ad_utils.jl")
 for f in
     (
         :qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
-        :eig_full, :eig_trunc, :eigh_full, :eigh_trunc, :svd_compact, :svd_trunc,
+        :eig_full, :eig_trunc, :eig_vals, :eigh_full, :eigh_trunc, :eigh_vals,
+        :svd_compact, :svd_trunc, :svd_vals,
         :left_polar, :right_polar,
     )
     copy_f = Symbol(:copy_, f)
     f! = Symbol(f, '!')
+    _hermitian = startswith(string(f), "eigh")
     @eval begin
         function $copy_f(input, alg)
-            if $f === eigh_full || $f === eigh_trunc
+            if $_hermitian
                 input = (input + input') / 2
             end
             return $f(input, alg)
         end
         function ChainRulesCore.rrule(::typeof($copy_f), input, alg)
             output = MatrixAlgebraKit.initialize_output($f!, input, alg)
-            if $f === eigh_full || $f === eigh_trunc
+            if $_hermitian
                 input = (input + input') / 2
             else
                 input = copy(input)
@@ -228,12 +230,13 @@ end
     ΔD2 = Diagonal(randn(rng, complex(T), m))
     for alg in (LAPACK_Simple(), LAPACK_Expert())
         test_rrule(
-            copy_eig_full, A, alg ⊢ NoTangent();
-            output_tangent = (ΔD, ΔV), atol = atol, rtol = rtol
+            copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = (ΔD, ΔV), atol, rtol
         )
         test_rrule(
-            copy_eig_full, A, alg ⊢ NoTangent();
-            output_tangent = (ΔD2, ΔV), atol = atol, rtol = rtol
+            copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = (ΔD2, ΔV), atol, rtol
+        )
+        test_rrule(
+            copy_eig_vals, A, alg ⊢ NoTangent(); output_tangent = diagview(ΔD), atol, rtol
         )
         for r in 1:4:m
             truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
@@ -284,6 +287,10 @@ end
         config, last ∘ eig_full, A;
         output_tangent = ΔV, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
     )
+    test_rrule(
+        config, eig_vals, A;
+        output_tangent = diagview(ΔD), atol, rtol, rrule_f = rrule_via_ad, check_inferred = false
+    )
 end
 
 @timedtestset "EIGH AD Rules with eltype $T" for T in (Float64, ComplexF64, Float32)
@@ -304,12 +311,13 @@ end
         )
         # copy_eigh_full includes a projector onto the Hermitian part of the matrix
         test_rrule(
-            copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = (ΔD, ΔV),
-            atol = atol, rtol = rtol
+            copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = (ΔD, ΔV), atol, rtol
         )
         test_rrule(
-            copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = (ΔD2, ΔV),
-            atol = atol, rtol = rtol
+            copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = (ΔD2, ΔV), atol, rtol
+        )
+        test_rrule(
+            copy_eigh_vals, A, alg ⊢ NoTangent(); output_tangent = diagview(ΔD), atol, rtol
         )
         for r in 1:4:m
             truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
@@ -361,6 +369,10 @@ end
         config, last ∘ eigh_full ∘ Matrix ∘ Hermitian, A;
         output_tangent = ΔV, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
     )
+    test_rrule(
+        config, eigh_vals ∘ Matrix ∘ Hermitian, A;
+        output_tangent = diagview(ΔD), atol, rtol, rrule_f = rrule_via_ad, check_inferred = false
+    )
     eigh_trunc2(A; kwargs...) = eigh_trunc(Matrix(Hermitian(A)); kwargs...)
     for r in 1:4:m
         trunc = truncrank(r; by = real)
@@ -403,6 +415,10 @@ end
             test_rrule(
                 copy_svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = (ΔU, ΔS2, ΔVᴴ), atol = atol, rtol = rtol
+            )
+            test_rrule(
+                copy_svd_vals, A, alg ⊢ NoTangent();
+                output_tangent = diagview(ΔS), atol, rtol
             )
             for r in 1:4:minmn
                 truncalg = TruncatedAlgorithm(alg, truncrank(r))
@@ -450,6 +466,10 @@ end
             config, svd_compact, A;
             output_tangent = (ΔU, ΔS2, ΔVᴴ), atol = atol, rtol = rtol,
             rrule_f = rrule_via_ad, check_inferred = false
+        )
+        test_rrule(
+            config, svd_vals, A;
+            output_tangent = diagview(ΔS), atol, rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
         for r in 1:4:minmn
             trunc = truncrank(r)

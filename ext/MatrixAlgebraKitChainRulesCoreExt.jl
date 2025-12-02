@@ -95,6 +95,11 @@ for eig in (:eig, :eigh)
     eig_t! = Symbol(eig, "_trunc!")
     eig_t_pb = Symbol(eig, "_trunc_pullback")
     _make_eig_t_pb = Symbol("_make_", eig_t_pb)
+    eig_v = Symbol(eig, "_vals")
+    eig_v! = Symbol(eig_v, "!")
+    eig_v_pb = Symbol(eig_v, "_pullback")
+    eig_v_pb! = Symbol(eig_v_pb, "!")
+
     @eval begin
         function ChainRulesCore.rrule(::typeof($eig_f!), A, DV, alg)
             Ac = copy_input($eig_f, A)
@@ -130,6 +135,18 @@ for eig in (:eig, :eigh)
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return $eig_t_pb
+        end
+        function ChainRulesCore.rrule(::typeof($eig_v!), A, D, alg)
+            DV = $eig_f(A, alg)
+            function $eig_v_pb(ΔD)
+                ΔA = zero(A)
+                MatrixAlgebraKit.$eig_v_pb!(ΔA, A, DV, unthunk(ΔD))
+                return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+            end
+            function $eig_v_pb(::ZeroTangent) # is this extra definition useful?
+                return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+            end
+            return diagview(DV[1]), $eig_v_pb
         end
     end
 end
@@ -174,6 +191,19 @@ function _make_svd_trunc_pullback(A, USVᴴ, ind)
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return svd_trunc_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(svd_vals!), A, S, alg)
+    USVᴴ = svd_compact(A, alg)
+    function svd_vals_pullback(ΔS)
+        ΔA = zero(A)
+        MatrixAlgebraKit.svd_vals_pullback!(ΔA, A, USVᴴ, unthunk(ΔS))
+        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+    end
+    function svd_pullback(::ZeroTangent) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return diagview(USVᴴ[2]), svd_vals_pullback
 end
 
 function ChainRulesCore.rrule(::typeof(left_polar!), A, WP, alg)

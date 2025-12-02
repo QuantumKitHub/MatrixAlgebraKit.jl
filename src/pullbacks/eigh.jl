@@ -141,3 +141,27 @@ function eigh_trunc_pullback!(
     end
     return ΔA
 end
+
+"""
+    eigh_vals_pullback!(
+        ΔA, A, DV, ΔD, [ind];
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+    )
+
+Adds the pullback from the eigenvalues of `A` to `ΔA`, given the output
+`DV` of `eigh_full` and the cotangent `ΔD` of `eig_vals`.
+
+In particular, it is assumed that `A ≈ V * D * inv(V)` with thus `size(A) == size(V) == size(D)`
+and `D` diagonal. For the cotangents, an arbitrary number of eigenvalues can be missing, i.e.
+for a matrix `A` of size `(n, n)`, `diagview(ΔD)` can have length `pD`. In those cases,
+additionally `ind` is required to specify which eigenvalues are present in `ΔV` or `ΔD`.
+By default, it is assumed that all eigenvectors and eigenvalues are present.
+"""
+function eigh_vals_pullback!(
+        ΔA, A, DV, ΔD, ind = Colon();
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+    )
+
+    ΔDV = (diagonal(ΔD), nothing)
+    return eigh_pullback!(ΔA, A, DV, ΔDV, ind; degeneracy_atol)
+end

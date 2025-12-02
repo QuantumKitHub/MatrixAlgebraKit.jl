@@ -6,7 +6,7 @@
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
 
-Adds the pullback from the SVD of `A` to `ΔA` given the output USVᴴ of `svd_compact` or
+Adds the pullback from the SVD of `A` to `ΔA` given the output `USVᴴ` of `svd_compact` or
 `svd_full` and the cotangent `ΔUSVᴴ` of `svd_compact`, `svd_full` or `svd_trunc`.
 
 In particular, it is assumed that `A ≈ U * S * Vᴴ`, or thus, that no singular values with
@@ -200,4 +200,30 @@ function svd_trunc_pullback!(
     ΔA = mul!(ΔA, Ũ, X * Vᴴ, 1, 1)
     ΔA = mul!(ΔA, U, Y' * Ṽᴴ, 1, 1)
     return ΔA
+end
+
+"""
+    svd_vals_pullback!(
+        ΔA, A, USVᴴ, ΔS, [ind];
+        rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2])
+    )
+
+
+Adds the pullback from the singular values of `A` to `ΔA`, given the output
+`USVᴴ` of `svd_compact`, and the cotangent `ΔS` of `svd_vals`.
+
+In particular, it is assumed that `A ≈ U * S * Vᴴ`, or thus, that no singular values with
+magnitude less than `rank_atol` are missing from `S`. For the cotangents, an arbitrary
+number of singular vectors or singular values can be missing, i.e. for a matrix `A` with
+size `(m, n)`, `diagview(ΔS)` can have length `pS`. In those cases, additionally `ind` is required to
+specify which singular vectors and values are present in `ΔS`.
+"""
+function svd_vals_pullback!(
+        ΔA, A, USVᴴ, ΔS, ind = Colon();
+        rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2])
+    )
+    ΔUSVᴴ = (nothing, diagonal(ΔS), nothing)
+    return svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, ind; rank_atol, degeneracy_atol)
 end
