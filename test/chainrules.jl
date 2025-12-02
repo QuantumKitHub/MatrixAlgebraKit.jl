@@ -11,7 +11,8 @@ include("ad_utils.jl")
 for f in
     (
         :qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
-        :eig_full, :eig_trunc, :eigh_full, :eigh_trunc, :svd_compact, :svd_trunc,
+        :eig_full, :eig_trunc, :eigh_full, :eigh_trunc,
+        :svd_compact, :svd_trunc, :svd_vals,
         :left_polar, :right_polar,
     )
     copy_f = Symbol(:copy_, f)
@@ -403,6 +404,10 @@ end
             test_rrule(
                 copy_svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = (ΔU, ΔS2, ΔVᴴ), atol = atol, rtol = rtol
+            )
+            test_rrule(
+                copy_svd_vals, A, alg ⊢ NoTangent();
+                output_tangent = diagview(ΔS), atol, rtol
             )
             for r in 1:4:minmn
                 truncalg = TruncatedAlgorithm(alg, truncrank(r))

@@ -176,6 +176,19 @@ function _make_svd_trunc_pullback(A, USVᴴ, ind)
     return svd_trunc_pullback
 end
 
+function ChainRulesCore.rrule(::typeof(svd_vals!), A, S, alg)
+    USVᴴ = svd_compact(A, alg)
+    function svd_vals_pullback(ΔS)
+        ΔA = zero(A)
+        MatrixAlgebraKit.svd_vals_pullback!(ΔA, A, USVᴴ, unthunk(ΔS))
+        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+    end
+    function svd_pullback(::ZeroTangent) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return diagview(USVᴴ[2]), svd_vals_pullback
+end
+
 function ChainRulesCore.rrule(::typeof(left_polar!), A, WP, alg)
     Ac = copy_input(left_polar, A)
     WP = left_polar!(Ac, WP, alg)
