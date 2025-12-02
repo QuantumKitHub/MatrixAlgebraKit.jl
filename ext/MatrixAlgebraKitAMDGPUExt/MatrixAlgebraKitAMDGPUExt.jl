@@ -129,16 +129,16 @@ function MatrixAlgebraKit._project_hermitian_diag!(A::SupportedROCMatrix, B::Sup
     return nothing
 end
 
-# avoids calling the `SupportedMatrix` specialization to avoid scalar indexing,
+# avoids calling the `StridedMatrix` specialization to avoid scalar indexing,
 # use (allocating) fallback instead until we write a dedicated kernel
-MatrixAlgebraKit.ishermitian_exact(A::SupportedROCMatrix) = A == A'
-MatrixAlgebraKit.ishermitian_approx(A::SupportedROCMatrix; atol, rtol, kwargs...) =
+MatrixAlgebraKit.ishermitian_exact(A::StridedROCMatrix) = A == A'
+MatrixAlgebraKit.ishermitian_approx(A::StridedROCMatrix; atol, rtol, kwargs...) =
     norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
-MatrixAlgebraKit.isantihermitian_exact(A::SupportedROCMatrix) = A == -A'
-MatrixAlgebraKit.isantihermitian_approx(A::SupportedROCMatrix; atol, rtol, kwargs...) =
+MatrixAlgebraKit.isantihermitian_exact(A::StridedROCMatrix) = A == -A'
+MatrixAlgebraKit.isantihermitian_approx(A::StridedROCMatrix; atol, rtol, kwargs...) =
     norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 
-function MatrixAlgebraKit._avgdiff!(A::SupportedROCMatrix, B::SupportedROCMatrix)
+function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
     # COV_EXCL_START
     function _avgdiff_kernel(A, B)

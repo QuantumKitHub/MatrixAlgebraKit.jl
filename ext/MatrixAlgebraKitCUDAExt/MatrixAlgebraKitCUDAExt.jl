@@ -155,14 +155,14 @@ end
 
 # avoids calling the `StridedMatrix` specialization to avoid scalar indexing,
 # use (allocating) fallback instead until we write a dedicated kernel
-MatrixAlgebraKit.ishermitian_exact(A::SupportedCuMatrix) = A == A'
-MatrixAlgebraKit.ishermitian_approx(A::SupportedCuMatrix; atol, rtol, kwargs...) =
+MatrixAlgebraKit.ishermitian_exact(A::StridedCuMatrix) = A == A'
+MatrixAlgebraKit.ishermitian_approx(A::StridedCuMatrix; atol, rtol, kwargs...) =
     norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
-MatrixAlgebraKit.isantihermitian_exact(A::SupportedCuMatrix) = A == -A'
-MatrixAlgebraKit.isantihermitian_approx(A::SupportedCuMatrix; atol, rtol, kwargs...) =
+MatrixAlgebraKit.isantihermitian_exact(A::StridedCuMatrix) = A == -A'
+MatrixAlgebraKit.isantihermitian_approx(A::StridedCuMatrix; atol, rtol, kwargs...) =
     norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
 
-function MatrixAlgebraKit._avgdiff!(A::SupportedCuMatrix, B::SupportedCuMatrix)
+function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
     # COV_EXCL_START
     function _avgdiff_kernel(A, B)
