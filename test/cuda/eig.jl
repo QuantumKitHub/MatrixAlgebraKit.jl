@@ -4,10 +4,13 @@ using Test
 using TestExtras
 using StableRNGs
 using CUDA
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview, norm
 
 include(joinpath("..", "utilities.jl"))
 
-@testset "eig_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+
+@testset "eig_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for alg in (CUSOLVER_Simple(), :CUSOLVER_Simple, CUSOLVER_Simple)
@@ -60,4 +63,46 @@ end
         @test V2 * ((V2' * V2) \ (V2' * V1)) ≈ V1
     end
 end
+
+@testset "eig_trunc! specify truncation algorithm T = $T" for T in BLASFloats
+    rng = StableRNG(123)
+    m = 4
+    atol = sqrt(eps(real(T)))
+    V = randn(rng, T, m, m)
+    D = Diagonal(real(T)[0.9, 0.3, 0.1, 0.01])
+    A = V * D * inv(V)
+    alg = TruncatedAlgorithm(LAPACK_Simple(), truncrank(2))
+    D2, V2, ϵ2 = @constinferred eig_trunc(A; alg)
+    @test diagview(D2) ≈ diagview(D)[1:2]
+    @test ϵ2 ≈ norm(diagview(D)[3:4]) atol = atol
+    @test_throws ArgumentError eig_trunc(A; alg, trunc = (; maxrank = 2))
+
+    alg = TruncatedAlgorithm(LAPACK_Simple(), truncerror(; atol = 0.2, p = 1))
+    D3, V3, ϵ3 = @constinferred eig_trunc(A; alg)
+    @test diagview(D3) ≈ diagview(D)[1:2]
+    @test ϵ3 ≈ norm(diagview(D)[3:4]) atol = atol
+end
 =#
+
+@testset "eig for Diagonal{$T}" for T in BLASFloats
+    rng = StableRNG(123)
+    m = 54
+    Ad = CuArray(randn(rng, T, m))
+    A = Diagonal(Ad)
+    atol = sqrt(eps(real(T)))
+
+    D, V = @constinferred eig_full(A)
+    @test D isa Diagonal{T} && size(D) == size(A)
+    @test V isa Diagonal{T} && size(V) == size(A)
+    @test A * V ≈ V * D
+
+    D2 = @constinferred eig_vals(A)
+    @test D2 isa AbstractVector{T} && length(D2) == m
+    @test diagview(D) ≈ D2
+
+    #=A2 = Diagonal(T[0.9, 0.3, 0.1, 0.01])
+    alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
+    D2, V2, ϵ2 = @constinferred eig_trunc(A2; alg)
+    @test diagview(D2) ≈ diagview(A2)[1:2]
+    @test ϵ2 ≈ norm(diagview(A2)[3:4]) atol = atol=#
+end
