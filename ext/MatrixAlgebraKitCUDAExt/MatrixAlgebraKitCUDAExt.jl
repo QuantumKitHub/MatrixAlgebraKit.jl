@@ -32,19 +32,6 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {TT
     return CUSOLVER_DivideAndConquer(; kwargs...)
 end
 
-for f in (
-        :(MatrixAlgebraKit.default_lq_algorithm),
-        :(MatrixAlgebraKit.default_qr_algorithm),
-        :(MatrixAlgebraKit.default_eig_algorithm),
-        :(MatrixAlgebraKit.default_eigh_algorithm),
-        :(MatrixAlgebraKit.default_svd_algorithm),
-    )
-
-    @eval function $f(::Type{T}; kwargs...) where {S, T <: Diagonal{S, <:StridedCuVector}}
-        return DiagonalAlgorithm(; kwargs...)
-    end
-end
-
 # include for block sector support
 function MatrixAlgebraKit.default_qr_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
     return CUSOLVER_HouseholderQR(; kwargs...)

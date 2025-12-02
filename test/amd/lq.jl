@@ -139,8 +139,7 @@ end
         @test Lp isa Diagonal{T} && size(Lp) == (m, m)
         @test Lp * Qp ≈ A
         @test isunitary(Qp)
-        @test all(≥(zero(real(T))), real(diag(Lp))) &&
-            all(≈(zero(real(T)); atol), imag(diag(Lp)))
+        @test all(isposdef.(diagview(Lp)))
 
         # full
         L, Q = @constinferred lq_full(A)
@@ -155,8 +154,7 @@ end
         @test Lp isa Diagonal{T} && size(Lp) == (m, m)
         @test Lp * Qp ≈ A
         @test isunitary(Qp)
-        @test all(≥(zero(real(T))), real(diag(Lp))) &&
-            all(≈(zero(real(T)); atol), imag(diag(Lp)))
+        @test all(isposdef.(diagview(Lp)))
 
         # null
         N = @constinferred lq_null(A)

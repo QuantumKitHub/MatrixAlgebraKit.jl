@@ -143,8 +143,7 @@ end
         @test Rp isa Diagonal{T} && size(Rp) == (m, m)
         @test Qp * Rp ≈ A
         @test isunitary(Qp)
-        @test all(≥(zero(real(T))), real(diag(Rp))) &&
-            all(≈(zero(real(T)); atol), imag(diag(Rp)))
+        @test all(isposdef.(diagview(Rp)))
 
         # full
         Q, R = @constinferred qr_full(A)
@@ -159,8 +158,7 @@ end
         @test Rp isa Diagonal{T} && size(Rp) == (m, m)
         @test Qp * Rp ≈ A
         @test isunitary(Qp)
-        @test all(≥(zero(real(T))), real(diag(Rp))) &&
-            all(≈(zero(real(T)); atol), imag(diag(Rp)))
+        @test all(isposdef.(diagview(Rp)))
 
         # null
         N = @constinferred qr_null(A)
