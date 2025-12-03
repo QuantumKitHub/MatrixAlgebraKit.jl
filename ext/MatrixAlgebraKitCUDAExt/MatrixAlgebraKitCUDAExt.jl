@@ -136,15 +136,17 @@ function _project_hermitian_diag_kernel(A, B, ::Val{false})
 end
 # COV_EXCL_STOP
 
+const SupportedCuMatrix{T} = Union{AnyCuMatrix{T}, SubArray{T, 2, <:AnyCuMatrix{T}}}
+
 function MatrixAlgebraKit._project_hermitian_offdiag!(
-        Au::StridedCuMatrix, Al::StridedCuMatrix, Bu::StridedCuMatrix, Bl::StridedCuMatrix, ::Val{anti}
+        Au::SupportedCuMatrix, Al::SupportedCuMatrix, Bu::SupportedCuMatrix, Bl::SupportedCuMatrix, ::Val{anti}
     ) where {anti}
     thread_dim = 512
     block_dim = cld(size(Au, 2), thread_dim)
     @cuda threads = thread_dim blocks = block_dim _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, Val(anti))
     return nothing
 end
-function MatrixAlgebraKit._project_hermitian_diag!(A::StridedCuMatrix, B::StridedCuMatrix, ::Val{anti}) where {anti}
+function MatrixAlgebraKit._project_hermitian_diag!(A::SupportedCuMatrix, B::SupportedCuMatrix, ::Val{anti}) where {anti}
     thread_dim = 512
     block_dim = cld(size(A, 1), thread_dim)
     @cuda threads = thread_dim blocks = block_dim _project_hermitian_diag_kernel(A, B, Val(anti))
