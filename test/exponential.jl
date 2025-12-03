@@ -4,6 +4,7 @@ using TestExtras
 using StableRNGs
 using MatrixAlgebraKit: diagview
 using LinearAlgebra
+using LinearAlgebra: exp
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
@@ -12,23 +13,21 @@ GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
     rng = StableRNG(123)
     m = 54
 
-    A = randn(rng, T, m, m)
-    A /= norm(A)
+    A = LinearAlgebra.normalize!(randn(rng, T, m, m))
+    Ac = copy(A)
+    expA = LinearAlgebra.exp(A)
 
-    D, V = @constinferred eig_full(A)
+    expA2 = @constinferred exponential(A)
+    @test expA ≈ expA2
+    @test A == Ac
+
     algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()))
-    expA_LA = @constinferred exponential(A)
     @testset "algorithm $alg" for alg in algs
-        expA = similar(A)
-
-        @constinferred exponential!(copy(A), expA)
-        expA2 = @constinferred exponential(A; alg = alg)
-        @test expA ≈ expA_LA
-        @test expA2 ≈ expA
-
-        Dexp, Vexp = @constinferred eig_full(expA)
-        @test sort(diagview(Dexp); by = imag) ≈ sort(LinearAlgebra.exp.(diagview(D)); by = imag)
+        expA2 = @constinferred exponential(A, alg)
+        @test expA ≈ expA2
+        @test A == Ac
     end
+
     @test_throws DomainError exponential(A; alg = MatrixFunctionViaEigh(LAPACK_QRIteration()))
 end
 
@@ -38,55 +37,52 @@ end
 
     A = randn(rng, T, m, m)
     τ = randn(rng, T)
+    Ac = copy(A)
 
-    D, V = @constinferred eig_full(A)
+    Aimτ = A * im * τ
+    expAimτ = LinearAlgebra.exp(Aimτ)
+
+    expAimτ2 = @constinferred exponentiali(τ, A)
+    @test expAimτ ≈ expAimτ2
+    @test A == Ac
+
     algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()))
-    expiτA_LA = @constinferred exp(im * τ * A)
     @testset "algorithm $alg" for alg in algs
-        expiτA = similar(complex(A))
-
-        @constinferred exponentiali!(τ, copy(A), expiτA; alg)
-        expiτA2 = @constinferred exponentiali(τ, A; alg = alg)
-        @test expiτA ≈ expiτA_LA
-        @test expiτA2 ≈ expiτA
-
-        Dexp, Vexp = @constinferred eig_full(expiτA)
-        @test sort(diagview(Dexp); by = imag) ≈ sort(LinearAlgebra.exp.(diagview(D) .* (im * τ)); by = imag)
+        expAimτ2 = @constinferred exponentiali(τ, A, alg)
+        @test expAimτ ≈ expAimτ2
+        @test A == Ac
     end
+
     @test_throws DomainError exponentiali(τ, A; alg = MatrixFunctionViaEigh(LAPACK_QRIteration()))
 end
 
 @testset "exponential! for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
     rng = StableRNG(123)
-    atol = sqrt(eps(real(T)))
     m = 54
-    Ad = randn(T, m)
-    A = Diagonal(Ad)
 
-    expA = similar(A)
-    @constinferred exponential!(copy(A), expA)
-    expA2 = @constinferred exponential(A; alg = DiagonalAlgorithm())
-    @test expA2 ≈ expA
+    A = Diagonal(randn(rng, T, m))
+    τ = randn(rng, T)
+    Ac = copy(A)
 
-    D, V = @constinferred eig_full(A)
-    Dexp, Vexp = @constinferred eig_full(expA)
-    @test diagview(Dexp) ≈ LinearAlgebra.exp.(diagview(D))
+    expA = LinearAlgebra.exp(A)
+
+    expA2 = @constinferred exponential(A)
+    @test expA ≈ expA2
+    @test A == Ac
 end
 
 @testset "exponentiali! for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
     rng = StableRNG(123)
-    atol = sqrt(eps(real(T)))
     m = 54
-    Ad = randn(T, m)
-    A = Diagonal(Ad)
+
+    A = Diagonal(randn(rng, T, m))
     τ = randn(rng, T)
+    Ac = copy(A)
 
-    expiτA = similar(complex(A))
-    @constinferred exponentiali!(τ, copy(A), expiτA)
-    expiτA2 = @constinferred exponentiali(τ, A; alg = DiagonalAlgorithm())
-    @test expiτA2 ≈ expiτA
+    Aimτ = A * im * τ
+    expAimτ = LinearAlgebra.exp(Aimτ)
 
-    D, V = @constinferred eig_full(A)
-    Dexp, Vexp = @constinferred eig_full(expiτA)
-    @test diagview(Dexp) ≈ LinearAlgebra.exp.(diagview(D) .* (im * τ))
+    expAimτ2 = @constinferred exponentiali(τ, A)
+    @test expAimτ ≈ expAimτ2
+    @test A == Ac
 end
