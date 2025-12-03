@@ -4,12 +4,14 @@ using Test
 using TestExtras
 using StableRNGs
 using CUDA
+using LinearAlgebra
+using LinearAlgebra: isposdef
 
 include(joinpath("..", "utilities.jl"))
 
-eltypes = (Float32, Float64, ComplexF32, ComplexF64)
+BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 
-@testset "qr_compact! and qr_null! for T = $T" for T in eltypes
+@testset "qr_compact! and qr_null! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
@@ -68,7 +70,7 @@ eltypes = (Float32, Float64, ComplexF32, ComplexF64)
     end
 end
 
-@testset "qr_full! for T = $T" for T in eltypes
+@testset "qr_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 63
     for n in (37, m, 63)
@@ -119,5 +121,48 @@ end
         end
         # no blocked CUDA
         @test_throws ArgumentError qr_full!(copy!(Ac, A), (Q, R); blocksize = 8)
+    end
+end
+
+@testset "qr_compact, qr_full and qr_null for Diagonal{$T}" for T in BLASFloats
+    rng = StableRNG(123)
+    atol = eps(real(T))^(3 / 4)
+    for m in (54, 0)
+        Ad = CuArray(randn(rng, T, m))
+        A = Diagonal(Ad)
+
+        # compact
+        Q, R = @constinferred qr_compact(A)
+        @test Q isa Diagonal{T} && size(Q) == (m, m)
+        @test R isa Diagonal{T} && size(R) == (m, m)
+        @test Q * R ≈ A
+        @test isunitary(Q)
+
+        # compact and positive
+        Qp, Rp = @constinferred qr_compact(A; positive = true)
+        @test Qp isa Diagonal{T} && size(Qp) == (m, m)
+        @test Rp isa Diagonal{T} && size(Rp) == (m, m)
+        @test Qp * Rp ≈ A
+        @test isunitary(Qp)
+        @test all(isposdef.(diagview(Rp)))
+
+        # full
+        Q, R = @constinferred qr_full(A)
+        @test Q isa Diagonal{T} && size(Q) == (m, m)
+        @test R isa Diagonal{T} && size(R) == (m, m)
+        @test Q * R ≈ A
+        @test isunitary(Q)
+
+        # full and positive
+        Qp, Rp = @constinferred qr_full(A; positive = true)
+        @test Qp isa Diagonal{T} && size(Qp) == (m, m)
+        @test Rp isa Diagonal{T} && size(Rp) == (m, m)
+        @test Qp * Rp ≈ A
+        @test isunitary(Qp)
+        @test all(isposdef.(diagview(Rp)))
+
+        # null
+        N = @constinferred qr_null(A)
+        @test N isa AbstractMatrix{T} && size(N) == (m, 0)
     end
 end

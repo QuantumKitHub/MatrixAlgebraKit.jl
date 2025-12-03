@@ -3,13 +3,14 @@ module MatrixAlgebraKit
 using LinearAlgebra: LinearAlgebra
 using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!, adjoint!, rdiv!, ldiv!
-using LinearAlgebra: sylvester, lu!
+using LinearAlgebra: sylvester, lu!, diagm
 using LinearAlgebra: isposdef, issymmetric
 using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
 export isisometric, isunitary, ishermitian, isantihermitian
+export diagview, diagonal
 
 export project_hermitian, project_antihermitian, project_isometric
 export project_hermitian!, project_antihermitian!, project_isometric!
@@ -64,8 +65,9 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
         Expr(
             :public, :left_polar_pullback!, :right_polar_pullback!,
             :qr_pullback!, :qr_null_pullback!, :lq_pullback!, :lq_null_pullback!,
-            :eig_pullback!, :eig_trunc_pullback!, :eigh_pullback!, :eigh_trunc_pullback!,
-            :svd_pullback!, :svd_trunc_pullback!
+            :eig_pullback!, :eig_trunc_pullback!, :eig_vals_pullback!,
+            :eigh_pullback!, :eigh_trunc_pullback!, :eigh_vals_pullback!,
+            :svd_pullback!, :svd_trunc_pullback!, :svd_vals_pullback!
         )
     )
     eval(Expr(:public, :is_left_isometric, :is_right_isometric))

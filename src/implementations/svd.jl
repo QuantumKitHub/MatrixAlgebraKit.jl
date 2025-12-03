@@ -218,6 +218,11 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::DiagonalAlgorithm)
     check_input(svd_full!, A, USVᴴ, alg)
     Ad = diagview(A)
     U, S, Vᴴ = USVᴴ
+    if isempty(Ad)
+        one!(U)
+        one!(Vᴴ)
+        return USVᴴ
+    end
     p = sortperm(Ad; by = abs, rev = true)
     zero!(U)
     zero!(Vᴴ)
