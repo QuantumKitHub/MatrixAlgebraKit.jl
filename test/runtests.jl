@@ -115,24 +115,28 @@ if AMDGPU.functional()
 end
 
 using GenericLinearAlgebra
-@safetestset "QR / LQ Decomposition" begin
-    include("genericlinearalgebra/qr.jl")
-    include("genericlinearalgebra/lq.jl")
-end
-@safetestset "Singular Value Decomposition" begin
-    include("genericlinearalgebra/svd.jl")
-end
-@safetestset "Hermitian Eigenvalue Decomposition" begin
-    include("genericlinearalgebra/eigh.jl")
-end
-@safetestset "Exponential" begin
-    include("genericlinearalgebra/exponential.jl")
+if !is_buildkite
+    @safetestset "QR / LQ Decomposition" begin
+        include("genericlinearalgebra/qr.jl")
+        include("genericlinearalgebra/lq.jl")
+    end
+    @safetestset "Singular Value Decomposition" begin
+        include("genericlinearalgebra/svd.jl")
+    end
+    @safetestset "Hermitian Eigenvalue Decomposition" begin
+        include("genericlinearalgebra/eigh.jl")
+    end
+    @safetestset "Exponential" begin
+        include("genericlinearalgebra/exponential.jl")
+    end
 end
 
 using GenericSchur
-@safetestset "General Eigenvalue Decomposition" begin
-    include("genericschur/eig.jl")
-end
-@safetestset "Exponential" begin
-    include("genericschur/exponential.jl")
+if !is_buildkite
+    @safetestset "General Eigenvalue Decomposition" begin
+        include("genericschur/eig.jl")
+    end
+    @safetestset "Exponential" begin
+        include("genericschur/exponential.jl")
+    end
 end
