@@ -62,59 +62,40 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(exponential!), A::AbstractMatrix, ::AbstractAlgorithm)
-    n = size(A, 1) # square check will happen later
-    expA = similar(A, (n, n))
-    return expA
-end
-
-initialize_output(::typeof(exponential!), A::Diagonal, ::DiagonalAlgorithm) = A
-
-function initialize_output(::typeof(exponentiali!), τ::Number, A::AbstractMatrix, ::AbstractAlgorithm)
-    n = size(A, 1) # square check will happen later
-    expA = similar(complex(A), (n, n))
-    return expA
-end
-
-initialize_output(::typeof(exponentiali!), τ::Number, A::Diagonal, ::DiagonalAlgorithm) = complex(A)
+initialize_output(::typeof(exponential!), A::AbstractMatrix, ::AbstractAlgorithm) = A
+initialize_output(::typeof(exponentiali!), τ::Number, A::AbstractMatrix, ::AbstractAlgorithm) =
+    complex(A)
 
 # Implementation
 # --------------
-function exponential!(A::AbstractMatrix{T}, expA::AbstractMatrix{T}, alg::MatrixFunctionViaLA) where {T <: BlasFloat}
+function exponential!(A, expA, alg::MatrixFunctionViaLA)
     check_input(exponential!, A, expA, alg)
-    copyto!(expA, LinearAlgebra.exp(A))
-    return expA
+    return LinearAlgebra.exp!(A)
 end
 
 function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
     check_input(exponential!, A, expA, alg)
-    D, V = eigh_full(A, alg.eigh_alg)
-
+    D, V = eigh_full!(A, alg.eigh_alg)
     diagview(D) .= exp.(diagview(D) ./ 2)
-    rmul!(V, D)
-    mul!(expA, V, adjoint(V))
-    return expA
-end
-
-function exponential!(A::AbstractMatrix{T}, expA::AbstractMatrix{T}, alg::MatrixFunctionViaEig) where {T <: Real}
-    check_input(exponential!, A, expA, alg)
-    D, V = eig_full(A, alg.eig_alg)
-    iV = inv(V)
-    map!(exp, diagview(D), diagview(D))
-    expA .= real.(rmul!(V, D) * iV)
-    return expA
+    VexpD = rmul!(V, D)
+    return mul!(expA, VexpD, V')
 end
 
 function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEig)
     check_input(exponential!, A, expA, alg)
-    D, V = eig_full(A, alg.eig_alg)
+    D, V = eig_full!(A, alg.eig_alg)
+    diagview(D) .= exp.(diagview(D))
     iV = inv(V)
-    map!(exp, diagview(D), diagview(D))
-    mul!(expA, rmul!(V, D), iV)
+    VexpD = rmul!(V, D)
+    if eltype(A) <: Real
+        expA .= real.(VexpD * iV)
+    else
+        mul!(expA, VexpD, iV)
+    end
     return expA
 end
 
-function exponentiali!(τ::Number, A::AbstractMatrix{T1}, expA::AbstractMatrix{T2}, alg::MatrixFunctionViaLA) where {T1 <: BlasFloat, T2 <: BlasFloat}
+function exponentiali!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
     check_input(exponentiali!, A, expA, alg)
     copyto!(expA, LinearAlgebra.exp(im * τ * A))
     return expA
@@ -122,47 +103,36 @@ end
 
 function exponentiali!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
     check_input(exponentiali!, A, expA, alg)
-    Dreal, Vreal = eigh_full(A, alg.eigh_alg)
-
-    Dcomplex = complex(Dreal)
-    Vcomplex = complex(Vreal)
-
-    iV = copy(adjoint(Vcomplex))
-
-    diagview(Dcomplex) .= exp.(diagview(Dcomplex) .* (im * τ))
-    rmul!(Vcomplex, Dcomplex)
-    mul!(expA, Vcomplex, iV)
-    return expA
-end
-
-function exponentiali!(τ::T, A::AbstractMatrix{T}, expA::AbstractMatrix{T}, alg::MatrixFunctionViaEig) where {T <: Real}
-    check_input(exponentiali!, A, expA, alg)
-    D, V = eig_full(A, alg.eig_alg)
-    iV = inv(V)
-    map!(exp, diagview(D), diagview(D) .* (im * τ))
-    expA .= real.(rmul!(V, D) * iV)
-    return expA
+    D, V = eigh_full!(A, alg.eigh_alg)
+    expD = diagonal(exp.(diagview(D) .* (im * τ)))
+    if eltype(A) <: Real
+        VexpD = V * expD
+        return expA .= real.(VexpD * V')
+    else
+        VexpD = rmul!(V, expD)
+        return mul!(expA, VexpD, V')
+    end
 end
 
 function exponentiali!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEig)
     check_input(exponentiali!, A, expA, alg)
-    D, V = eig_full(A, alg.eig_alg)
+    D, V = eig_full!(A, alg.eig_alg)
+    diagview(D) .= exp.(diagview(D) .* (im * τ))
     iV = inv(V)
-    map!(exp, diagview(D), diagview(D) .* (im * τ))
-    mul!(expA, rmul!(V, D), iV)
-    return expA
+    VexpD = rmul!(V, D)
+    return mul!(expA, VexpD, iV)
 end
 
 # Diagonal logic
 # --------------
 function exponential!(A::Diagonal, expA, alg::DiagonalAlgorithm)
     check_input(exponential!, A, expA, alg)
-    map!(exp, diagview(expA), diagview(A))
+    diagview(expA) .= exp.(diagview(A))
     return expA
 end
 
 function exponentiali!(τ::Number, A::Diagonal, expA, alg::DiagonalAlgorithm)
     check_input(exponentiali!, A, expA, alg)
-    map!(exp, diagview(expA), diagview(A) .* (im * τ))
+    diagview(expA) .= exp.(diagview(A) .* (im * τ))
     return expA
 end
