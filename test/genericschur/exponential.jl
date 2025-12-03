@@ -16,9 +16,7 @@ GenericFloats = (BigFloat, Complex{BigFloat})
     algs = (MatrixFunctionViaEig(GS_QRIteration()),)
     expA_LA = @constinferred exponential(A)
     @testset "algorithm $alg" for alg in algs
-        expA = similar(A)
-
-        @constinferred exponential!(copy(A), expA)
+        expA = @constinferred exponential!(copy(A))
         expA2 = @constinferred exponential(A; alg = alg)
         @test expA ≈ expA_LA
         @test expA2 ≈ expA
@@ -38,9 +36,7 @@ end
     D, V = @constinferred eig_full(A)
     algs = (MatrixFunctionViaEig(GS_QRIteration()),)
     @testset "algorithm $alg" for alg in algs
-        expiτA = similar(complex(A))
-
-        @constinferred exponentiali!(τ, copy(A), expiτA)
+        expiτA = @constinferred exponentiali!(τ, copy(A))
         expiτA2 = @constinferred exponentiali(τ, A; alg)
         @test expiτA2 ≈ expiτA
 

@@ -16,7 +16,7 @@ GenericFloats = (BigFloat, Complex{BigFloat})
     D, V = @constinferred eigh_full(A)
     algs = (MatrixFunctionViaEigh(GLA_QRIteration()),)
     @testset "algorithm $alg" for alg in algs
-        expA = @constinferred exponential!(copy(A), expA; alg)
+        expA = @constinferred exponential!(copy(A); alg)
         expA2 = @constinferred exponential(A; alg)
         @test expA2 ≈ expA
 
@@ -37,7 +37,7 @@ using GenericSchur
     D, V = @constinferred eigh_full(A)
     algs = (MatrixFunctionViaEigh(GLA_QRIteration()),)
     @testset "algorithm $alg" for alg in algs
-        expiτA = @constinferred exponentiali!(τ, copy(A), expiτA; alg)
+        expiτA = @constinferred exponentiali!(τ, copy(A); alg)
         expiτA2 = @constinferred exponentiali(τ, A; alg)
         @test expiτA2 ≈ expiτA
 
