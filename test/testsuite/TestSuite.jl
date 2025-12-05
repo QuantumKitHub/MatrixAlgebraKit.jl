@@ -70,5 +70,7 @@ include("orthnull.jl")
 include("projections.jl")
 include("eigh.jl")
 include("eig.jl")
+include("schur.jl")
+include("svd.jl")
 
 end

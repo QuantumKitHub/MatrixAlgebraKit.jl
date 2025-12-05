@@ -8,20 +8,30 @@ using CUDA, AMDGPU
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (Float16, BigFloat, Complex{BigFloat})
 
+@isdefined(TestSuite) || include("testsuite/TestSuite.jl")
+using .TestSuite
+
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
+
 m = 54
 for T in BLASFloats, n in (37, m, 63)
     TestSuite.seed_rng!(123)
-    TestSuite.test_lq(T, (m, n); test_pivoted = false)
-    if CUDA.functional()
-        TestSuite.test_lq(CuMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
-        TestSuite.test_lq(Diagonal{T, CuVector{T}}, m; test_pivoted = false, test_blocksize = false)
-    end
-    if AMDGPU.functional()
-        TestSuite.test_lq(ROCMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
-        TestSuite.test_lq(Diagonal{T, ROCVector{T}}, m; test_pivoted = false, test_blocksize = false)
+    if is_buildkite
+        if CUDA.functional()
+            TestSuite.test_lq(CuMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
+            TestSuite.test_lq(Diagonal{T, CuVector{T}}, m; test_pivoted = false, test_blocksize = false)
+        end
+        if AMDGPU.functional()
+            TestSuite.test_lq(ROCMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
+            TestSuite.test_lq(Diagonal{T, ROCVector{T}}, m; test_pivoted = false, test_blocksize = false)
+        end
+    else
+        TestSuite.test_lq(T, (m, n); test_pivoted = false)
     end
 end
-for T in (BLASFloats..., GenericFloats...)
-    AT = Diagonal{T, Vector{T}}
-    TestSuite.test_lq(AT, m; test_pivoted = false, test_blocksize = false)
+if !is_buildkite
+    for T in (BLASFloats..., GenericFloats...)
+        AT = Diagonal{T, Vector{T}}
+        TestSuite.test_lq(AT, m; test_pivoted = false, test_blocksize = false)
+    end
 end
