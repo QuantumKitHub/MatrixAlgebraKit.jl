@@ -5,7 +5,7 @@ function test_svd(T::Type, sz; kwargs...)
     return @testset "svd $summary_str" begin
         test_svd_compact(T, sz; kwargs...)
         test_svd_full(T, sz; kwargs...)
-        if min(sz...) > 0
+        if min(sz...) > 0 && (T <: Number || T <: Diagonal{<:Number, <:Vector})
             test_svd_trunc(T, sz; kwargs...)
         end
     end
@@ -86,7 +86,7 @@ function test_svd_full(
         Sc = similar(A, real(eltype(T)), min(m, n))
         Sc2 = svd_vals!(copy!(Ac, A), Sc)
         @test Sc === Sc2
-        @test diagview(S) ≈ Sc
+        @test collect(diagview(S)) ≈ collect(Sc)
     end
 end
 

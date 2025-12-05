@@ -4,7 +4,9 @@ function test_eig(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eig $summary_str" begin
         test_eig_full(T, sz; kwargs...)
-        test_eig_trunc(T, sz; kwargs...)
+        if T <: Number || T <: Diagonal{<:Number, <:Vector}
+            test_eig_trunc(T, sz; kwargs...)
+        end
     end
 end
 

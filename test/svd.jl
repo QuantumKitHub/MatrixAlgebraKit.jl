@@ -2,8 +2,8 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using StableRNGs
-using LinearAlgebra: LinearAlgebra, Diagonal, I, isposdef, norm
-using MatrixAlgebraKit: TruncatedAlgorithm, diagview, isisometric
+using LinearAlgebra: Diagonal
+using CUDA, AMDGPU
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (Float16, BigFloat, Complex{BigFloat})

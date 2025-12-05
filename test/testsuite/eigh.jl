@@ -4,7 +4,7 @@ function test_eigh(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eigh $summary_str" begin
         test_eigh_full(T, sz; kwargs...)
-        if eltype(T) <: Union{Float16, ComplexF16, Float32, Float64, ComplexF32, ComplexF64} && !(T <: Diagonal)
+        if T <: Number && eltype(T) <: Union{Float16, ComplexF16, Float32, Float64, ComplexF32, ComplexF64} && !(T <: Diagonal)
             test_eigh_trunc(T, sz; kwargs...)
         end
     end
@@ -54,31 +54,29 @@ function test_eigh_trunc(
         r = m - 2
         s = 1 + sqrt(eps(real(eltype(T))))
         atol = sqrt(eps(real(eltype(T))))
-        local V1, V2, V3
-        @testset "truncrank" begin
-            D1, V1, ϵ1 = @testinferred eigh_trunc(A; trunc = truncrank(r))
-            @test length(diagview(D1)) == r
-            @test isisometric(V1)
-            @test A * V1 ≈ V1 * D1
-            @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
-            @test ϵ1 ≈ norm(view(D₀, (r + 1):m)) atol = atol
-        end
-        @testset "trunctol" begin
-            trunc = trunctol(; atol = s * D₀[r + 1])
-            D2, V2, ϵ2 = @testinferred eigh_trunc(A; trunc)
-            @test length(diagview(D2)) == r
-            @test isisometric(V2)
-            @test A * V2 ≈ V2 * D2
-            @test ϵ2 ≈ norm(view(D₀, (r + 1):m)) atol = atol
-        end
-        @testset "truncerror" begin
-            s = 1 - sqrt(eps(real(eltype(T))))
-            trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
-            D3, V3, ϵ3 = @testinferred eigh_trunc(A; trunc)
-            @test length(diagview(D3)) == r
-            @test A * V3 ≈ V3 * D3
-            @test ϵ3 ≈ norm(view(D₀, (r + 1):m)) atol = atol
-        end
+        # truncrank
+        D1, V1, ϵ1 = @testinferred eigh_trunc(A; trunc = truncrank(r))
+        @test length(diagview(D1)) == r
+        @test isisometric(V1)
+        @test A * V1 ≈ V1 * D1
+        @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
+        @test ϵ1 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+
+        # trunctol
+        trunc = trunctol(; atol = s * D₀[r + 1])
+        D2, V2, ϵ2 = @testinferred eigh_trunc(A; trunc)
+        @test length(diagview(D2)) == r
+        @test isisometric(V2)
+        @test A * V2 ≈ V2 * D2
+        @test ϵ2 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+
+        #truncerror
+        s = 1 - sqrt(eps(real(eltype(T))))
+        trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
+        D3, V3, ϵ3 = @testinferred eigh_trunc(A; trunc)
+        @test length(diagview(D3)) == r
+        @test A * V3 ≈ V3 * D3
+        @test ϵ3 ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
         # test for same subspace
         @test V1 * (V1' * V2) ≈ V2

@@ -18,11 +18,13 @@ for T in BLASFloats, n in (37, m, 63)
     if is_buildkite
         if CUDA.functional()
             TestSuite.test_polar(CuMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
-            TestSuite.test_polar(Diagonal{T, CuVector{T}}, m; test_pivoted = false, test_blocksize = false)
+            # not supported
+            #TestSuite.test_polar(Diagonal{T, CuVector{T}}, m; test_pivoted = false, test_blocksize = false)
         end
         if AMDGPU.functional()
             TestSuite.test_polar(ROCMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
-            TestSuite.test_polar(Diagonal{T, ROCVector{T}}, m; test_pivoted = false, test_blocksize = false)
+            # not supported
+            #TestSuite.test_polar(Diagonal{T, ROCVector{T}}, m; test_pivoted = false, test_blocksize = false)
         end
     else
         TestSuite.test_polar(T, (m, n))

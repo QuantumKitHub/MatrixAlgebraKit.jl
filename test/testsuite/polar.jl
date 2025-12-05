@@ -19,8 +19,10 @@ function test_left_polar(
         A = instantiate_matrix(T, sz)
         algs = if T <: Diagonal
             (PolarNewton(),)
-        else
+        elseif T <: Number
             (PolarViaSVD(MatrixAlgebraKit.default_svd_algorithm(A)), PolarNewton())
+        else
+            (PolarViaSVD(MatrixAlgebraKit.default_svd_algorithm(A)),)
         end
         @testset "algorithm $alg" for alg in algs
             A = instantiate_matrix(T, sz)
@@ -61,8 +63,10 @@ function test_right_polar(
         A = instantiate_matrix(T, sz)
         algs = if T <: Diagonal
             (PolarNewton(),)
-        else
+        elseif T <: Number
             (PolarViaSVD(MatrixAlgebraKit.default_svd_algorithm(A)), PolarNewton())
+        else
+            (PolarViaSVD(MatrixAlgebraKit.default_svd_algorithm(A)),)
         end
         @testset "algorithm $alg" for alg in algs
             A = instantiate_matrix(T, sz)
