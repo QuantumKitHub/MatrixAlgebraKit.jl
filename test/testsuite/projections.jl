@@ -129,7 +129,7 @@ function test_project_isometric(
         # test that W is closer to A then any other isometry
         for k in 1:10
             δA = instantiate_matrix(T, sz)
-            W  = project_isometric(A)
+            W = project_isometric(A)
             W2 = project_isometric(A + δA / 100)
             # must be ≥ for real Diagonal case
             @test norm(A - W2) ≥ norm(A - W)
