@@ -26,6 +26,29 @@ function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, ::AbstractA
     return nothing
 end
 
+function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    T, Z, vals = TZv
+    @assert vals isa AbstractVector && Z isa Diagonal
+    @check_scalar(T, A)
+    @check_size(Z, (m, m))
+    @check_scalar(Z, A)
+    @check_size(vals, (n,))
+    # Diagonal doesn't need to promote to complex scalartype since we know it is diagonalizable
+    @check_scalar(vals, A)
+    return nothing
+end
+function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert vals isa AbstractVector
+    @check_size(vals, (n,))
+    # Diagonal doesn't need to promote to complex scalartype since we know it is diagonalizable
+    @check_scalar(vals, A)
+    return nothing
+end
+
 # Outputs
 # -------
 function initialize_output(::typeof(schur_full!), A::AbstractMatrix, ::AbstractAlgorithm)
@@ -37,6 +60,17 @@ end
 function initialize_output(::typeof(schur_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     n = size(A, 1) # square check will happen later
     vals = similar(A, complex(eltype(A)), n)
+    return vals
+end
+function initialize_output(::typeof(schur_full!), A::Diagonal, ::DiagonalAlgorithm)
+    n = size(A, 1)
+    Z = similar(A)
+    vals = similar(A, eltype(A), n)
+    return (A, Z, vals)
+end
+function initialize_output(::typeof(schur_vals!), A::Diagonal, ::DiagonalAlgorithm)
+    n = size(A, 1)
+    vals = similar(A, eltype(A), n)
     return vals
 end
 
@@ -70,5 +104,22 @@ function schur_vals!(A::AbstractMatrix, vals, alg::LAPACK_EigAlgorithm)
             throw(ArgumentError("LAPACK_Expert (geesx) does not accept any keyword arguments"))
         YALAPACK.geesx!(A, Z, vals)
     end
+    return vals
+end
+
+# Diagonal logic
+# --------------
+function schur_full!(A::Diagonal, (T, Z, vals)::Tuple{Diagonal, Diagonal, <:AbstractVector}, alg::DiagonalAlgorithm)
+    check_input(schur_full!, A, (T, Z, vals), alg)
+    copy!(vals, diagview(A))
+    one!(Z)
+    T === A || copy!(T, A)
+    return T, Z, vals
+end
+
+function schur_vals!(A::Diagonal, vals::AbstractVector, alg::DiagonalAlgorithm)
+    check_input(schur_vals!, A, vals, alg)
+    Ad = diagview(A)
+    vals === Ad || copy!(vals, Ad)
     return vals
 end
