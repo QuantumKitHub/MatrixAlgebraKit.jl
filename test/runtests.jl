@@ -56,6 +56,23 @@ if !is_buildkite
             JET.test_package(MatrixAlgebraKit; target_defined_modules = true)
         end
     end
+
+    using GenericLinearAlgebra
+    @safetestset "QR / LQ Decomposition" begin
+        include("genericlinearalgebra/qr.jl")
+        include("genericlinearalgebra/lq.jl")
+    end
+    @safetestset "Singular Value Decomposition" begin
+        include("genericlinearalgebra/svd.jl")
+    end
+    @safetestset "Hermitian Eigenvalue Decomposition" begin
+        include("genericlinearalgebra/eigh.jl")
+    end
+
+    using GenericSchur
+    @safetestset "General Eigenvalue Decomposition" begin
+        include("genericschur/eig.jl")
+    end
 end
 
 using CUDA
@@ -109,21 +126,4 @@ if AMDGPU.functional()
     @safetestset "AMDGPU Image and Null Space" begin
         include("amd/orthnull.jl")
     end
-end
-
-using GenericLinearAlgebra
-@safetestset "QR / LQ Decomposition" begin
-    include("genericlinearalgebra/qr.jl")
-    include("genericlinearalgebra/lq.jl")
-end
-@safetestset "Singular Value Decomposition" begin
-    include("genericlinearalgebra/svd.jl")
-end
-@safetestset "Hermitian Eigenvalue Decomposition" begin
-    include("genericlinearalgebra/eigh.jl")
-end
-
-using GenericSchur
-@safetestset "General Eigenvalue Decomposition" begin
-    include("genericschur/eig.jl")
 end
