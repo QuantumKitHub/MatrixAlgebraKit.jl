@@ -6,10 +6,10 @@ using MatrixAlgebraKit: diagview, TruncatedAlgorithm, PolarViaSVD, eigh_trunc
 
 make_mooncake_tangent(ΔAelem::T) where {T <: Real} = ΔAelem
 make_mooncake_tangent(ΔAelem::T) where {T <: Complex} = Mooncake.build_tangent(T, real(ΔAelem), imag(ΔAelem))
-make_mooncake_tangent(ΔA::Matrix{<:Real}) = ΔA
-make_mooncake_tangent(ΔA::Vector{<:Real}) = ΔA
-make_mooncake_tangent(ΔA::Matrix{T}) where {T <: Complex} = map(make_mooncake_tangent, ΔA)
-make_mooncake_tangent(ΔA::Vector{T}) where {T <: Complex} = map(make_mooncake_tangent, ΔA)
+make_mooncake_tangent(ΔA::AbstractMatrix{<:Real}) = ΔA
+make_mooncake_tangent(ΔA::AbstractVector{<:Real}) = ΔA
+make_mooncake_tangent(ΔA::AbstractMatrix{T}) where {T <: Complex} = map(make_mooncake_tangent, ΔA)
+make_mooncake_tangent(ΔA::AbstractVector{T}) where {T <: Complex} = map(make_mooncake_tangent, ΔA)
 make_mooncake_tangent(ΔD::Diagonal{T}) where {T <: Real} = Mooncake.build_tangent(typeof(ΔD), diagview(ΔD))
 make_mooncake_tangent(ΔD::Diagonal{T}) where {T <: Complex} = Mooncake.build_tangent(typeof(ΔD), map(make_mooncake_tangent, diagview(ΔD)))
 
