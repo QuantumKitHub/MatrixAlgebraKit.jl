@@ -216,24 +216,9 @@ function svd_trunc!(A, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgori
     end
     return USVᴴtrunc..., ϵ
 end
-function svd_trunc!(A, USVᴴϵ::Tuple{Nothing, Tϵ}, alg::TruncatedAlgorithm) where {Tϵ}
-    USVᴴ, ϵ = USVᴴϵ
-    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
-    USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
-    if !isempty(ϵ)
-        ϵ .= truncation_error!(diagview(S), ind)
-    end
-    return USVᴴtrunc..., ϵ
-end
-
 function svd_trunc!(A, USVᴴ::Tuple{TU, TS, TVᴴ}, alg::TruncatedAlgorithm; compute_error::Bool = true) where {TU, TS, TVᴴ}
-    ϵ = similar(USVᴴ[2], compute_error)
-    (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
-    return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
-end
-function svd_trunc!(A, USVᴴ::Nothing, alg::TruncatedAlgorithm; compute_error::Bool = true)
     ϵ = similar(A, real(eltype(A)), compute_error)
-    U, S, Vᴴ, ϵ = svd_trunc!(A, (USVᴴ, ϵ), alg)
+    (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
     return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
 end
 
