@@ -212,7 +212,7 @@ function svd_trunc!(A, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgori
     U, S, Vᴴ = svd_compact!(A, (U, S, Vᴴ), alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
     if !isempty(ϵ)
-        ϵ[1] = truncation_error!(diagview(S), ind)
+        ϵ .= truncation_error!(diagview(S), ind)
     end
     return USVᴴtrunc..., ϵ
 end
@@ -221,7 +221,7 @@ function svd_trunc!(A, USVᴴϵ::Tuple{Nothing, Tϵ}, alg::TruncatedAlgorithm) w
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
     if !isempty(ϵ)
-        ϵ[1] = truncation_error!(diagview(S), ind)
+        ϵ .= truncation_error!(diagview(S), ind)
     end
     return USVᴴtrunc..., ϵ
 end
