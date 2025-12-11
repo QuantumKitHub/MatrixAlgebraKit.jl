@@ -229,7 +229,7 @@ end
 function svd_trunc!(A, USVᴴ::Tuple{TU, TS, TVᴴ}, alg::TruncatedAlgorithm; compute_error::Bool = true) where {TU, TS, TVᴴ}
     ϵ = similar(S, compute_error)
     (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
-    return compute_error ? (U, S, Vᴴ, ϵ[1]::Tr) : (U, S, Vᴴ, -one(Tr))
+    return compute_error ? (U, S, Vᴴ, ϵ[1]) : (U, S, Vᴴ, -one(eltype(ϵ)))
 end
 function svd_trunc!(A, USVᴴ::Nothing, alg::TruncatedAlgorithm; compute_error::Bool = true)
     Tr = real(eltype(A))
