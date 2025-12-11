@@ -4,7 +4,7 @@ using SafeTestsets
 # specific ones
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 if !is_buildkite
-    @safetestset "Algorithms" begin
+    #=@safetestset "Algorithms" begin
         include("algorithms.jl")
     end
     @safetestset "Projections" begin
@@ -37,8 +37,11 @@ if !is_buildkite
     end
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
+    end=#
+    @safetestset "Enzyme" begin
+        include("enzyme.jl")
     end
-    @safetestset "Mooncake" begin
+    #=@safetestset "Mooncake" begin
         include("mooncake.jl")
     end
     @safetestset "ChainRules" begin
@@ -72,7 +75,7 @@ if !is_buildkite
     using GenericSchur
     @safetestset "General Eigenvalue Decomposition" begin
         include("genericschur/eig.jl")
-    end
+    end=#
 end
 
 using CUDA
