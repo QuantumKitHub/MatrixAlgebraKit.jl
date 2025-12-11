@@ -229,13 +229,12 @@ end
 function svd_trunc!(A, USVᴴ::Tuple{TU, TS, TVᴴ}, alg::TruncatedAlgorithm; compute_error::Bool = true) where {TU, TS, TVᴴ}
     ϵ = similar(USVᴴ[2], compute_error)
     (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
-    return compute_error ? (U, S, Vᴴ, collect(ϵ)[1]) : (U, S, Vᴴ, -one(eltype(ϵ)))
+    return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
 end
 function svd_trunc!(A, USVᴴ::Nothing, alg::TruncatedAlgorithm; compute_error::Bool = true)
-    Tr = real(eltype(A))
-    ϵ = zeros(Tr, compute_error)
+    ϵ = similar(A, real(eltype(A)), compute_error)
     U, S, Vᴴ, ϵ = svd_trunc!(A, (USVᴴ, ϵ), alg)
-    return compute_error ? (U, S, Vᴴ, collect(ϵ)[1]) : (U, S, Vᴴ, -one(Tr))
+    return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
 end
 
 # Diagonal logic
