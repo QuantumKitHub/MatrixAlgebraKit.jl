@@ -397,7 +397,11 @@ function svd_trunc!(A::AbstractMatrix, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg:
 
     if !isempty(ϵ)
         # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
-        ϵ = sqrt(norm(A)^2 - norm(diagview(Str))^2) # is there a more accurate way to do this?
+        normS = norm(diagview(Str))
+        normA = norm(A)
+        # equivalent to sqrt(normA^2 - normS^2)
+        # but may be more accurate
+        ϵ = sqrt((normA + normS) * (normA - normS))
     end
 
     do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
