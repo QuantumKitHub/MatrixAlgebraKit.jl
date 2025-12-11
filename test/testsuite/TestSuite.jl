@@ -63,6 +63,8 @@ macro testinferred(ex)
     return esc(:(@inferred $ex))
 end
 
+include("ad_utils.jl")
+
 include("qr.jl")
 include("lq.jl")
 include("polar.jl")
@@ -72,5 +74,7 @@ include("eigh.jl")
 include("eig.jl")
 include("schur.jl")
 include("svd.jl")
+include("mooncake.jl")
+include("chainrules.jl")
 
 end

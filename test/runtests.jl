@@ -36,23 +36,23 @@ end
 @safetestset "Image and Null Space" begin
     include("orthnull.jl")
 end
-if !is_buildkite
-    @safetestset "Mooncake" begin
-        include("mooncake.jl")
-    end
-    @safetestset "ChainRules" begin
-        include("chainrules.jl")
-    end
+@safetestset "Mooncake" begin
+    include("mooncake.jl")
 end
-@safetestset "MatrixAlgebraKit.jl" begin
-    @safetestset "Code quality (Aqua.jl)" begin
-        using MatrixAlgebraKit
-        using Aqua
-        Aqua.test_all(MatrixAlgebraKit)
-    end
-    @safetestset "Code linting (JET.jl)" begin
-        using MatrixAlgebraKit
-        using JET
-        JET.test_package(MatrixAlgebraKit; target_defined_modules = true)
+@safetestset "ChainRules" begin
+    include("chainrules.jl")
+end
+if !is_buildkite
+    @safetestset "MatrixAlgebraKit.jl" begin
+        @safetestset "Code quality (Aqua.jl)" begin
+            using MatrixAlgebraKit
+            using Aqua
+            Aqua.test_all(MatrixAlgebraKit)
+        end
+        @safetestset "Code linting (JET.jl)" begin
+            using MatrixAlgebraKit
+            using JET
+            JET.test_package(MatrixAlgebraKit; target_defined_modules = true)
+        end
     end
 end
