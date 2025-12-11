@@ -190,18 +190,22 @@ function EnzymeRules.augmented_primal(
         func::Const{typeof(svd_trunc!)},
         ::Type{RT},
         A::Annotation,
-        USVᴴ::Annotation,
+        USVᴴϵ::Annotation,
         alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
     ) where {RT}
     # form cache if needed
     cache_A = copy(A.val)
-    svd_compact!(A.val, USVᴴ.val, alg.val.alg)
-    cache_USVᴴ = copy.(USVᴴ.val)
-    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ.val, alg.val.trunc)
-    ϵ.val      = MatrixAlgebraKit.truncation_error!(diagview(USVᴴ.val[2]), ind)
-    primal     = EnzymeRules.needs_primal(config) ? (USVᴴ′..., ϵ.val) : nothing
-    shadow_USVᴴ = if !isa(A, Const) && !isa(USVᴴ, Const)
-        dU, dS, dVᴴ = USVᴴ.dval
+    USVᴴ = USVᴴϵ.val[1:3]
+    ϵ    = USVᴴϵ.val[end]
+    svd_compact!(A.val, USVᴴ, alg.val.alg)
+    cache_USVᴴ = copy.(USVᴴ)
+    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.val.trunc)
+    if !isempty(ϵ)
+        ϵ .= MatrixAlgebraKit.truncation_error!(diagview(USVᴴ[2]), ind)
+    end
+    primal     = EnzymeRules.needs_primal(config) ? (USVᴴ′..., ϵ) : nothing
+    shadow_USVᴴ = if !isa(A, Const) && !isa(USVᴴϵ, Const)
+        dU, dS, dVᴴ, dϵ = USVᴴϵ.dval
         # This creates new output shadow matrices, we do this slicing
         # to ensure they have the correct eltype and dimensions.
         # These new shadow matrices are "filled in" with the accumulated
@@ -214,7 +218,7 @@ function EnzymeRules.augmented_primal(
     else
         (nothing, nothing, nothing)
     end
-    shadow = EnzymeRules.needs_shadow(config) ? (shadow_USVᴴ..., ϵ.dval) : nothing
+    shadow = EnzymeRules.needs_shadow(config) ? (shadow_USVᴴ..., USVᴴϵ.dval[end]) : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (cache_A, cache_USVᴴ, shadow_USVᴴ, ind))
 end
 function EnzymeRules.reverse(
@@ -223,7 +227,7 @@ function EnzymeRules.reverse(
         dret::Type{RT},
         cache,
         A::Annotation,
-        USVᴴ::Annotation,
+        USVᴴϵ::Annotation,
         alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
     ) where {RT}
     cache_A, cache_USVᴴ, shadow_USVᴴ, ind = cache
@@ -233,8 +237,7 @@ function EnzymeRules.reverse(
     if !isa(A, Const) && !isa(USVᴴ, Const)
         svd_pullback!(A.dval, Aval, (U, S, Vᴴ), shadow_USVᴴ, ind)
     end
-    !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
-    !isa(ϵ, Const) && make_zero!(ϵ.dval)
+    !isa(USVᴴϵ, Const) && make_zero!(USVᴴϵ.dval)
     return (nothing, nothing, nothing, nothing)
 end
 

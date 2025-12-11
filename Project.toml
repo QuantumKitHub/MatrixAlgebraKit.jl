@@ -61,3 +61,6 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
 test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur", "Mooncake", "Enzyme", "EnzymeTestUtils"]
+
+[sources]
+EnzymeTestUtils = {path="/Users/khyatt/.julia/dev/Enzyme/lib/EnzymeTestUtils"}
