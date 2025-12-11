@@ -9,9 +9,8 @@ function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <
     return GS_QRIteration(; kwargs...)
 end
 
-for f! in (:eig_full!, :eig_vals!)
-    @eval MatrixAlgebraKit.initialize_output(::typeof($f!), A::AbstractMatrix, ::GS_QRIteration) = nothing
-end
+MatrixAlgebraKit.initialize_output(::typeof(eig_full!), A::AbstractMatrix, ::GS_QRIteration) = (nothing, nothing)
+MatrixAlgebraKit.initialize_output(::typeof(eig_vals!), A::AbstractMatrix, ::GS_QRIteration) = nothing
 
 function MatrixAlgebraKit.eig_full!(A::AbstractMatrix, DV, ::GS_QRIteration)
     D, V = GenericSchur.eigen!(A)
