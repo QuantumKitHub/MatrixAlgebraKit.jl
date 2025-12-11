@@ -1,6 +1,5 @@
 using MatrixAlgebraKit
 using Test
-using StableRNGs
 
 #BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 BLASFloats = (Float32, ComplexF64) # full suite is too expensive on CI
@@ -10,12 +9,10 @@ using .TestSuite
 
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
-rng = StableRNG(12345)
-
 m = 19
 for T in BLASFloats, n in (17, m, 23)
     TestSuite.seed_rng!(123)
     if !is_buildkite # doesn't work on GPU
-        TestSuite.test_chainrules(T, (m, n), rng; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        TestSuite.test_chainrules(T, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
     end
 end

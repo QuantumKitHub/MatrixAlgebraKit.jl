@@ -3,8 +3,6 @@ using ChainRulesCore, ChainRulesTestUtils, Zygote
 using MatrixAlgebraKit: diagview, TruncatedAlgorithm, PolarViaSVD
 using LinearAlgebra: UpperTriangular, Diagonal, Hermitian, mul!
 
-include("ad_utils.jl")
-
 for f in
     (
         :qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
@@ -35,23 +33,23 @@ for f in
     end
 end
 
-function test_chainrules(T::Type, sz, rng; kwargs...)
+function test_chainrules(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "Chainrules AD $summary_str" begin
-        test_chainrules_qr(T, sz, rng; kwargs...)
-        test_chainrules_lq(T, sz, rng; kwargs...)
+        test_chainrules_qr(T, sz; kwargs...)
+        test_chainrules_lq(T, sz; kwargs...)
         if length(sz) == 1 || sz[1] == sz[2]
-            test_chainrules_eig(T, sz, rng; kwargs...)
-            test_chainrules_eigh(T, sz, rng; kwargs...)
+            test_chainrules_eig(T, sz; kwargs...)
+            test_chainrules_eigh(T, sz; kwargs...)
         end
-        test_chainrules_svd(T, sz, rng; kwargs...)
-        test_chainrules_polar(T, sz, rng; kwargs...)
-        test_chainrules_orthnull(T, sz, rng; kwargs...)
+        test_chainrules_svd(T, sz; kwargs...)
+        test_chainrules_polar(T, sz; kwargs...)
+        test_chainrules_orthnull(T, sz; kwargs...)
     end
 end
 
 function test_chainrules_qr(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -61,7 +59,7 @@ function test_chainrules_qr(
         config = Zygote.ZygoteRuleConfig()
         alg = MatrixAlgebraKit.default_qr_algorithm(A)
         @testset "qr_compact" begin
-            QR, ΔQR = ad_qr_compact_setup(rng, A)
+            QR, ΔQR = ad_qr_compact_setup(A)
             ΔQ, ΔR = ΔQR
             test_rrule(
                 copy_qr_compact, A, alg ⊢ NoTangent();
@@ -84,7 +82,7 @@ function test_chainrules_qr(
             )
         end
         @testset "qr_null" begin
-            N, ΔN = ad_qr_null_setup(rng, A)
+            N, ΔN = ad_qr_null_setup(A)
             test_rrule(
                 copy_qr_null, A, alg ⊢ NoTangent();
                 output_tangent = ΔN, atol = atol, rtol = rtol
@@ -97,7 +95,7 @@ function test_chainrules_qr(
             m, n = size(A)
         end
         @testset "qr_full" begin
-            QR, ΔQR = ad_qr_full_setup(rng, A)
+            QR, ΔQR = ad_qr_full_setup(A)
             test_rrule(
                 copy_qr_full, A, alg ⊢ NoTangent();
                 output_tangent = ΔQR, atol = atol, rtol = rtol
@@ -113,7 +111,7 @@ function test_chainrules_qr(
             m, n = size(A)
             r = min(m, n) - 5
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            QR, ΔQR = ad_qr_rd_compact_setup(rng, Ard)
+            QR, ΔQR = ad_qr_rd_compact_setup(Ard)
             ΔQ, ΔR = ΔQR
             test_rrule(
                 copy_qr_compact, Ard, alg ⊢ NoTangent();
@@ -129,7 +127,7 @@ function test_chainrules_qr(
 end
 
 function test_chainrules_lq(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -140,7 +138,7 @@ function test_chainrules_lq(
         config = Zygote.ZygoteRuleConfig()
         alg = MatrixAlgebraKit.default_lq_algorithm(A)
         @testset "lq_compact" begin
-            LQ, ΔLQ = ad_lq_compact_setup(rng, A)
+            LQ, ΔLQ = ad_lq_compact_setup(A)
             ΔL, ΔQ = ΔLQ
             test_rrule(
                 copy_lq_compact, A, alg ⊢ NoTangent();
@@ -163,7 +161,7 @@ function test_chainrules_lq(
             )
         end
         @testset "lq_null" begin
-            Nᴴ, ΔNᴴ = ad_lq_null_setup(rng, A)
+            Nᴴ, ΔNᴴ = ad_lq_null_setup(A)
             test_rrule(
                 copy_lq_null, A, alg ⊢ NoTangent();
                 output_tangent = ΔNᴴ, atol = atol, rtol = rtol
@@ -175,7 +173,7 @@ function test_chainrules_lq(
             )
         end
         @testset "lq_full" begin
-            LQ, ΔLQ = ad_lq_full_setup(rng, A)
+            LQ, ΔLQ = ad_lq_full_setup(A)
             test_rrule(
                 copy_lq_full, A, alg ⊢ NoTangent();
                 output_tangent = ΔLQ, atol = atol, rtol = rtol
@@ -190,7 +188,7 @@ function test_chainrules_lq(
             m, n = size(A)
             r = min(m, n) - 5
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            LQ, ΔLQ = ad_lq_rd_compact_setup(rng, Ard)
+            LQ, ΔLQ = ad_lq_rd_compact_setup(Ard)
             test_rrule(
                 copy_lq_compact, Ard, alg ⊢ NoTangent();
                 output_tangent = ΔLQ, atol = atol, rtol = rtol
@@ -205,7 +203,7 @@ function test_chainrules_lq(
 end
 
 function test_chainrules_eig(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -216,7 +214,7 @@ function test_chainrules_eig(
         config = Zygote.ZygoteRuleConfig()
         alg = MatrixAlgebraKit.default_eig_algorithm(A)
         @testset "eig_full" begin
-            DV, ΔDV, ΔD2V = ad_eig_full_setup(rng, A)
+            DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
             ΔD, ΔV = ΔDV
             test_rrule(
                 copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
@@ -242,7 +240,7 @@ function test_chainrules_eig(
             )
         end
         @testset "eig_vals" begin
-            D, ΔD = ad_eig_vals_setup(rng, A)
+            D, ΔD = ad_eig_vals_setup(A)
             test_rrule(
                 copy_eig_vals, A, alg ⊢ NoTangent(); output_tangent = ΔD, atol, rtol
             )
@@ -254,42 +252,34 @@ function test_chainrules_eig(
         @testset "eig_trunc" begin
             for r in 1:4:m
                 truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
-                DV, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(rng, A, truncalg)
+                DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
                 test_rrule(
                     copy_eig_trunc, A, truncalg ⊢ NoTangent();
                     output_tangent = (ΔDVtrunc..., zero(real(T))),
                     atol = atol, rtol = rtol
                 )
-                D, V = DV
-                Ddiag = diagview(D)
-                ind = MatrixAlgebraKit.findtruncated(Ddiag, truncalg.trunc)
-                Dtrunc = Diagonal(Ddiag[ind])
-                Vtrunc = V[:, ind]
+                ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
                 dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, DV, ΔDVtrunc, ind)
-                dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), ΔDVtrunc)
+                dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, DVtrunc, ΔDVtrunc)
                 @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
             end
             truncalg = TruncatedAlgorithm(alg, truncrank(5; by = real))
-            DV, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(rng, A, truncalg)
+            DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
             test_rrule(
                 copy_eig_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔDVtrunc..., zero(real(T))),
                 atol = atol, rtol = rtol
             )
-            D, V = DV
-            Ddiag = diagview(D)
-            ind = MatrixAlgebraKit.findtruncated(Ddiag, truncalg.trunc)
-            Dtrunc = Diagonal(Ddiag[ind])
-            Vtrunc = V[:, ind]
+            ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
             dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, DV, ΔDVtrunc, ind)
-            dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), ΔDVtrunc)
+            dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, DVtrunc, ΔDVtrunc)
             @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
         end
     end
 end
 
 function test_chainrules_eigh(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -302,7 +292,7 @@ function test_chainrules_eigh(
         alg = MatrixAlgebraKit.default_eigh_algorithm(A)
         # copy_eigh_xxxx includes a projector onto the Hermitian part of the matrix
         @testset "eigh_full" begin
-            DV, ΔDV, ΔD2V = ad_eigh_full_setup(rng, A)
+            DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
             ΔD, ΔV = ΔDV
             test_rrule(
                 copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
@@ -329,7 +319,7 @@ function test_chainrules_eigh(
             )
         end
         @testset "eigh_vals" begin
-            D, ΔD = ad_eigh_vals_setup(rng, A)
+            D, ΔD = ad_eigh_vals_setup(A)
             test_rrule(
                 copy_eigh_vals, A, alg ⊢ NoTangent(); output_tangent = ΔD, atol, rtol
             )
@@ -342,24 +332,20 @@ function test_chainrules_eigh(
             eigh_trunc2(A; kwargs...) = eigh_trunc(Matrix(Hermitian(A)); kwargs...)
             for r in 1:4:m
                 truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
-                DV, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(rng, A, truncalg)
+                DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
                 test_rrule(
                     copy_eigh_trunc, A, truncalg ⊢ NoTangent();
                     output_tangent = (ΔDVtrunc..., zero(real(T))),
                     atol = atol, rtol = rtol
                 )
-                D, V = DV
-                Ddiag = diagview(D)
-                ind = MatrixAlgebraKit.findtruncated(Ddiag, truncalg.trunc)
-                Dtrunc = Diagonal(Ddiag[ind])
-                Vtrunc = V[:, ind]
+                ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
                 dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, DV, ΔDVtrunc, ind)
-                dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), ΔDVtrunc)
+                dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, DVtrunc, ΔDVtrunc)
                 @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
                 trunc = truncrank(r; by = real)
-                ind = MatrixAlgebraKit.findtruncated(Ddiag, trunc)
+                ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), trunc)
                 truncalg = TruncatedAlgorithm(alg, trunc)
-                DV, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(rng, A, truncalg)
+                DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
                 test_rrule(
                     config, eigh_trunc2, A;
                     fkwargs = (; trunc = trunc),
@@ -367,33 +353,22 @@ function test_chainrules_eigh(
                     atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
                 )
             end
-            D, ΔD = ad_eigh_vals_setup(rng, A)
+            D, ΔD = ad_eigh_vals_setup(A / 2)
             truncalg = TruncatedAlgorithm(alg, trunctol(; atol = maximum(abs, D) / 2))
-            DV, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(rng, A, truncalg)
+            DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
             ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
-            ΔDtrunc = Diagonal(diagview(ΔDV[1])[ind])
-            ΔVtrunc = ΔDV[2][:, ind]
             test_rrule(
                 copy_eigh_trunc, A, truncalg ⊢ NoTangent();
-                output_tangent = (ΔDtrunc, ΔVtrunc, zero(real(T))),
+                output_tangent = (ΔDVtrunc..., zero(real(T))),
                 atol = atol, rtol = rtol
             )
-            D, V = DV
-            Ddiag = diagview(D)
-            Dtrunc = Diagonal(Ddiag[ind])
-            Vtrunc = V[:, ind]
             dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, DV, ΔDVtrunc, ind)
-            dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), ΔDVtrunc)
+            dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, DVtrunc, ΔDVtrunc)
             @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
             trunc = trunctol(; rtol = 1 / 2)
             truncalg = TruncatedAlgorithm(alg, trunc)
-            DV, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(rng, A, truncalg)
-            D, V = DV
-            Ddiag = diagview(D)
-            ind = MatrixAlgebraKit.findtruncated(Ddiag, truncalg.trunc)
-            Dtrunc = Diagonal(Ddiag[ind])
-            Vtrunc = V[:, ind]
-            ind = MatrixAlgebraKit.findtruncated(Ddiag, trunc)
+            DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
+            ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
             test_rrule(
                 config, eigh_trunc2, A;
                 fkwargs = (; trunc = trunc),
@@ -405,7 +380,7 @@ function test_chainrules_eigh(
 end
 
 function test_chainrules_svd(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -416,7 +391,7 @@ function test_chainrules_svd(
         config = Zygote.ZygoteRuleConfig()
         alg = MatrixAlgebraKit.default_svd_algorithm(A)
         @testset "svd_compact" begin
-            USV, ΔUSVᴴ, ΔUS2Vᴴ = ad_svd_compact_setup(rng, A)
+            USV, ΔUSVᴴ, ΔUS2Vᴴ = ad_svd_compact_setup(A)
             test_rrule(
                 copy_svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol
@@ -437,7 +412,7 @@ function test_chainrules_svd(
             )
         end
         @testset "svd_vals" begin
-            S, ΔS = ad_svd_vals_setup(rng, A)
+            S, ΔS = ad_svd_vals_setup(A)
             test_rrule(
                 copy_svd_vals, A, alg ⊢ NoTangent();
                 output_tangent = ΔS, atol, rtol
@@ -450,7 +425,7 @@ function test_chainrules_svd(
         @testset "svd_trunc" begin
             @testset for r in 1:4:minmn
                 truncalg = TruncatedAlgorithm(alg, truncrank(r))
-                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(rng, A, truncalg)
+                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
                 test_rrule(
                     copy_svd_trunc, A, truncalg ⊢ NoTangent();
                     output_tangent = (ΔUSVᴴtrunc..., zero(real(T))),
@@ -474,9 +449,9 @@ function test_chainrules_svd(
                     atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
                 )
             end
-            S, ΔS = ad_svd_vals_setup(rng, A)
+            S, ΔS = ad_svd_vals_setup(A)
             truncalg = TruncatedAlgorithm(alg, trunctol(atol = S[1, 1] / 2))
-            USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(rng, A, truncalg)
+            USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
             test_rrule(
                 copy_svd_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔUSVᴴtrunc..., zero(real(T))),
@@ -503,7 +478,7 @@ function test_chainrules_svd(
 end
 
 function test_chainrules_polar(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -535,7 +510,7 @@ function test_chainrules_polar(
 end
 
 function test_chainrules_orthnull(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -544,8 +519,8 @@ function test_chainrules_orthnull(
         A = instantiate_matrix(T, sz)
         m, n = size(A)
         config = Zygote.ZygoteRuleConfig()
-        N, ΔN = ad_left_null_setup(rng, A)
-        Nᴴ, ΔNᴴ = ad_right_null_setup(rng, A)
+        N, ΔN = ad_left_null_setup(A)
+        Nᴴ, ΔNᴴ = ad_right_null_setup(A)
         test_rrule(
             config, left_orth, A;
             atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false

@@ -77,7 +77,7 @@ function _get_inplace_derivative(f!, A, ΔA, args, Δargs, alg, rdata)
 end
 
 """
-    test_pullbacks_match(rng, f!, f, A, args, Δargs, alg = nothing; rdata = Mooncake.NoRData())
+    test_pullbacks_match(f!, f, A, args, Δargs, alg = nothing; rdata = Mooncake.NoRData())
 
 Compare the result of running the *in-place, mutating* function `f!`'s reverse rule
 with the result of running its *non-mutating* partner function `f`'s reverse rule.
@@ -93,12 +93,12 @@ The arguments to this function are:
   - `alg` optional algorithm keyword argument
   - `rdata` Mooncake reverse data to supply to the pullback, in case `f` and `f!` return scalar results (as truncating functions do)
 """
-function test_pullbacks_match(rng, f!, f, A, args, Δargs, alg = nothing; rdata = Mooncake.NoRData())
+function test_pullbacks_match(f!, f, A, args, Δargs, alg = nothing; rdata = Mooncake.NoRData())
     f_c = isnothing(alg) ? (A, args) -> f!(MatrixAlgebraKit.copy_input(f, A), args) : (A, args, alg) -> f!(MatrixAlgebraKit.copy_input(f, A), args, alg)
     sig = isnothing(alg) ? Tuple{typeof(f_c), typeof(A), typeof(args)} : Tuple{typeof(f_c), typeof(A), typeof(args), typeof(alg)}
     rvs_interp = Mooncake.get_interpreter(Mooncake.ReverseMode)
     rrule = Mooncake.build_rrule(rvs_interp, sig)
-    ΔA = randn(rng, eltype(A), size(A))
+    ΔA = randn!(similar(A))
 
     dA_copy = _get_copying_derivative(f_c, rrule, A, ΔA, args, Δargs, alg, rdata)
     dA_inplace = _get_inplace_derivative(f!, A, ΔA, args, Δargs, alg, rdata)
@@ -109,23 +109,23 @@ function test_pullbacks_match(rng, f!, f, A, args, Δargs, alg = nothing; rdata 
     return
 end
 
-function test_mooncake(T::Type, sz, rng; kwargs...)
+function test_mooncake(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "Mooncake AD $summary_str" begin
-        test_mooncake_qr(T, sz, rng; kwargs...)
-        test_mooncake_lq(T, sz, rng; kwargs...)
+        test_mooncake_qr(T, sz; kwargs...)
+        test_mooncake_lq(T, sz; kwargs...)
         if length(sz) == 1 || sz[1] == sz[2]
-            test_mooncake_eig(T, sz, rng; kwargs...)
-            test_mooncake_eigh(T, sz, rng; kwargs...)
+            test_mooncake_eig(T, sz; kwargs...)
+            test_mooncake_eigh(T, sz; kwargs...)
         end
-        test_mooncake_svd(T, sz, rng; kwargs...)
-        test_mooncake_polar(T, sz, rng; kwargs...)
-        test_mooncake_orthnull(T, sz, rng; kwargs...)
+        test_mooncake_svd(T, sz; kwargs...)
+        test_mooncake_polar(T, sz; kwargs...)
+        test_mooncake_orthnull(T, sz; kwargs...)
     end
 end
 
 function test_mooncake_qr(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -133,36 +133,36 @@ function test_mooncake_qr(
     return @testset "QR Mooncake AD rules $summary_str" begin
         A = instantiate_matrix(T, sz)
         @testset "qr_compact" begin
-            QR, ΔQR = ad_qr_compact_setup(rng, A)
+            QR, ΔQR = ad_qr_compact_setup(A)
             Mooncake.TestUtils.test_rule(rng, qr_compact, A; is_primitive = false, mode = Mooncake.ReverseMode, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, qr_compact!, qr_compact, A, QR, ΔQR)
+            test_pullbacks_match(qr_compact!, qr_compact, A, QR, ΔQR)
         end
         @testset "qr_null" begin
-            N, ΔN = ad_qr_null_setup(rng, A)
+            N, ΔN = ad_qr_null_setup(A)
             dN = make_mooncake_tangent(copy(ΔN))
             Mooncake.TestUtils.test_rule(rng, qr_null, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dN, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, qr_null!, qr_null, A, N, ΔN)
+            test_pullbacks_match(qr_null!, qr_null, A, N, ΔN)
         end
         @testset "qr_full" begin
-            QR, ΔQR = ad_qr_full_setup(rng, A)
+            QR, ΔQR = ad_qr_full_setup(A)
             dQR = make_mooncake_tangent(ΔQR)
             Mooncake.TestUtils.test_rule(rng, qr_full, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dQR, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, qr_full!, qr_full, A, QR, ΔQR)
+            test_pullbacks_match(qr_full!, qr_full, A, QR, ΔQR)
         end
         @testset "qr_compact - rank-deficient A" begin
             m, n = size(A)
             r = min(m, n) - 5
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            QR, ΔQR = ad_qr_rd_compact_setup(rng, Ard)
+            QR, ΔQR = ad_qr_rd_compact_setup(Ard)
             dQR = make_mooncake_tangent(ΔQR)
             Mooncake.TestUtils.test_rule(rng, qr_compact, Ard; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dQR, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, qr_compact!, qr_compact, Ard, QR, ΔQR)
+            test_pullbacks_match(qr_compact!, qr_compact, Ard, QR, ΔQR)
         end
     end
 end
 
 function test_mooncake_lq(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -170,36 +170,36 @@ function test_mooncake_lq(
     return @testset "LQ Mooncake AD rules $summary_str" begin
         A = instantiate_matrix(T, sz)
         @testset "lq_compact" begin
-            LQ, ΔLQ = ad_lq_compact_setup(rng, A)
+            LQ, ΔLQ = ad_lq_compact_setup(A)
             Mooncake.TestUtils.test_rule(rng, lq_compact, A; is_primitive = false, mode = Mooncake.ReverseMode, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, lq_compact!, lq_compact, A, LQ, ΔLQ)
+            test_pullbacks_match(lq_compact!, lq_compact, A, LQ, ΔLQ)
         end
         @testset "lq_null" begin
-            Nᴴ, ΔNᴴ = ad_lq_null_setup(rng, A)
+            Nᴴ, ΔNᴴ = ad_lq_null_setup(A)
             dNᴴ = make_mooncake_tangent(ΔNᴴ)
             Mooncake.TestUtils.test_rule(rng, lq_null, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dNᴴ, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, lq_null!, lq_null, A, Nᴴ, ΔNᴴ)
+            test_pullbacks_match(lq_null!, lq_null, A, Nᴴ, ΔNᴴ)
         end
         @testset "lq_full" begin
-            LQ, ΔLQ = ad_lq_full_setup(rng, A)
+            LQ, ΔLQ = ad_lq_full_setup(A)
             dLQ = make_mooncake_tangent(ΔLQ)
             Mooncake.TestUtils.test_rule(rng, lq_full, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dLQ, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, lq_full!, lq_full, A, LQ, ΔLQ)
+            test_pullbacks_match(lq_full!, lq_full, A, LQ, ΔLQ)
         end
         @testset "lq_compact - rank-deficient A" begin
             m, n = size(A)
             r = min(m, n) - 5
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            LQ, ΔLQ = ad_lq_rd_compact_setup(rng, Ard)
+            LQ, ΔLQ = ad_lq_rd_compact_setup(Ard)
             dLQ = make_mooncake_tangent(ΔLQ)
             Mooncake.TestUtils.test_rule(rng, lq_compact, Ard; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dLQ, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, lq_compact!, lq_compact, Ard, LQ, ΔLQ)
+            test_pullbacks_match(lq_compact!, lq_compact, Ard, LQ, ΔLQ)
         end
     end
 end
 
 function test_mooncake_eig(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -208,38 +208,38 @@ function test_mooncake_eig(
         A = instantiate_matrix(T, sz)
         m = size(A, 1)
         @testset "eig_full" begin
-            DV, ΔDV, ΔD2V = ad_eig_full_setup(rng, A)
+            DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
             dDV = make_mooncake_tangent(ΔD2V)
             Mooncake.TestUtils.test_rule(rng, eig_full, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dDV, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, eig_full!, eig_full, A, DV, ΔD2V)
+            test_pullbacks_match(eig_full!, eig_full, A, DV, ΔD2V)
         end
         @testset "eig_vals" begin
-            D, ΔD = ad_eig_vals_setup(rng, A)
+            D, ΔD = ad_eig_vals_setup(A)
             dD = make_mooncake_tangent(ΔD)
             Mooncake.TestUtils.test_rule(rng, eig_vals, A; is_primitive = false, mode = Mooncake.ReverseMode, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, eig_vals!, eig_vals, A, D, ΔD)
+            test_pullbacks_match(eig_vals!, eig_vals, A, D, ΔD)
         end
         @testset "eig_trunc" begin
             for r in 1:4:m
                 truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_eig_algorithm(A), truncrank(r; by = abs))
-                DV, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(rng, A, truncalg)
+                DV, _, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
                 ϵ = zero(real(T))
                 dDVerr = make_mooncake_tangent((ΔDVtrunc..., ϵ))
                 Mooncake.TestUtils.test_rule(rng, eig_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dDVerr, atol = atol, rtol = rtol)
-                test_pullbacks_match(rng, eig_trunc!, eig_trunc, A, DV, ΔDV, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
+                test_pullbacks_match(eig_trunc!, eig_trunc, A, DV, ΔDV, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
             end
             truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_eig_algorithm(A), truncrank(5; by = real))
-            DV, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(rng, A, truncalg)
+            DV, _, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
             ϵ = zero(real(T))
             dDVerr = make_mooncake_tangent((ΔDVtrunc..., ϵ))
             Mooncake.TestUtils.test_rule(rng, eig_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dDVerr, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, eig_trunc!, eig_trunc, A, DV, ΔDV, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
+            test_pullbacks_match(eig_trunc!, eig_trunc, A, DV, ΔDV, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
         end
     end
 end
 
 function test_mooncake_eigh(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -249,39 +249,39 @@ function test_mooncake_eigh(
         A = A + A'
         m = size(A, 1)
         @testset "eigh_full" begin
-            DV, ΔDV, ΔD2V = ad_eigh_full_setup(rng, A)
+            DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
             dDV = make_mooncake_tangent(ΔD2V)
             Mooncake.TestUtils.test_rule(rng, copy_eigh_full, A; mode = Mooncake.ReverseMode, output_tangent = dDV, is_primitive = false, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, A, DV, ΔD2V)
+            test_pullbacks_match(copy_eigh_full!, copy_eigh_full, A, DV, ΔD2V)
         end
         @testset "eigh_vals" begin
-            D, ΔD = ad_eigh_vals_setup(rng, A)
+            D, ΔD = ad_eigh_vals_setup(A)
             dD = make_mooncake_tangent(ΔD)
             Mooncake.TestUtils.test_rule(rng, copy_eigh_vals, A; mode = Mooncake.ReverseMode, output_tangent = dD, is_primitive = false, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, A, D, ΔD)
+            test_pullbacks_match(copy_eigh_vals!, copy_eigh_vals, A, D, ΔD)
         end
         @testset "eigh_trunc" begin
             for r in 1:4:m
                 truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_eigh_algorithm(A), truncrank(r; by = abs))
-                DV, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(rng, A, truncalg)
+                DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
                 ϵ = zero(real(T))
                 dDVerr = make_mooncake_tangent((ΔDVtrunc..., ϵ))
                 Mooncake.TestUtils.test_rule(rng, copy_eigh_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dDVerr, atol = atol, rtol = rtol, is_primitive = false)
-                test_pullbacks_match(rng, copy_eigh_trunc!, copy_eigh_trunc, A, DV, ΔDV, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
+                test_pullbacks_match(copy_eigh_trunc!, copy_eigh_trunc, A, DV, ΔDV, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
             end
             D = eigh_vals(A / 2)
             truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_eigh_algorithm(A), trunctol(; atol = maximum(abs, D) / 2))
-            DV, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(rng, A, truncalg)
+            DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
             ϵ = zero(real(T))
             dDVerr = make_mooncake_tangent((ΔDVtrunc..., ϵ))
             Mooncake.TestUtils.test_rule(rng, copy_eigh_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dDVerr, atol = atol, rtol = rtol, is_primitive = false)
-            test_pullbacks_match(rng, copy_eigh_trunc!, copy_eigh_trunc, A, DV, ΔDV, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
+            test_pullbacks_match(copy_eigh_trunc!, copy_eigh_trunc, A, DV, ΔDV, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
         end
     end
 end
 
 function test_mooncake_svd(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -290,46 +290,46 @@ function test_mooncake_svd(
         A = instantiate_matrix(T, sz)
         minmn = min(size(A)...)
         @testset "svd_compact" begin
-            USVᴴ, _, ΔUSVᴴ = ad_svd_compact_setup(rng, A)
+            USVᴴ, _, ΔUSVᴴ = ad_svd_compact_setup(A)
             dUSVᴴ = make_mooncake_tangent(ΔUSVᴴ)
             Mooncake.TestUtils.test_rule(rng, svd_compact, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dUSVᴴ, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, svd_compact!, svd_compact, A, USVᴴ, ΔUSVᴴ)
+            test_pullbacks_match(svd_compact!, svd_compact, A, USVᴴ, ΔUSVᴴ)
         end
         @testset "svd_full" begin
-            USVᴴ, ΔUSVᴴ = ad_svd_full_setup(rng, A)
+            USVᴴ, ΔUSVᴴ = ad_svd_full_setup(A)
             dUSVᴴ = make_mooncake_tangent(ΔUSVᴴ)
             Mooncake.TestUtils.test_rule(rng, svd_full, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dUSVᴴ, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, svd_full!, svd_full, A, USVᴴ, ΔUSVᴴ)
+            test_pullbacks_match(svd_full!, svd_full, A, USVᴴ, ΔUSVᴴ)
         end
         @testset "svd_vals" begin
-            S, ΔS = ad_svd_vals_setup(rng, A)
+            S, ΔS = ad_svd_vals_setup(A)
             Mooncake.TestUtils.test_rule(rng, svd_vals, A; is_primitive = false, mode = Mooncake.ReverseMode, atol = atol, rtol = rtol)
-            test_pullbacks_match(rng, svd_vals!, svd_vals, A, S, ΔS)
+            test_pullbacks_match(svd_vals!, svd_vals, A, S, ΔS)
         end
         @testset "svd_trunc" begin
-            S, ΔS = ad_svd_vals_setup(rng, A)
+            S, ΔS = ad_svd_vals_setup(A)
             @testset for r in 1:4:minmn
                 truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_svd_algorithm(A), truncrank(r))
-                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(rng, A, truncalg)
+                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
                 ϵ = zero(real(T))
                 dUSVᴴerr = make_mooncake_tangent((ΔUSVᴴtrunc..., ϵ))
                 Mooncake.TestUtils.test_rule(rng, svd_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dUSVᴴerr, atol = atol, rtol = rtol)
-                test_pullbacks_match(rng, svd_trunc!, svd_trunc, A, USVᴴ, ΔUSVᴴ, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
+                test_pullbacks_match(svd_trunc!, svd_trunc, A, USVᴴ, ΔUSVᴴ, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
             end
             @testset "trunctol" begin
                 truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_svd_algorithm(A), trunctol(atol = S[1, 1] / 2))
-                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(rng, A, truncalg)
+                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
                 ϵ = zero(real(T))
                 dUSVᴴerr = make_mooncake_tangent((ΔUSVᴴtrunc..., ϵ))
                 Mooncake.TestUtils.test_rule(rng, svd_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dUSVᴴerr, atol = atol, rtol = rtol)
-                test_pullbacks_match(rng, svd_trunc!, svd_trunc, A, USVᴴ, ΔUSVᴴ, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
+                test_pullbacks_match(svd_trunc!, svd_trunc, A, USVᴴ, ΔUSVᴴ, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), zero(real(T))))
             end
         end
     end
 end
 
 function test_mooncake_polar(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -339,16 +339,16 @@ function test_mooncake_polar(
         m, n = size(A)
         @testset "left_polar" begin
             if m >= n
-                WP, ΔWP = ad_left_polar_setup(rng, A)
+                WP, ΔWP = ad_left_polar_setup(A)
                 Mooncake.TestUtils.test_rule(rng, left_polar, A; is_primitive = false, mode = Mooncake.ReverseMode, atol = atol, rtol = rtol)
-                test_pullbacks_match(rng, left_polar!, left_polar, A, WP, ΔWP)
+                test_pullbacks_match(left_polar!, left_polar, A, WP, ΔWP)
             end
         end
         @testset "right_polar" begin
             if m <= n
-                PWᴴ, ΔPWᴴ = ad_right_polar_setup(rng, A)
+                PWᴴ, ΔPWᴴ = ad_right_polar_setup(A)
                 Mooncake.TestUtils.test_rule(rng, right_polar, A; is_primitive = false, mode = Mooncake.ReverseMode, atol = atol, rtol = rtol)
-                test_pullbacks_match(rng, right_polar!, right_polar, A, PWᴴ, ΔPWᴴ)
+                test_pullbacks_match(right_polar!, right_polar, A, PWᴴ, ΔPWᴴ)
             end
         end
     end
@@ -369,7 +369,7 @@ MatrixAlgebraKit.copy_input(::typeof(right_orth_polar), A) = MatrixAlgebraKit.co
 MatrixAlgebraKit.copy_input(::typeof(right_null_lq), A) = MatrixAlgebraKit.copy_input(right_null, A)
 
 function test_mooncake_orthnull(
-        T::Type, sz, rng;
+        T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
         kwargs...
     )
@@ -377,36 +377,36 @@ function test_mooncake_orthnull(
     return @testset "Orthnull Mooncake AD rules $summary_str" begin
         A = instantiate_matrix(T, sz)
         m, n = size(A)
-        VC, ΔVC = ad_left_orth_setup(rng, A)
-        CVᴴ, ΔCVᴴ = ad_right_orth_setup(rng, A)
+        VC, ΔVC = ad_left_orth_setup(A)
+        CVᴴ, ΔCVᴴ = ad_right_orth_setup(A)
         Mooncake.TestUtils.test_rule(rng, left_orth, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
-        test_pullbacks_match(rng, left_orth!, left_orth, A, VC, ΔVC)
+        test_pullbacks_match(left_orth!, left_orth, A, VC, ΔVC)
         Mooncake.TestUtils.test_rule(rng, right_orth, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
-        test_pullbacks_match(rng, right_orth!, right_orth, A, CVᴴ, ΔCVᴴ)
+        test_pullbacks_match(right_orth!, right_orth, A, CVᴴ, ΔCVᴴ)
 
         Mooncake.TestUtils.test_rule(rng, left_orth_qr, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
-        test_pullbacks_match(rng, ((X, VC) -> left_orth!(X, VC; alg = :qr)), left_orth_qr, A, VC, ΔVC)
+        test_pullbacks_match(((X, VC) -> left_orth!(X, VC; alg = :qr)), left_orth_qr, A, VC, ΔVC)
         if m >= n
             Mooncake.TestUtils.test_rule(rng, left_orth_polar, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
-            test_pullbacks_match(rng, ((X, VC) -> left_orth!(X, VC; alg = :polar)), left_orth_polar, A, VC, ΔVC)
+            test_pullbacks_match(((X, VC) -> left_orth!(X, VC; alg = :polar)), left_orth_polar, A, VC, ΔVC)
         end
 
-        N, ΔN = ad_left_null_setup(rng, A)
+        N, ΔN = ad_left_null_setup(A)
         dN = make_mooncake_tangent(ΔN)
         Mooncake.TestUtils.test_rule(rng, left_null_qr, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false, output_tangent = dN)
-        test_pullbacks_match(rng, ((X, N) -> left_null!(X, N; alg = :qr)), left_null_qr, A, N, ΔN)
+        test_pullbacks_match(((X, N) -> left_null!(X, N; alg = :qr)), left_null_qr, A, N, ΔN)
 
         Mooncake.TestUtils.test_rule(rng, right_orth_lq, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
-        test_pullbacks_match(rng, ((X, CVᴴ) -> right_orth!(X, CVᴴ; alg = :lq)), right_orth_lq, A, CVᴴ, ΔCVᴴ)
+        test_pullbacks_match(((X, CVᴴ) -> right_orth!(X, CVᴴ; alg = :lq)), right_orth_lq, A, CVᴴ, ΔCVᴴ)
 
         if m <= n
             Mooncake.TestUtils.test_rule(rng, right_orth_polar, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false)
-            test_pullbacks_match(rng, ((X, CVᴴ) -> right_orth!(X, CVᴴ; alg = :polar)), right_orth_polar, A, CVᴴ, ΔCVᴴ)
+            test_pullbacks_match(((X, CVᴴ) -> right_orth!(X, CVᴴ; alg = :polar)), right_orth_polar, A, CVᴴ, ΔCVᴴ)
         end
 
-        Nᴴ, ΔNᴴ = ad_right_null_setup(rng, A)
+        Nᴴ, ΔNᴴ = ad_right_null_setup(A)
         dNᴴ = make_mooncake_tangent(ΔNᴴ)
         Mooncake.TestUtils.test_rule(rng, right_null_lq, A; mode = Mooncake.ReverseMode, atol = atol, rtol = rtol, is_primitive = false, output_tangent = dNᴴ)
-        test_pullbacks_match(rng, ((X, Nᴴ) -> right_null!(X, Nᴴ; alg = :lq)), right_null_lq, A, Nᴴ, ΔNᴴ)
+        test_pullbacks_match(((X, Nᴴ) -> right_null!(X, Nᴴ; alg = :lq)), right_null_lq, A, Nᴴ, ΔNᴴ)
     end
 end
