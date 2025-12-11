@@ -206,7 +206,12 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
-# nothing case here to handle GenericLinearAlgebra
+function svd_trunc!(A, USVᴴ::Tuple{TU, TS, TVᴴ}, alg::TruncatedAlgorithm; compute_error::Bool = true) where {TU, TS, TVᴴ}
+    ϵ = similar(A, real(eltype(A)), compute_error)
+    (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
+    return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
+end
+
 function svd_trunc!(A, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgorithm) where {TU, TS, TVᴴ, Tϵ}
     U, S, Vᴴ, ϵ = USVᴴϵ
     U, S, Vᴴ = svd_compact!(A, (U, S, Vᴴ), alg.alg)
@@ -215,11 +220,6 @@ function svd_trunc!(A, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgori
         ϵ .= truncation_error!(diagview(S), ind)
     end
     return USVᴴtrunc..., ϵ
-end
-function svd_trunc!(A, USVᴴ::Tuple{TU, TS, TVᴴ}, alg::TruncatedAlgorithm; compute_error::Bool = true) where {TU, TS, TVᴴ}
-    ϵ = similar(A, real(eltype(A)), compute_error)
-    (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
-    return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
 end
 
 # Diagonal logic
