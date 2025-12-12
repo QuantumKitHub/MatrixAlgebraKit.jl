@@ -4,6 +4,7 @@ copy_input(::typeof(svd_full), A::AbstractMatrix) = copy!(similar(A, float(eltyp
 copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
+copy_input(::typeof(svd_trunc_with_err), A) = copy_input(svd_compact, A)
 
 copy_input(::typeof(svd_full), A::Diagonal) = copy(A)
 
@@ -90,6 +91,9 @@ function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlg
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
 function initialize_output(::typeof(svd_trunc!), A, alg::TruncatedAlgorithm)
+    return initialize_output(svd_compact!, A, alg.alg)
+end
+function initialize_output(::typeof(svd_trunc_with_err!), A, alg::TruncatedAlgorithm)
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
@@ -206,19 +210,16 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
-function svd_trunc!(A, USVᴴ::Tuple{TU, TS, TVᴴ}, alg::TruncatedAlgorithm; compute_error::Bool = true) where {TU, TS, TVᴴ}
-    ϵ = similar(A, real(eltype(A)), compute_error)
-    (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
-    return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
+function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
+    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
+    USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+    return USVᴴtrunc
 end
 
-function svd_trunc!(A, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgorithm) where {TU, TS, TVᴴ, Tϵ}
-    U, S, Vᴴ, ϵ = USVᴴϵ
-    U, S, Vᴴ = svd_compact!(A, (U, S, Vᴴ), alg.alg)
+function svd_trunc_with_err!(A, USVᴴ, alg::TruncatedAlgorithm)
+    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
-    if !isempty(ϵ)
-        ϵ .= truncation_error!(diagview(S), ind)
-    end
+    ϵ = truncation_error!(diagview(S), ind)
     return USVᴴtrunc..., ϵ
 end
 
@@ -287,8 +288,35 @@ function check_input(
     return nothing
 end
 
+function check_input(
+        ::typeof(svd_trunc_with_err!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
+    )
+    m, n = size(A)
+    minmn = min(m, n)
+    U, S, Vᴴ = USVᴴ
+    @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
+    @check_size(U, (m, m))
+    @check_scalar(U, A)
+    @check_size(S, (minmn, minmn))
+    @check_scalar(S, A, real)
+    @check_size(Vᴴ, (n, n))
+    @check_scalar(Vᴴ, A)
+    return nothing
+end
+
 function initialize_output(
         ::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
+    )
+    m, n = size(A)
+    minmn = min(m, n)
+    U = similar(A, (m, m))
+    S = Diagonal(similar(A, real(eltype(A)), (minmn,)))
+    Vᴴ = similar(A, (n, n))
+    return (U, S, Vᴴ)
+end
+
+function initialize_output(
+        ::typeof(svd_trunc_with_err!), A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -372,22 +400,34 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     return USVᴴ
 end
 
-function svd_trunc!(A::AbstractMatrix, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgorithm{<:GPU_Randomized}) where {TU, TS, TVᴴ, Tϵ}
-    U, S, Vᴴ, ϵ = USVᴴϵ
+function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
+    U, S, Vᴴ = USVᴴ
     check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
     (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
 
-    if !isempty(ϵ)
-        # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
-        normS = norm(diagview(Str))
-        normA = norm(A)
-        # equivalent to sqrt(normA^2 - normS^2)
-        # but may be more accurate
-        ϵ = sqrt((normA + normS) * (normA - normS))
-    end
+    do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
+
+    return Utr, Str, Vᴴtr
+end
+
+function svd_trunc_with_err!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
+    U, S, Vᴴ = USVᴴ
+    check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
+    _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
+
+    # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
+    (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+
+    # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
+    normS = norm(diagview(Str))
+    normA = norm(A)
+    # equivalent to sqrt(normA^2 - normS^2)
+    # but may be more accurate
+    ϵ = sqrt((normA + normS) * (normA - normS))
 
     do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
     do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)

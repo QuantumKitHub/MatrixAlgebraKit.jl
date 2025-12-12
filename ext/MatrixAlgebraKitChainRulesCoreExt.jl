@@ -170,20 +170,39 @@ for svd_f in (:svd_compact, :svd_full)
     end
 end
 
-function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlgorithm)
+function ChainRulesCore.rrule(::typeof(svd_trunc_with_err!), A, USVᴴ, alg::TruncatedAlgorithm)
     Ac = copy_input(svd_compact, A)
     USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
     USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
     ϵ = truncation_error(diagview(USVᴴ[2]), ind)
-    return (USVᴴ′..., ϵ), _make_svd_trunc_pullback(A, USVᴴ, ind)
+    return (USVᴴ′..., ϵ), _make_svd_trunc_with_err_pullback(A, USVᴴ, ind)
 end
-function _make_svd_trunc_pullback(A, USVᴴ, ind)
-    function svd_trunc_pullback(ΔUSVᴴϵ)
+function _make_svd_trunc_with_err_pullback(A, USVᴴ, ind)
+    function svd_trunc_with_err_pullback(ΔUSVᴴϵ)
         ΔA = zero(A)
         ΔU, ΔS, ΔVᴴ, Δϵ = ΔUSVᴴϵ
         if !MatrixAlgebraKit.iszerotangent(Δϵ) && !iszero(unthunk(Δϵ))
             throw(ArgumentError("Pullback for svd_trunc! does not yet support non-zero tangent for the truncation error"))
         end
+        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.((ΔU, ΔS, ΔVᴴ)), ind)
+        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+    end
+    function svd_trunc_with_err_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return svd_trunc_with_err_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlgorithm)
+    Ac = copy_input(svd_compact, A)
+    USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
+    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+    return USVᴴ′, _make_svd_trunc_pullback(A, USVᴴ, ind)
+end
+function _make_svd_trunc_pullback(A, USVᴴ, ind)
+    function svd_trunc_pullback(ΔUSVᴴ)
+        ΔA = zero(A)
+        ΔU, ΔS, ΔVᴴ = ΔUSVᴴ
         MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.((ΔU, ΔS, ΔVᴴ)), ind)
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end

@@ -129,7 +129,7 @@ end
             minmn = min(m, n)
             r = minmn - 2
 
-            U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
+            U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc_with_err(A; alg, trunc = truncrank(r))
             @test length(diagview(S1)) == r
             @test diagview(S1) ≈ S₀[1:r]
             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
@@ -139,7 +139,7 @@ end
             s = 1 + sqrt(eps(real(T)))
             trunc = trunctol(; atol = s * S₀[r + 1])
 
-            U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg, trunc)
+            U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc_with_err(A; alg, trunc)
             @test length(diagview(S2)) == r
             @test U1 ≈ U2
             @test S1 ≈ S2
@@ -147,7 +147,7 @@ end
             @test ϵ2 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             trunc = truncerror(; atol = s * norm(@view(S₀[(r + 1):end])))
-            U3, S3, V3ᴴ, ϵ3 = @constinferred svd_trunc(A; alg, trunc)
+            U3, S3, V3ᴴ, ϵ3 = @constinferred svd_trunc_with_err(A; alg, trunc)
             @test length(diagview(S3)) == r
             @test U1 ≈ U3
             @test S1 ≈ S3
@@ -177,11 +177,11 @@ end
                 (rtol, maxrank) -> (; rtol, maxrank),
                 (rtol, maxrank) -> truncrank(maxrank) & trunctol(; rtol),
             )
-            U1, S1, V1ᴴ, ϵ1 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 1))
+            U1, S1, V1ᴴ, ϵ1 = svd_trunc_with_err(A; alg, trunc = trunc_fun(0.2, 1))
             @test length(diagview(S1)) == 1
             @test diagview(S1) ≈ diagview(S)[1:1]
 
-            U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 3))
+            U2, S2, V2ᴴ = svd_trunc(A; alg, trunc = trunc_fun(0.2, 3))
             @test length(diagview(S2)) == 2
             @test diagview(S2) ≈ diagview(S)[1:2]
         end
@@ -197,9 +197,12 @@ end
     Vᴴ = qr_compact(randn(rng, T, m, m))[1]
     A = U * S * Vᴴ
     alg = TruncatedAlgorithm(LAPACK_DivideAndConquer(), trunctol(; atol = 0.2))
-    U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg)
+    U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc_with_err(A; alg)
     @test diagview(S2) ≈ diagview(S)[1:2]
     @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
+    U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg)
+    @test diagview(S2) ≈ diagview(S)[1:2]
+    @test_throws ArgumentError svd_trunc_with_err(A; alg, trunc = (; maxrank = 2))
     @test_throws ArgumentError svd_trunc(A; alg, trunc = (; maxrank = 2))
 end
 
@@ -233,8 +236,10 @@ end
         @test S2 ≈ diagview(S)
 
         alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
-        U3, S3, Vᴴ3, ϵ3 = @constinferred svd_trunc(A; alg)
+        U3, S3, Vᴴ3, ϵ3 = @constinferred svd_trunc_with_err(A; alg)
         @test diagview(S3) ≈ S2[1:min(m, 2)]
         @test ϵ3 ≈ norm(S2[(min(m, 2) + 1):m]) atol = atol
+        U3, S3, Vᴴ3 = @constinferred svd_trunc(A; alg)
+        @test diagview(S3) ≈ S2[1:min(m, 2)]
     end
 end
