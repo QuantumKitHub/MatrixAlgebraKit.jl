@@ -3,8 +3,7 @@
 copy_input(::typeof(svd_full), A::AbstractMatrix) = copy!(similar(A, float(eltype(A))), A)
 copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
-copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
-copy_input(::typeof(svd_trunc_with_err), A) = copy_input(svd_compact, A)
+copy_input(::Union{typeof(svd_trunc), typeof(svd_trunc_with_err)}, A) = copy_input(svd_compact, A)
 
 copy_input(::typeof(svd_full), A::Diagonal) = copy(A)
 
@@ -90,10 +89,7 @@ end
 function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
-function initialize_output(::typeof(svd_trunc!), A, alg::TruncatedAlgorithm)
-    return initialize_output(svd_compact!, A, alg.alg)
-end
-function initialize_output(::typeof(svd_trunc_with_err!), A, alg::TruncatedAlgorithm)
+function initialize_output(::Union{typeof(svd_trunc!), typeof(svd_trunc_with_err!)}, A, alg::TruncatedAlgorithm)
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
@@ -273,23 +269,7 @@ end
 ###
 
 function check_input(
-        ::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
-    )
-    m, n = size(A)
-    minmn = min(m, n)
-    U, S, Vᴴ = USVᴴ
-    @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
-    @check_size(U, (m, m))
-    @check_scalar(U, A)
-    @check_size(S, (minmn, minmn))
-    @check_scalar(S, A, real)
-    @check_size(Vᴴ, (n, n))
-    @check_scalar(Vᴴ, A)
-    return nothing
-end
-
-function check_input(
-        ::typeof(svd_trunc_with_err!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
+        ::Union{typeof(svd_trunc!), typeof(svd_trunc_with_err!)}, A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -305,18 +285,7 @@ function check_input(
 end
 
 function initialize_output(
-        ::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
-    )
-    m, n = size(A)
-    minmn = min(m, n)
-    U = similar(A, (m, m))
-    S = Diagonal(similar(A, real(eltype(A)), (minmn,)))
-    Vᴴ = similar(A, (n, n))
-    return (U, S, Vᴴ)
-end
-
-function initialize_output(
-        ::typeof(svd_trunc_with_err!), A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
+        ::Union{typeof(svd_trunc!), typeof(svd_trunc_with_err!)}, A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
     )
     m, n = size(A)
     minmn = min(m, n)
