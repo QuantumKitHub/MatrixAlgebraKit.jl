@@ -90,7 +90,9 @@ function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlg
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
 function initialize_output(::typeof(svd_trunc!), A, alg::TruncatedAlgorithm)
-    return initialize_output(svd_compact!, A, alg.alg)
+    USVᴴ = initialize_output(svd_compact!, A, alg.alg)
+    ϵ = similar(A, real(eltype(A)), alg.compute_error)
+    return (USVᴴ..., ϵ)
 end
 
 function initialize_output(::typeof(svd_full!), A::Diagonal, ::DiagonalAlgorithm)
@@ -206,12 +208,6 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
-function svd_trunc!(A, USVᴴ::Tuple{TU, TS, TVᴴ}, alg::TruncatedAlgorithm; compute_error::Bool = true) where {TU, TS, TVᴴ}
-    ϵ = similar(A, real(eltype(A)), compute_error)
-    (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
-    return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
-end
-
 function svd_trunc!(A, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgorithm) where {TU, TS, TVᴴ, Tϵ}
     U, S, Vᴴ, ϵ = USVᴴϵ
     U, S, Vᴴ = svd_compact!(A, (U, S, Vᴴ), alg.alg)
@@ -272,11 +268,11 @@ end
 ###
 
 function check_input(
-        ::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
+        ::typeof(svd_trunc!), A::AbstractMatrix, USVᴴϵ, alg::CUSOLVER_Randomized
     )
     m, n = size(A)
     minmn = min(m, n)
-    U, S, Vᴴ = USVᴴ
+    U, S, Vᴴ, ϵ = USVᴴϵ
     @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
     @check_size(U, (m, m))
     @check_scalar(U, A)
@@ -284,6 +280,7 @@ function check_input(
     @check_scalar(S, A, real)
     @check_size(Vᴴ, (n, n))
     @check_scalar(Vᴴ, A)
+    @check_scalar(ϵ, A, real)
     return nothing
 end
 
@@ -295,7 +292,8 @@ function initialize_output(
     U = similar(A, (m, m))
     S = Diagonal(similar(A, real(eltype(A)), (minmn,)))
     Vᴴ = similar(A, (n, n))
-    return (U, S, Vᴴ)
+    ϵ = similar(A, real(eltype(A)), alg.compute_error)
+    return (U, S, Vᴴ, ϵ)
 end
 
 function _gpu_gesvd!(

@@ -179,10 +179,9 @@ for (f, pb, adj) in (
             # pass). For many types this is done automatically when the forward step returns, but
             # not for nested structs with various fields (like Diagonal{Complex})
             output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
-            function $adj(dy::Tuple{NoRData, NoRData, T}) where {T <: Real}
+            function $adj(::NoRData)
                 Dtrunc, Vtrunc, ϵ = Mooncake.primal(output_codual)
                 dDtrunc_, dVtrunc_, dϵ = Mooncake.tangent(output_codual)
-                abs(dy[3]) > MatrixAlgebraKit.defaulttol(dy[3]) && @warn "Pullback for $f does not yet support non-zero tangent for the truncation error"
                 D, dD = arrayify(Dtrunc, dDtrunc_)
                 V, dV = arrayify(Vtrunc, dVtrunc_)
                 $pb(dA, A, (D, V), (dD, dV))
@@ -316,10 +315,9 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     # pass). For many types this is done automatically when the forward step returns, but
     # not for nested structs with various fields (like Diagonal{Complex})
     output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
-    function svd_trunc_adjoint(dy::Tuple{NoRData, NoRData, NoRData, T}) where {T <: Real}
+    function svd_trunc_adjoint(::NoRData)
         Utrunc, Strunc, Vᴴtrunc, ϵ = Mooncake.primal(output_codual)
         dUtrunc_, dStrunc_, dVᴴtrunc_, dϵ = Mooncake.tangent(output_codual)
-        abs(dy[4]) > MatrixAlgebraKit.defaulttol(dy[4]) && @warn "Pullback for svd_trunc! does not yet support non-zero tangent for the truncation error"
         U, dU = arrayify(Utrunc, dUtrunc_)
         S, dS = arrayify(Strunc, dStrunc_)
         Vᴴ, dVᴴ = arrayify(Vᴴtrunc, dVᴴtrunc_)

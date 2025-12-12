@@ -48,21 +48,21 @@ end
         D1, V1, ϵ1 = @constinferred eig_trunc(A; alg, trunc = truncrank(r))
         @test length(diagview(D1)) == r
         @test A * V1 ≈ V1 * D1
-        @test ϵ1 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        @test norm(ϵ1) ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
         s = 1 + sqrt(eps(real(T)))
         trunc = trunctol(; atol = s * abs(D₀[r + 1]))
         D2, V2, ϵ2 = @constinferred eig_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test A * V2 ≈ V2 * D2
-        @test ϵ2 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        @test norm(ϵ2) ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
         s = 1 - sqrt(eps(real(T)))
         trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
         D3, V3, ϵ3 = @constinferred eig_trunc(A; alg, trunc)
         @test length(diagview(D3)) == r
         @test A * V3 ≈ V3 * D3
-        @test ϵ3 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        @test norm(ϵ3) ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
         # trunctol keeps order, truncrank might not
         # test for same subspace
@@ -83,13 +83,13 @@ end
     alg = TruncatedAlgorithm(LAPACK_Simple(), truncrank(2))
     D2, V2, ϵ2 = @constinferred eig_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2]
-    @test ϵ2 ≈ norm(diagview(D)[3:4]) atol = atol
+    @test norm(ϵ2) ≈ norm(diagview(D)[3:4]) atol = atol
     @test_throws ArgumentError eig_trunc(A; alg, trunc = (; maxrank = 2))
 
     alg = TruncatedAlgorithm(LAPACK_Simple(), truncerror(; atol = 0.2, p = 1))
     D3, V3, ϵ3 = @constinferred eig_trunc(A; alg)
     @test diagview(D3) ≈ diagview(D)[1:2]
-    @test ϵ3 ≈ norm(diagview(D)[3:4]) atol = atol
+    @test norm(ϵ3) ≈ norm(diagview(D)[3:4]) atol = atol
 end
 
 @testset "eig for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
@@ -112,5 +112,5 @@ end
     alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
     D2, V2, ϵ2 = @constinferred eig_trunc(A2; alg)
     @test diagview(D2) ≈ diagview(A2)[1:2]
-    @test ϵ2 ≈ norm(diagview(A2)[3:4]) atol = atol
+    @test norm(ϵ2) ≈ norm(diagview(A2)[3:4]) atol = atol
 end
