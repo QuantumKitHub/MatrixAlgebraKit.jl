@@ -118,7 +118,7 @@ for eig in (:eig, :eigh)
             Ac = copy_input($eig_f, A)
             DV = $(eig_f!)(Ac, DV, alg.alg)
             DV′, ind = MatrixAlgebraKit.truncate($eig_t!, DV, alg.trunc)
-            ϵ = truncation_error(diagview(DV[1]), ind)
+            ϵ = [truncation_error(diagview(DV[1]), ind)]
             return (DV′..., ϵ), $(_make_eig_t_pb)(A, DV, ind)
         end
         function $(_make_eig_t_pb)(A, DV, ind)
@@ -174,7 +174,7 @@ function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlg
     Ac = copy_input(svd_compact, A)
     USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
     USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
-    ϵ = truncation_error(diagview(USVᴴ[2]), ind)
+    ϵ = [truncation_error(diagview(USVᴴ[2]), ind)]
     return (USVᴴ′..., ϵ), _make_svd_trunc_pullback(A, USVᴴ, ind)
 end
 function _make_svd_trunc_pullback(A, USVᴴ, ind)

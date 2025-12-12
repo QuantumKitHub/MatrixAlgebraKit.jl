@@ -134,7 +134,7 @@ end
             @test diagview(S1) ≈ S₀[1:r]
             @test LinearAlgebra.opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
             # Test truncation error
-            @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
+            @test norm(ϵ1) ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             s = 1 + sqrt(eps(real(T)))
             trunc = trunctol(; atol = s * S₀[r + 1])
@@ -144,7 +144,7 @@ end
             @test U1 ≈ U2
             @test S1 ≈ S2
             @test V1ᴴ ≈ V2ᴴ
-            @test ϵ2 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
+            @test norm(ϵ2) ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             trunc = truncerror(; atol = s * norm(@view(S₀[(r + 1):end])))
             U3, S3, V3ᴴ, ϵ3 = @constinferred svd_trunc(A; alg, trunc)
@@ -152,7 +152,7 @@ end
             @test U1 ≈ U3
             @test S1 ≈ S3
             @test V1ᴴ ≈ V3ᴴ
-            @test ϵ3 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
+            @test norm(ϵ3) ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
         end
     end
 end
@@ -199,7 +199,7 @@ end
     alg = TruncatedAlgorithm(LAPACK_DivideAndConquer(), trunctol(; atol = 0.2))
     U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg)
     @test diagview(S2) ≈ diagview(S)[1:2]
-    @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
+    @test norm(ϵ2) ≈ norm(diagview(S)[3:4]) atol = atol
     @test_throws ArgumentError svd_trunc(A; alg, trunc = (; maxrank = 2))
 end
 
@@ -235,6 +235,6 @@ end
         alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
         U3, S3, Vᴴ3, ϵ3 = @constinferred svd_trunc(A; alg)
         @test diagview(S3) ≈ S2[1:min(m, 2)]
-        @test ϵ3 ≈ norm(S2[(min(m, 2) + 1):m]) atol = atol
+        @test norm(ϵ3) ≈ norm(S2[(min(m, 2) + 1):m]) atol = atol
     end
 end

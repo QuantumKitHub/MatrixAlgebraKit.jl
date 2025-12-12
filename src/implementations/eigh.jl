@@ -75,7 +75,9 @@ function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::AbstractAl
     return D
 end
 function initialize_output(::typeof(eigh_trunc!), A, alg::TruncatedAlgorithm)
-    return initialize_output(eigh_full!, A, alg.alg)
+    DV = initialize_output(eigh_full!, A, alg.alg)
+    ϵ = similar(A, real(eltype(A)), alg.compute_error)
+    return (DV..., ϵ)
 end
 
 function initialize_output(::typeof(eigh_full!), A::Diagonal, ::DiagonalAlgorithm)
@@ -129,10 +131,14 @@ function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
     return D
 end
 
-function eigh_trunc!(A, DV, alg::TruncatedAlgorithm)
-    D, V = eigh_full!(A, DV, alg.alg)
+function eigh_trunc!(A, DVϵ, alg::TruncatedAlgorithm)
+    D, V, ϵ = DVϵ
+    D, V = eigh_full!(A, (D, V), alg.alg)
     DVtrunc, ind = truncate(eigh_trunc!, (D, V), alg.trunc)
-    return DVtrunc..., truncation_error!(diagview(D), ind)
+    if !isempty(ϵ)
+        ϵ .= truncation_error!(diagview(D), ind)
+    end
+    return DVtrunc..., ϵ
 end
 
 # Diagonal logic

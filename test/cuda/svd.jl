@@ -143,7 +143,7 @@ end
                 U1, S1, V1ᴴ, ϵ1 = @constinferred svd_trunc(A; alg, trunc = truncrank(r))
                 @test length(S1.diag) == r
                 @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
-                @test norm(A - U1 * S1 * V1ᴴ) ≈ ϵ1
+                @test norm(A - U1 * S1 * V1ᴴ) ≈ norm(ϵ1)
 
                 if !(alg isa CUSOLVER_Randomized)
                     s = 1 + sqrt(eps(real(T)))

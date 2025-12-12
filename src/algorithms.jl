@@ -228,7 +228,9 @@ truncation through `trunc`.
 struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
     alg::A
     trunc::T
+    compute_error::Bool
 end
+TruncatedAlgorithm(alg::A, trunc::T; compute_error::Bool = true) where {A <: AbstractAlgorithm, T} = TruncatedAlgorithm{A, T}(alg, trunc, compute_error)
 
 does_truncate(::TruncatedAlgorithm) = true
 

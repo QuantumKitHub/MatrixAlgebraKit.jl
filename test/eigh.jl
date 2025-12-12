@@ -57,21 +57,21 @@ end
         @test isisometric(V1)
         @test A * V1 ≈ V1 * D1
         @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
-        @test ϵ1 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        @test norm(ϵ1) ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
         trunc = trunctol(; atol = s * D₀[r + 1])
         D2, V2, ϵ2 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D2)) == r
         @test isisometric(V2)
         @test A * V2 ≈ V2 * D2
-        @test ϵ2 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        @test norm(ϵ2) ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
         s = 1 - sqrt(eps(real(T)))
         trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
         D3, V3, ϵ3 = @constinferred eigh_trunc(A; alg, trunc)
         @test length(diagview(D3)) == r
         @test A * V3 ≈ V3 * D3
-        @test ϵ3 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        @test norm(ϵ3) ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
         # test for same subspace
         @test V1 * (V1' * V2) ≈ V2
@@ -93,12 +93,12 @@ end
     D2, V2, ϵ2 = @constinferred eigh_trunc(A; alg)
     @test diagview(D2) ≈ diagview(D)[1:2]
     @test_throws ArgumentError eigh_trunc(A; alg, trunc = (; maxrank = 2))
-    @test ϵ2 ≈ norm(diagview(D)[3:4]) atol = atol
+    @test norm(ϵ2) ≈ norm(diagview(D)[3:4]) atol = atol
 
     alg = TruncatedAlgorithm(LAPACK_QRIteration(), truncerror(; atol = 0.2))
     D3, V3, ϵ3 = @constinferred eigh_trunc(A; alg)
     @test diagview(D3) ≈ diagview(D)[1:2]
-    @test ϵ3 ≈ norm(diagview(D)[3:4]) atol = atol
+    @test norm(ϵ3) ≈ norm(diagview(D)[3:4]) atol = atol
 end
 
 @testset "eigh for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
@@ -122,5 +122,5 @@ end
     alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
     D2, V2, ϵ2 = @constinferred eigh_trunc(A2; alg)
     @test diagview(D2) ≈ diagview(A2)[1:2]
-    @test ϵ2 ≈ norm(diagview(A2)[3:4]) atol = atol
+    @test norm(ϵ2) ≈ norm(diagview(A2)[3:4]) atol = atol
 end
