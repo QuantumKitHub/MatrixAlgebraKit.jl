@@ -163,17 +163,17 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     if alg isa LAPACK_QRIteration
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
-        YALAPACK.gesvd!(A, S.diag, U, Vᴴ)
+        YALAPACK.gesvd!(A, diagview(S), U, Vᴴ)
     elseif alg isa LAPACK_DivideAndConquer
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
-        YALAPACK.gesdd!(A, S.diag, U, Vᴴ)
+        YALAPACK.gesdd!(A, diagview(S), U, Vᴴ)
     elseif alg isa LAPACK_Bisection
-        YALAPACK.gesvdx!(A, S.diag, U, Vᴴ; alg_kwargs...)
+        YALAPACK.gesvdx!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_Jacobi"))
-        YALAPACK.gesvj!(A, S.diag, U, Vᴴ)
+        YALAPACK.gesvj!(A, diagview(S), U, Vᴴ)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
@@ -403,7 +403,7 @@ end
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
     U, S, Vᴴ = USVᴴ
     check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
-    _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
+    _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
     (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
@@ -417,7 +417,7 @@ end
 function svd_trunc_with_err!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
     U, S, Vᴴ = USVᴴ
     check_input(svd_trunc_with_err!, A, (U, S, Vᴴ), alg.alg)
-    _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
+    _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
     (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
@@ -444,11 +444,11 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
 
     if alg isa GPU_QRIteration
         isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
-        _gpu_gesvd_maybe_transpose!(A, S.diag, U, Vᴴ)
+        _gpu_gesvd_maybe_transpose!(A, diagview(S), U, Vᴴ)
     elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; alg_kwargs...)
+        _gpu_Xgesvdp!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, S.diag, U, Vᴴ; alg_kwargs...)
+        _gpu_gesvdj!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
