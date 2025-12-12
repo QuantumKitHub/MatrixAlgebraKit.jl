@@ -160,40 +160,6 @@ function ad_eig_trunc_setup(A, truncalg)
     return DV, (Dtrunc, Vtrunc), ΔD2V, (ΔDtrunc, ΔVtrunc)
 end
 
-function copy_eigh_full(A; kwargs...)
-    A = (A + A') / 2
-    return eigh_full(A; kwargs...)
-end
-
-function copy_eigh_full!(A, DV; kwargs...)
-    A = (A + A') / 2
-    return eigh_full!(A, DV; kwargs...)
-end
-
-function copy_eigh_vals(A; kwargs...)
-    A = (A + A') / 2
-    return eigh_vals(A; kwargs...)
-end
-
-function copy_eigh_vals!(A, D; kwargs...)
-    A = (A + A') / 2
-    return eigh_vals!(A, D; kwargs...)
-end
-
-function copy_eigh_trunc(A, alg; kwargs...)
-    A = (A + A') / 2
-    return eigh_trunc(A, alg; kwargs...)
-end
-
-function copy_eigh_trunc!(A, DV, alg; kwargs...)
-    A = (A + A') / 2
-    return eigh_trunc!(A, DV, alg; kwargs...)
-end
-
-MatrixAlgebraKit.copy_input(::typeof(copy_eigh_full), A) = MatrixAlgebraKit.copy_input(eigh_full, A)
-MatrixAlgebraKit.copy_input(::typeof(copy_eigh_vals), A) = MatrixAlgebraKit.copy_input(eigh_vals, A)
-MatrixAlgebraKit.copy_input(::typeof(copy_eigh_trunc), A) = MatrixAlgebraKit.copy_input(eigh_trunc, A)
-
 function ad_eigh_full_setup(A)
     m, n = size(A)
     T = eltype(A)

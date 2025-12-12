@@ -46,6 +46,7 @@ AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -56,7 +57,8 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur", "Random", "Mooncake"]
+test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur", "Random", "Mooncake", "GPUArrays"]
 
 [sources]
 Mooncake = {url="https://github.com/chalk-lab/Mooncake.jl", rev="ksh/cuarraify"}
+GPUArrays = {url="https://github.com/JuliaGPU/GPUArrays.jl", rev="ksh/findlast"}

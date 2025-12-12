@@ -10,7 +10,7 @@ for f in
         :svd_compact, :svd_trunc, :svd_vals,
         :left_polar, :right_polar,
     )
-    copy_f = Symbol(:copy_, f)
+    copy_f = Symbol(:cr_copy_, f)
     f! = Symbol(f, '!')
     _hermitian = startswith(string(f), "eigh")
     @eval begin
@@ -62,7 +62,7 @@ function test_chainrules_qr(
             QR, ΔQR = ad_qr_compact_setup(A)
             ΔQ, ΔR = ΔQR
             test_rrule(
-                copy_qr_compact, A, alg ⊢ NoTangent();
+                cr_copy_qr_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔQR, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -84,7 +84,7 @@ function test_chainrules_qr(
         @testset "qr_null" begin
             N, ΔN = ad_qr_null_setup(A)
             test_rrule(
-                copy_qr_null, A, alg ⊢ NoTangent();
+                cr_copy_qr_null, A, alg ⊢ NoTangent();
                 output_tangent = ΔN, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -97,7 +97,7 @@ function test_chainrules_qr(
         @testset "qr_full" begin
             QR, ΔQR = ad_qr_full_setup(A)
             test_rrule(
-                copy_qr_full, A, alg ⊢ NoTangent();
+                cr_copy_qr_full, A, alg ⊢ NoTangent();
                 output_tangent = ΔQR, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -114,7 +114,7 @@ function test_chainrules_qr(
             QR, ΔQR = ad_qr_rd_compact_setup(Ard)
             ΔQ, ΔR = ΔQR
             test_rrule(
-                copy_qr_compact, Ard, alg ⊢ NoTangent();
+                cr_copy_qr_compact, Ard, alg ⊢ NoTangent();
                 output_tangent = ΔQR, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -141,7 +141,7 @@ function test_chainrules_lq(
             LQ, ΔLQ = ad_lq_compact_setup(A)
             ΔL, ΔQ = ΔLQ
             test_rrule(
-                copy_lq_compact, A, alg ⊢ NoTangent();
+                cr_copy_lq_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔLQ, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -163,7 +163,7 @@ function test_chainrules_lq(
         @testset "lq_null" begin
             Nᴴ, ΔNᴴ = ad_lq_null_setup(A)
             test_rrule(
-                copy_lq_null, A, alg ⊢ NoTangent();
+                cr_copy_lq_null, A, alg ⊢ NoTangent();
                 output_tangent = ΔNᴴ, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -175,7 +175,7 @@ function test_chainrules_lq(
         @testset "lq_full" begin
             LQ, ΔLQ = ad_lq_full_setup(A)
             test_rrule(
-                copy_lq_full, A, alg ⊢ NoTangent();
+                cr_copy_lq_full, A, alg ⊢ NoTangent();
                 output_tangent = ΔLQ, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -190,7 +190,7 @@ function test_chainrules_lq(
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
             LQ, ΔLQ = ad_lq_rd_compact_setup(Ard)
             test_rrule(
-                copy_lq_compact, Ard, alg ⊢ NoTangent();
+                cr_copy_lq_compact, Ard, alg ⊢ NoTangent();
                 output_tangent = ΔLQ, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -217,10 +217,10 @@ function test_chainrules_eig(
             DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
             ΔD, ΔV = ΔDV
             test_rrule(
-                copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
+                cr_copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
             )
             test_rrule(
-                copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔD2V, atol, rtol
+                cr_copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔD2V, atol, rtol
             )
             test_rrule(
                 config, eig_full, A, alg ⊢ NoTangent();
@@ -242,7 +242,7 @@ function test_chainrules_eig(
         @testset "eig_vals" begin
             D, ΔD = ad_eig_vals_setup(A)
             test_rrule(
-                copy_eig_vals, A, alg ⊢ NoTangent(); output_tangent = ΔD, atol, rtol
+                cr_copy_eig_vals, A, alg ⊢ NoTangent(); output_tangent = ΔD, atol, rtol
             )
             test_rrule(
                 config, eig_vals, A, alg ⊢ NoTangent();
@@ -254,7 +254,7 @@ function test_chainrules_eig(
                 truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
                 DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
                 test_rrule(
-                    copy_eig_trunc, A, truncalg ⊢ NoTangent();
+                    cr_copy_eig_trunc, A, truncalg ⊢ NoTangent();
                     output_tangent = (ΔDVtrunc..., zero(real(T))),
                     atol = atol, rtol = rtol
                 )
@@ -266,7 +266,7 @@ function test_chainrules_eig(
             truncalg = TruncatedAlgorithm(alg, truncrank(5; by = real))
             DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
             test_rrule(
-                copy_eig_trunc, A, truncalg ⊢ NoTangent();
+                cr_copy_eig_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔDVtrunc..., zero(real(T))),
                 atol = atol, rtol = rtol
             )
@@ -295,10 +295,10 @@ function test_chainrules_eigh(
             DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
             ΔD, ΔV = ΔDV
             test_rrule(
-                copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
+                cr_copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
             )
             test_rrule(
-                copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔD2V, atol, rtol
+                cr_copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔD2V, atol, rtol
             )
             # eigh_full does not include a projector onto the Hermitian part of the matrix
             test_rrule(
@@ -321,7 +321,7 @@ function test_chainrules_eigh(
         @testset "eigh_vals" begin
             D, ΔD = ad_eigh_vals_setup(A)
             test_rrule(
-                copy_eigh_vals, A, alg ⊢ NoTangent(); output_tangent = ΔD, atol, rtol
+                cr_copy_eigh_vals, A, alg ⊢ NoTangent(); output_tangent = ΔD, atol, rtol
             )
             test_rrule(
                 config, eigh_vals ∘ Matrix ∘ Hermitian, A;
@@ -334,7 +334,7 @@ function test_chainrules_eigh(
                 truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
                 DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
                 test_rrule(
-                    copy_eigh_trunc, A, truncalg ⊢ NoTangent();
+                    cr_copy_eigh_trunc, A, truncalg ⊢ NoTangent();
                     output_tangent = (ΔDVtrunc..., zero(real(T))),
                     atol = atol, rtol = rtol
                 )
@@ -358,7 +358,7 @@ function test_chainrules_eigh(
             DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
             ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
             test_rrule(
-                copy_eigh_trunc, A, truncalg ⊢ NoTangent();
+                cr_copy_eigh_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔDVtrunc..., zero(real(T))),
                 atol = atol, rtol = rtol
             )
@@ -393,11 +393,11 @@ function test_chainrules_svd(
         @testset "svd_compact" begin
             USV, ΔUSVᴴ, ΔUS2Vᴴ = ad_svd_compact_setup(A)
             test_rrule(
-                copy_svd_compact, A, alg ⊢ NoTangent();
+                cr_copy_svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol
             )
             test_rrule(
-                copy_svd_compact, A, alg ⊢ NoTangent();
+                cr_copy_svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔUS2Vᴴ, atol = atol, rtol = rtol
             )
             test_rrule(
@@ -414,7 +414,7 @@ function test_chainrules_svd(
         @testset "svd_vals" begin
             S, ΔS = ad_svd_vals_setup(A)
             test_rrule(
-                copy_svd_vals, A, alg ⊢ NoTangent();
+                cr_copy_svd_vals, A, alg ⊢ NoTangent();
                 output_tangent = ΔS, atol, rtol
             )
             test_rrule(
@@ -427,7 +427,7 @@ function test_chainrules_svd(
                 truncalg = TruncatedAlgorithm(alg, truncrank(r))
                 USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
                 test_rrule(
-                    copy_svd_trunc, A, truncalg ⊢ NoTangent();
+                    cr_copy_svd_trunc, A, truncalg ⊢ NoTangent();
                     output_tangent = (ΔUSVᴴtrunc..., zero(real(T))),
                     atol = atol, rtol = rtol
                 )
@@ -453,7 +453,7 @@ function test_chainrules_svd(
             truncalg = TruncatedAlgorithm(alg, trunctol(atol = S[1, 1] / 2))
             USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
             test_rrule(
-                copy_svd_trunc, A, truncalg ⊢ NoTangent();
+                cr_copy_svd_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔUSVᴴtrunc..., zero(real(T))),
                 atol = atol, rtol = rtol
             )
@@ -490,7 +490,7 @@ function test_chainrules_polar(
         alg = MatrixAlgebraKit.default_polar_algorithm(A)
         @testset "left_polar" begin
             if m >= n
-                test_rrule(copy_left_polar, A, alg ⊢ NoTangent(); atol = atol, rtol = rtol)
+                test_rrule(cr_copy_left_polar, A, alg ⊢ NoTangent(); atol = atol, rtol = rtol)
                 test_rrule(
                     config, left_polar, A, alg ⊢ NoTangent();
                     atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
@@ -499,7 +499,7 @@ function test_chainrules_polar(
         end
         @testset "right_polar" begin
             if m <= n
-                test_rrule(copy_right_polar, A, alg ⊢ NoTangent(); atol = atol, rtol = rtol)
+                test_rrule(cr_copy_right_polar, A, alg ⊢ NoTangent(); atol = atol, rtol = rtol)
                 test_rrule(
                     config, right_polar, A, alg ⊢ NoTangent();
                     atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
