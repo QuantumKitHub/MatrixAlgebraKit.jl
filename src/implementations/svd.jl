@@ -372,7 +372,7 @@ end
 
 function svd_trunc!(A::AbstractMatrix, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgorithm{<:GPU_Randomized}) where {TU, TS, TVᴴ, Tϵ}
     U, S, Vᴴ, ϵ = USVᴴϵ
-    check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
+    check_input(svd_trunc!, A, USVᴴϵ, alg.alg)
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
@@ -384,7 +384,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg:
         normA = norm(A)
         # equivalent to sqrt(normA^2 - normS^2)
         # but may be more accurate
-        ϵ = sqrt((normA + normS) * (normA - normS))
+        ϵ .= sqrt((normA + normS) * (normA - normS))
     end
 
     do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
