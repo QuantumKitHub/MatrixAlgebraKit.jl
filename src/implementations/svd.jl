@@ -416,7 +416,7 @@ end
 
 function svd_trunc_with_err!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
     U, S, Vᴴ = USVᴴ
-    check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
+    check_input(svd_trunc_with_err!, A, (U, S, Vᴴ), alg.alg)
     _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
