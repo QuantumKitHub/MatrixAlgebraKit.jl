@@ -113,16 +113,16 @@ combined_trunc = truncrank(10) & trunctol(; atol = 1e-6);
 
 ## Truncation Error
 
-When using truncated decompositions such as [`svd_trunc`](@ref), [`eig_trunc`](@ref), or [`eigh_trunc`](@ref), an additional truncation error value is returned.
+When using truncated decompositions such as [`svd_trunc_with_err`](@ref), [`eig_trunc`](@ref), or [`eigh_trunc`](@ref), an additional truncation error value is returned.
 This error is defined as the 2-norm of the discarded  singular values or eigenvalues, providing a measure of the approximation quality.
-For `svd_trunc` and `eigh_trunc`, this corresponds to the 2-norm difference between the original and the truncated matrix.
+For `svd_trunc_with_err` and `eigh_trunc`, this corresponds to the 2-norm difference between the original and the truncated matrix.
 For the case of `eig_trunc`, this interpretation does not hold because the norm of the non-unitary matrix of eigenvectors and its inverse also influence the approximation quality.
 
 
 For example:
 ```jldoctest truncations; output=false
 using LinearAlgebra: norm
-U, S, Vᴴ, ϵ = svd_trunc(A; trunc=truncrank(2))
+U, S, Vᴴ, ϵ = svd_trunc_with_err(A; trunc=truncrank(2))
 norm(A - U * S * Vᴴ) ≈ ϵ # ϵ is the 2-norm of the discarded singular values
 
 # output

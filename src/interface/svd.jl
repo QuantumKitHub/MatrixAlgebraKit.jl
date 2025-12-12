@@ -42,10 +42,10 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_vals(!)`](@ref svd_vals) and
 @functiondef svd_compact
 
 """
-    svd_trunc(A; [trunc], kwargs...) -> U, S, Vᴴ, ϵ
-    svd_trunc(A, alg::AbstractAlgorithm) -> U, S, Vᴴ, ϵ
-    svd_trunc!(A, [USVᴴ]; [trunc], kwargs...) -> U, S, Vᴴ, ϵ
-    svd_trunc!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ, ϵ
+    svd_trunc_with_err(A; [trunc], kwargs...) -> U, S, Vᴴ, ϵ
+    svd_trunc_with_err(A, alg::AbstractAlgorithm) -> U, S, Vᴴ, ϵ
+    svd_trunc_with_err!(A, [USVᴴ]; [trunc], kwargs...) -> U, S, Vᴴ, ϵ
+    svd_trunc_with_err!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ, ϵ
 
 Compute a partial or truncated singular value decomposition (SVD) of `A`, such that
 `A * (Vᴴ)' ≈ U * S`. Here, `U` is an isometric matrix (orthonormal columns) of size
@@ -54,6 +54,54 @@ square diagonal matrix of size `(k, k)`, with `k` is set by the truncation strat
 
 The function also returns `ϵ`, the truncation error defined as the 2-norm of the 
 discarded singular values.
+
+## Truncation
+The truncation strategy can be controlled via the `trunc` keyword argument. This can be
+either a `NamedTuple` or a [`TruncationStrategy`](@ref). If `trunc` is not provided or
+nothing, all values will be kept.
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$docs_truncation_kwargs
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly.
+By default, MatrixAlgebraKit supplies the following:
+
+$docs_truncation_strategies
+
+## Keyword arguments
+Other keyword arguments are passed to the algorithm selection procedure. If no explicit
+`alg` is provided, these keywords are used to select and configure the algorithm through
+[`MatrixAlgebraKit.select_algorithm`](@ref). The remaining keywords after algorithm
+selection are passed to the algorithm constructor. See [`MatrixAlgebraKit.default_algorithm`](@ref)
+for the default algorithm selection behavior.
+
+When `alg` is a [`TruncatedAlgorithm`](@ref), the `trunc` keyword cannot be specified as the
+truncation strategy is already embedded in the algorithm.
+
+!!! note
+    The bang method `svd_trunc!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `USVᴴ` as output.
+
+See also [`svd_trunc(!)`](@ref svd_trunc), [`svd_full(!)`](@ref svd_full),
+[`svd_compact(!)`](@ref svd_compact), [`svd_vals(!)`](@ref svd_vals),
+and [Truncations](@ref) for more information on truncation strategies.
+"""
+@functiondef svd_trunc_with_err
+
+"""
+    svd_trunc(A; [trunc], kwargs...) -> U, S, Vᴴ
+    svd_trunc(A, alg::AbstractAlgorithm) -> U, S, Vᴴ
+    svd_trunc!(A, [USVᴴ]; [trunc], kwargs...) -> U, S, Vᴴ
+    svd_trunc!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ
+
+Compute a partial or truncated singular value decomposition (SVD) of `A`, such that
+`A * (Vᴴ)' ≈ U * S`. Here, `U` is an isometric matrix (orthonormal columns) of size
+`(m, k)`, whereas  `Vᴴ` is a matrix of size `(k, n)` with orthonormal rows and `S` is a
+square diagonal matrix of size `(k, k)`, with `k` is set by the truncation strategy.
 
 ## Truncation
 The truncation strategy can be controlled via the `trunc` keyword argument. This can be
@@ -125,13 +173,15 @@ for f in (:svd_full!, :svd_compact!, :svd_vals!)
     end
 end
 
-function select_algorithm(::typeof(svd_trunc!), A, alg; trunc = nothing, kwargs...)
-    if alg isa TruncatedAlgorithm
-        isnothing(trunc) ||
-            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
-        return alg
-    else
-        alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
-        return TruncatedAlgorithm(alg_svd, select_truncation(trunc))
+for f in (:svd_trunc!, :svd_trunc_with_err!)
+    @eval function select_algorithm(::typeof($f), A, alg; trunc = nothing, kwargs...)
+        if alg isa TruncatedAlgorithm
+            isnothing(trunc) ||
+                throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
+            return alg
+        else
+            alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
+            return TruncatedAlgorithm(alg_svd, select_truncation(trunc))
+        end
     end
 end
