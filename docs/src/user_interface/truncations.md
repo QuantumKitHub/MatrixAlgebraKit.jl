@@ -123,7 +123,7 @@ For example:
 ```jldoctest truncations; output=false
 using LinearAlgebra: norm
 U, S, Vᴴ, ϵ = svd_trunc(A; trunc=truncrank(2))
-norm(A - U * S * Vᴴ) ≈ ϵ # ϵ is the 2-norm of the discarded singular values
+norm(A - U * S * Vᴴ) ≈ only(ϵ) # ϵ is the 2-norm of the discarded singular values, stored as a Vector
 
 # output
 true
