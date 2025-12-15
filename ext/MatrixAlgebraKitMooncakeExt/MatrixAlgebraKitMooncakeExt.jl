@@ -319,7 +319,35 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     function svd_trunc_adjoint(dy::Tuple{NoRData, NoRData, NoRData, T}) where {T <: Real}
         Utrunc, Strunc, Vᴴtrunc, ϵ = Mooncake.primal(output_codual)
         dUtrunc_, dStrunc_, dVᴴtrunc_, dϵ = Mooncake.tangent(output_codual)
-        abs(dy[4]) > MatrixAlgebraKit.defaulttol(dy[4]) && @warn "Pullback for svd_trunc! does not yet support non-zero tangent for the truncation error"
+        abs(dy[4]) > MatrixAlgebraKit.defaulttol(dy[4]) && @warn "Pullback for svd_trunc does not yet support non-zero tangent for the truncation error"
+        U, dU = arrayify(Utrunc, dUtrunc_)
+        S, dS = arrayify(Strunc, dStrunc_)
+        Vᴴ, dVᴴ = arrayify(Vᴴtrunc, dVᴴtrunc_)
+        svd_trunc_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
+        MatrixAlgebraKit.zero!(dU)
+        MatrixAlgebraKit.zero!(dS)
+        MatrixAlgebraKit.zero!(dVᴴ)
+        return NoRData(), NoRData(), NoRData()
+    end
+    return output_codual, svd_trunc_adjoint
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error), Any, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual)
+    # compute primal
+    A_ = Mooncake.primal(A_dA)
+    dA_ = Mooncake.tangent(A_dA)
+    A, dA = arrayify(A_, dA_)
+    alg = Mooncake.primal(alg_dalg)
+    output = svd_trunc_no_error(A, alg)
+    # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
+    # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
+    # pass). For many types this is done automatically when the forward step returns, but
+    # not for nested structs with various fields (like Diagonal{Complex})
+    output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+    function svd_trunc_adjoint(::NoRData)
+        Utrunc, Strunc, Vᴴtrunc = Mooncake.primal(output_codual)
+        dUtrunc_, dStrunc_, dVᴴtrunc_ = Mooncake.tangent(output_codual)
         U, dU = arrayify(Utrunc, dUtrunc_)
         S, dS = arrayify(Strunc, dStrunc_)
         Vᴴ, dVᴴ = arrayify(Vᴴtrunc, dVᴴtrunc_)

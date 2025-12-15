@@ -12,7 +12,7 @@ for f in
     (
         :qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
         :eig_full, :eig_trunc, :eig_vals, :eigh_full, :eigh_trunc, :eigh_vals,
-        :svd_compact, :svd_trunc, :svd_vals,
+        :svd_compact, :svd_trunc, :svd_trunc_no_error, :svd_vals,
         :left_polar, :right_polar,
     )
     copy_f = Symbol(:copy_, f)
@@ -434,6 +434,11 @@ end
                     output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc, zero(real(T))),
                     atol = atol, rtol = rtol
                 )
+                test_rrule(
+                    copy_svd_trunc_no_error, A, truncalg ⊢ NoTangent();
+                    output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc),
+                    atol = atol, rtol = rtol
+                )
                 dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, (U, S, Vᴴ), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc), ind)
                 dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), A, (Utrunc, Strunc, Vᴴtrunc), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc))
                 @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
@@ -449,6 +454,11 @@ end
             test_rrule(
                 copy_svd_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc, zero(real(T))),
+                atol = atol, rtol = rtol
+            )
+            test_rrule(
+                copy_svd_trunc_no_error, A, truncalg ⊢ NoTangent();
+                output_tangent = (ΔUtrunc, ΔStrunc, ΔVᴴtrunc),
                 atol = atol, rtol = rtol
             )
             dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, (U, S, Vᴴ), (ΔUtrunc, ΔStrunc, ΔVᴴtrunc), ind)
@@ -480,6 +490,12 @@ end
                 output_tangent = (ΔU[:, ind], ΔS[ind, ind], ΔVᴴ[ind, :], zero(real(T))),
                 atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
             )
+            test_rrule(
+                config, svd_trunc_no_error, A;
+                fkwargs = (; trunc = trunc),
+                output_tangent = (ΔU[:, ind], ΔS[ind, ind], ΔVᴴ[ind, :]),
+                atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+            )
         end
         trunc = trunctol(; atol = S[1, 1] / 2)
         ind = MatrixAlgebraKit.findtruncated(diagview(S), trunc)
@@ -487,6 +503,12 @@ end
             config, svd_trunc, A;
             fkwargs = (; trunc = trunc),
             output_tangent = (ΔU[:, ind], ΔS[ind, ind], ΔVᴴ[ind, :], zero(real(T))),
+            atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+        )
+        test_rrule(
+            config, svd_trunc_no_error, A;
+            fkwargs = (; trunc = trunc),
+            output_tangent = (ΔU[:, ind], ΔS[ind, ind], ΔVᴴ[ind, :]),
             atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
     end

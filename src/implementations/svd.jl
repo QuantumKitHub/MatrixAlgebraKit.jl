@@ -3,7 +3,7 @@
 copy_input(::typeof(svd_full), A::AbstractMatrix) = copy!(similar(A, float(eltype(A))), A)
 copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
-copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
+copy_input(::Union{typeof(svd_trunc), typeof(svd_trunc_no_error)}, A) = copy_input(svd_compact, A)
 
 copy_input(::typeof(svd_full), A::Diagonal) = copy(A)
 
@@ -89,7 +89,7 @@ end
 function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
-function initialize_output(::typeof(svd_trunc!), A, alg::TruncatedAlgorithm)
+function initialize_output(::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A, alg::TruncatedAlgorithm)
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
@@ -159,17 +159,17 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     if alg isa LAPACK_QRIteration
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
-        YALAPACK.gesvd!(A, S.diag, U, Vᴴ)
+        YALAPACK.gesvd!(A, diagview(S), U, Vᴴ)
     elseif alg isa LAPACK_DivideAndConquer
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
-        YALAPACK.gesdd!(A, S.diag, U, Vᴴ)
+        YALAPACK.gesdd!(A, diagview(S), U, Vᴴ)
     elseif alg isa LAPACK_Bisection
-        YALAPACK.gesvdx!(A, S.diag, U, Vᴴ; alg_kwargs...)
+        YALAPACK.gesvdx!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_Jacobi"))
-        YALAPACK.gesvj!(A, S.diag, U, Vᴴ)
+        YALAPACK.gesvj!(A, diagview(S), U, Vᴴ)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end
@@ -206,19 +206,16 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
-function svd_trunc!(A, USVᴴ::Tuple{TU, TS, TVᴴ}, alg::TruncatedAlgorithm; compute_error::Bool = true) where {TU, TS, TVᴴ}
-    ϵ = similar(A, real(eltype(A)), compute_error)
-    (U, S, Vᴴ, ϵ) = svd_trunc!(A, (USVᴴ..., ϵ), alg)
-    return compute_error ? (U, S, Vᴴ, norm(ϵ)) : (U, S, Vᴴ, -one(eltype(ϵ)))
+function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
+    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
+    USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+    return USVᴴtrunc
 end
 
-function svd_trunc!(A, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgorithm) where {TU, TS, TVᴴ, Tϵ}
-    U, S, Vᴴ, ϵ = USVᴴϵ
-    U, S, Vᴴ = svd_compact!(A, (U, S, Vᴴ), alg.alg)
+function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
+    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
-    if !isempty(ϵ)
-        ϵ .= truncation_error!(diagview(S), ind)
-    end
+    ϵ = truncation_error!(diagview(S), ind)
     return USVᴴtrunc..., ϵ
 end
 
@@ -272,7 +269,7 @@ end
 ###
 
 function check_input(
-        ::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
+        ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -288,7 +285,7 @@ function check_input(
 end
 
 function initialize_output(
-        ::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
+        ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -372,22 +369,34 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     return USVᴴ
 end
 
-function svd_trunc!(A::AbstractMatrix, USVᴴϵ::Tuple{TU, TS, TVᴴ, Tϵ}, alg::TruncatedAlgorithm{<:GPU_Randomized}) where {TU, TS, TVᴴ, Tϵ}
-    U, S, Vᴴ, ϵ = USVᴴϵ
-    check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
-    _gpu_Xgesvdr!(A, S.diag, U, Vᴴ; alg.alg.kwargs...)
+function svd_trunc_no_error!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
+    U, S, Vᴴ = USVᴴ
+    check_input(svd_trunc_no_error!, A, (U, S, Vᴴ), alg.alg)
+    _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
     (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
 
-    if !isempty(ϵ)
-        # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
-        normS = norm(diagview(Str))
-        normA = norm(A)
-        # equivalent to sqrt(normA^2 - normS^2)
-        # but may be more accurate
-        ϵ = sqrt((normA + normS) * (normA - normS))
-    end
+    do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
+
+    return Utr, Str, Vᴴtr
+end
+
+function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
+    U, S, Vᴴ = USVᴴ
+    check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
+    _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
+
+    # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
+    (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+
+    # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
+    normS = norm(diagview(Str))
+    normA = norm(A)
+    # equivalent to sqrt(normA^2 - normS^2)
+    # but may be more accurate
+    ϵ = sqrt((normA + normS) * (normA - normS))
 
     do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
     do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
@@ -404,11 +413,11 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
 
     if alg isa GPU_QRIteration
         isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
-        _gpu_gesvd_maybe_transpose!(A, S.diag, U, Vᴴ)
+        _gpu_gesvd_maybe_transpose!(A, diagview(S), U, Vᴴ)
     elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, S.diag, U, Vᴴ; alg_kwargs...)
+        _gpu_Xgesvdp!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, S.diag, U, Vᴴ; alg_kwargs...)
+        _gpu_gesvdj!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
     end

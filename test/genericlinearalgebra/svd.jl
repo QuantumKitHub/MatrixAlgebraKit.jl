@@ -145,11 +145,11 @@ end
             (rtol, maxrank) -> (; rtol, maxrank),
             (rtol, maxrank) -> truncrank(maxrank) & trunctol(; rtol),
         )
-        U1, S1, V1ᴴ, ϵ1 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 1))
+        U1, S1, V1ᴴ = svd_trunc_no_error(A; alg, trunc = trunc_fun(0.2, 1))
         @test length(diagview(S1)) == 1
         @test diagview(S1) ≈ diagview(S)[1:1]
 
-        U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 3))
+        U2, S2, V2ᴴ = svd_trunc_no_error(A; alg, trunc = trunc_fun(0.2, 3))
         @test length(diagview(S2)) == 2
         @test diagview(S2) ≈ diagview(S)[1:2]
     end
@@ -168,4 +168,5 @@ end
     @test diagview(S2) ≈ diagview(S)[1:2]
     @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
     @test_throws ArgumentError svd_trunc(A; alg, trunc = (; maxrank = 2))
+    @test_throws ArgumentError svd_trunc_no_error(A; alg, trunc = (; maxrank = 2))
 end

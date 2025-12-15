@@ -181,7 +181,7 @@ end
             @test length(diagview(S1)) == 1
             @test diagview(S1) ≈ diagview(S)[1:1]
 
-            U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; alg, trunc = trunc_fun(0.2, 3))
+            U2, S2, V2ᴴ = svd_trunc_no_error(A; alg, trunc = trunc_fun(0.2, 3))
             @test length(diagview(S2)) == 2
             @test diagview(S2) ≈ diagview(S)[1:2]
         end
@@ -200,7 +200,10 @@ end
     U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg)
     @test diagview(S2) ≈ diagview(S)[1:2]
     @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
+    U2, S2, V2ᴴ = @constinferred svd_trunc_no_error(A; alg)
+    @test diagview(S2) ≈ diagview(S)[1:2]
     @test_throws ArgumentError svd_trunc(A; alg, trunc = (; maxrank = 2))
+    @test_throws ArgumentError svd_trunc_no_error(A; alg, trunc = (; maxrank = 2))
 end
 
 @testset "svd for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
@@ -236,5 +239,7 @@ end
         U3, S3, Vᴴ3, ϵ3 = @constinferred svd_trunc(A; alg)
         @test diagview(S3) ≈ S2[1:min(m, 2)]
         @test ϵ3 ≈ norm(S2[(min(m, 2) + 1):m]) atol = atol
+        U3, S3, Vᴴ3 = @constinferred svd_trunc_no_error(A; alg)
+        @test diagview(S3) ≈ S2[1:min(m, 2)]
     end
 end

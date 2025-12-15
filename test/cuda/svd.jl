@@ -144,12 +144,21 @@ end
                 @test length(S1.diag) == r
                 @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
                 @test norm(A - U1 * S1 * V1ᴴ) ≈ ϵ1
+                U1, S1, V1ᴴ = @constinferred svd_trunc_no_error(A; alg, trunc = truncrank(r))
+                @test length(S1.diag) == r
+                @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
 
                 if !(alg isa CUSOLVER_Randomized)
                     s = 1 + sqrt(eps(real(T)))
                     trunc2 = trunctol(; atol = s * S₀[r + 1])
 
                     U2, S2, V2ᴴ, ϵ2 = @constinferred svd_trunc(A; alg, trunc = trunctol(; atol = s * S₀[r + 1]))
+                    @test length(S2.diag) == r
+                    @test U1 ≈ U2
+                    @test parent(S1) ≈ parent(S2)
+                    @test V1ᴴ ≈ V2ᴴ
+
+                    U2, S2, V2ᴴ = @constinferred svd_trunc_no_error(A; alg, trunc = trunctol(; atol = s * S₀[r + 1]))
                     @test length(S2.diag) == r
                     @test U1 ≈ U2
                     @test parent(S1) ≈ parent(S2)

@@ -16,8 +16,8 @@ export project_hermitian, project_antihermitian, project_isometric
 export project_hermitian!, project_antihermitian!, project_isometric!
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
-export svd_compact, svd_full, svd_vals, svd_trunc
-export svd_compact!, svd_full!, svd_vals!, svd_trunc!
+export svd_compact, svd_full, svd_vals, svd_trunc, svd_trunc_no_error
+export svd_compact!, svd_full!, svd_vals!, svd_trunc!, svd_trunc_no_error!
 export eigh_full, eigh_vals, eigh_trunc
 export eigh_full!, eigh_vals!, eigh_trunc!
 export eig_full, eig_vals, eig_trunc
