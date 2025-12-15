@@ -86,7 +86,7 @@ truncation strategy is already embedded in the algorithm.
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `USVᴴ` as output.
 
-See also [`svd_trunc_no_error(!)`](@ref svd_trunc), [`svd_full(!)`](@ref svd_full),
+See also [`svd_trunc_no_error(!)`](@ref svd_trunc_no_error), [`svd_full(!)`](@ref svd_full),
 [`svd_compact(!)`](@ref svd_compact), [`svd_vals(!)`](@ref svd_vals),
 and [Truncations](@ref) for more information on truncation strategies.
 """
