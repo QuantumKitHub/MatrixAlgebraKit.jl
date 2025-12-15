@@ -3,7 +3,7 @@
 copy_input(::typeof(svd_full), A::AbstractMatrix) = copy!(similar(A, float(eltype(A))), A)
 copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
-copy_input(::Union{typeof(svd_trunc), typeof(svd_trunc_with_err)}, A) = copy_input(svd_compact, A)
+copy_input(::Union{typeof(svd_trunc), typeof(svd_trunc_no_error)}, A) = copy_input(svd_compact, A)
 
 copy_input(::typeof(svd_full), A::Diagonal) = copy(A)
 
@@ -89,7 +89,7 @@ end
 function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
-function initialize_output(::Union{typeof(svd_trunc!), typeof(svd_trunc_with_err!)}, A, alg::TruncatedAlgorithm)
+function initialize_output(::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A, alg::TruncatedAlgorithm)
     return initialize_output(svd_compact!, A, alg.alg)
 end
 
@@ -206,13 +206,13 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
-function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
+function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
     return USVᴴtrunc
 end
 
-function svd_trunc_with_err!(A, USVᴴ, alg::TruncatedAlgorithm)
+function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
     ϵ = truncation_error!(diagview(S), ind)
@@ -269,7 +269,7 @@ end
 ###
 
 function check_input(
-        ::Union{typeof(svd_trunc!), typeof(svd_trunc_with_err!)}, A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
+        ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -285,7 +285,7 @@ function check_input(
 end
 
 function initialize_output(
-        ::Union{typeof(svd_trunc!), typeof(svd_trunc_with_err!)}, A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
+        ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -369,9 +369,9 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
     return USVᴴ
 end
 
-function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
+function svd_trunc_no_error!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
     U, S, Vᴴ = USVᴴ
-    check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
+    check_input(svd_trunc_no_error!, A, (U, S, Vᴴ), alg.alg)
     _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
@@ -383,9 +383,9 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     return Utr, Str, Vᴴtr
 end
 
-function svd_trunc_with_err!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
+function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
     U, S, Vᴴ = USVᴴ
-    check_input(svd_trunc_with_err!, A, (U, S, Vᴴ), alg.alg)
+    check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
     _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
 
     # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong

@@ -303,14 +303,14 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::Co
     return S_codual, svd_vals_adjoint
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_with_err), Any, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_with_err)}, A_dA::CoDual, alg_dalg::CoDual)
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc), Any, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A_ = Mooncake.primal(A_dA)
     dA_ = Mooncake.tangent(A_dA)
     A, dA = arrayify(A_, dA_)
     alg = Mooncake.primal(alg_dalg)
-    output = svd_trunc_with_err(A, alg)
+    output = svd_trunc(A, alg)
     # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
     # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
     # pass). For many types this is done automatically when the forward step returns, but
@@ -319,7 +319,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_with_err)}, A_dA::CoDual, al
     function svd_trunc_adjoint(dy::Tuple{NoRData, NoRData, NoRData, T}) where {T <: Real}
         Utrunc, Strunc, Vᴴtrunc, ϵ = Mooncake.primal(output_codual)
         dUtrunc_, dStrunc_, dVᴴtrunc_, dϵ = Mooncake.tangent(output_codual)
-        abs(dy[4]) > MatrixAlgebraKit.defaulttol(dy[4]) && @warn "Pullback for svd_trunc_with_err does not yet support non-zero tangent for the truncation error"
+        abs(dy[4]) > MatrixAlgebraKit.defaulttol(dy[4]) && @warn "Pullback for svd_trunc does not yet support non-zero tangent for the truncation error"
         U, dU = arrayify(Utrunc, dUtrunc_)
         S, dS = arrayify(Strunc, dStrunc_)
         Vᴴ, dVᴴ = arrayify(Vᴴtrunc, dVᴴtrunc_)
@@ -332,14 +332,14 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_with_err)}, A_dA::CoDual, al
     return output_codual, svd_trunc_adjoint
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc), Any, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual)
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error), Any, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A_ = Mooncake.primal(A_dA)
     dA_ = Mooncake.tangent(A_dA)
     A, dA = arrayify(A_, dA_)
     alg = Mooncake.primal(alg_dalg)
-    output = svd_trunc(A, alg)
+    output = svd_trunc_no_error(A, alg)
     # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
     # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
     # pass). For many types this is done automatically when the forward step returns, but
