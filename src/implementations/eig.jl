@@ -4,7 +4,7 @@ function copy_input(::typeof(eig_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
 copy_input(::typeof(eig_vals), A) = copy_input(eig_full, A)
-copy_input(::typeof(eig_trunc), A) = copy_input(eig_full, A)
+copy_input(::Union{typeof(eig_trunc), typeof(eig_trunc_no_error)}, A) = copy_input(eig_full, A)
 
 copy_input(::typeof(eig_full), A::Diagonal) = copy(A)
 
@@ -65,7 +65,7 @@ function initialize_output(::typeof(eig_vals!), A::AbstractMatrix, ::AbstractAlg
     D = similar(A, Tc, n)
     return D
 end
-function initialize_output(::typeof(eig_trunc!), A, alg::TruncatedAlgorithm)
+function initialize_output(::Union{typeof(eig_trunc!), typeof(eig_trunc_no_error!)}, A, alg::TruncatedAlgorithm)
     return initialize_output(eig_full!, A, alg.alg)
 end
 
@@ -119,6 +119,12 @@ function eig_trunc!(A, DV, alg::TruncatedAlgorithm)
     D, V = eig_full!(A, DV, alg.alg)
     DVtrunc, ind = truncate(eig_trunc!, (D, V), alg.trunc)
     return DVtrunc..., truncation_error!(diagview(D), ind)
+end
+
+function eig_trunc_no_error!(A, DV, alg::TruncatedAlgorithm)
+    D, V = eig_full!(A, DV, alg.alg)
+    DVtrunc, ind = truncate(eig_trunc!, (D, V), alg.trunc)
+    return DVtrunc
 end
 
 # Diagonal logic
