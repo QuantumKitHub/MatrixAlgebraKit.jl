@@ -18,10 +18,10 @@ export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
 export svd_compact, svd_full, svd_vals, svd_trunc, svd_trunc_no_error
 export svd_compact!, svd_full!, svd_vals!, svd_trunc!, svd_trunc_no_error!
-export eigh_full, eigh_vals, eigh_trunc
-export eigh_full!, eigh_vals!, eigh_trunc!
-export eig_full, eig_vals, eig_trunc
-export eig_full!, eig_vals!, eig_trunc!
+export eigh_full, eigh_vals, eigh_trunc, eigh_trunc_no_error
+export eigh_full!, eigh_vals!, eigh_trunc!, eigh_trunc_no_error!
+export eig_full, eig_vals, eig_trunc, eig_trunc_no_error
+export eig_full!, eig_vals!, eig_trunc!, eig_trunc_no_error!
 export gen_eig_full, gen_eig_vals
 export gen_eig_full!, gen_eig_vals!
 export schur_full, schur_vals

@@ -64,6 +64,11 @@ end
         @test A * V3 ≈ V3 * D3
         @test ϵ3 ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
+        s = 1 - sqrt(eps(real(T)))
+        trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
+        D4, V4 = @constinferred eig_trunc_no_error(A; alg, trunc)
+        @test length(diagview(D4)) == r
+        @test A * V4 ≈ V4 * D4
         # trunctol keeps order, truncrank might not
         # test for same subspace
         @test V1 * ((V1' * V1) \ (V1' * V2)) ≈ V2
@@ -90,6 +95,10 @@ end
     D3, V3, ϵ3 = @constinferred eig_trunc(A; alg)
     @test diagview(D3) ≈ diagview(D)[1:2]
     @test ϵ3 ≈ norm(diagview(D)[3:4]) atol = atol
+
+    alg = TruncatedAlgorithm(LAPACK_Simple(), truncerror(; atol = 0.2, p = 1))
+    D4, V4 = @constinferred eig_trunc_no_error(A; alg)
+    @test diagview(D4) ≈ diagview(D)[1:2]
 end
 
 @testset "eig for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
@@ -113,4 +122,9 @@ end
     D2, V2, ϵ2 = @constinferred eig_trunc(A2; alg)
     @test diagview(D2) ≈ diagview(A2)[1:2]
     @test ϵ2 ≈ norm(diagview(A2)[3:4]) atol = atol
+
+    A3 = Diagonal(T[0.9, 0.3, 0.1, 0.01])
+    alg = TruncatedAlgorithm(DiagonalAlgorithm(), truncrank(2))
+    D3, V3 = @constinferred eig_trunc_no_error(A3; alg)
+    @test diagview(D3) ≈ diagview(A3)[1:2]
 end
