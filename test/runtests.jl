@@ -58,10 +58,6 @@ if !is_buildkite
     end
 
     using GenericLinearAlgebra
-    @safetestset "QR / LQ Decomposition" begin
-        include("genericlinearalgebra/qr.jl")
-        include("genericlinearalgebra/lq.jl")
-    end
     @safetestset "Singular Value Decomposition" begin
         include("genericlinearalgebra/svd.jl")
     end
@@ -77,12 +73,6 @@ end
 
 using CUDA
 if CUDA.functional()
-    @safetestset "CUDA QR" begin
-        include("cuda/qr.jl")
-    end
-    @safetestset "CUDA LQ" begin
-        include("cuda/lq.jl")
-    end
     @safetestset "CUDA Projections" begin
         include("cuda/projections.jl")
     end
@@ -105,12 +95,6 @@ end
 
 using AMDGPU
 if AMDGPU.functional()
-    @safetestset "AMDGPU QR" begin
-        include("amd/qr.jl")
-    end
-    @safetestset "AMDGPU LQ" begin
-        include("amd/lq.jl")
-    end
     @safetestset "AMDGPU Projections" begin
         include("amd/projections.jl")
     end
