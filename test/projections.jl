@@ -1,4 +1,5 @@
 using MatrixAlgebraKit
+using MatrixAlgebraKit: check_hermitian, default_hermitian_tol
 using Test
 using TestExtras
 using StableRNGs
@@ -10,6 +11,12 @@ const BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
     noisefactor = eps(real(T))^(3 / 4)
+
+    mat0 = zeros(T, (1,1))
+    @test ishermitian(mat0)
+    @test ishermitian(mat0; atol=default_hermitian_tol(mat0))
+    @test isnothing(check_hermitian(mat0))
+
     for alg in (NativeBlocked(blocksize = 16), NativeBlocked(blocksize = 32), NativeBlocked(blocksize = 64))
         for A in (randn(rng, T, m, m), Diagonal(randn(rng, T, m)))
             Ah = (A + A') / 2
