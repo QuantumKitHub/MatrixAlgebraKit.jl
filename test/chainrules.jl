@@ -221,7 +221,7 @@ end
     rng = StableRNG(12345)
     m = 19
     atol = rtol = m * m * precision(T)
-    A = randn(rng, T, m, m)
+    A = make_eig_matrix(rng, T, m)
     D, V = eig_full(A)
     Ddiag = diagview(D)
     ΔV = randn(rng, complex(T), m, m)
@@ -297,8 +297,7 @@ end
     rng = StableRNG(12345)
     m = 19
     atol = rtol = m * m * precision(T)
-    A = randn(rng, T, m, m)
-    A = A + A'
+    A = make_eigh_matrix(rng, T, m)
     D, V = eigh_full(A)
     Ddiag = diagview(D)
     ΔV = randn(rng, T, m, m)
