@@ -27,16 +27,19 @@ function remove_eighgauge_dependence!(
     mul!(ΔV, V, gaugepart, -1, 1)
     return ΔV
 end
-function stabilize_eigvals!(D)
+function stabilize_eigvals!(D::AbstractVector)
     absD = abs.(D)
     p = invperm(sortperm(absD)) # rank of abs(D)
+    # account for exact degeneracies in absolute value when having complex conjugate pairs
     for i in 1:(length(D) - 1)
-        if absD[i] == absD[i + 1]
-            p[p .>= p[i + 1]] .-= 1
+        if absD[i] == absD[i + 1] # conjugate pairs will appear sequentially
+            p[p .>= p[i + 1]] .-= 1 # lower the rank of all higher ones
         end
     end
     n = maximum(p)
-    radii = 1 / n * ((1:n) + rand(real(eltype(D)), n) / 2)
+    # rescale eigenvalues so that they lie on distinct radii in the complex plane
+    # that are chosen randomly in non-overlapping intervals [k/n, (k+0.5)/n)] for k=1,...,n
+    radii = ((1:n) .+ rand(real(eltype(D)), n) ./ 2) ./ n
     for i in 1:length(D)
         D[i] = sign(D[i]) * radii[p[i]]
     end
@@ -45,22 +48,15 @@ end
 function make_eig_matrix(rng, T, n)
     A = randn(rng, T, n, n)
     D, V = eig_full(A)
-    Ddiag = diagview(D)
-    stabilize_eigvals!(Ddiag)
-    if T <: Real
-        A = real(V * D * inv(V))
-    else
-        A = V * D * inv(V)
-    end
-    return A
+    stabilize_eigvals!(diagview(D))
+    Ac = V * D * inv(V)
+    return (T <: Real) ? real(Ac) : Ac
 end
 function make_eigh_matrix(rng, T, n)
     A = project_hermitian!(randn(rng, T, n, n))
     D, V = eigh_full(A)
-    Ddiag = diagview(D)
-    stabilize_eigvals!(Ddiag)
-    A = project_hermitian!(V * D * V')
-    return A
+    stabilize_eigvals!(diagview(D))
+    return project_hermitian!(V * D * V')
 end
 
 precision(::Type{T}) where {T <: Number} = sqrt(eps(real(T)))
