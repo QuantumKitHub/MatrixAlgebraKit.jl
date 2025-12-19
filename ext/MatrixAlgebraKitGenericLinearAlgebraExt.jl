@@ -56,7 +56,7 @@ function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix, D, ::GLA_QRIteration)
     return eigvals!(Hermitian(A); sortby = real)
 end
 
-function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
+function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}}}
     return GLA_HouseholderQR(; kwargs...)
 end
 
@@ -109,7 +109,7 @@ function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksi
     return Q, R
 end
 
-function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
+function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}}}
     return MatrixAlgebraKit.LQViaTransposedQR(GLA_HouseholderQR(; kwargs...))
 end
 

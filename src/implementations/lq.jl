@@ -153,8 +153,8 @@ function _lapack_lq!(
     computeL = length(L) > 0
     inplaceQ = Q === A
 
-    if pivoted
-        throw(ArgumentError("LAPACK does not provide an implementation for a pivoted LQ decomposition"))
+    if pivoted && (blocksize > 1)
+        throw(ArgumentError("LAPACK does not provide a blocked implementation for a pivoted LQ decomposition"))
     end
     if inplaceQ && (computeL || positive || blocksize > 1 || n < m)
         throw(ArgumentError("inplace Q only supported if matrix is wide (`m <= n`), L is not required, and using the unblocked algorithm (`blocksize=1`) with `positive=false`"))
