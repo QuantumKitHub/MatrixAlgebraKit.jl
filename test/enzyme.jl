@@ -171,14 +171,15 @@ end
     ΔV = remove_eiggauge_dependence!(ΔV, D, V; degeneracy_atol = atol)
     ΔD = randn(rng, complex(T), m, m)
     ΔD2 = Diagonal(randn(rng, complex(T), m))
+    fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
     @testset for alg in (
             LAPACK_Simple(),
             #LAPACK_Expert(), # expensive on CI
         )
         @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-            test_reverse(eig_full, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
+            test_reverse(eig_full, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)), fdm = fdm)
             test_pullbacks_match(rng, eig_full!, eig_full, A, (D, V), (ΔD2, ΔV), alg)
-            test_reverse(eig_vals, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag))
+            test_reverse(eig_vals, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag), fdm = fdm)
             test_pullbacks_match(rng, eig_vals!, eig_vals, A, D.diag, ΔD2.diag, alg)
         end
         @testset "eig_trunc reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -189,7 +190,7 @@ end
                 Vtrunc = V[:, ind]
                 ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
                 ΔVtrunc = ΔV[:, ind]
-                test_reverse(eig_trunc_no_error, RT, (A, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc))
+                test_reverse(eig_trunc_no_error, RT, (A, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc), fdm = fdm)
                 test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
                 dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
                 dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
@@ -201,7 +202,7 @@ end
             Vtrunc = V[:, ind]
             ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
             ΔVtrunc = ΔV[:, ind]
-            test_reverse(eig_trunc_no_error, RT, (A, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc))
+            test_reverse(eig_trunc_no_error, RT, (A, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc), fdm = fdm)
             test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg; ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
             dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, (D, V), (ΔDtrunc, ΔVtrunc), ind)
             dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, (Dtrunc, Vtrunc), (ΔDtrunc, ΔVtrunc))
@@ -275,14 +276,14 @@ end
     m = 19
     atol = rtol = m * m * precision(T)
     A = make_eigh_matrix(rng, T, m)
-    Ac = copy(A)
-    A = (A + A') / 2
+    #A = (A + A') / 2
     D, V = eigh_full(A)
     D2 = Diagonal(D)
     ΔV = randn(rng, T, m, m)
     ΔV = remove_eighgauge_dependence!(ΔV, D, V; degeneracy_atol = atol)
     ΔD = randn(rng, real(T), m, m)
     ΔD2 = Diagonal(randn(rng, real(T), m))
+    fdm = T <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
     @testset for alg in (
             LAPACK_QRIteration(),
             #LAPACK_DivideAndConquer(),
@@ -290,11 +291,11 @@ end
             #LAPACK_MultipleRelativelyRobustRepresentations(), # expensive on CI
         )
         @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-            test_reverse(copy_eigh_full, RT, (Ac, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
-            test_reverse(copy_eigh_full!, RT, (copy(Ac), TA), ((D, V), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
-            test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, Ac, (D, V), (ΔD2, ΔV), alg)
-            test_reverse(copy_eigh_vals, RT, (Ac, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag))
-            test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, Ac, D.diag, ΔD2.diag, alg)
+            test_reverse(copy_eigh_full, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)), fdm = fdm)
+            test_reverse(copy_eigh_full!, RT, (copy(A), TA), ((D, V), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)), fdm = fdm)
+            test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, A, (D, V), (ΔD2, ΔV), alg)
+            test_reverse(copy_eigh_vals, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag), fdm = fdm)
+            test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, A, D.diag, ΔD2.diag, alg)
         end
         @testset "eigh_trunc reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             for r in 1:4:m
@@ -305,8 +306,8 @@ end
                 Vtrunc = V[:, ind]
                 ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
                 ΔVtrunc = ΔV[:, ind]
-                test_reverse(copy_eigh_trunc_no_error, RT, (Ac, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc))
-                test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, Ac, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
+                test_reverse(copy_eigh_trunc_no_error, RT, (A, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc), fdm = fdm)
+                test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
             end
             Ddiag = diagview(D)
             truncalg = TruncatedAlgorithm(alg, trunctol(; atol = maximum(abs, Ddiag) / 2))
@@ -315,8 +316,8 @@ end
             Vtrunc = V[:, ind]
             ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
             ΔVtrunc = ΔV[:, ind]
-            test_reverse(copy_eigh_trunc_no_error, RT, (Ac, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc))
-            test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, Ac, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
+            test_reverse(copy_eigh_trunc_no_error, RT, (A, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc), fdm = fdm)
+            test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
         end
     end
 end
