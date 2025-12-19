@@ -50,7 +50,7 @@ function is_left_isometric(A::AbstractMatrix; atol::Real = 0, rtol::Real = defau
     P = A' * A
     nP = norm(P) # isapprox would use `rtol * max(norm(P), norm(I))`
     diagview(P) .-= 1
-    return norm(P) <= max(atol, rtol * nP) # assume that the norm of I is `sqrt(n)`
+    return norm(P) ≤ max(atol, rtol * nP) # assume that the norm of I is `sqrt(n)`
 end
 
 @doc """

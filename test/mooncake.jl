@@ -238,7 +238,7 @@ end
     rng = StableRNG(12345)
     m = 19
     atol = rtol = m * m * precision(T)
-    A = randn(rng, T, m, m)
+    A = make_eig_matrix(rng, T, m)
     DV = eig_full(A)
     D, V = DV
     Ddiag = diagview(D)
@@ -347,9 +347,9 @@ MatrixAlgebraKit.copy_input(::typeof(copy_eigh_trunc_no_error), A) = MatrixAlgeb
     rng = StableRNG(12345)
     m = 19
     atol = rtol = m * m * precision(T)
-    A = randn(rng, T, m, m)
-    A = A + A'
+    A = make_eigh_matrix(rng, T, m)
     D, V = eigh_full(A)
+    Ddiag = diagview(D)
     ΔV = randn(rng, T, m, m)
     ΔV = remove_eighgauge_dependence!(ΔV, D, V; degeneracy_atol = atol)
     ΔD = randn(rng, real(T), m, m)
@@ -357,7 +357,6 @@ MatrixAlgebraKit.copy_input(::typeof(copy_eigh_trunc_no_error), A) = MatrixAlgeb
     dD = make_mooncake_tangent(ΔD2)
     dV = make_mooncake_tangent(ΔV)
     dDV = Mooncake.build_tangent(typeof((ΔD2, ΔV)), dD, dV)
-    Ddiag = diagview(D)
     @testset for alg in (
             LAPACK_QRIteration(),
             #LAPACK_DivideAndConquer(),
