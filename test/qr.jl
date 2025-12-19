@@ -15,7 +15,7 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 m = 54
 for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
     TestSuite.seed_rng!(123)
-    if is_buildkite && T ∈ BLASFloats
+    if T ∈ BLASFloats
         if CUDA.functional()
             CUDA_QR_ALGS = (CUSOLVER_HouseholderQR(; positive = false), CUSOLVER_HouseholderQR(; positive = true))
             TestSuite.test_qr(CuMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
@@ -34,7 +34,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
                 TestSuite.test_qr_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),))
             end
         end
-    else
+    elseif !is_buildkite
         if T ∈ BLASFloats
             TestSuite.test_qr(T, (m, n))
             LAPACK_QR_ALGS = (
