@@ -39,13 +39,13 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             TestSuite.test_qr(T, (m, n))
             LAPACK_QR_ALGS = (
                 LAPACK_HouseholderQR(; positive = false, pivoted = false, blocksize = 1),
-                LAPACK_HouseholderQR(; positive = false, pivoted = false, blocksize = 2),
+                LAPACK_HouseholderQR(; positive = false, pivoted = false, blocksize = 8),
                 LAPACK_HouseholderQR(; positive = false, pivoted = true, blocksize = 1),
-                #LAPACK_HouseholderQR(; positive=false, pivoted=true, blocksize=2), # not supported
+                #LAPACK_HouseholderQR(; positive=false, pivoted=true, blocksize=8), # not supported
                 LAPACK_HouseholderQR(; positive = true, pivoted = false, blocksize = 1),
-                LAPACK_HouseholderQR(; positive = true, pivoted = false, blocksize = 2),
+                LAPACK_HouseholderQR(; positive = true, pivoted = false, blocksize = 8),
                 LAPACK_HouseholderQR(; positive = true, pivoted = true, blocksize = 1),
-                #LAPACK_HouseholderQR(; positive=true, pivoted=true, blocksize=2), # not supported
+                #LAPACK_HouseholderQR(; positive=true, pivoted=true, blocksize=8), # not supported
             )
             TestSuite.test_qr_algs(T, (m, n), LAPACK_QR_ALGS)
         elseif T ∈ GenericFloats
@@ -53,12 +53,10 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             GLA_QR_ALGS = (GLA_HouseholderQR(),)
             TestSuite.test_qr_algs(T, (m, n), GLA_QR_ALGS; test_null = false)
         end
-    end
-end
-if !is_buildkite
-    for T in (BLASFloats..., GenericFloats...)
-        AT = Diagonal{T, Vector{T}}
-        TestSuite.test_qr(AT, m; test_pivoted = false, test_blocksize = false)
-        TestSuite.test_qr_algs(AT, m, (DiagonalAlgorithm(),))
+        if m == n
+            AT = Diagonal{T, Vector{T}}
+            TestSuite.test_qr(AT, m; test_pivoted = false, test_blocksize = false)
+            TestSuite.test_qr_algs(AT, m, (DiagonalAlgorithm(),))
+        end
     end
 end

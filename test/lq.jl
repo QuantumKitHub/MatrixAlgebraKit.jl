@@ -40,13 +40,13 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             TestSuite.test_lq(T, (m, n))
             LAPACK_LQ_ALGS = (
                 LAPACK_HouseholderLQ(; positive = false, pivoted = false, blocksize = 1),
-                LAPACK_HouseholderLQ(; positive = false, pivoted = false, blocksize = 2),
+                LAPACK_HouseholderLQ(; positive = false, pivoted = false, blocksize = 8),
                 LAPACK_HouseholderLQ(; positive = false, pivoted = true, blocksize = 1),
-                #LAPACK_HouseholderLQ(; positive=false, pivoted=true, blocksize=2), # not supported
+                #LAPACK_HouseholderLQ(; positive=false, pivoted=true, blocksize=8), # not supported
                 LAPACK_HouseholderLQ(; positive = true, pivoted = false, blocksize = 1),
-                LAPACK_HouseholderLQ(; positive = true, pivoted = false, blocksize = 2),
+                LAPACK_HouseholderLQ(; positive = true, pivoted = false, blocksize = 8),
                 LAPACK_HouseholderLQ(; positive = true, pivoted = true, blocksize = 1),
-                #LAPACK_HouseholderLQ(; positive=true, pivoted=true, blocksize=2), # not supported
+                #LAPACK_HouseholderLQ(; positive=true, pivoted=true, blocksize=8), # not supported
             )
             TestSuite.test_lq_algs(T, (m, n), LAPACK_LQ_ALGS)
         elseif T ∈ GenericFloats
@@ -54,12 +54,10 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             GLA_LQ_ALGS = (LQViaTransposedQR(GLA_HouseholderQR()),)
             TestSuite.test_lq_algs(T, (m, n), GLA_LQ_ALGS; test_null = false)
         end
-    end
-end
-if !is_buildkite
-    for T in (BLASFloats..., GenericFloats...)
-        AT = Diagonal{T, Vector{T}}
-        TestSuite.test_lq(AT, m; test_pivoted = false, test_blocksize = false)
-        TestSuite.test_lq_algs(AT, m, (DiagonalAlgorithm(),))
+        if m == n
+            AT = Diagonal{T, Vector{T}}
+            TestSuite.test_lq(AT, m; test_pivoted = false, test_blocksize = false)
+            TestSuite.test_lq_algs(AT, m, (DiagonalAlgorithm(),))
+        end
     end
 end
