@@ -13,8 +13,12 @@ sign_safe(s::Complex) = ifelse(iszero(s), one(s), s / abs(s))
 # Inverse
 
 """
-    function inv_safe(a::Number, tol = defaulttol(a))
+    inv_safe(a::Number, tol = defaulttol(a))
 
 Compute the inverse of a number `a`, but return zero if `a` is smaller than `tol`.
 """
 inv_safe(a::Number, tol = defaulttol(a)) = abs(a) < tol ? zero(a) : inv(a)
+function inv_safe(a::ComplexF32, tol = defaulttol(a))
+    str = string(a) # WHY does this fix the NaN issues??????
+    return abs(a) < tol ? zero(a) : inv(a)
+end

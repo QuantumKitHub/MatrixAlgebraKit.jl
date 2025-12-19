@@ -46,8 +46,7 @@ function eig_pullback!(
         Δgauge ≤ gauge_atol ||
             @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-        VᴴΔV ./= conj.(transpose(D) .- D)
-        diagview(VᴴΔV) .= zero(eltype(VᴴΔV))
+        VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
 
         if !iszerotangent(ΔDmat)
             ΔDvec = diagview(ΔDmat)

@@ -164,7 +164,7 @@ end
     rng = StableRNG(12345)
     m = 19
     atol = rtol = m * m * precision(T)
-    A = randn(rng, T, m, m)
+    A = make_eig_matrix(rng, T, m)
     D, V = eig_full(A)
     Ddiag = diagview(D)
     ΔV = randn(rng, complex(T), m, m)
@@ -274,8 +274,9 @@ end
     rng = StableRNG(12345)
     m = 19
     atol = rtol = m * m * precision(T)
-    A = randn(rng, T, m, m)
-    A = A + A'
+    A = make_eigh_matrix(rng, T, m)
+    Ac = copy(A)
+    A = (A + A') / 2
     D, V = eigh_full(A)
     D2 = Diagonal(D)
     ΔV = randn(rng, T, m, m)
@@ -289,11 +290,11 @@ end
             #LAPACK_MultipleRelativelyRobustRepresentations(), # expensive on CI
         )
         @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-            test_reverse(copy_eigh_full, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
-            test_reverse(copy_eigh_full!, RT, (copy(A), TA), ((D, V), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
-            test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, A, (D, V), (ΔD2, ΔV), alg)
-            test_reverse(copy_eigh_vals, RT, (A, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag))
-            test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, A, D.diag, ΔD2.diag, alg)
+            test_reverse(copy_eigh_full, RT, (Ac, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
+            test_reverse(copy_eigh_full!, RT, (copy(Ac), TA), ((D, V), TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = (copy(ΔD2), copy(ΔV)))
+            test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, Ac, (D, V), (ΔD2, ΔV), alg)
+            test_reverse(copy_eigh_vals, RT, (Ac, TA); fkwargs = (alg = alg,), atol = atol, rtol = rtol, output_tangent = copy(ΔD2.diag))
+            test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, Ac, D.diag, ΔD2.diag, alg)
         end
         @testset "eigh_trunc reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
             for r in 1:4:m
@@ -304,8 +305,8 @@ end
                 Vtrunc = V[:, ind]
                 ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
                 ΔVtrunc = ΔV[:, ind]
-                test_reverse(copy_eigh_trunc_no_error, RT, (A, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc))
-                test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
+                test_reverse(copy_eigh_trunc_no_error, RT, (Ac, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc))
+                test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, Ac, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
             end
             Ddiag = diagview(D)
             truncalg = TruncatedAlgorithm(alg, trunctol(; atol = maximum(abs, Ddiag) / 2))
@@ -314,8 +315,8 @@ end
             Vtrunc = V[:, ind]
             ΔDtrunc = Diagonal(diagview(ΔD2)[ind])
             ΔVtrunc = ΔV[:, ind]
-            test_reverse(copy_eigh_trunc_no_error, RT, (A, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc))
-            test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
+            test_reverse(copy_eigh_trunc_no_error, RT, (Ac, TA); fkwargs = (alg = truncalg,), atol = atol, rtol = rtol, output_tangent = (ΔDtrunc, ΔVtrunc))
+            test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, Ac, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
         end
     end
 end
