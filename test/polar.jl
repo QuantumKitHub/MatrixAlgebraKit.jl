@@ -33,8 +33,10 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
         if T ∈ BLASFloats
             LAPACK_POLAR_ALGS = (PolarViaSVD.((LAPACK_QRIteration(), LAPACK_Bisection(), LAPACK_DivideAndConquer()))..., PolarNewton())
             TestSuite.test_polar(T, (m, n), LAPACK_POLAR_ALGS)
-            LAPACK_JACOBI = (PolarViaSVD(LAPACK_Jacobi()),)
-            TestSuite.test_polar(T, (m, n), LAPACK_JACOBI; test_right = false)
+            if LinearAlgebra.LAPACK.version() ≥ v"3.12.0"
+                LAPACK_JACOBI = (PolarViaSVD(LAPACK_Jacobi()),)
+                TestSuite.test_polar(T, (m, n), LAPACK_JACOBI; test_right = false)
+            end
         elseif T ∈ GenericFloats
             GLA_POLAR_ALGS = (PolarViaSVD.((GLA_QRIteration(),))..., PolarNewton())
             TestSuite.test_polar(T, (m, n), GLA_POLAR_ALGS)
