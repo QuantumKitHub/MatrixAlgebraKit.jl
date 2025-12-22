@@ -1,7 +1,7 @@
 using MatrixAlgebraKit
 using Test
 using StableRNGs
-using LinearAlgebra: Diagonal
+using LinearAlgebra: Diagonal, LAPACK
 using CUDA, AMDGPU
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
@@ -33,7 +33,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
         if T ∈ BLASFloats
             LAPACK_POLAR_ALGS = (PolarViaSVD.((LAPACK_QRIteration(), LAPACK_Bisection(), LAPACK_DivideAndConquer()))..., PolarNewton())
             TestSuite.test_polar(T, (m, n), LAPACK_POLAR_ALGS)
-            if LinearAlgebra.LAPACK.version() ≥ v"3.12.0"
+            if LAPACK.version() ≥ v"3.12.0"
                 LAPACK_JACOBI = (PolarViaSVD(LAPACK_Jacobi()),)
                 TestSuite.test_polar(T, (m, n), LAPACK_JACOBI; test_right = false)
             end
