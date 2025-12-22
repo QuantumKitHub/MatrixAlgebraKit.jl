@@ -1,8 +1,8 @@
 using SafeTestsets
 
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 # don't run all tests on GPU, only the GPU
 # specific ones
-is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 if !is_buildkite
     @safetestset "Algorithms" begin
         include("algorithms.jl")
@@ -12,10 +12,6 @@ if !is_buildkite
     end
     @safetestset "Truncate" begin
         include("truncate.jl")
-    end
-    @safetestset "QR / LQ Decomposition" begin
-        include("qr.jl")
-        include("lq.jl")
     end
     @safetestset "Singular Value Decomposition" begin
         include("svd.jl")
@@ -69,6 +65,11 @@ if !is_buildkite
     @safetestset "General Eigenvalue Decomposition" begin
         include("genericschur/eig.jl")
     end
+end
+
+@safetestset "QR / LQ Decomposition" begin
+    include("qr.jl")
+    include("lq.jl")
 end
 
 using CUDA
