@@ -18,7 +18,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
     TestSuite.seed_rng!(123)
     if T ∈ BLASFloats
         if CUDA.functional()
-            CUDA_LQ_ALGS = LQViaTransposedQR.(CUSOLVER_HouseholderLQ(; positive = false), CUSOLVER_HouseholderLQ(; positive = true))
+            CUDA_LQ_ALGS = LQViaTransposedQR.((CUSOLVER_HouseholderQR(; positive = false), CUSOLVER_HouseholderQR(; positive = true)))
             TestSuite.test_lq(CuMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
             TestSuite.test_lq_algs(CuMatrix{T}, (m, n), CUDA_LQ_ALGS)
             if n == m
@@ -27,9 +27,9 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             end
         end
         if AMDGPU.functional()
-            ROC_LQ_ALGS = LQViaTransposedQR.(ROCSOLVER_HouseholderLQ(; positive = false), ROCSOLVER_HouseholderLQ(; positive = true))
+            ROC_LQ_ALGS = LQViaTransposedQR.((ROCSOLVER_HouseholderQR(; positive = false), ROCSOLVER_HouseholderQR(; positive = true)))
             TestSuite.test_lq(ROCMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
-            TestSuite.test_lq_algs(ROCMatrix{T}, (m, n), CUDA_LQ_ALGS)
+            TestSuite.test_lq_algs(ROCMatrix{T}, (m, n), ROC_LQ_ALGS)
             if n == m
                 TestSuite.test_lq(Diagonal{T, ROCVector{T}}, m; test_pivoted = false, test_blocksize = false)
                 TestSuite.test_lq_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),))
