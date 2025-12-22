@@ -107,19 +107,19 @@ function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = 
     if m > n # initial QR
         Q, R = qr_compact!(A)
         Rc = view(A, 1:n, 1:n)
-        copy!(Rc, R)
+        Rc .= R
         Rᴴinv = ldiv!(UpperTriangular(Rc)', one!(Rᴴinv))
     else # m == n
         R = A
         Rc = view(W, 1:n, 1:n)
-        copy!(Rc, R)
+        Rc .= R
         Rᴴinv = ldiv!(lu!(Rc)', one!(Rᴴinv))
     end
     γ = sqrt(norm(Rᴴinv) / norm(R)) # scaling factor
     rmul!(R, γ)
     rmul!(Rᴴinv, 1 / γ)
     R, Rᴴinv = _avgdiff!(R, Rᴴinv)
-    copy!(Rc, R)
+    Rc .= R
     i = 1
     conv = norm(Rᴴinv, Inf)
     while i < maxiter && conv > tol
@@ -128,7 +128,7 @@ function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = 
         rmul!(R, γ)
         rmul!(Rᴴinv, 1 / γ)
         R, Rᴴinv = _avgdiff!(R, Rᴴinv)
-        copy!(Rc, R)
+        Rc .= R
         conv = norm(Rᴴinv, Inf)
         i += 1
     end
