@@ -34,7 +34,8 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
                 TestSuite.test_qr_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),))
             end
         end
-    elseif !is_buildkite
+    end
+    if !is_buildkite
         if T ∈ BLASFloats
             TestSuite.test_qr(T, (m, n))
             LAPACK_QR_ALGS = (

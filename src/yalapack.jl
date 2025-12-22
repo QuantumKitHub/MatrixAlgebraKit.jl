@@ -2162,7 +2162,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 jobu = 'N'
             else
                 size(U, 1) == m ||
-                    throw(DimensionMismatch("row size mismatch between A and U"))
+                    throw(DimensionMismatch("row size mismatch between A ($m) and U ($(size(U, 1)))"))
                 size(U, 2) >= (range == 'I' ? iu - il + 1 : minmn) ||
                     throw(DimensionMismatch("invalid column size of U"))
                 jobu = 'V'
@@ -2171,13 +2171,13 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 jobvt = 'N'
             else
                 size(Vᴴ, 2) == n ||
-                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                    throw(DimensionMismatch("column size mismatch between A ($n) and Vᴴ ($(size(Vᴴ, 2)))"))
                 size(Vᴴ, 1) >= (range == 'I' ? iu - il + 1 : minmn) ||
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 jobvt = 'V'
             end
             length(S) == minmn ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+                throw(DimensionMismatch("length mismatch between A ($minmn) and S ($(length(S)))"))
 
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(U, 2))
@@ -2247,15 +2247,15 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
-            m >= n ||
-                throw(ArgumentError("gejsv! requires a matrix with at least as many rows as columns"))
+            m ≥ n ||
+                throw(ArgumentError("gejsv! requires a matrix with at least as many rows ($m) as columns ($n)"))
 
             joba = 'G'
             if length(U) == 0
                 jobu = 'N'
             else
                 size(U, 1) == m ||
-                    throw(DimensionMismatch("row size mismatch between A and U"))
+                    throw(DimensionMismatch("row size mismatch between A ($m) and U ($(size(U, 1)))"))
                 if size(U, 2) == n
                     jobu = 'U'
                 elseif size(U, 2) == m
@@ -2268,7 +2268,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 jobv = 'N'
             else
                 size(Vᴴ, 2) == n ||
-                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                    throw(DimensionMismatch("column size mismatch between A ($n) and Vᴴ ($(size(Vᴴ, 2)))"))
                 if size(Vᴴ, 1) == n
                     jobv = 'V'
                 else
@@ -2276,7 +2276,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 end
             end
             length(S) == n ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+                throw(DimensionMismatch("length mismatch between A ($minmn) and S ($(length(S)))"))
 
             lda = max(1, stride(A, 2))
             mv = Ref{BlasInt}() # unused
