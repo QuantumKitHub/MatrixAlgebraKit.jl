@@ -1,3 +1,13 @@
+svd_rank(S, rank_atol) = searchsortedlast(S, rank_atol; rev = true)
+
+function check_svd_cotangents(aUΔU, Sr, aVΔV; degeneracy_atol = default_pullback_rank_atol(Sr), gauge_atol = default_pullback_gauge_atol(aUΔU, aVΔV))
+    mask = abs.(Sr' .- Sr) .< degeneracy_atol
+    Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
+    Δgauge ≤ gauge_atol ||
+        @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    return
+end
+
 """
     svd_pullback!(
         ΔA, A, USVᴴ, ΔUSVᴴ, [ind];
@@ -33,7 +43,7 @@ function svd_pullback!(
     minmn = min(m, n)
     S = diagview(Smat)
     length(S) == minmn || throw(DimensionMismatch("length of S ($(length(S))) does not matrix minimum dimension of U, Vᴴ ($minmn)"))
-    r = searchsortedlast(S, rank_atol; rev = true) # rank
+    r = svd_rank(S, rank_atol)
     Ur = view(U, :, 1:r)
     Vᴴr = view(Vᴴ, 1:r, :)
     Sr = view(S, 1:r)
@@ -70,10 +80,7 @@ function svd_pullback!(
     aVΔV = project_antihermitian!(VΔV)
 
     # check whether cotangents arise from gauge-invariance objective function
-    mask = abs.(Sr' .- Sr) .< degeneracy_atol
-    Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
-    Δgauge ≤ gauge_atol ||
-        @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    check_svd_cotangents(aUΔU, Sr, aVΔV; degeneracy_atol, gauge_atol)
 
     UdΔAV = (aUΔU .+ aVΔV) .* inv_safe.(Sr' .- Sr, degeneracy_atol) .+
         (aUΔU .- aVΔV) .* inv_safe.(Sr' .+ Sr, degeneracy_atol)
@@ -169,10 +176,7 @@ function svd_trunc_pullback!(
     aVΔV = project_antihermitian!(VΔV)
 
     # check whether cotangents arise from gauge-invariance objective function
-    mask = abs.(S' .- S) .< degeneracy_atol
-    Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
-    Δgauge ≤ gauge_atol ||
-        @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    check_svd_cotangents(aUΔU, S, aVΔV; degeneracy_atol, gauge_atol)
 
     UdΔAV = (aUΔU .+ aVΔV) .* inv_safe.(S' .- S, degeneracy_atol) .+
         (aUΔU .- aVΔV) .* inv_safe.(S' .+ S, degeneracy_atol)
@@ -205,7 +209,7 @@ function svd_trunc_pullback!(
     else
         fill!(view(rhs, m̃ .+ (1:ñ), :), 0)
     end
-    XY = sylvester(ÃÃ, -Smat, rhs)
+    XY = _sylvester(ÃÃ, -Smat, rhs)
     X = view(XY, 1:m̃, :)
     Y = view(XY, m̃ .+ (1:ñ), :)
     ΔA = mul!(ΔA, Ũ, X * Vᴴ, 1, 1)

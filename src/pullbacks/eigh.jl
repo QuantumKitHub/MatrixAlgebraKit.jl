@@ -1,3 +1,15 @@
+function check_eigh_cotangents(
+        D, aVᴴΔV;
+        degeneracy_atol::Real = default_pullback_rank_atol(D),
+        gauge_atol::Real = default_pullback_gauge_atol(aVᴴΔV)
+    )
+    mask = abs.(D' .- D) .< degeneracy_atol
+    Δgauge = norm(view(aVᴴΔV, mask))
+    Δgauge ≤ gauge_atol ||
+        @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    return
+end
+
 """
     eigh_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, [ind];
@@ -42,10 +54,7 @@ function eigh_pullback!(
         mul!(view(VᴴΔV, :, indV), V', ΔV)
         aVᴴΔV = project_antihermitian(VᴴΔV) # can't use in-place or recycling doesn't work
 
-        mask = abs.(D' .- D) .< degeneracy_atol
-        Δgauge = norm(view(aVᴴΔV, mask))
-        Δgauge ≤ gauge_atol ||
-            @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        check_eigh_cotangents(D, aVᴴΔV; degeneracy_atol, gauge_atol)
 
         aVᴴΔV .*= inv_safe.(D' .- D, degeneracy_atol)
 
@@ -120,10 +129,7 @@ function eigh_trunc_pullback!(
         VᴴΔV = V' * ΔV
         aVᴴΔV = project_antihermitian!(VᴴΔV)
 
-        mask = abs.(D' .- D) .< degeneracy_atol
-        Δgauge = norm(view(aVᴴΔV, mask))
-        Δgauge ≤ gauge_atol ||
-            @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        check_eigh_cotangents(D, aVᴴΔV; degeneracy_atol, gauge_atol)
 
         aVᴴΔV .*= inv_safe.(D' .- D, degeneracy_atol)
 
@@ -138,7 +144,7 @@ function eigh_trunc_pullback!(
         # add contribution from orthogonal complement
         W = qr_null(V)
         WᴴΔV = W' * ΔV
-        X = sylvester(W' * A * W, -Dmat, WᴴΔV)
+        X = _sylvester(W' * A * W, -Dmat, WᴴΔV)
         Z = mul!(Z, W, X, 1, 1)
 
         # put everything together: symmetrize for hermitian case

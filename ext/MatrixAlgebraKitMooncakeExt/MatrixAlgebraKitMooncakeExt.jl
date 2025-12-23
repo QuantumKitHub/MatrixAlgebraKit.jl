@@ -3,7 +3,7 @@ module MatrixAlgebraKitMooncakeExt
 using Mooncake
 using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
 using MatrixAlgebraKit
-using MatrixAlgebraKit: inv_safe, diagview, copy_input
+using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!
@@ -18,14 +18,16 @@ Mooncake.tangent_type(::Type{<:MatrixAlgebraKit.AbstractAlgorithm}) = Mooncake.N
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(copy_input), Any, Any}
 function Mooncake.rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDual)
     Ac = copy_input(Mooncake.primal(f_df), Mooncake.primal(A_dA))
-    dAc = Mooncake.zero_tangent(Ac)
+    Ac_dAc = Mooncake.zero_fcodual(Ac)
+    dAc = Mooncake.tangent(Ac_dAc)
     function copy_input_pb(::NoRData)
         Mooncake.increment!!(Mooncake.tangent(A_dA), dAc)
         return NoRData(), NoRData(), NoRData()
     end
-    return CoDual(Ac, dAc), copy_input_pb
+    return Ac_dAc, copy_input_pb
 end
 
+Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(initialize_output), Any, Any, Any}
 # two-argument in-place factorizations like LQ, QR, EIG
 for (f!, f, pb, adj) in (
         (:qr_full!, :qr_full, :qr_pullback!, :qr_adjoint),
