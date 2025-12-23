@@ -159,45 +159,6 @@ function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
     return A, B
 end
 
-function MatrixAlgebraKit.truncate(
-        ::typeof(left_null!), US::Tuple{TU, TS}, strategy::TruncationStrategy
-    ) where {TU <: ROCMatrix, TS}
-    # TODO: avoid allocation?
-    U, S = US
-    extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 1) - size(S, 2))))
-    ind = MatrixAlgebraKit.findtruncated(extended_S, strategy)
-    trunc_cols = collect(1:size(U, 2))[ind]
-    Utrunc = U[:, trunc_cols]
-    return Utrunc, ind
-end
-function MatrixAlgebraKit.truncate(
-        ::typeof(right_null!), SVᴴ::Tuple{TS, TVᴴ}, strategy::TruncationStrategy
-    ) where {TS, TVᴴ <: ROCMatrix}
-    # TODO: avoid allocation?
-    S, Vᴴ = SVᴴ
-    extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 2) - size(S, 1))))
-    ind = MatrixAlgebraKit.findtruncated(extended_S, strategy)
-    trunc_rows = collect(1:size(Vᴴ, 1))[ind]
-    Vᴴtrunc = Vᴴ[trunc_rows, :]
-    return Vᴴtrunc, ind
-end
-
-# disambiguate:
-function MatrixAlgebraKit.truncate(
-        ::typeof(left_null!), (U, S)::Tuple{TU, TS}, ::NoTruncation
-    ) where {TU <: ROCMatrix, TS}
-    m, n = size(S)
-    ind = (n + 1):m
-    return U[:, ind], ind
-end
-function MatrixAlgebraKit.truncate(
-        ::typeof(right_null!), (S, Vᴴ)::Tuple{TS, TVᴴ}, ::NoTruncation
-    ) where {TS, TVᴴ <: ROCMatrix}
-    m, n = size(S)
-    ind = (m + 1):n
-    return Vᴴ[ind, :], ind
-end
-
 # avoids calling the BlasMat specialization that assumes syrk! or herk! is called
 # TODO: remove once syrk! or herk! is defined
 function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix{T}) where {T <: BlasFloat}
