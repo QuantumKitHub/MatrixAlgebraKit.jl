@@ -25,12 +25,6 @@ if !is_buildkite
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
-    @safetestset "Mooncake" begin
-        include("mooncake.jl")
-    end
-    @safetestset "ChainRules" begin
-        include("chainrules.jl")
-    end
     @safetestset "MatrixAlgebraKit.jl" begin
         @safetestset "Code quality (Aqua.jl)" begin
             using MatrixAlgebraKit
@@ -66,6 +60,12 @@ end
 end
 @safetestset "Schur Decomposition" begin
     include("schur.jl")
+end
+@safetestset "Mooncake" begin
+    include("mooncake.jl")
+end
+@safetestset "ChainRules" begin
+    include("chainrules.jl")
 end
 
 using CUDA
