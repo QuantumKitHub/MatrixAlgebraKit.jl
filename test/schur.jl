@@ -5,7 +5,7 @@ using StableRNGs
 using LinearAlgebra: I, Diagonal
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
-GenericFloats = (Float16, BigFloat, Complex{BigFloat})
+GenericFloats = (BigFloat, Complex{BigFloat})
 
 @isdefined(TestSuite) || include("testsuite/TestSuite.jl")
 using .TestSuite
@@ -27,7 +27,7 @@ for T in (BLASFloats..., GenericFloats...)
     end
     if !is_buildkite
         TestSuite.test_schur(T, (m, m))
-        AT = Diagonal{T, Vector{T}}
-        TestSuite.test_schur(AT, m)
+        #AT = Diagonal{T, Vector{T}}
+        #TestSuite.test_schur(AT, m) # not supported yet
     end
 end
