@@ -7,9 +7,6 @@ if !is_buildkite
     @safetestset "Algorithms" begin
         include("algorithms.jl")
     end
-    @safetestset "Projections" begin
-        include("projections.jl")
-    end
     @safetestset "Truncate" begin
         include("truncate.jl")
     end
@@ -71,12 +68,12 @@ end
 @safetestset "Polar Decomposition" begin
     include("polar.jl")
 end
+@safetestset "Projections" begin
+    include("projections.jl")
+end
 
 using CUDA
 if CUDA.functional()
-    @safetestset "CUDA Projections" begin
-        include("cuda/projections.jl")
-    end
     @safetestset "CUDA SVD" begin
         include("cuda/svd.jl")
     end
@@ -93,9 +90,6 @@ end
 
 using AMDGPU
 if AMDGPU.functional()
-    @safetestset "AMDGPU Projections" begin
-        include("amd/projections.jl")
-    end
     @safetestset "AMDGPU SVD" begin
         include("amd/svd.jl")
     end

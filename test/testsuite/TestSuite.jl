@@ -72,5 +72,6 @@ is_pivoted(alg::MatrixAlgebraKit.LQViaTransposedQR) = is_pivoted(alg.qr_alg)
 include("qr.jl")
 include("lq.jl")
 include("polar.jl")
+include("projections.jl")
 
 end
