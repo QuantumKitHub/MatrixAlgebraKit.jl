@@ -13,7 +13,18 @@ MatrixAlgebraKit.initialize_output(::typeof(eig_full!), A::AbstractMatrix, ::GS_
 MatrixAlgebraKit.initialize_output(::typeof(eig_vals!), A::AbstractMatrix, ::GS_QRIteration) = nothing
 
 function MatrixAlgebraKit.eig_full!(A::AbstractMatrix, DV, ::GS_QRIteration)
-    D, V = GenericSchur.eigen!(A)
+    D_, V_ = GenericSchur.eigen!(A)
+    D, V = DV
+    if !isnothing(D)
+        copyto!(D, Diagonal(D_))
+    else
+        D = D_
+    end
+    if !isnothing(V)
+        copyto!(V, V_)
+    else
+        V = V_
+    end
     return Diagonal(D), V
 end
 

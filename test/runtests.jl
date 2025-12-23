@@ -16,9 +16,6 @@ if !is_buildkite
     @safetestset "Hermitian Eigenvalue Decomposition" begin
         include("eigh.jl")
     end
-    @safetestset "General Eigenvalue Decomposition" begin
-        include("eig.jl")
-    end
     @safetestset "Generalized Eigenvalue Decomposition" begin
         include("gen_eig.jl")
     end
@@ -51,7 +48,6 @@ if !is_buildkite
     @safetestset "Hermitian Eigenvalue Decomposition" begin
         include("genericlinearalgebra/eigh.jl")
     end
-
 end
 
 @safetestset "QR / LQ Decomposition" begin
@@ -67,14 +63,14 @@ end
 @safetestset "Schur Decomposition" begin
     include("schur.jl")
 end
+@safetestset "General Eigenvalue Decomposition" begin
+    include("eig.jl")
+end
 
 using CUDA
 if CUDA.functional()
     @safetestset "CUDA SVD" begin
         include("cuda/svd.jl")
-    end
-    @safetestset "CUDA General Eigenvalue Decomposition" begin
-        include("cuda/eig.jl")
     end
     @safetestset "CUDA Hermitian Eigenvalue Decomposition" begin
         include("cuda/eigh.jl")
