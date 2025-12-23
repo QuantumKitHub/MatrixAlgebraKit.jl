@@ -75,5 +75,6 @@ include("polar.jl")
 include("projections.jl")
 include("schur.jl")
 include("eig.jl")
+include("eigh.jl")
 
 end
