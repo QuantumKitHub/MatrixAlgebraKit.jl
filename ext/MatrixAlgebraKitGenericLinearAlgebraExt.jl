@@ -49,27 +49,11 @@ MatrixAlgebraKit.initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::GL
 
 function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix, DV, ::GLA_QRIteration)
     eigval, eigvec = eigen!(Hermitian(A); sortby = real)
-    D, V = DV
-    if isnothing(D)
-        D = Diagonal(eigval::AbstractVector{real(eltype(A))})
-    else
-        copyto!(D, Diagonal(eigval::AbstractVector{real(eltype(A))}))
-    end
-    if isnothing(V)
-        V = eigvec::AbstractMatrix{eltype(A)}
-    else
-        copyto!(V, eigvec::AbstractMatrix{eltype(A)})
-    end
-    return D, V
+    return Diagonal(eigval::AbstractVector{real(eltype(A))}), eigvec::AbstractMatrix{eltype(A)}
 end
 
 function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix, D, ::GLA_QRIteration)
-    if isnothing(D)
-        D = eigvals!(Hermitian(A); sortby = real)
-    else
-        copyto!(D, eigvals!(Hermitian(A); sortby = real))
-    end
-    return D
+    return eigvals!(Hermitian(A); sortby = real)
 end
 
 function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}}}

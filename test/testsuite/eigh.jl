@@ -26,8 +26,7 @@ function test_eigh_full(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "eigh_full! $summary_str" begin
-        A = instantiate_matrix(T, sz)
-        A = (A + A') / 2
+        A = project_hermitian!(instantiate_matrix(T, sz))
         Ac = deepcopy(A)
 
         D, V = @testinferred eigh_full(A)
@@ -35,9 +34,8 @@ function test_eigh_full(
         @test isunitary(V)
         @test all(isreal, D)
 
-        D2, V2 = eigh_full!(copy(A), (D, V))
-        @test D2 === D
-        @test V2 === V
+        D2, V2 = eigh_full!(Ac, (D, V))
+        @test A * V2 ≈ V2 * D2
 
         D3 = @testinferred eigh_vals(A)
         @test D ≈ Diagonal(D3)
@@ -51,8 +49,7 @@ function test_eigh_full_algs(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "eigh_full! algorithm $alg $summary_str" for alg in algs
-        A = instantiate_matrix(T, sz)
-        A = (A + A') / 2
+        A = project_hermitian!(instantiate_matrix(T, sz))
         Ac = deepcopy(A)
 
         D, V = @testinferred eigh_full(A; alg)
@@ -60,9 +57,8 @@ function test_eigh_full_algs(
         @test isunitary(V)
         @test all(isreal, D)
 
-        D2, V2 = eigh_full!(copy(A), (D, V); alg)
-        @test D2 === D
-        @test V2 === V
+        D2, V2 = eigh_full!(Ac, (D, V); alg)
+        @test A * V2 ≈ V2 * D2
 
         D3 = @testinferred eigh_vals(A; alg)
         @test D ≈ Diagonal(D3)
@@ -76,9 +72,7 @@ function test_eigh_trunc(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "eigh_trunc! $summary_str" begin
-        A = instantiate_matrix(T, sz)
-        A = A * A'
-        A = (A + A') / 2
+        A = project_hermitian!(instantiate_matrix(T, sz))
         Ac = deepcopy(A)
         if !(T <: Diagonal)
 
@@ -132,8 +126,7 @@ function test_eigh_trunc(
             Ddiag = similar(A, real(eltype(T)), m4)
             copyto!(Ddiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
             D = Diagonal(Ddiag)
-            A = V * D * V'
-            A = (A + A') / 2
+            A = project_hermitian!(V * D * V')
             alg = TruncatedAlgorithm(MatrixAlgebraKit.default_eigh_algorithm(A), truncrank(2))
             D2, V2, ϵ2 = @testinferred eigh_trunc(A; alg)
             @test diagview(D2) ≈ diagview(D)[1:2]
@@ -155,9 +148,7 @@ function test_eigh_trunc_algs(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "eigh_trunc! algorithm $alg $summary_str" for alg in algs
-        A = instantiate_matrix(T, sz)
-        A = A * A'
-        A = (A + A') / 2
+        A = project_hermitian!(instantiate_matrix(T, sz))
         Ac = deepcopy(A)
 
         m = size(A, 1)
@@ -172,8 +163,7 @@ function test_eigh_trunc_algs(
         Ddiag = similar(A, real(eltype(T)), m4)
         copyto!(Ddiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
         D = Diagonal(Ddiag)
-        A = V * D * V'
-        A = (A + A') / 2
+        A = project_hermitian!(V * D * V')
         truncalg = TruncatedAlgorithm(alg, truncrank(2))
         D2, V2, ϵ2 = @testinferred eigh_trunc(A; alg = truncalg)
         @test diagview(D2) ≈ diagview(D)[1:2]
