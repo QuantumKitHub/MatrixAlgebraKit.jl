@@ -20,7 +20,7 @@ for T in (BLASFloats..., GenericFloats...)
     if T ∈ BLASFloats
         if CUDA.functional()
             TestSuite.test_eig(CuMatrix{T}, (m, m); test_trunc = false)
-            TestSuite.test_eig_algs(CuMatrix{T}, (m, m), (CUSOLVER_Simple(),))
+            TestSuite.test_eig_algs(CuMatrix{T}, (m, m), (CUSOLVER_Simple(),); test_trunc = false)
             TestSuite.test_eig(Diagonal{T, CuVector{T}}, m)
             TestSuite.test_eig_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
         end
