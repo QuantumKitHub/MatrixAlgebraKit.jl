@@ -6,8 +6,8 @@ copy_input(::typeof(right_polar), A) = copy_input(svd_full, A)
 function check_input(::typeof(left_polar!), A::AbstractMatrix, WP, ::AbstractAlgorithm)
     m, n = size(A)
     W, P = WP
-    m >= n ||
-        throw(ArgumentError("input matrix needs at least as many rows as columns"))
+    m ≥ n ||
+        throw(ArgumentError("input matrix needs at least as many rows ($m) as columns ($n)"))
     @assert W isa AbstractMatrix && P isa AbstractMatrix
     @check_size(W, (m, n))
     @check_scalar(W, A)
@@ -18,8 +18,8 @@ end
 function check_input(::typeof(right_polar!), A::AbstractMatrix, PWᴴ, ::AbstractAlgorithm)
     m, n = size(A)
     P, Wᴴ = PWᴴ
-    n >= m ||
-        throw(ArgumentError("input matrix needs at least as many columns as rows"))
+    n ≥ m ||
+        throw(ArgumentError("input matrix needs at least as many columns ($n) as rows ($m)"))
     @assert P isa AbstractMatrix && Wᴴ isa AbstractMatrix
     isempty(P) || @check_size(P, (m, m))
     @check_scalar(P, A)
@@ -107,19 +107,19 @@ function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = 
     if m > n # initial QR
         Q, R = qr_compact!(A)
         Rc = view(A, 1:n, 1:n)
-        copy!(Rc, R)
+        Rc .= R
         Rᴴinv = ldiv!(UpperTriangular(Rc)', one!(Rᴴinv))
     else # m == n
         R = A
         Rc = view(W, 1:n, 1:n)
-        copy!(Rc, R)
+        Rc .= R
         Rᴴinv = ldiv!(lu!(Rc)', one!(Rᴴinv))
     end
     γ = sqrt(norm(Rᴴinv) / norm(R)) # scaling factor
     rmul!(R, γ)
     rmul!(Rᴴinv, 1 / γ)
     R, Rᴴinv = _avgdiff!(R, Rᴴinv)
-    copy!(Rc, R)
+    Rc .= R
     i = 1
     conv = norm(Rᴴinv, Inf)
     while i < maxiter && conv > tol
@@ -128,7 +128,7 @@ function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = 
         rmul!(R, γ)
         rmul!(Rᴴinv, 1 / γ)
         R, Rᴴinv = _avgdiff!(R, Rᴴinv)
-        copy!(Rc, R)
+        Rc .= R
         conv = norm(Rᴴinv, Inf)
         i += 1
     end
@@ -152,7 +152,7 @@ function _right_polarnewton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); to
     else # m == n
         L = A
         Lc = view(Wᴴ, 1:m, 1:m)
-        copy!(Lc, L)
+        Lc .= L
         Lᴴinv = ldiv!(lu!(Lc)', one!(Lᴴinv))
     end
     γ = sqrt(norm(Lᴴinv) / norm(L)) # scaling factor
@@ -168,7 +168,7 @@ function _right_polarnewton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); to
         rmul!(L, γ)
         rmul!(Lᴴinv, 1 / γ)
         L, Lᴴinv = _avgdiff!(L, Lᴴinv)
-        copy!(Lc, L)
+        Lc .= L
         conv = norm(Lᴴinv, Inf)
         i += 1
     end

@@ -28,9 +28,6 @@ if !is_buildkite
     @safetestset "Schur Decomposition" begin
         include("schur.jl")
     end
-    @safetestset "Polar Decomposition" begin
-        include("polar.jl")
-    end
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
@@ -71,6 +68,9 @@ end
     include("qr.jl")
     include("lq.jl")
 end
+@safetestset "Polar Decomposition" begin
+    include("polar.jl")
+end
 
 using CUDA
 if CUDA.functional()
@@ -85,9 +85,6 @@ if CUDA.functional()
     end
     @safetestset "CUDA Hermitian Eigenvalue Decomposition" begin
         include("cuda/eigh.jl")
-    end
-    @safetestset "CUDA Polar Decomposition" begin
-        include("cuda/polar.jl")
     end
     @safetestset "CUDA Image and Null Space" begin
         include("cuda/orthnull.jl")
@@ -104,9 +101,6 @@ if AMDGPU.functional()
     end
     @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
         include("amd/eigh.jl")
-    end
-    @safetestset "AMDGPU Polar Decomposition" begin
-        include("amd/polar.jl")
     end
     @safetestset "AMDGPU Image and Null Space" begin
         include("amd/orthnull.jl")
