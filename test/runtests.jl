@@ -16,9 +16,6 @@ if !is_buildkite
     @safetestset "Generalized Eigenvalue Decomposition" begin
         include("gen_eig.jl")
     end
-    @safetestset "Image and Null Space" begin
-        include("orthnull.jl")
-    end
     @safetestset "Mooncake" begin
         include("mooncake.jl")
     end
@@ -63,14 +60,14 @@ end
 @safetestset "Hermitian Eigenvalue Decomposition" begin
     include("eigh.jl")
 end
+@safetestset "Image and Null Space" begin
+    include("orthnull.jl")
+end
 
 using CUDA
 if CUDA.functional()
     @safetestset "CUDA SVD" begin
         include("cuda/svd.jl")
-    end
-    @safetestset "CUDA Image and Null Space" begin
-        include("cuda/orthnull.jl")
     end
 end
 
@@ -78,8 +75,5 @@ using AMDGPU
 if AMDGPU.functional()
     @safetestset "AMDGPU SVD" begin
         include("amd/svd.jl")
-    end
-    @safetestset "AMDGPU Image and Null Space" begin
-        include("amd/orthnull.jl")
     end
 end
