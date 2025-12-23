@@ -42,9 +42,12 @@ function eig_pullback!(
         mul!(view(VᴴΔV, :, indV), V', ΔV)
 
         mask = abs.(transpose(D) .- D) .< degeneracy_atol
-        Δgauge = norm(view(VᴴΔV, mask), Inf)
-        Δgauge ≤ gauge_atol ||
-            @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        if isa(ΔA, Array)
+            # not GPU friendly...
+            Δgauge = norm(view(VᴴΔV, mask), Inf)
+            Δgauge ≤ gauge_atol ||
+                @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        end
 
         VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
 

@@ -3,7 +3,7 @@ module MatrixAlgebraKitCUDAExt
 using MatrixAlgebraKit
 using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
-using MatrixAlgebraKit: diagview, sign_safe
+using MatrixAlgebraKit: diagview, sign_safe, default_pullback_gauge_atol, default_pullback_rank_atol
 using MatrixAlgebraKit: LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_Xgesvdr!, _gpu_gesvdj!, _gpu_geev!
@@ -181,6 +181,25 @@ function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
     block_dim = cld(length(A), thread_dim)
     @cuda threads = thread_dim blocks = block_dim _avgdiff_kernel(A, B)
     return A, B
+end
+
+MatrixAlgebraKit.default_pullback_rank_atol(A::AnyCuArray) = eps(norm(CuArray(A), Inf))^(3 / 4)
+MatrixAlgebraKit.default_pullback_gauge_atol(A::AnyCuArray) = MatrixAlgebraKit.iszerotangent(A) ? 0 : eps(norm(CuArray(A), Inf))^(3 / 4)
+function MatrixAlgebraKit.default_pullback_gauge_atol(A::AnyCuArray, As...)
+    As′ = filter(!MatrixAlgebraKit.iszerotangent, (A, As...))
+    return isempty(As′) ? 0 : eps(norm(CuArray.(As′), Inf))^(3 / 4)
+end
+
+function LinearAlgebra.sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
+    #=m = size(A, 1)
+    n = size(B, 2)
+    I_n = fill!(similar(A, n), one(eltype(A)))
+    I_m = fill!(similar(B, m), one(eltype(B)))
+    L   = kron(diagm(I_n), A) + kron(adjoint(B), diagm(I_m))
+    x_vec = L \ -vec(C)
+    X = CuMatrix(reshape(x_vec, m, n))=#
+    hX = sylvester(collect(A), collect(B), collect(C))
+    return CuArray(hX)
 end
 
 end

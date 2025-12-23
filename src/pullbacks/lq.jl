@@ -36,22 +36,24 @@ function lq_pullback!(
     ΔA1 = view(ΔA, 1:p, :)
     ΔA2 = view(ΔA, (p + 1):m, :)
 
-    if minmn > p # case where A is rank-deficient
-        Δgauge = abs(zero(eltype(Q)))
-        if !iszerotangent(ΔQ)
-            # in this case the number Householder reflections will
-            # change upon small variations, and all of the remaining
-            # columns of ΔQ should be zero for a gauge-invariant
-            # cost function
-            ΔQ2 = view(ΔQ, (p + 1):size(Q, 1), :)
-            Δgauge = max(Δgauge, norm(ΔQ2, Inf))
+    if isa(ΔA, Array) # not GPU friendly
+        if minmn > p # case where A is rank-deficient
+            Δgauge = abs(zero(eltype(Q)))
+            if !iszerotangent(ΔQ)
+                # in this case the number Householder reflections will
+                # change upon small variations, and all of the remaining
+                # columns of ΔQ should be zero for a gauge-invariant
+                # cost function
+                ΔQ2 = view(ΔQ, (p + 1):size(Q, 1), :)
+                Δgauge = max(Δgauge, norm(ΔQ2, Inf))
+            end
+            if !iszerotangent(ΔL)
+                ΔL22 = view(ΔL, (p + 1):m, (p + 1):minmn)
+                Δgauge = max(Δgauge, norm(ΔL22, Inf))
+            end
+            Δgauge ≤ gauge_atol ||
+                @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
         end
-        if !iszerotangent(ΔL)
-            ΔL22 = view(ΔL, (p + 1):m, (p + 1):minmn)
-            Δgauge = max(Δgauge, norm(ΔL22, Inf))
-        end
-        Δgauge ≤ gauge_atol ||
-            @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     end
 
     ΔQ̃ = zero!(similar(Q, (p, n)))
@@ -69,9 +71,11 @@ function lq_pullback!(
             # how the full Q2 will change, but this we omit for now, and we consider
             # Q2' * ΔQ2 as a gauge dependent quantity.
             ΔQ2Q1ᴴ = ΔQ2 * Q1'
-            Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
-            Δgauge ≤ gauge_atol ||
-                @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+            if isa(ΔA, Array) # not GPU friendly
+                Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
+                Δgauge ≤ gauge_atol ||
+                    @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+            end
             ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1ᴴ', Q2, -1, 1)
         end
     end
@@ -95,8 +99,10 @@ function lq_pullback!(
         Md = diagview(M)
         Md .= real.(Md)
     end
-    ldiv!(LowerTriangular(L11)', M)
-    ldiv!(LowerTriangular(L11)', ΔQ̃)
+    # not GPU friendly...
+    L11arr = typeof(L)(L11)
+    ldiv!(LowerTriangular(L11arr)', M)
+    ldiv!(LowerTriangular(L11arr)', ΔQ̃)
     ΔA1 = mul!(ΔA1, M, Q1, +1, 1)
     ΔA1 .+= ΔQ̃
     return ΔA

@@ -22,8 +22,8 @@ which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol
 """
 function svd_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ, ind = Colon();
-        rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
-        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        rank_atol::Real = default_pullback_rank_atol(diagview(USVᴴ[2])),
+        degeneracy_atol::Real = default_pullback_rank_atol(diagview(USVᴴ[2])),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
     )
     # Extract the SVD components
@@ -33,7 +33,7 @@ function svd_pullback!(
     minmn = min(m, n)
     S = diagview(Smat)
     length(S) == minmn || throw(DimensionMismatch("length of S ($(length(S))) does not matrix minimum dimension of U, Vᴴ ($minmn)"))
-    r = searchsortedlast(S, rank_atol; rev = true) # rank
+    r = findlast(s -> s ≥ rank_atol, S) # rank
     Ur = view(U, :, 1:r)
     Vᴴr = view(Vᴴ, 1:r, :)
     Sr = view(S, 1:r)
@@ -71,9 +71,11 @@ function svd_pullback!(
 
     # check whether cotangents arise from gauge-invariance objective function
     mask = abs.(Sr' .- Sr) .< degeneracy_atol
-    Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
-    Δgauge ≤ gauge_atol ||
-        @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    if isa(ΔA, Array) # norm check not GPU friendly
+        Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
+        Δgauge ≤ gauge_atol ||
+            @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    end
 
     UdΔAV = (aUΔU .+ aVΔV) .* inv_safe.(Sr' .- Sr, degeneracy_atol) .+
         (aUΔU .- aVΔV) .* inv_safe.(Sr' .+ Sr, degeneracy_atol)
