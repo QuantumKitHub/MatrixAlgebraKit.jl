@@ -22,9 +22,6 @@ if !is_buildkite
     @safetestset "Generalized Eigenvalue Decomposition" begin
         include("gen_eig.jl")
     end
-    @safetestset "Schur Decomposition" begin
-        include("schur.jl")
-    end
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
@@ -55,10 +52,6 @@ if !is_buildkite
         include("genericlinearalgebra/eigh.jl")
     end
 
-    using GenericSchur
-    @safetestset "General Eigenvalue Decomposition" begin
-        include("genericschur/eig.jl")
-    end
 end
 
 @safetestset "QR / LQ Decomposition" begin
@@ -70,6 +63,9 @@ end
 end
 @safetestset "Projections" begin
     include("projections.jl")
+end
+@safetestset "Schur Decomposition" begin
+    include("schur.jl")
 end
 
 using CUDA

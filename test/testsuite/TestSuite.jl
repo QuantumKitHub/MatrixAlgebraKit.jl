@@ -73,5 +73,6 @@ include("qr.jl")
 include("lq.jl")
 include("polar.jl")
 include("projections.jl")
+include("schur.jl")
 
 end
