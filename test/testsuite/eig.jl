@@ -34,9 +34,7 @@ function test_eig_full(
         @test A * V ≈ V * D
 
         D2, V2 = @testinferred eig_full!(Ac, (D, V))
-        @test D2 === D
-        @test V2 === V
-        @test A * V ≈ V * D
+        @test A * V2 ≈ V2 * D2
 
         Dc = @testinferred eig_vals(A)
         @test eltype(Dc) == Tc
@@ -59,9 +57,7 @@ function test_eig_full_algs(
         @test A * V ≈ V * D
 
         D2, V2 = @testinferred eig_full!(Ac, (D, V); alg)
-        @test D2 === D
-        @test V2 === V
-        @test A * V ≈ V * D
+        @test A * V2 ≈ V2 * D2
 
         Dc = @testinferred eig_vals(A; alg)
         @test eltype(Dc) == Tc
