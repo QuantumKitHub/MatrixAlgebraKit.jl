@@ -72,6 +72,11 @@ function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR, alg::GLA_Householde
     return _gla_householder_qr!(A, Q, R; alg.kwargs...)
 end
 
+function MatrixAlgebraKit.qr_null!(A::AbstractMatrix, N, alg::GLA_HouseholderQR)
+    check_input(qr_null!, A, N, alg)
+    return _gla_householder_qr_null!(A, N; alg.kwargs...)
+end
+
 function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksize = 1, pivoted = false)
     pivoted && throw(ArgumentError("Only pivoted = false implemented for GLA_HouseholderQR."))
     (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for GLA_HouseholderQR."))
@@ -107,6 +112,21 @@ function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksi
         end
     end
     return Q, R
+end
+
+function _gla_householder_qr_null!(
+        A::AbstractMatrix, N::AbstractMatrix;
+        positive = false, blocksize = 1, pivoted = false
+    )
+    pivoted && throw(ArgumentError("Only pivoted = false implemented for GLA_HouseholderQR."))
+    (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for GLA_HouseholderQR."))
+    m, n = size(A)
+    minmn = min(m, n)
+    fill!(N, zero(eltype(N)))
+    one!(view(N, (minmn + 1):m, 1:(m - minmn)))
+    Q̃, = qr!(A)
+    lmul!(Q̃, N)
+    return N
 end
 
 function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}}}
