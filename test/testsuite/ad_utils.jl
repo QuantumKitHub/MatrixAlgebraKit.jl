@@ -138,7 +138,7 @@ function ad_lq_full_setup(A)
     Q1 = view(Q, 1:minmn, 1:n)
     ΔQ = randn!(similar(A, T, n, n))
     ΔQ2 = view(ΔQ, (minmn + 1):n, 1:n)
-    mul!(ΔQ2, ΔQ2 * Q1', Q1)
+    ΔQ2 .= (ΔQ2 * Q1') * Q1
     ΔL = randn!(similar(A, T, m, n))
     return (L, Q), (ΔL, ΔQ)
 end
