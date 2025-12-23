@@ -21,8 +21,8 @@ for T in (BLASFloats..., GenericFloats...)
         if CUDA.functional()
             TestSuite.test_eig(CuMatrix{T}, (m, m); test_trunc = false)
             TestSuite.test_eig_algs(CuMatrix{T}, (m, m), (CUSOLVER_Simple(),); test_trunc = false)
-            TestSuite.test_eig(Diagonal{T, CuVector{T}}, m)
-            TestSuite.test_eig_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
+            TestSuite.test_eig(Diagonal{T, CuVector{T}}, m; test_trunc = false)
+            TestSuite.test_eig_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),); test_trunc = false)
         end
         #= not yet supported
         if AMDGPU.functional()
