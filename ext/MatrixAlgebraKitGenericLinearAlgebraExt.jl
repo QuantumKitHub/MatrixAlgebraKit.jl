@@ -1,7 +1,7 @@
 module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, default_fixgauge
+using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, one!, default_fixgauge
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
