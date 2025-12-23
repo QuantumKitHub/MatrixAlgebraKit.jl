@@ -1,6 +1,5 @@
 using TestExtras
 using MatrixAlgebraKit: ishermitian
-using LinearAlgebra: Diagonal, normalize!
 using GenericLinearAlgebra
 
 function test_projections(T::Type, sz; kwargs...)
@@ -37,7 +36,6 @@ function test_project_antihermitian(
             # this is never anti-hermitian for real Diagonal: |A - A'| == 0
             @test isantihermitian(Ba_approx; rtol = 10 * noisefactor) || norm(Aa) == 0
 
-            copy!(Ac, A)
             Ba = project_antihermitian!(Ac; blocksize = 16)
             @test Ba === Ac
             @test isantihermitian(Ba)
@@ -45,7 +43,8 @@ function test_project_antihermitian(
         end
 
         # test approximate error calculation
-        A = normalize!(A)
+        normA = norm(A)
+        A ./= normA
         Ah = project_hermitian(A)
         Aa = project_antihermitian(A)
 
@@ -95,7 +94,8 @@ function test_project_hermitian(
         end
 
         # test approximate error calculation
-        A = normalize!(A)
+        normA = norm(A)
+        A ./= normA
         Ah = project_hermitian(A)
         Aa = project_antihermitian(A)
 
