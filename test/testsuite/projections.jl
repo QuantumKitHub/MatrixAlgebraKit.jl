@@ -1,6 +1,6 @@
 using TestExtras
 using MatrixAlgebraKit: ishermitian
-using LinearAlgebra: Diagonal, normalize
+using LinearAlgebra: Diagonal, normalize!
 using GenericLinearAlgebra
 
 function test_projections(T::Type, sz; kwargs...)
@@ -45,7 +45,7 @@ function test_project_antihermitian(
         end
 
         # test approximate error calculation
-        A = normalize(A)
+        A = normalize!(A)
         Ah = project_hermitian(A)
         Aa = project_antihermitian(A)
 
@@ -95,7 +95,7 @@ function test_project_hermitian(
         end
 
         # test approximate error calculation
-        A = normalize(A)
+        A = normalize!(A)
         Ah = project_hermitian(A)
         Aa = project_antihermitian(A)
 
