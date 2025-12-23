@@ -35,7 +35,7 @@ for T in (BLASFloats..., GenericFloats...)
                 ROCSOLVER_Bisection(),
             )
             TestSuite.test_eigh(ROCMatrix{T}, (m, m); test_trunc = false)
-            TestSuite.test_eigh(ROCMatrix{T}, (m, m), ROCSOLVER_EIGH_ALGS; test_trunc = false)
+            TestSuite.test_eigh_algs(ROCMatrix{T}, (m, m), ROCSOLVER_EIGH_ALGS; test_trunc = false)
             TestSuite.test_eigh(Diagonal{T, ROCVector{T}}, m; test_trunc = false)
             TestSuite.test_eigh_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),); test_trunc = false)
         end
