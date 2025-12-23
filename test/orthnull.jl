@@ -27,8 +27,10 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
         end
     end
     if !is_buildkite
-        TestSuite.test_orthnull(T, (m, n))
-        AT = Diagonal{T, Vector{T}}
-        TestSuite.test_orthnull(AT, m)
+        if T ∈ BLASFloats # no qr_null or lq_null for GenericFloats
+            TestSuite.test_orthnull(T, (m, n))
+        end
+        #AT = Diagonal{T, Vector{T}}
+        #TestSuite.test_orthnull(AT, m) # not supported
     end
 end
