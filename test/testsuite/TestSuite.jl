@@ -69,10 +69,14 @@ is_positive(alg::MatrixAlgebraKit.ROCSOLVER_HouseholderQR) = alg.positive
 is_positive(alg::MatrixAlgebraKit.LQViaTransposedQR) = is_positive(alg.qr_alg)
 is_pivoted(alg::MatrixAlgebraKit.LQViaTransposedQR) = is_pivoted(alg.qr_alg)
 
+include("ad_utils.jl")
+
 include("qr.jl")
 include("lq.jl")
 include("polar.jl")
 include("projections.jl")
 include("schur.jl")
+include("mooncake.jl")
+include("chainrules.jl")
 
 end
