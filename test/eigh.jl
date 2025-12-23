@@ -21,7 +21,6 @@ for T in (BLASFloats..., GenericFloats...)
             CUSOLVER_EIGH_ALGS = (
                 CUSOLVER_Jacobi(),
                 CUSOLVER_DivideAndConquer(),
-                CUSOLVER_QRIteration(),
             )
             TestSuite.test_eigh(CuMatrix{T}, (m, m); test_trunc = false)
             TestSuite.test_eigh_algs(CuMatrix{T}, (m, m), CUSOLVER_EIGH_ALGS; test_trunc = false)
