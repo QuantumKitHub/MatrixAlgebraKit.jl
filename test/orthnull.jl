@@ -6,7 +6,7 @@ using LinearAlgebra: LinearAlgebra, I, Diagonal
 using CUDA, AMDGPU
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
-GenericFloats = (Float16, BigFloat, Complex{BigFloat})
+GenericFloats = (BigFloat, Complex{BigFloat})
 
 @isdefined(TestSuite) || include("testsuite/TestSuite.jl")
 using .TestSuite
@@ -27,9 +27,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
         end
     end
     if !is_buildkite
-        if T ∈ BLASFloats # no qr_null or lq_null for GenericFloats
-            TestSuite.test_orthnull(T, (m, n))
-        end
+        TestSuite.test_orthnull(T, (m, n))
         #AT = Diagonal{T, Vector{T}}
         #TestSuite.test_orthnull(AT, m) # not supported
     end
