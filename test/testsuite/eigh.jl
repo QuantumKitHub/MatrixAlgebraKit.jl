@@ -72,7 +72,9 @@ function test_eigh_trunc(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "eigh_trunc! $summary_str" begin
-        A = project_hermitian!(instantiate_matrix(T, sz))
+        A = instantiate_matrix(T, sz)
+        A = A * A'
+        A = project_hermitian!(A)
         Ac = deepcopy(A)
         if !(T <: Diagonal)
 
@@ -148,7 +150,9 @@ function test_eigh_trunc_algs(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "eigh_trunc! algorithm $alg $summary_str" for alg in algs
-        A = project_hermitian!(instantiate_matrix(T, sz))
+        A = instantiate_matrix(T, sz)
+        A = A * A'
+        A = project_hermitian!(A)
         Ac = deepcopy(A)
 
         m = size(A, 1)
