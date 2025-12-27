@@ -13,9 +13,6 @@ if !is_buildkite
     @safetestset "Singular Value Decomposition" begin
         include("svd.jl")
     end
-    @safetestset "Hermitian Eigenvalue Decomposition" begin
-        include("eigh.jl")
-    end
     @safetestset "Generalized Eigenvalue Decomposition" begin
         include("gen_eig.jl")
     end
@@ -45,9 +42,6 @@ if !is_buildkite
     @safetestset "Singular Value Decomposition" begin
         include("genericlinearalgebra/svd.jl")
     end
-    @safetestset "Hermitian Eigenvalue Decomposition" begin
-        include("genericlinearalgebra/eigh.jl")
-    end
 end
 
 @safetestset "QR / LQ Decomposition" begin
@@ -66,14 +60,14 @@ end
 @safetestset "General Eigenvalue Decomposition" begin
     include("eig.jl")
 end
+@safetestset "Hermitian Eigenvalue Decomposition" begin
+    include("eigh.jl")
+end
 
 using CUDA
 if CUDA.functional()
     @safetestset "CUDA SVD" begin
         include("cuda/svd.jl")
-    end
-    @safetestset "CUDA Hermitian Eigenvalue Decomposition" begin
-        include("cuda/eigh.jl")
     end
     @safetestset "CUDA Image and Null Space" begin
         include("cuda/orthnull.jl")
@@ -84,9 +78,6 @@ using AMDGPU
 if AMDGPU.functional()
     @safetestset "AMDGPU SVD" begin
         include("amd/svd.jl")
-    end
-    @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
-        include("amd/eigh.jl")
     end
     @safetestset "AMDGPU Image and Null Space" begin
         include("amd/orthnull.jl")
