@@ -1,23 +1,23 @@
 name = "MatrixAlgebraKit"
 uuid = "6c742aac-3347-4629-af66-fc926824e5e4"
-authors = ["Jutho <jutho.haegeman@ugent.be> and contributors"]
 version = "0.6.0"
+authors = ["Jutho <jutho.haegeman@ugent.be> and contributors"]
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [weakdeps]
 AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
-ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
 GenericSchur = "c145ed77-6b09-5dd9-b285-bf645a82121e"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 
 [extensions]
-MatrixAlgebraKitChainRulesCoreExt = "ChainRulesCore"
 MatrixAlgebraKitAMDGPUExt = "AMDGPU"
 MatrixAlgebraKitCUDAExt = "CUDA"
+MatrixAlgebraKitChainRulesCoreExt = "ChainRulesCore"
 MatrixAlgebraKitGenericLinearAlgebraExt = "GenericLinearAlgebra"
 MatrixAlgebraKitGenericSchurExt = "GenericSchur"
 MatrixAlgebraKitMooncakeExt = "Mooncake"
@@ -25,12 +25,12 @@ MatrixAlgebraKitMooncakeExt = "Mooncake"
 [compat]
 AMDGPU = "2"
 Aqua = "0.6, 0.7, 0.8"
+CUDA = "5"
 ChainRulesCore = "1"
 ChainRulesTestUtils = "1"
-CUDA = "5"
 GenericLinearAlgebra = "0.3.19"
 GenericSchur = "0.5.6"
-JET = "0.9, 0.10"
+JET = "0.9, 0.10, 0.11"
 LinearAlgebra = "1"
 Mooncake = "0.4.183"
 Random = "1"
@@ -44,8 +44,8 @@ julia = "1.10"
 [extras]
 AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
-ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
