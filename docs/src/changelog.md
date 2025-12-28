@@ -14,14 +14,11 @@ When making changes to this project, please update the "Unreleased" section with
 - **Deprecated** for soon-to-be removed features.
 - **Removed** for now removed features.
 - **Fixed** for any bug fixes.
-- **Security** in case of vulnerabilities.
+- **Performance** for performance improvements.
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-[Unreleased]: https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.0...HEAD
-[0.6.0]: https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/releases/tag/v0.6.0
-
-## [Unreleased]
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.1...HEAD)
 
 ### Added
 
@@ -33,9 +30,29 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
-### Security
+## [0.6.1](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.0...v0.6.1) - 2025-12-28
 
-## [0.6.0] - 2025-11-14
+### Added
+
+- Support for null-space computation via Householder QR in the `GenericLinearAlgebra` extension ([#132](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/132)).
+- New truncated-eigensolver variants: `eig_trunc_no_error` and `eigh_trunc_no_error` ([#117](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/117)).
+- New truncated-singular value variant: `svd_trunc_no_error` to improve GPU synchronization and AD support ([#116](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/116)).
+- AD: ChainRules support for `svd_vals`, `eig_vals`, `eigh_vals`, and `diagonal` ([#107](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/107)).
+
+### Changed
+
+- Improved GPU compatibility for some wrapper arrays ([#100](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/100)).
+- Test infrastructure migrated to a common `TestSuite` to reduce duplication ([#119](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/119), [#130](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/130), [#131](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/131), [#127](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/127), [#125](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/125), [#123](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/123), [#124](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/124)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- `ishermitian` now correctly handles all-zero matrices ([#121](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/121)).
+
+## [0.6.0](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/releases/tag/v0.6.0) - 2025-11-14
 
 ### Added
 - New `project_isometric` function for projecting matrices onto isometric manifold ([#67](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/67))
