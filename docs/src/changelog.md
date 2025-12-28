@@ -14,14 +14,11 @@ When making changes to this project, please update the "Unreleased" section with
 - **Deprecated** for soon-to-be removed features.
 - **Removed** for now removed features.
 - **Fixed** for any bug fixes.
-- **Security** in case of vulnerabilities.
+- **Performance** for performance improvements.
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-[Unreleased]: https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.0...HEAD
-[0.6.0]: https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/releases/tag/v0.6.0
-
-## [Unreleased]
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.0...HEAD)
 
 ### Added
 
@@ -35,7 +32,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Security
 
-## [0.6.0] - 2025-11-14
+## [0.6.0](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/releases/tag/v0.6.0) - 2025-11-14
 
 ### Added
 - New `project_isometric` function for projecting matrices onto isometric manifold ([#67](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/67))
