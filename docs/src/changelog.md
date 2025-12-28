@@ -22,7 +22,15 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- Support for null-space computation via Householder QR in the `GenericLinearAlgebra` extension ([#132](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/132)).
+- New truncated-eigensolver variants: `eig_trunc_no_error` and `eigh_trunc_no_error` ([#117](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/117)).
+- New truncated-singular value variant: `svd_trunc_no_error` to improve GPU synchronization and Enzyme AD support ([#116](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/116)).
+- AD: ChainRules support for `svd_vals`, `eig_vals`, `eigh_vals`, and `diagonal` ([#107](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/107)).
+
 ### Changed
+
+- Improved GPU compatibility for some wrapper arrays ([#100](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/100)).
+- Test infrastructure migrated to a common `TestSuite` to reduce duplication ([#119](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/119), [#130](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/130), [#131](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/131), [#127](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/127), [#125](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/125), [#123](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/123), [#124](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/124)).
 
 ### Deprecated
 
@@ -30,7 +38,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
-### Security
+- `ishermitian` now correctly handles all-zero matrices ([#121](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/121)).
 
 ## [0.6.0](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/releases/tag/v0.6.0) - 2025-11-14
 
