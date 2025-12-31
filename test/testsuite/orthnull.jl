@@ -3,6 +3,20 @@ using LinearAlgebra
 
 include("../linearmap.jl")
 
+_left_orth_svd(x; kwargs...) = left_orth(x; alg = :svd, kwargs...)
+_left_orth_svd!(x, VC; kwargs...) = left_orth!(x, VC; alg = :svd, kwargs...)
+_left_orth_qr(x; kwargs...) = left_orth(x; alg = :qr, kwargs...)
+_left_orth_qr!(x, VC; kwargs...) = left_orth!(x, VC; alg = :qr, kwargs...)
+_left_orth_polar(x; kwargs...) = left_orth(x; alg = :polar, kwargs...)
+_left_orth_polar!(x, VC; kwargs...) = left_orth!(x, VC; alg = :polar, kwargs...)
+
+_right_orth_svd(x; kwargs...) = right_orth(x; alg = :svd, kwargs...)
+_right_orth_svd!(x, CVᴴ; kwargs...) = right_orth!(x, CVᴴ; alg = :svd, kwargs...)
+_right_orth_lq(x; kwargs...) = right_orth(x; alg = :lq, kwargs...)
+_right_orth_lq!(x, CVᴴ; kwargs...) = right_orth!(x, CVᴴ; alg = :lq, kwargs...)
+_right_orth_polar(x; kwargs...) = right_orth(x; alg = :polar, kwargs...)
+_right_orth_polar!(x, CVᴴ; kwargs...) = right_orth!(x, CVᴴ; alg = :polar, kwargs...)
+
 function test_orthnull(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "orthnull $summary_str" begin
@@ -34,9 +48,7 @@ function test_left_orthnull(
         @test collect(V) * collect(V)' + collect(N) * collect(N)' ≈ I
 
         M = LinearMap(A)
-        # broken
-        #VM, CM = @testinferred left_orth(M; alg = :svd)
-        VM, CM = left_orth(M; alg = :svd)
+        VM, CM = @testinferred _left_orth_svd(M)
         @test parent(VM) * parent(CM) ≈ A
 
         if m > n && (T <: Number  || T <: Diagonal{<:Number, <:Vector})
@@ -53,9 +65,7 @@ function test_left_orthnull(
         end
 
         # passing a kind and some kwargs
-        # broken
-        # V, C = @testinferred left_orth(A; alg = :qr, positive = true)
-        V, C = left_orth(A; alg = :qr, positive = true)
+        V, C = @testinferred _left_orth_qr(A; positive = true)
         N = @testinferred left_null(A; alg = :qr, positive = true)
         @test V isa typeof(A) && size(V) == (m, minmn)
         @test C isa typeof(A) && size(C) == (minmn, n)
@@ -117,9 +127,13 @@ function test_left_orthnull(
 
         for alg in (:qr, :polar, :svd) # explicit kind kwarg
             m < n && alg === :polar && continue
-            # broken
-            # V2, C2 = @testinferred left_orth!(copy!(Ac, A), (V, C); alg = alg)
-            V2, C2 = left_orth!(copy!(Ac, A), (V, C); alg = alg)
+            if alg == :svd
+                V2, C2 = @testinferred _left_orth_svd!(copy!(Ac, A), (V, C))
+            elseif alg == :qr
+                V2, C2 = @testinferred _left_orth_qr!(copy!(Ac, A), (V, C))
+            elseif alg == :polar
+                V2, C2 = @testinferred _left_orth_polar!(copy!(Ac, A), (V, C))
+            end
             @test V2 * C2 ≈ A
             @test isisometric(V2)
             if alg != :polar
@@ -132,9 +146,7 @@ function test_left_orthnull(
             # with kind and tol kwargs
             if alg == :svd
                 if (T <: Number  || T <: Diagonal{<:Number, <:Vector})
-                    # broken
-                    # V2, C2 = @testinferred left_orth!(copy!(Ac, A), (V, C); alg = alg, trunc = (; atol))
-                    V2, C2 = left_orth!(copy!(Ac, A), (V, C); alg = alg, trunc = (; atol))
+                    V2, C2 = @testinferred _left_orth_svd!(copy!(Ac, A), (V, C); trunc = (; atol))
                     N2 = @testinferred left_null!(copy!(Ac, A), N; alg, trunc = (; atol))
                     @test V2 * C2 ≈ A
                     @test isisometric(V2)
@@ -142,9 +154,7 @@ function test_left_orthnull(
                     @test isisometric(N2)
                     @test collect(V2) * collect(V2)' + collect(N2) * collect(N2)' ≈ I
 
-                    # broken
-                    # V2, C2 = @testinferred left_orth!(copy!(Ac, A), (V, C); alg = alg, trunc = (; rtol))
-                    V2, C2 = left_orth!(copy!(Ac, A), (V, C); alg = alg, trunc = (; rtol))
+                    V2, C2 = @testinferred _left_orth_svd!(copy!(Ac, A), (V, C); trunc = (; rtol))
                     N2 = @testinferred left_null!(copy!(Ac, A), N; alg, trunc = (; rtol))
                     @test V2 * C2 ≈ A
                     @test isisometric(V2)
@@ -186,9 +196,7 @@ function test_right_orthnull(
         @test collect(Vᴴ)' * collect(Vᴴ) + collect(Nᴴ)' * collect(Nᴴ) ≈ I
 
         M = LinearMap(A)
-        # broken
-        #CM, VMᴴ = @testinferred right_orth(M; alg = :svd)
-        CM, VMᴴ = right_orth(M; alg = :svd)
+        CM, VMᴴ = @testinferred _right_orth_svd(M)
         @test parent(CM) * parent(VMᴴ) ≈ A
 
         Ac = similar(A)
@@ -222,9 +230,13 @@ function test_right_orthnull(
 
         for alg in (:lq, :polar, :svd)
             n < m && alg == :polar && continue
-            # broken
-            #C2, Vᴴ2 = @testinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg = alg)
-            C2, Vᴴ2 = right_orth!(copy!(Ac, A), (C, Vᴴ); alg = alg)
+            if alg == :lq
+                C2, Vᴴ2 = @testinferred _right_orth_lq!(copy!(Ac, A), (C, Vᴴ))
+            elseif alg == :polar
+                C2, Vᴴ2 = @testinferred _right_orth_polar!(copy!(Ac, A), (C, Vᴴ))
+            elseif alg == :svd
+                C2, Vᴴ2 = @testinferred _right_orth_svd!(copy!(Ac, A), (C, Vᴴ))
+            end
             @test C2 * Vᴴ2 ≈ A
             @test isisometric(Vᴴ2; side = :right)
             if alg != :polar
@@ -236,9 +248,7 @@ function test_right_orthnull(
 
             if alg == :svd
                 if (T <: Number  || T <: Diagonal{<:Number, <:Vector})
-                    # broken
-                    #C2, Vᴴ2 = @testinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg = alg, trunc = (; atol))
-                    C2, Vᴴ2 = right_orth!(copy!(Ac, A), (C, Vᴴ); alg = alg, trunc = (; atol))
+                    C2, Vᴴ2 = @testinferred _right_orth_svd!(copy!(Ac, A), (C, Vᴴ); trunc = (; atol))
                     Nᴴ2 = @testinferred right_null!(copy!(Ac, A), Nᴴ; alg = alg, trunc = (; atol))
                     @test C2 * Vᴴ2 ≈ A
                     @test isisometric(Vᴴ2; side = :right)
@@ -246,9 +256,7 @@ function test_right_orthnull(
                     @test isisometric(Nᴴ2; side = :right)
                     @test collect(Vᴴ2)' * collect(Vᴴ2) + collect(Nᴴ2)' * collect(Nᴴ2) ≈ I
 
-                    # broken
-                    #C2, Vᴴ2 = @testinferred right_orth!(copy!(Ac, A), (C, Vᴴ); alg = alg, trunc = (; rtol))
-                    C2, Vᴴ2 = right_orth!(copy!(Ac, A), (C, Vᴴ); alg = alg, trunc = (; rtol))
+                    C2, Vᴴ2 = @testinferred _right_orth_svd!(copy!(Ac, A), (C, Vᴴ); trunc = (; rtol))
                     Nᴴ2 = @testinferred right_null!(copy!(Ac, A), Nᴴ; alg = alg, trunc = (; rtol))
                     @test C2 * Vᴴ2 ≈ A
                     @test isisometric(Vᴴ2; side = :right)
