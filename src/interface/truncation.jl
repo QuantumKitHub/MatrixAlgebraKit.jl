@@ -135,7 +135,7 @@ truncfilter(f) = TruncationByFilter(f)
 """
     TruncationByValue(atol::Real, rtol::Real, p::Real, by, keep_below::Bool=false)
 
-Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p)`.
+Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p))`.
 If `keep_below = true`, discard these values instead.
 See also [`trunctol`](@ref)
 """
@@ -153,7 +153,7 @@ end
 """
     trunctol(; atol::Real=0, rtol::Real=0, p::Real=2, by=abs, keep_below::Bool=false)
 
-Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p)`.
+Truncation strategy to keep the values that satisfy `by(val) > max(atol, rtol * norm(values, p))`.
 If `keep_below = true`, discard these values instead.
 """
 function trunctol(; atol::Real = 0, rtol::Real = 0, p::Real = 2, by = abs, keep_below::Bool = false)
