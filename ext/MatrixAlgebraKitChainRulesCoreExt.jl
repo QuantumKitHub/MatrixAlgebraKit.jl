@@ -95,6 +95,9 @@ for eig in (:eig, :eigh)
     eig_t! = Symbol(eig, "_trunc!")
     eig_t_pb = Symbol(eig, "_trunc_pullback")
     _make_eig_t_pb = Symbol("_make_", eig_t_pb)
+    eig_t_ne! = Symbol(eig, "_trunc_no_error!")
+    eig_t_ne_pb = Symbol(eig, "_trunc_no_error_pullback")
+    _make_eig_t_ne_pb = Symbol("_make_", eig_t_ne_pb)
     eig_v = Symbol(eig, "_vals")
     eig_v! = Symbol(eig_v, "!")
     eig_v_pb = Symbol(eig_v, "_pullback")
@@ -135,6 +138,24 @@ for eig in (:eig, :eigh)
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return $eig_t_pb
+        end
+        function ChainRulesCore.rrule(::typeof($eig_t_ne!), A, DV, alg::TruncatedAlgorithm)
+            Ac = copy_input($eig_f, A)
+            DV = $(eig_f!)(Ac, DV, alg.alg)
+            DV′, ind = MatrixAlgebraKit.truncate($eig_t!, DV, alg.trunc)
+            return DV′, $(_make_eig_t_ne_pb)(A, DV, ind)
+        end
+        function $(_make_eig_t_ne_pb)(A, DV, ind)
+            function $eig_t_ne_pb(ΔDV)
+                ΔA = zero(A)
+                ΔD, ΔV = ΔDV
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, unthunk.((ΔD, ΔV)), ind)
+                return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+            end
+            function $eig_t_ne_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
+                return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+            end
+            return $eig_t_ne_pb
         end
         function ChainRulesCore.rrule(::typeof($eig_v!), A, D, alg)
             DV = $eig_f(A, alg)

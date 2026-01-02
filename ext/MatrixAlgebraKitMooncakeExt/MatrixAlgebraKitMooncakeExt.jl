@@ -3,7 +3,7 @@ module MatrixAlgebraKitMooncakeExt
 using Mooncake
 using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
 using MatrixAlgebraKit
-using MatrixAlgebraKit: inv_safe, diagview, copy_input
+using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!
@@ -25,6 +25,17 @@ function Mooncake.rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDu
     end
     return CoDual(Ac, dAc), copy_input_pb
 end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(initialize_output), Any, Any, Any}
+function Mooncake.rrule!!(::CoDual{typeof(initialize_output)}, f_df::CoDual, A_dA::CoDual, alg_dalg::CoDual)
+    output = initialize_output(Mooncake.primal(f_df), Mooncake.primal(A_dA), Mooncake.primal(alg_dalg))
+    doutput = Mooncake.zero_tangent(output)
+    function initialize_output_pb(::NoRData)
+        return NoRData(), NoRData(), NoRData(), NoRData()
+    end
+    return CoDual(output, doutput), initialize_output_pb
+end
+
 
 # two-argument in-place factorizations like LQ, QR, EIG
 for (f!, f, pb, adj) in (
