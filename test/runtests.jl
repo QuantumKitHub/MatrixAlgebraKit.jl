@@ -19,6 +19,11 @@ if !is_buildkite
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
+    if VERSION < v"1.12.0" # reconsider when Enzyme works on 1.12
+        @safetestset "Enzyme" begin
+            include("enzyme.jl")
+        end
+    end
     @safetestset "Mooncake" begin
         include("mooncake.jl")
     end
