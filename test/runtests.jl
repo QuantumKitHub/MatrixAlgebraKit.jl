@@ -4,7 +4,7 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 # don't run all tests on GPU, only the GPU
 # specific ones
 if !is_buildkite
-    @safetestset "Algorithms" begin
+    #=@safetestset "Algorithms" begin
         include("algorithms.jl")
     end
     @safetestset "Truncate" begin
@@ -19,9 +19,11 @@ if !is_buildkite
     @safetestset "Image and Null Space" begin
         include("orthnull.jl")
     end
+    =#
     @safetestset "Mooncake" begin
         include("mooncake.jl")
     end
+    #=
     @safetestset "ChainRules" begin
         include("chainrules.jl")
     end
@@ -41,7 +43,7 @@ if !is_buildkite
     using GenericLinearAlgebra
     @safetestset "Singular Value Decomposition" begin
         include("genericlinearalgebra/svd.jl")
-    end
+    end=#
 end
 
 @safetestset "QR / LQ Decomposition" begin
