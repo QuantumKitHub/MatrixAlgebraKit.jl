@@ -2,6 +2,7 @@ module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, one!, default_fixgauge
+using MatrixAlgebraKit: left_orth_alg
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
@@ -132,5 +133,7 @@ end
 function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}}}
     return MatrixAlgebraKit.LQViaTransposedQR(GLA_HouseholderQR(; kwargs...))
 end
+
+MatrixAlgebraKit.left_orth_alg(alg::GLA_HouseholderQR) = MatrixAlgebraKit.LeftOrthViaQR(alg)
 
 end
