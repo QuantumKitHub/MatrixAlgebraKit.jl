@@ -78,7 +78,7 @@ function _mul_herm!(C, A)
     project_hermitian!(C)
     return C
 end
-function _mul_herm!(C::YALAPACK.BlasMat{T}, A::YALAPACK.BlasMat{T}) where {T}
+function _mul_herm!(C::YALAPACK.BlasMat{T}, A::YALAPACK.BlasMat{T}) where {T <: YALAPACK.BlasFloat}
     mul!(C, A, A')
     return C
 end
