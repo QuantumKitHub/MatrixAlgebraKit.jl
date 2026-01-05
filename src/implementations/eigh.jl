@@ -43,7 +43,7 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalA
     @assert isdiag(A)
     m = size(A, 1)
     D, V = DV
-    @assert D isa Diagonal && V isa Diagonal
+    @assert D isa Diagonal
     @check_size(D, (m, m))
     @check_scalar(D, A, real)
     @check_size(V, (m, m))
@@ -79,7 +79,7 @@ function initialize_output(::Union{typeof(eigh_trunc!), typeof(eigh_trunc_no_err
 end
 
 function initialize_output(::typeof(eigh_full!), A::Diagonal, ::DiagonalAlgorithm)
-    return eltype(A) <: Real ? A : similar(A, real(eltype(A))), similar(A)
+    return eltype(A) <: Real ? A : similar(A, real(eltype(A))), similar(A, size(A)...)
 end
 function initialize_output(::typeof(eigh_vals!), A::Diagonal, ::DiagonalAlgorithm)
     return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
@@ -146,15 +146,26 @@ end
 function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
-    D === A || (diagview(D) .= real.(diagview(A)))
+    I = sortperm(real.(diagview(A)))
+    if D === A
+        sort!(diagview(A))
+    else
+        diagview(D) .= real.(diagview(A))[I]
+    end
     one!(V)
+    Base.permutecols!!(V, I)
     return D, V
 end
 
 function eigh_vals!(A::Diagonal, D, alg::DiagonalAlgorithm)
     check_input(eigh_vals!, A, D, alg)
     Ad = diagview(A)
-    D === Ad || (D .= real.(Ad))
+    if D === Ad
+        sort!(Ad)
+    else
+        I = sortperm(real.(Ad))
+        D .= real.(Ad[I])
+    end
     return D
 end
 
