@@ -96,14 +96,8 @@ function _truncerr_impl(values::AbstractVector, I; atol::Real = 0, rtol::Real = 
     # fast path to avoid checking all values
     ϵᵖ ≥ Nᵖ && return Base.OneTo(0)
 
-    truncerrᵖ = zero(real(eltype(values)))
-    rank = length(values)
-    for i in reverse(I)
-        truncerrᵖ += by(values[i])
-        truncerrᵖ ≥ ϵᵖ && break
-        rank -= 1
-    end
-
+    truncerrᵖ_array = cumsum(map(by, values[reverse(I)]))
+    rank = length(values) - (findfirst(truncerrᵖ -> truncerrᵖ ≥ ϵᵖ, truncerrᵖ_array) - 1)
     return Base.OneTo(rank)
 end
 
