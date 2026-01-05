@@ -53,7 +53,7 @@ function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
     if !isempty(P)
         S .= sqrt.(S)
         SsqrtVᴴ = lmul!(S, Vᴴ)
-        P = _mul_herm!(P, SsqrtVᴴ)
+        P = _mul_herm!(P, SsqrtVᴴ')
     end
     return (W, P)
 end
@@ -65,7 +65,7 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarViaSVD)
     if !isempty(P)
         S .= sqrt.(S)
         USsqrt = rmul!(U, S)
-        P = _mul_herm!(P, USsqrt')
+        P = _mul_herm!(P, USsqrt)
     end
     return (P, Wᴴ)
 end
@@ -74,12 +74,12 @@ end
 # For BLAS calls that dispatch to `syrk` or `herk` this works automatically
 # for GPU this currently does not seem to be guaranteed so we manually project
 function _mul_herm!(C, A)
-    mul!(C, A', A)
+    mul!(C, A, A')
     project_hermitian!(C)
     return C
 end
 function _mul_herm!(C::YALAPACK.BlasMat{T}, A::YALAPACK.BlasMat{T}) where {T}
-    mul!(C, A', A)
+    mul!(C, A, A')
     return C
 end
 
