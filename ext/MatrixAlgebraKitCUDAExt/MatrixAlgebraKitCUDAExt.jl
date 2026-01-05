@@ -183,4 +183,12 @@ function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
     return A, B
 end
 
+# avoids calling the BlasMat specialization that assumes syrk! or herk! is called
+# TODO: remove once syrk! or herk! is defined
+function MatrixAlgebraKit._mul_herm!(C::StridedCuMatrix{T}, A::StridedCuMatrix{T}) where {T <: BlasFloat}
+    mul!(C, A, A')
+    project_hermitian!(C)
+    return C
+end
+
 end

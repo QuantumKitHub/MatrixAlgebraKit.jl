@@ -30,6 +30,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- Polar decompositions return exact hermitian factors ([#143](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/143)
+
 ## [0.6.1](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.0...v0.6.1) - 2025-12-28
 
 ### Added

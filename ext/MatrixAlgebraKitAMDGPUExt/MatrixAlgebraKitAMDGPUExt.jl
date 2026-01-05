@@ -198,4 +198,12 @@ function MatrixAlgebraKit.truncate(
     return Vᴴ[ind, :], ind
 end
 
+# avoids calling the BlasMat specialization that assumes syrk! or herk! is called
+# TODO: remove once syrk! or herk! is defined
+function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix{T}) where {T <: BlasFloat}
+    mul!(C, A, A')
+    project_hermitian!(C)
+    return C
+end
+
 end
