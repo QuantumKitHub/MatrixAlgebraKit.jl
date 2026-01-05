@@ -49,7 +49,7 @@ findtruncated(values::AbstractVector, ::NoTruncation) = Colon()
 
 function findtruncated(values::AbstractVector, strategy::TruncationByOrder)
     howmany = min(strategy.howmany, length(values))
-    return partialsortperm(values, 1:howmany; strategy.by, strategy.rev)
+    return sortperm(values; strategy.by, strategy.rev)[1:howmany]
 end
 function findtruncated_svd(values::AbstractVector, strategy::TruncationByOrder)
     strategy.by === abs || return findtruncated(values, strategy)
