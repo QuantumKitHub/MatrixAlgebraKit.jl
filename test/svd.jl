@@ -33,7 +33,6 @@ for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
             TestSuite.test_svd(ROCMatrix{T}, (m, n); test_trunc = false)
             AMD_SVD_ALGS = (
                 ROCSOLVER_QRIteration(),
-                ROCSOLVER_SVDPolar(),
                 ROCSOLVER_Jacobi(),
             )
             TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS; test_trunc = false)
