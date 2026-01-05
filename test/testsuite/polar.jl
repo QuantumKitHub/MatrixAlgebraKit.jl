@@ -25,16 +25,14 @@ function test_left_polar(
             @test eltype(P) == eltype(A) && size(P) == (size(A, 2), size(A, 2))
             @test W * P ≈ A
             @test isisometric(W)
-            @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P))
-            @test isposdef(project_hermitian!(P))
+            @test isposdef(P)
 
             W2, P2 = @testinferred left_polar!(Ac, (W, P), alg)
             @test W2 === W
             @test P2 === P
             @test W * P ≈ A
             @test isisometric(W)
-            @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P))
-            @test isposdef(project_hermitian!(P))
+            @test isposdef(P)
 
             noP = similar(P, (0, 0))
             W2, P2 = @testinferred left_polar!(copy!(Ac, A), (W, noP), alg)
@@ -62,16 +60,14 @@ function test_right_polar(
         @test eltype(P) == eltype(A) && size(P) == (size(A, 1), size(A, 1))
         @test P * Wᴴ ≈ A
         @test isisometric(Wᴴ; side = :right)
-        @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P))
-        @test isposdef(project_hermitian!(P))
+        @test isposdef(P)
 
         P2, Wᴴ2 = @testinferred right_polar!(Ac, (P, Wᴴ), alg)
         @test P2 === P
         @test Wᴴ2 === Wᴴ
         @test P * Wᴴ ≈ A
         @test isisometric(Wᴴ; side = :right)
-        @test ishermitian(P; rtol = MatrixAlgebraKit.defaulttol(P))
-        @test isposdef(project_hermitian!(P))
+        @test isposdef(P)
 
         noP = similar(P, (0, 0))
         P2, Wᴴ2 = @testinferred right_polar!(copy!(Ac, A), (noP, Wᴴ), alg)
