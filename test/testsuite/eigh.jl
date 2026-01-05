@@ -76,50 +76,49 @@ function test_eigh_trunc(
         A = A * A'
         A = project_hermitian!(A)
         Ac = deepcopy(A)
-        if !(T <: Diagonal)
 
-            m = size(A, 1)
-            D₀ = reverse(eigh_vals(A))
-            r = m - 2
-            s = 1 + sqrt(eps(real(eltype(T))))
-            atol = sqrt(eps(real(eltype(T))))
-            # truncrank
-            D1, V1, ϵ1 = @testinferred eigh_trunc(A; trunc = truncrank(r))
-            @test length(diagview(D1)) == r
-            @test isisometric(V1)
-            @test A * V1 ≈ V1 * D1
-            @test opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
-            @test ϵ1 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        m = size(A, 1)
+        D₀ = collect(reverse(eigh_vals(A)))
+        r = m - 2
+        s = 1 + sqrt(eps(real(eltype(T))))
+        atol = sqrt(eps(real(eltype(T))))
+        # truncrank
+        D1, V1, ϵ1 = @testinferred eigh_trunc(A; trunc = truncrank(r))
+        @test length(diagview(D1)) == r
+        @test isisometric(V1)
+        @test A * V1 ≈ V1 * D1
+        @test opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
+        @test ϵ1 ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
-            # trunctol
-            trunc = trunctol(; atol = s * D₀[r + 1])
-            D2, V2, ϵ2 = @testinferred eigh_trunc(A; trunc)
-            @test length(diagview(D2)) == r
-            @test isisometric(V2)
-            @test A * V2 ≈ V2 * D2
-            @test ϵ2 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        # trunctol
+        trunc = trunctol(; atol = s * D₀[r + 1])
+        D2, V2, ϵ2 = @testinferred eigh_trunc(A; trunc)
+        @test length(diagview(D2)) == r
+        @test isisometric(V2)
+        @test A * V2 ≈ V2 * D2
+        @test ϵ2 ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
-            #truncerror
-            s = 1 - sqrt(eps(real(eltype(T))))
-            trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
-            D3, V3, ϵ3 = @testinferred eigh_trunc(A; trunc)
-            @test length(diagview(D3)) == r
-            @test A * V3 ≈ V3 * D3
-            @test ϵ3 ≈ norm(view(D₀, (r + 1):m)) atol = atol
+        #truncerror
+        s = 1 - sqrt(eps(real(eltype(T))))
+        trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
+        D3, V3, ϵ3 = @testinferred eigh_trunc(A; trunc)
+        @test length(diagview(D3)) == r
+        @test A * V3 ≈ V3 * D3
+        @test ϵ3 ≈ norm(view(D₀, (r + 1):m)) atol = atol
 
-            s = 1 - sqrt(eps(real(eltype(T))))
-            trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
-            D4, V4 = @testinferred eigh_trunc_no_error(A; trunc)
-            @test length(diagview(D4)) == r
-            @test A * V4 ≈ V4 * D4
+        s = 1 - sqrt(eps(real(eltype(T))))
+        trunc = truncerror(; atol = s * norm(@view(D₀[r:end]), 1), p = 1)
+        D4, V4 = @testinferred eigh_trunc_no_error(A; trunc)
+        @test length(diagview(D4)) == r
+        @test A * V4 ≈ V4 * D4
 
-            # test for same subspace
-            @test V1 * (V1' * V2) ≈ V2
-            @test V2 * (V2' * V1) ≈ V1
-            @test V1 * (V1' * V3) ≈ V3
-            @test V3 * (V3' * V1) ≈ V1
-            @test V4 * (V4' * V1) ≈ V1
-        end
+        # test for same subspace
+        @test V1 * (V1' * V2) ≈ V2
+        @test V2 * (V2' * V1) ≈ V1
+        @test V1 * (V1' * V3) ≈ V3
+        @test V3 * (V3' * V1) ≈ V1
+        @test V4 * (V4' * V1) ≈ V1
+
         @testset "specify truncation algorithm" begin
             atol = sqrt(eps(real(eltype(T))))
             m4 = 4
@@ -156,7 +155,7 @@ function test_eigh_trunc_algs(
         Ac = deepcopy(A)
 
         m = size(A, 1)
-        D₀ = reverse(eigh_vals(A))
+        D₀ = collect(reverse(eigh_vals(A)))
         r = m - 2
         s = 1 + sqrt(eps(real(eltype(T))))
         # truncrank

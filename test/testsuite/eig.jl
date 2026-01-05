@@ -78,7 +78,7 @@ function test_eig_trunc(
         Ac = deepcopy(A)
         Tc = complex(eltype(T))
         # eigenvalues are sorted by ascending real component...
-        D₀ = sort!(eig_vals(A); by = abs, rev = true)
+        D₀ = collect(sort!(eig_vals(A); by = abs, rev = true))
         m = size(A, 1)
         rmin = findfirst(i -> abs(D₀[end - i]) != abs(D₀[end - i - 1]), 1:(m - 2))
         r = length(D₀) - rmin
@@ -150,7 +150,7 @@ function test_eig_trunc_algs(
         Ac = deepcopy(A)
         Tc = complex(eltype(T))
         # eigenvalues are sorted by ascending real component...
-        D₀ = sort!(eig_vals(A; alg); by = abs, rev = true)
+        D₀ = collect(sort!(eig_vals(A; alg); by = abs, rev = true))
         m = size(A, 1)
         rmin = findfirst(i -> abs(D₀[end - i]) != abs(D₀[end - i - 1]), 1:(m - 2))
         r = length(D₀) - rmin
