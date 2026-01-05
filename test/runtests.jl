@@ -10,9 +10,6 @@ if !is_buildkite
     @safetestset "Truncate" begin
         include("truncate.jl")
     end
-    @safetestset "Singular Value Decomposition" begin
-        include("svd.jl")
-    end
     @safetestset "Generalized Eigenvalue Decomposition" begin
         include("gen_eig.jl")
     end
@@ -33,11 +30,6 @@ if !is_buildkite
             using JET
             JET.test_package(MatrixAlgebraKit; target_defined_modules = true)
         end
-    end
-
-    using GenericLinearAlgebra
-    @safetestset "Singular Value Decomposition" begin
-        include("genericlinearalgebra/svd.jl")
     end
 end
 
@@ -63,17 +55,6 @@ end
 @safetestset "Image and Null Space" begin
     include("orthnull.jl")
 end
-
-using CUDA
-if CUDA.functional()
-    @safetestset "CUDA SVD" begin
-        include("cuda/svd.jl")
-    end
-end
-
-using AMDGPU
-if AMDGPU.functional()
-    @safetestset "AMDGPU SVD" begin
-        include("amd/svd.jl")
-    end
+@safetestset "Singular Value Decomposition" begin
+    include("svd.jl")
 end

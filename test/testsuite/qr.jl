@@ -1,20 +1,20 @@
 using TestExtras
 
-function test_qr(T::Type, sz; test_null = true, kwargs...)
+function test_qr(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "qr $summary_str" begin
         test_qr_compact(T, sz; kwargs...)
         test_qr_full(T, sz; kwargs...)
-        test_null && test_qr_null(T, sz; kwargs...)
+        test_qr_null(T, sz; kwargs...)
     end
 end
 
-function test_qr_algs(T::Type, sz, algs; test_null = true, kwargs...)
+function test_qr_algs(T::Type, sz, algs; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "qr algorithms $summary_str" begin
         test_qr_compact_algs(T, sz, algs; kwargs...)
         test_qr_full_algs(T, sz, algs; kwargs...)
-        test_null && test_qr_null_algs(T, sz, algs; kwargs...)
+        test_qr_null_algs(T, sz, algs; kwargs...)
     end
 end
 

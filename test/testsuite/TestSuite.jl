@@ -84,5 +84,6 @@ include("schur.jl")
 include("eig.jl")
 include("eigh.jl")
 include("orthnull.jl")
+include("svd.jl")
 
 end
