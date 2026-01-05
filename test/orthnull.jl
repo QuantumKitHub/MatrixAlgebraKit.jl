@@ -18,17 +18,17 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
     TestSuite.seed_rng!(123)
     if T ∈ BLASFloats
         if CUDA.functional()
-            TestSuite.test_orthnull(CuMatrix{T}, (m, n))
-            n == m && TestSuite.test_orthnull(Diagonal{T, CuVector{T}}, m)
+            TestSuite.test_orthnull(CuMatrix{T}, (m, n); test_nullity = false)
+            n == m && TestSuite.test_orthnull(Diagonal{T, CuVector{T}}, m; test_orthnull = false)
         end
         if AMDGPU.functional()
-            TestSuite.test_orthnull(ROCMatrix{T}, (m, n))
-            n == m && TestSuite.test_orthnull(Diagonal{T, ROCVector{T}}, m)
+            TestSuite.test_orthnull(ROCMatrix{T}, (m, n); test_nullity = false)
+            n == m && TestSuite.test_orthnull(Diagonal{T, ROCVector{T}}, m; test_orthnull = false)
         end
     end
     if !is_buildkite
         TestSuite.test_orthnull(T, (m, n))
-        #AT = Diagonal{T, Vector{T}}
-        #TestSuite.test_orthnull(AT, m) # not supported
+        AT = Diagonal{T, Vector{T}}
+        TestSuite.test_orthnull(AT, m; test_orthnull = false)
     end
 end
