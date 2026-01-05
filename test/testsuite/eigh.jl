@@ -3,19 +3,19 @@ using GenericLinearAlgebra
 using MatrixAlgebraKit: TruncatedAlgorithm
 using LinearAlgebra: I, opnorm
 
-function test_eigh(T::Type, sz; test_trunc = true, kwargs...)
+function test_eigh(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eigh $summary_str" begin
         test_eigh_full(T, sz; kwargs...)
-        test_trunc && test_eigh_trunc(T, sz; kwargs...)
+        test_eigh_trunc(T, sz; kwargs...)
     end
 end
 
-function test_eigh_algs(T::Type, sz, algs; test_trunc = true, kwargs...)
+function test_eigh_algs(T::Type, sz, algs; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eigh algorithms $summary_str" begin
         test_eigh_full_algs(T, sz, algs; kwargs...)
-        test_trunc && test_eigh_trunc_algs(T, sz, algs; kwargs...)
+        test_eigh_trunc_algs(T, sz, algs; kwargs...)
     end
 end
 
