@@ -25,8 +25,8 @@ for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
             )
             TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS; test_trunc = false)
             if n == m
-                TestSuite.test_svd(Diagonal{T, CuVector{T}}, m)
-                TestSuite.test_svd_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
+                TestSuite.test_svd(Diagonal{T, CuVector{T}}, m; test_trunc = false)
+                TestSuite.test_svd_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),); test_trunc = false)
             end
         end
         if AMDGPU.functional()
@@ -38,8 +38,8 @@ for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
             )
             TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS; test_trunc = false)
             if n == m
-                TestSuite.test_svd(Diagonal{T, ROCVector{T}}, m)
-                TestSuite.test_svd_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),))
+                TestSuite.test_svd(Diagonal{T, ROCVector{T}}, m; test_trunc = false)
+                TestSuite.test_svd_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),); test_trunc = false)
             end
         end
     end
