@@ -51,9 +51,9 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             )
             TestSuite.test_lq_algs(T, (m, n), LAPACK_LQ_ALGS)
         elseif T ∈ GenericFloats
-            TestSuite.test_lq(T, (m, n); test_null = true, test_pivoted = false, test_blocksize = false)
+            TestSuite.test_lq(T, (m, n); test_pivoted = false, test_blocksize = false)
             GLA_LQ_ALGS = (LQViaTransposedQR(GLA_HouseholderQR()),)
-            TestSuite.test_lq_algs(T, (m, n), GLA_LQ_ALGS; test_null = true)
+            TestSuite.test_lq_algs(T, (m, n), GLA_LQ_ALGS)
         end
         if m == n
             AT = Diagonal{T, Vector{T}}
