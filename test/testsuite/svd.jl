@@ -106,7 +106,7 @@ function test_svd_full(
         m, n = size(A)
         minmn = min(m, n)
 
-        U, S, Vᴴ = svd_full(A)
+        U, S, Vᴴ = @testinferred svd_full(A)
         @test size(U) == (m, m)
         @test eltype(S) == real(eltype(T)) && size(S) == (m, n)
         @test size(Vᴴ) == (n, n)
