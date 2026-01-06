@@ -82,7 +82,6 @@ function test_svd_compact_algs(
         @test isisometric(Vᴴ; side = :right)
         @test isposdef(S)
 
-        Sc = similar(A, real(eltype(T)), min(m, n))
         U2, S2, V2ᴴ = @testinferred svd_compact!(Ac, (U, S, Vᴴ); alg)
         @test U2 * S2 * V2ᴴ ≈ A
         @test isisometric(U2)
