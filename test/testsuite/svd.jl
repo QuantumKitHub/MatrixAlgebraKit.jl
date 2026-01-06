@@ -2,21 +2,21 @@ using TestExtras
 using GenericLinearAlgebra
 using LinearAlgebra: opnorm
 
-function test_svd(T::Type, sz; test_trunc = true, kwargs...)
+function test_svd(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "svd $summary_str" begin
         test_svd_compact(T, sz; kwargs...)
         test_svd_full(T, sz; kwargs...)
-        test_trunc && test_svd_trunc(T, sz; kwargs...)
+        test_svd_trunc(T, sz; kwargs...)
     end
 end
 
-function test_svd_algs(T::Type, sz, algs; test_trunc = true, kwargs...)
+function test_svd_algs(T::Type, sz, algs; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "svd algorithms $summary_str" begin
         test_svd_compact_algs(T, sz, algs; kwargs...)
         test_svd_full_algs(T, sz, algs; kwargs...)
-        test_trunc && test_svd_trunc_algs(T, sz, algs; kwargs...)
+        test_svd_trunc_algs(T, sz, algs; kwargs...)
     end
 end
 
