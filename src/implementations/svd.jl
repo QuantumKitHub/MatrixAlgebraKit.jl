@@ -131,6 +131,16 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, view(S, 1:minmn, 1), U, Vᴴ)
+    elseif alg isa SafeSVD
+        isempty(alg_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for SafeSVD"))
+        # extra copy to avoid modifying input if it goes wrong
+        A′ = copy(A)
+        try
+            YALAPACK.gesdd!(A′, view(S, 1:minmn, 1), U, Vᴴ)
+        catch
+            YALAPACK.gesvd!(A, view(S, 1:minmn, 1), U, Vᴴ)
+        end
     elseif alg isa LAPACK_Bisection
         throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
     elseif alg isa LAPACK_Jacobi
