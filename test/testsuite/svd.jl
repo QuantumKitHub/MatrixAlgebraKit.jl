@@ -121,7 +121,7 @@ function test_svd_full(
         @test all(isposdef, diagview(S2))
 
         Sc = similar(A, real(eltype(T)), min(m, n))
-        Sc2 = svd_vals!(copy!(Ac, A), Sc)
+        Sc2 = @testinferred svd_vals!(copy!(Ac, A), Sc)
         @test collect(diagview(S)) ≈ collect(Sc2)
     end
 end
