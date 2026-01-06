@@ -38,7 +38,7 @@ module LinearMaps
     # Using AbstractAlgorithm here would be ambiguous since neither A-type nor alg-type would
     # be strictly more specific.
     for f! in (:svd_compact!, :svd_full!)
-        for Alg in (:SafeDivideAndConquer, :DivideAndConquer, :QRIteration, :Bisection, :Jacobi, :SVDViaPolar)
+        for Alg in (:SafeDivideAndConquer, :DivideAndConquer, :QRIteration, :Bisection, :Jacobi, :SVDViaPolar, :DiagonalAlgorithm)
             @eval MAK.$f!(A::LinearMap, USVᴴ, alg::MAK.$Alg) =
                 LinearMap.(MAK.$f!(parent(A), parent.(USVᴴ), alg))
         end
