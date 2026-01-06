@@ -31,12 +31,7 @@ function test_svd_compact(
         Ac = deepcopy(A)
         m, n = size(A)
         minmn = min(m, n)
-        if VERSION < v"1.11"
-            # This is type unstable on older versions of Julia.
-            U, S, Vᴴ = svd_compact(A)
-        else
-            U, S, Vᴴ = @testinferred svd_compact(A)
-        end
+        U, S, Vᴴ = @testinferred svd_compact(A)
         @test size(U) == (m, minmn)
         @test S isa Diagonal{real(eltype(T))} && size(S) == (minmn, minmn)
         @test size(Vᴴ) == (minmn, n)
@@ -68,12 +63,7 @@ function test_svd_compact_algs(
         Ac = deepcopy(A)
         m, n = size(A)
         minmn = min(m, n)
-        if VERSION < v"1.11"
-            # This is type unstable on older versions of Julia.
-            U, S, Vᴴ = svd_compact(A; alg)
-        else
-            U, S, Vᴴ = @testinferred svd_compact(A; alg)
-        end
+        U, S, Vᴴ = @testinferred svd_compact(A; alg)
         @test size(U) == (m, minmn)
         @test S isa Diagonal{real(eltype(T))} && size(S) == (minmn, minmn)
         @test size(Vᴴ) == (minmn, n)
@@ -202,12 +192,12 @@ function test_svd_trunc(
 
         @testset "mix maxrank and tol" begin
             m4 = 4
-            U = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
+            U = instantiate_unitary(T, A, m4)
             Sdiag = similar(A, real(eltype(T)), m4)
             copyto!(Sdiag, [0.9, 0.3, 0.1, 0.01])
             S = Diagonal(Sdiag)
-            Vᴴ = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
-            A = T <: Diagonal ? S : U * S * Vᴴ
+            Vᴴ = instantiate_unitary(T, A, m4)
+            A = U * S * Vᴴ
             for trunc_fun in (
                     (rtol, maxrank) -> (; rtol, maxrank),
                     (rtol, maxrank) -> truncrank(maxrank) & trunctol(; rtol),
@@ -224,12 +214,12 @@ function test_svd_trunc(
         @testset "specify truncation algorithm" begin
             atol = sqrt(eps(real(eltype(T))))
             m4 = 4
-            U = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
+            U = instantiate_unitary(T, A, m4)
             Sdiag = similar(A, real(eltype(T)), m4)
-            copyto!(Sdiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
+            copyto!(Sdiag, [0.9, 0.3, 0.1, 0.01])
+            Vᴴ = instantiate_unitary(T, A, m4)
             S = Diagonal(Sdiag)
-            Vᴴ = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
-            A = T <: Diagonal ? S : U * S * Vᴴ
+            A = U * S * Vᴴ
             alg = TruncatedAlgorithm(MatrixAlgebraKit.default_svd_algorithm(A), trunctol(; atol = 0.2))
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; alg)
             @test diagview(S2) ≈ diagview(S)[1:2]
@@ -283,13 +273,12 @@ function test_svd_trunc_algs(
 
         @testset "mix maxrank and tol" begin
             m4 = 4
-            U = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
+            U = instantiate_unitary(T, A, m4)
             Sdiag = similar(A, real(eltype(T)), m4)
             copyto!(Sdiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
             S = Diagonal(Sdiag)
-            Vᴴ = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
-            A = T <: Diagonal ? S : U * S * Vᴴ
-
+            Vᴴ = instantiate_unitary(T, A, m4)
+            A = U * S * Vᴴ
             for trunc_fun in (
                     (rtol, maxrank) -> (; rtol, maxrank),
                     (rtol, maxrank) -> truncrank(maxrank) & trunctol(; rtol),
@@ -306,12 +295,12 @@ function test_svd_trunc_algs(
         @testset "specify truncation algorithm" begin
             atol = sqrt(eps(real(eltype(T))))
             m4 = 4
-            U = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
+            U = instantiate_unitary(T, A, m4)
             Sdiag = similar(A, real(eltype(T)), m4)
             copyto!(Sdiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
             S = Diagonal(Sdiag)
-            Vᴴ = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
-            A = T <: Diagonal ? S : U * S * Vᴴ
+            Vᴴ = instantiate_unitary(T, A, m4)
+            A = U * S * Vᴴ
             truncalg = TruncatedAlgorithm(alg, trunctol(; atol = 0.2))
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; alg = truncalg)
             @test diagview(S2) ≈ diagview(S)[1:2]

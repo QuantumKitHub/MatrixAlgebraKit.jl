@@ -56,8 +56,8 @@ for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
         end
         if m == n
             AT = Diagonal{T, Vector{T}}
-            TestSuite.test_svd(AT, m; test_trunc = !(T ∈ GenericFloats))
-            TestSuite.test_svd_algs(AT, m, (DiagonalAlgorithm(),); test_trunc = !(T ∈ GenericFloats))
+            TestSuite.test_svd(AT, m)
+            TestSuite.test_svd_algs(AT, m, (DiagonalAlgorithm(),))
         end
     end
 end
