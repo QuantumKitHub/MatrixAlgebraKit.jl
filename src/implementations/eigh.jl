@@ -153,7 +153,7 @@ function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
         diagview(D) .= real.(diagview(A))[I]
     end
     zero!(V)
-    Is = [ix -> CartesianIndex(ix, I[ix]) for ix in 1:size(A, 1)]
+    Is = [CartesianIndex(ix, I[ix]) for ix in 1:size(A, 1)]
     V[Is] .= one(eltype(A))
     return D, V
 end
