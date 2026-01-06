@@ -204,7 +204,7 @@ function test_svd_trunc(
             m4 = 4
             U = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
             Sdiag = similar(A, real(eltype(T)), m4)
-            copyto!(Sdiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
+            copyto!(Sdiag, [0.9, 0.3, 0.1, 0.01])
             S = Diagonal(Sdiag)
             Vᴴ = qr_compact(randn!(similar(A, eltype(T), m4, m4)))[1]
             A = T <: Diagonal ? S : U * S * Vᴴ
