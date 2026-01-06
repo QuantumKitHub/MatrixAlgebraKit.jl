@@ -191,11 +191,4 @@ function MatrixAlgebraKit._mul_herm!(C::StridedCuMatrix{T}, A::StridedCuMatrix{T
     return C
 end
 
-function MatrixAlgebraKit.permute_V_cols!(V, I::CuVector{Int})
-    I_ixs = CuArray(collect(1:size(V, 1)))
-    c_ixs = map(CartesianIndex, I, I_ixs)
-    V[c_ixs] .= one(eltype(V))
-    return V
-end
-
 end
