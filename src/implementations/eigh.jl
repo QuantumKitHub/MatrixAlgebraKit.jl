@@ -152,8 +152,9 @@ function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
     else
         diagview(D) .= real.(diagview(A))[I]
     end
-    one!(V)
-    Base.permutecols!!(V, I)
+    zero!(V)
+    Is = [ix -> CartesianIndex(ix, I[ix]) for ix in 1:size(A, 1)]
+    V[Is] .= one(eltype(A))
     return D, V
 end
 
