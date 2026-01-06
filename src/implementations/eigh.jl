@@ -163,8 +163,8 @@ function eigh_vals!(A::Diagonal, D, alg::DiagonalAlgorithm)
     if D === Ad
         sort!(Ad)
     else
-        I = sortperm(real.(Ad))
-        D .= real.(Ad[I])
+        D .= real.(Ad)
+        sort!(D)
     end
     return D
 end
