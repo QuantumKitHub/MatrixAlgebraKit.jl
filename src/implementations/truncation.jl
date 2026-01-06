@@ -97,7 +97,7 @@ function _truncerr_impl(values::AbstractVector, I; atol::Real = 0, rtol::Real = 
     ϵᵖ ≥ Nᵖ && return Base.OneTo(0)
 
     truncerrᵖ_array = cumsum(map(by, values[reverse(I)]))
-    rank = length(values) - (findfirst(truncerrᵖ -> truncerrᵖ ≥ ϵᵖ, truncerrᵖ_array) - 1)
+    rank = length(values) - (findfirst(≥(ϵᵖ), truncerrᵖ_array) - 1)
     return Base.OneTo(rank)
 end
 
