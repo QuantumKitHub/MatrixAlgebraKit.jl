@@ -11,7 +11,7 @@ module TestSuite
 using Test
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
-using LinearAlgebra: Diagonal, norm, istriu, istril
+using LinearAlgebra: Diagonal, norm, istriu, istril, I
 using Random, StableRNGs
 using AMDGPU, CUDA
 
@@ -69,6 +69,13 @@ is_positive(alg::MatrixAlgebraKit.ROCSOLVER_HouseholderQR) = alg.positive
 is_positive(alg::MatrixAlgebraKit.LQViaTransposedQR) = is_positive(alg.qr_alg)
 is_pivoted(alg::MatrixAlgebraKit.LQViaTransposedQR) = is_pivoted(alg.qr_alg)
 
+isleftcomplete(V, N) = V * V' + N * N' ≈ I
+isleftcomplete(V::AnyCuMatrix, N::AnyCuMatrix) = isleftcomplete(collect(V), collect(N))
+isleftcomplete(V::AnyROCMatrix, N::AnyROCMatrix) = isleftcomplete(collect(V), collect(N))
+isrightcomplete(Vᴴ, Nᴴ) = Vᴴ' * Vᴴ + Nᴴ' * Nᴴ ≈ I
+isrightcomplete(V::AnyCuMatrix, N::AnyCuMatrix) = isrightcomplete(collect(V), collect(N))
+isrightcomplete(V::AnyROCMatrix, N::AnyROCMatrix) = isrightcomplete(collect(V), collect(N))
+
 include("qr.jl")
 include("lq.jl")
 include("polar.jl")
@@ -76,5 +83,6 @@ include("projections.jl")
 include("schur.jl")
 include("eig.jl")
 include("eigh.jl")
+include("orthnull.jl")
 
 end
