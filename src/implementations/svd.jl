@@ -134,7 +134,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     elseif alg isa SafeSVD
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for SafeSVD"))
-        # extra copy to avoid modifying input if it goes wrong
+        # extra copy to avoid modifying input if sdd goes wrong
         A′ = copy(A)
         try
             YALAPACK.gesdd!(A′, view(S, 1:minmn, 1), U, Vᴴ)
@@ -174,6 +174,16 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, diagview(S), U, Vᴴ)
+    elseif alg isa SafeSVD
+        isempty(alg_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for SafeSVD"))
+        # extra copy to avoid modifying input if sdd goes wrong
+        A′ = copy(A)
+        try
+            YALAPACK.gesdd!(A′, diagview(S), U, Vᴴ)
+        catch
+            YALAPACK.gesvd!(A, diagview(S), U, Vᴴ)
+        end
     elseif alg isa LAPACK_Bisection
         YALAPACK.gesvdx!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi
