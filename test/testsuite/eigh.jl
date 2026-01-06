@@ -11,7 +11,7 @@ function test_eigh(T::Type, sz; test_trunc = true, kwargs...)
     end
 end
 
-function test_eigh_algs(T::Type, sz, algs; kwargs...)
+function test_eigh_algs(T::Type, sz, algs; test_trunc = true, kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eigh algorithms $summary_str" begin
         test_eigh_full_algs(T, sz, algs; kwargs...)
