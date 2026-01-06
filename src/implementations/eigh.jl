@@ -146,11 +146,10 @@ end
 function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
-    I = sortperm(diagview(A); by = real)
     diagA = diagview(A)
     I = sortperm(diagA; by = real)
     if D === A
-        sort!(diagA)
+        permute!(diagA, I)
     else
         diagview(D) .= real.(view(diagA, I))
     end
