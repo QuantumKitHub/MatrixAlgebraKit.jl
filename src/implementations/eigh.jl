@@ -147,10 +147,12 @@ function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
     check_input(eigh_full!, A, DV, alg)
     D, V = DV
     I = sortperm(diagview(A); by = real)
+    diagA = diagview(A)
+    I = sortperm(diagA; by = real)
     if D === A
-        sort!(diagview(A))
+        sort!(diagA)
     else
-        diagview(D) .= real.(diagview(A))[I]
+        diagview(D) .= real.(view(diagA, I))
     end
     zero!(V)
     n = size(A, 1)
