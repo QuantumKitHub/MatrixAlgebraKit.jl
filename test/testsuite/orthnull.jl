@@ -17,12 +17,12 @@ _right_orth_lq!(x, CVᴴ; kwargs...) = right_orth!(x, CVᴴ; alg = :lq, kwargs..
 _right_orth_polar(x; kwargs...) = right_orth(x; alg = :polar, kwargs...)
 _right_orth_polar!(x, CVᴴ; kwargs...) = right_orth!(x, CVᴴ; alg = :polar, kwargs...)
 
-function test_orthnull(T::Type, sz; test_nullity = true, test_orthnull = true, kwargs...)
+function test_orthnull(T::Type, sz; test_nullity = true, kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "orthnull $summary_str" begin
-        test_orthnull && test_left_orthnull(T, sz; kwargs...)
+        test_left_orthnull(T, sz; kwargs...)
         test_nullity  && test_left_nullity(T, sz; kwargs...)
-        test_orthnull && test_right_orthnull(T, sz; kwargs...)
+        test_right_orthnull(T, sz; kwargs...)
         test_nullity  && test_right_nullity(T, sz; kwargs...)
     end
 end
@@ -276,9 +276,9 @@ function test_right_orthnull(
 
         # passing an algorithm
         C, Vᴴ = @testinferred right_orth(A; alg = MatrixAlgebraKit.default_lq_algorithm(A))
-        Nᴴ = @testinferred right_null(A; alg = :lq, positive = true)
         @test C isa typeof(A) && size(C) == (m, minmn)
         @test Vᴴ isa typeof(A) && size(Vᴴ) == (minmn, n)
+        Nᴴ = @testinferred right_null(A; alg = :lq, positive = true)
         @test eltype(Nᴴ) == eltype(A) && size(Nᴴ) == (n - minmn, n)
         @test C * Vᴴ ≈ A
         @test isisometric(Vᴴ; side = :right)
