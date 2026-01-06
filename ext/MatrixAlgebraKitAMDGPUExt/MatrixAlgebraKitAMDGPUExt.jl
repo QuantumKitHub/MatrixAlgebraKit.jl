@@ -167,4 +167,11 @@ function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix
     return C
 end
 
+function MatrixAlgebraKit.permute_V_cols!(V, I::ROCVector{Int})
+    I_ixs = ROCArray(collect(1:size(V, 1)))
+    c_ixs = map(CartesianIndex, I, I_ixs)
+    V[c_ixs] .= one(eltype(V))
+    return V
+end
+
 end

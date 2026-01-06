@@ -141,6 +141,8 @@ function eigh_trunc_no_error!(A, DV, alg::TruncatedAlgorithm)
     return DVtrunc
 end
 
+permute_V_cols!(V, I::Vector{Int}) = Base.permutecols!!(V, I)
+
 # Diagonal logic
 # --------------
 function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
@@ -153,8 +155,7 @@ function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
         diagview(D) .= real.(diagview(A))[I]
     end
     zero!(V)
-    Is = [CartesianIndex(ix, I[ix]) for ix in 1:size(A, 1)]
-    V[Is] .= one(eltype(A))
+    V = permute_V_cols!(V, I)
     return D, V
 end
 
