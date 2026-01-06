@@ -3,19 +3,19 @@ using MatrixAlgebraKit: TruncatedAlgorithm
 using LinearAlgebra: I
 using GenericSchur
 
-function test_eig(T::Type, sz; test_trunc = true, kwargs...)
+function test_eig(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eig $summary_str" begin
         test_eig_full(T, sz; kwargs...)
-        test_trunc && test_eig_trunc(T, sz; kwargs...)
+        test_eig_trunc(T, sz; kwargs...)
     end
 end
 
-function test_eig_algs(T::Type, sz, algs; test_trunc = true, kwargs...)
+function test_eig_algs(T::Type, sz, algs; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eig algorithms $summary_str" begin
         test_eig_full_algs(T, sz, algs; kwargs...)
-        test_trunc && test_eig_trunc_algs(T, sz, algs; kwargs...)
+        test_eig_trunc_algs(T, sz, algs; kwargs...)
     end
 end
 
@@ -78,7 +78,7 @@ function test_eig_trunc(
         Ac = deepcopy(A)
         Tc = complex(eltype(T))
         # eigenvalues are sorted by ascending real component...
-        D₀ = sort!(eig_vals(A); by = abs, rev = true)
+        D₀ = collect(sort!(eig_vals(A); by = abs, rev = true))
         m = size(A, 1)
         rmin = findfirst(i -> abs(D₀[end - i]) != abs(D₀[end - i - 1]), 1:(m - 2))
         r = length(D₀) - rmin
@@ -150,7 +150,7 @@ function test_eig_trunc_algs(
         Ac = deepcopy(A)
         Tc = complex(eltype(T))
         # eigenvalues are sorted by ascending real component...
-        D₀ = sort!(eig_vals(A; alg); by = abs, rev = true)
+        D₀ = collect(sort!(eig_vals(A; alg); by = abs, rev = true))
         m = size(A, 1)
         rmin = findfirst(i -> abs(D₀[end - i]) != abs(D₀[end - i - 1]), 1:(m - 2))
         r = length(D₀) - rmin

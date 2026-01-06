@@ -49,7 +49,7 @@ findtruncated(values::AbstractVector, ::NoTruncation) = Colon()
 
 function findtruncated(values::AbstractVector, strategy::TruncationByOrder)
     howmany = min(strategy.howmany, length(values))
-    return partialsortperm(values, 1:howmany; strategy.by, strategy.rev)
+    return sortperm(values; strategy.by, strategy.rev)[1:howmany]
 end
 function findtruncated_svd(values::AbstractVector, strategy::TruncationByOrder)
     strategy.by === abs || return findtruncated(values, strategy)
@@ -96,14 +96,8 @@ function _truncerr_impl(values::AbstractVector, I; atol::Real = 0, rtol::Real = 
     # fast path to avoid checking all values
     ϵᵖ ≥ Nᵖ && return Base.OneTo(0)
 
-    truncerrᵖ = zero(real(eltype(values)))
-    rank = length(values)
-    for i in reverse(I)
-        truncerrᵖ += by(values[i])
-        truncerrᵖ ≥ ϵᵖ && break
-        rank -= 1
-    end
-
+    truncerrᵖ_array = cumsum(map(by, view(values, reverse(I))))
+    rank = length(values) - (findfirst(≥(ϵᵖ), truncerrᵖ_array) - 1)
     return Base.OneTo(rank)
 end
 
