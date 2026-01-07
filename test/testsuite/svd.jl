@@ -248,7 +248,7 @@ function test_svd_trunc_algs(
             U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; trunc = truncrank(r), alg)
             @test length(diagview(S1)) == r
             @test diagview(S1) ≈ S₀[1:r]
-            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ @allowscalar S₀[r + 1]
             # Test truncation error
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
