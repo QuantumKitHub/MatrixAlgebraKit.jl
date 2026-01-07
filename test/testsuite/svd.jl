@@ -168,7 +168,7 @@ function test_svd_trunc(
             @test length(diagview(S1)) == r
             @test collect(diagview(S1)) ≈ S₀[1:r]
             AUSV_vals = svd_vals(A - U1 * S1 * V1ᴴ) # bypass broken svdvals on AMDGPU
-            @test opnorm(Diagonal(AUSV_vals)) ≈ S₀[r + 1]
+            @test mapreduce(sv->opnorm(sv, 2), max, AUSV_vals) ≈ S₀[r + 1]
             # Test truncation error
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
@@ -250,7 +250,7 @@ function test_svd_trunc_algs(
             @test length(diagview(S1)) == r
             @test collect(diagview(S1)) ≈ S₀[1:r]
             AUSV_vals = svd_vals(A - U1 * S1 * V1ᴴ) # bypass broken svdvals on AMDGPU
-            @test opnorm(Diagonal(AUSV_vals)) ≈ S₀[r + 1]
+            @test mapreduce(sv->opnorm(sv, 2), max, AUSV_vals) ≈ S₀[r + 1]
             # Test truncation error
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
