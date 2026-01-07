@@ -4,6 +4,7 @@ using TestExtras
 using StableRNGs
 using LinearAlgebra: Diagonal
 using CUDA, AMDGPU
+using CUDA.CUSOLVER # pull in opnorm binding
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (BigFloat, Complex{BigFloat})
@@ -17,28 +18,28 @@ for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
     TestSuite.seed_rng!(123)
     if T ∈ BLASFloats
         if CUDA.functional()
-            TestSuite.test_svd(CuMatrix{T}, (m, n); test_trunc = false)
+            TestSuite.test_svd(CuMatrix{T}, (m, n))
             CUDA_SVD_ALGS = (
                 CUSOLVER_QRIteration(),
                 CUSOLVER_SVDPolar(),
                 CUSOLVER_Jacobi(),
             )
-            TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS; test_trunc = false)
+            TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
             if n == m
-                TestSuite.test_svd(Diagonal{T, CuVector{T}}, m; test_trunc = false)
-                TestSuite.test_svd_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),); test_trunc = false)
+                TestSuite.test_svd(Diagonal{T, CuVector{T}}, m)
+                TestSuite.test_svd_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
             end
         end
         if AMDGPU.functional()
-            TestSuite.test_svd(ROCMatrix{T}, (m, n); test_trunc = false)
+            TestSuite.test_svd(ROCMatrix{T}, (m, n))
             AMD_SVD_ALGS = (
                 ROCSOLVER_QRIteration(),
                 ROCSOLVER_Jacobi(),
             )
-            TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS; test_trunc = false)
+            TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
             if n == m
-                TestSuite.test_svd(Diagonal{T, ROCVector{T}}, m; test_trunc = false)
-                TestSuite.test_svd_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),); test_trunc = false)
+                TestSuite.test_svd(Diagonal{T, ROCVector{T}}, m)
+                TestSuite.test_svd_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),))
             end
         end
     end

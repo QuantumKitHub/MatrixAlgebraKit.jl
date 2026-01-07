@@ -2,21 +2,21 @@ using TestExtras
 using GenericLinearAlgebra
 using LinearAlgebra: opnorm
 
-function test_svd(T::Type, sz; test_trunc = true, kwargs...)
+function test_svd(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "svd $summary_str" begin
         test_svd_compact(T, sz; kwargs...)
         test_svd_full(T, sz; kwargs...)
-        test_trunc && test_svd_trunc(T, sz; kwargs...)
+        test_svd_trunc(T, sz; kwargs...)
     end
 end
 
-function test_svd_algs(T::Type, sz, algs; test_trunc = true, kwargs...)
+function test_svd_algs(T::Type, sz, algs; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "svd algorithms $summary_str" begin
         test_svd_compact_algs(T, sz, algs; kwargs...)
         test_svd_full_algs(T, sz, algs; kwargs...)
-        test_trunc && test_svd_trunc_algs(T, sz, algs; kwargs...)
+        test_svd_trunc_algs(T, sz, algs; kwargs...)
     end
 end
 
@@ -160,14 +160,15 @@ function test_svd_trunc(
         Ac = deepcopy(A)
         m, n = size(A)
         minmn = min(m, n)
-        S₀ = svd_vals(A)
+        S₀ = collect(svd_vals(A))
         r = minmn - 2
 
         if m > 0 && n > 0
             U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; trunc = truncrank(r))
             @test length(diagview(S1)) == r
-            @test diagview(S1) ≈ S₀[1:r]
-            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            @test collect(diagview(S1)) ≈ S₀[1:r]
+            AUSV_vals = svd_vals(A - U1 * S1 * V1ᴴ) # bypass broken svdvals on AMDGPU
+            @test mapreduce(sv -> opnorm(sv, 2), max, AUSV_vals) ≈ S₀[r + 1]
             # Test truncation error
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
@@ -241,14 +242,15 @@ function test_svd_trunc_algs(
         Ac = deepcopy(A)
         m, n = size(A)
         minmn = min(m, n)
-        S₀ = svd_vals(A)
+        S₀ = collect(svd_vals(A))
         r = minmn - 2
 
         if m > 0 && n > 0
             U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; trunc = truncrank(r), alg)
             @test length(diagview(S1)) == r
-            @test diagview(S1) ≈ S₀[1:r]
-            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            @test collect(diagview(S1)) ≈ S₀[1:r]
+            AUSV_vals = svd_vals(A - U1 * S1 * V1ᴴ) # bypass broken svdvals on AMDGPU
+            @test mapreduce(sv -> opnorm(sv, 2), max, AUSV_vals) ≈ S₀[r + 1]
             # Test truncation error
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
@@ -285,11 +287,11 @@ function test_svd_trunc_algs(
                 )
                 U1, S1, V1ᴴ, ϵ1 = svd_trunc(A; trunc = trunc_fun(0.2, 1), alg)
                 @test length(diagview(S1)) == 1
-                @test diagview(S1) ≈ diagview(S)[1:1]
+                @test collect(diagview(S1)) ≈ collect(diagview(S)[1:1])
 
                 U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; trunc = trunc_fun(0.2, 3), alg)
                 @test length(diagview(S2)) == 2
-                @test diagview(S2) ≈ diagview(S)[1:2]
+                @test collect(diagview(S2)) ≈ collect(diagview(S)[1:2])
             end
         end
         @testset "specify truncation algorithm" begin
@@ -303,7 +305,7 @@ function test_svd_trunc_algs(
             A = U * S * Vᴴ
             truncalg = TruncatedAlgorithm(alg, trunctol(; atol = 0.2))
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; alg = truncalg)
-            @test diagview(S2) ≈ diagview(S)[1:2]
+            @test collect(diagview(S2)) ≈ collect(diagview(S)[1:2])
             @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
             @test_throws ArgumentError svd_trunc(A; alg = truncalg, trunc = (; maxrank = 2))
             @test_throws ArgumentError svd_trunc_no_error(A; alg = truncalg, trunc = (; maxrank = 2))
