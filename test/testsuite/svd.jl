@@ -160,19 +160,19 @@ function test_svd_trunc(
         Ac = deepcopy(A)
         m, n = size(A)
         minmn = min(m, n)
-        S₀ = svd_vals(A)
+        S₀ = collect(svd_vals(A))
         r = minmn - 2
 
         if m > 0 && n > 0
             U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; trunc = truncrank(r))
             @test length(diagview(S1)) == r
-            @test diagview(S1) ≈ S₀[1:r]
-            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ @allowscalar S₀[r + 1]
+            @test collect(diagview(S1)) ≈ S₀[1:r]
+            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
             # Test truncation error
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             s = 1 + sqrt(eps(real(eltype(T))))
-            trunc = trunctol(; atol = s * @allowscalar(S₀[r + 1]))
+            trunc = trunctol(; atol = s * S₀[r + 1])
 
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; trunc)
             @test length(diagview(S2)) == r
@@ -241,19 +241,19 @@ function test_svd_trunc_algs(
         Ac = deepcopy(A)
         m, n = size(A)
         minmn = min(m, n)
-        S₀ = svd_vals(A)
+        S₀ = collect(svd_vals(A))
         r = minmn - 2
 
         if m > 0 && n > 0
             U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; trunc = truncrank(r), alg)
             @test length(diagview(S1)) == r
-            @test diagview(S1) ≈ S₀[1:r]
-            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ @allowscalar S₀[r + 1]
+            @test collect(diagview(S1)) ≈ S₀[1:r]
+            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
             # Test truncation error
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             s = 1 + sqrt(eps(real(eltype(T))))
-            trunc = trunctol(; atol = s * @allowscalar(S₀[r + 1]))
+            trunc = trunctol(; atol = s * S₀[r + 1])
 
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; trunc, alg)
             @test length(diagview(S2)) == r

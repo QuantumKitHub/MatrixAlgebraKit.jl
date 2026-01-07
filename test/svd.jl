@@ -4,6 +4,7 @@ using TestExtras
 using StableRNGs
 using LinearAlgebra: Diagonal
 using CUDA, AMDGPU
+using CUDA.CUSOLVER # pull in opnorm binding
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (BigFloat, Complex{BigFloat})

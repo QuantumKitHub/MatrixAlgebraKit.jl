@@ -14,7 +14,6 @@ using MatrixAlgebraKit: diagview
 using LinearAlgebra: Diagonal, norm, istriu, istril, I
 using Random, StableRNGs
 using AMDGPU, CUDA
-using GPUArrays: @allowscalar
 
 const tests = Dict()
 
