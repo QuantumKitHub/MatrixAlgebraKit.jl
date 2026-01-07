@@ -77,6 +77,11 @@ isrightcomplete(V::AnyCuMatrix, N::AnyCuMatrix) = isrightcomplete(collect(V), co
 isrightcomplete(V::AnyROCMatrix, N::AnyROCMatrix) = isrightcomplete(collect(V), collect(N))
 
 instantiate_unitary(T, A, sz) = qr_compact(randn!(similar(A, eltype(T), sz, sz)))[1]
+# AMDGPU can't generate ComplexF32 random numbers
+function instantiate_unitary(T, A::ROCMatrix{ComplexF32}, sz)
+    sqA = randn!(similar(A, real(eltype(T)), sz, sz)) .+ im .* randn!(similar(A, real(eltype(T)), sz, sz))
+    return qr_compact(sqA)[1]
+end
 instantiate_unitary(::Type{<:Diagonal}, A, sz) = Diagonal(fill!(similar(parent(A), eltype(A), sz), one(eltype(A))))
 
 include("qr.jl")
