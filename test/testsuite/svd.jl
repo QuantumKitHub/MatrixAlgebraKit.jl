@@ -167,12 +167,12 @@ function test_svd_trunc(
             U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; trunc = truncrank(r))
             @test length(diagview(S1)) == r
             @test diagview(S1) ≈ S₀[1:r]
-            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ S₀[r + 1]
+            @test opnorm(A - U1 * S1 * V1ᴴ) ≈ @allowscalar S₀[r + 1]
             # Test truncation error
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             s = 1 + sqrt(eps(real(eltype(T))))
-            trunc = trunctol(; atol = s * S₀[r + 1])
+            trunc = trunctol(; atol = s * @allowscalar(S₀[r + 1]))
 
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; trunc)
             @test length(diagview(S2)) == r
@@ -253,7 +253,7 @@ function test_svd_trunc_algs(
             @test ϵ1 ≈ norm(view(S₀, (r + 1):minmn)) atol = atol
 
             s = 1 + sqrt(eps(real(eltype(T))))
-            trunc = trunctol(; atol = s * S₀[r + 1])
+            trunc = trunctol(; atol = s * @allowscalar(S₀[r + 1]))
 
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; trunc, alg)
             @test length(diagview(S2)) == r
@@ -285,11 +285,11 @@ function test_svd_trunc_algs(
                 )
                 U1, S1, V1ᴴ, ϵ1 = svd_trunc(A; trunc = trunc_fun(0.2, 1), alg)
                 @test length(diagview(S1)) == 1
-                @test diagview(S1) ≈ diagview(S)[1:1]
+                @test collect(diagview(S1)) ≈ collect(diagview(S)[1:1])
 
                 U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; trunc = trunc_fun(0.2, 3), alg)
                 @test length(diagview(S2)) == 2
-                @test diagview(S2) ≈ diagview(S)[1:2]
+                @test collect(diagview(S2)) ≈ collect(diagview(S)[1:2])
             end
         end
         @testset "specify truncation algorithm" begin
@@ -303,7 +303,7 @@ function test_svd_trunc_algs(
             A = U * S * Vᴴ
             truncalg = TruncatedAlgorithm(alg, trunctol(; atol = 0.2))
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; alg = truncalg)
-            @test diagview(S2) ≈ diagview(S)[1:2]
+            @test collect(diagview(S2)) ≈ collect(diagview(S)[1:2])
             @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
             @test_throws ArgumentError svd_trunc(A; alg = truncalg, trunc = (; maxrank = 2))
             @test_throws ArgumentError svd_trunc_no_error(A; alg = truncalg, trunc = (; maxrank = 2))
