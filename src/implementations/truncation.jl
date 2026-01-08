@@ -126,6 +126,14 @@ function _ind_intersect(A::AbstractVector{Bool}, B::AbstractVector)
 end
 _ind_intersect(A::AbstractVector, B::AbstractVector{Bool}) = _ind_intersect(B, A)
 _ind_intersect(A::AbstractVector{Bool}, B::AbstractVector{Bool}) = A .& B
+
+# when one of the ind selections is a unitrange, filter is more efficient than intersect
+# since we know both selections only contain unique entries
+# (This is also more GPU-friendly!)
+_ind_intersect(A::AbstractVector{Int}, B::AbstractUnitRange{Int}) = filter(in(B), A)
+_ind_intersect(A::AbstractUnitRange{Int}, B::AbstractVector{Int}) = _ind_intersect(B, A)
+
+# when all else fails, call intersect
 _ind_intersect(A, B) = intersect(A, B)
 
 # Truncation error

@@ -191,14 +191,8 @@ function MatrixAlgebraKit._mul_herm!(C::StridedCuMatrix{T}, A::StridedCuMatrix{T
     return C
 end
 
-MatrixAlgebraKit._ind_intersect(A::CuVector{Int}, B) = MatrixAlgebraKit._ind_intersect(B, A)
-function MatrixAlgebraKit._ind_intersect(A::UnitRange, B::CuVector{Int})
-    sortedB = sort(B)
-    firstB = findfirst(≥(first(A)), B)
-    lastB = findlast(≤(last(A)), B)
-    # ONLY works if the indices in B are contiguous!!!
-    return B[firstB:lastB]
-end
-MatrixAlgebraKit._ind_intersect(A::CuVector{Int}, B::CuVector{Int}) = MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
+# TODO: intersect doesn't work on GPU
+MatrixAlgebraKit._ind_intersect(A::CuVector{Int}, B::CuVector{Int}) =
+    MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
 
 end
