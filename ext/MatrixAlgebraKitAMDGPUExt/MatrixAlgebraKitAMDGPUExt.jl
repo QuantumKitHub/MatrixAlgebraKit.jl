@@ -167,9 +167,14 @@ function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix
     return C
 end
 
-# TODO: intersect on GPU arrays is not working
-MatrixAlgebraKit._ind_intersect(A::ROCVector{Int}, B::AbstractVector) = MatrixAlgebraKit._ind_intersect(collect(A), B)
-MatrixAlgebraKit._ind_intersect(A::AbstractVector, B::ROCVector{Int}) = MatrixAlgebraKit._ind_intersect(A, collect(B))
+MatrixAlgebraKit._ind_intersect(A::ROCVector{Int}, B) = MatrixAlgebraKit._ind_intersect(B, A)
+function MatrixAlgebraKit._ind_intersect(A::UnitRange, B::ROCVector{Int})
+    sortedB = sort(B)
+    firstB = findfirst(≥(first(A)), B)
+    lastB = findlast(≤(last(A)), B)
+    # ONLY works if the indices in B are contiguous!!!
+    return B[firstB:lastB]
+end
 MatrixAlgebraKit._ind_intersect(A::ROCVector{Int}, B::ROCVector{Int}) = MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
 
 end
