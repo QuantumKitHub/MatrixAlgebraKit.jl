@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.1...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.2...HEAD)
 
 ### Added
 
@@ -30,7 +30,25 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
-- Polar decompositions return exact hermitian factors ([#143](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/143)
+## [0.6.2](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.1...v0.6.2) - 2026-01-08
+
+### Added
+
+### Changed
+
+- Improved test infrastructure: migrated additional tests to the common `TestSuite` and added GPU/truncated-methods tests for SVD and related functionality ([#137](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/137), [#142](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/142), [#146](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/146), [#128](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/128)).
+- Eigenvalue decompositions of diagonal inputs have the same sorting as non-diagonal inputs ([#143](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/142)
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Polar decompositions return exact hermitian factors ([#143](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/143)).
+- Fixed a small typo in `TruncationByValue` and related docstrings ([#136](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/136)).
+- YALAPACK fixes and test adjustments ([#135](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/135)).
+- Various truncation schemes are now supported on the GPU.
 
 ## [0.6.1](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.0...v0.6.1) - 2025-12-28
 
