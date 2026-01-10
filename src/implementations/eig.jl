@@ -129,10 +129,20 @@ end
 
 # Diagonal logic
 # --------------
-function eig_full!(A::Diagonal, (D, V)::Tuple{Diagonal, Diagonal}, alg::DiagonalAlgorithm)
-    check_input(eig_full!, A, (D, V), alg)
-    D === A || copy!(D, A)
-    one!(V)
+function eig_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
+    check_input(eig_full!, A, DV, alg)
+    D, V = DV
+    diagA = diagview(A)
+    I = sortperm(diagA; by = real)
+    if D === A
+        permute!(diagA, I)
+    else
+        diagview(D) .= view(diagA, I)
+    end
+    zero!(V)
+    n = size(A, 1)
+    I .+= (0:(n - 1)) .* n
+    V[I] .= Ref(one(eltype(V)))
     return D, V
 end
 
@@ -140,6 +150,7 @@ function eig_vals!(A::Diagonal, D::AbstractVector, alg::DiagonalAlgorithm)
     check_input(eig_vals!, A, D, alg)
     Ad = diagview(A)
     D === Ad || copy!(D, Ad)
+    sort!(D; by = real)
     return D
 end
 
