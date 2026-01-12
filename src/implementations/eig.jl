@@ -32,12 +32,12 @@ function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::DiagonalAlgor
     m, n = size(A)
     @assert m == n && isdiag(A)
     D, V = DV
-    @assert D isa Diagonal && V isa Diagonal
+    @assert D isa Diagonal
     @check_size(D, (m, m))
     @check_size(V, (m, m))
     # Diagonal doesn't need to promote to complex scalartype since we know it is diagonalizable
     @check_scalar(D, A)
-    @check_scalar(V, A)
+    @check_scalar(V, A, real)
     return nothing
 end
 function check_input(::typeof(eig_vals!), A::AbstractMatrix, D, ::DiagonalAlgorithm)
@@ -70,7 +70,7 @@ function initialize_output(::Union{typeof(eig_trunc!), typeof(eig_trunc_no_error
 end
 
 function initialize_output(::typeof(eig_full!), A::Diagonal, ::DiagonalAlgorithm)
-    return A, similar(A)
+    return A, similar(A, real(eltype(A)), size(A))
 end
 function initialize_output(::typeof(eig_vals!), A::Diagonal, ::DiagonalAlgorithm)
     return diagview(A)
