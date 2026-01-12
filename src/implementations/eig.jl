@@ -129,7 +129,7 @@ end
 
 # Diagonal logic
 # --------------
-eig_sortby(x::T) where {T <: Number} = T <: Complex ? (real(x), imag(X)) : x
+eig_sortby(x::T) where {T <: Number} = T <: Complex ? (real(x), imag(x)) : x
 function eig_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
