@@ -129,11 +129,12 @@ end
 
 # Diagonal logic
 # --------------
+eig_sortby(x::T) where {T <: Number} = T <: Complex ? (real(x), imag(X)) : x
 function eig_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
     check_input(eig_full!, A, DV, alg)
     D, V = DV
     diagA = diagview(A)
-    I = sortperm(diagA; by = real)
+    I = sortperm(diagA; by = eig_sortby)
     if D === A
         permute!(diagA, I)
     else
@@ -150,7 +151,7 @@ function eig_vals!(A::Diagonal, D::AbstractVector, alg::DiagonalAlgorithm)
     check_input(eig_vals!, A, D, alg)
     Ad = diagview(A)
     D === Ad || copy!(D, Ad)
-    sort!(D; by = real)
+    sort!(D; by = eig_sortby)
     return D
 end
 
