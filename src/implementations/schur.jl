@@ -5,8 +5,7 @@ copy_input(::typeof(schur_vals), A) = copy_input(eig_vals, A)
 
 # check input
 function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::AbstractAlgorithm)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected"))
+    m = LinearAlgebra.checksquare(A)
     T, Z, vals = TZv
     @assert T isa AbstractMatrix && Z isa AbstractMatrix && vals isa AbstractVector
     @check_size(T, (m, m))
@@ -18,10 +17,9 @@ function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::AbstractAl
     return nothing
 end
 function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, ::AbstractAlgorithm)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected"))
+    m = LinearAlgebra.checksquare(A)
     @assert vals isa AbstractVector
-    @check_size(vals, (n,))
+    @check_size(vals, (m,))
     @check_scalar(vals, A, complex)
     return nothing
 end
