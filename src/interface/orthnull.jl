@@ -429,7 +429,7 @@ See also [`LeftOrthAlgorithm`](@ref), [`left_orth`](@ref).
 """
 left_orth_alg(alg::AbstractAlgorithm) = error(
     """
-    Unkown or invalid `left_orth` algorithm type `$(typeof(alg))`.
+    Unknown or invalid `left_orth` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `left_orth`, define
 
         MatrixAlgebraKit.left_orth_alg(alg::CustomAlgorithm) = LeftOrthAlgorithm{kind}(alg)
@@ -464,7 +464,7 @@ See also [`RightOrthAlgorithm`](@ref), [`right_orth`](@ref).
 """
 right_orth_alg(alg::AbstractAlgorithm) = error(
     """
-    Unkown or invalid `right_orth` algorithm type `$(typeof(alg))`.
+    Unknown or invalid `right_orth` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `right_orth`, define
 
         MatrixAlgebraKit.right_orth_alg(alg::CustomAlgorithm) = RightOrthAlgorithm{kind}(alg)
@@ -499,7 +499,7 @@ See also [`LeftNullAlgorithm`](@ref), [`left_null`](@ref).
 """
 left_null_alg(alg::AbstractAlgorithm) = error(
     """
-    Unkown or invalid `left_null` algorithm type `$(typeof(alg))`.
+    Unknown or invalid `left_null` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `left_null`, define
 
         MatrixAlgebraKit.left_null_alg(alg::CustomAlgorithm) = LeftNullAlgorithm{kind}(alg)
@@ -533,7 +533,7 @@ See also [`RightNullAlgorithm`](@ref), [`right_null`](@ref).
 """
 right_null_alg(alg::AbstractAlgorithm) = error(
     """
-    Unkown or invalid `right_null` algorithm type `$(typeof(alg))`.
+    Unknown or invalid `right_null` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `right_null`, define
 
         MatrixAlgebraKit.right_null_alg(alg::CustomAlgorithm) = RightNullAlgorithm{kind}(alg)
