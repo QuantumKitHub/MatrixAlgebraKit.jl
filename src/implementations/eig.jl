@@ -30,23 +30,21 @@ end
 
 function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::DiagonalAlgorithm)
     m, n = size(A)
-    @assert m == n && isdiag(A)
+    ((m == n) && isdiag(A)) || throw(DimensionMismatch("diagonal input matrix expected"))
     D, V = DV
-    @assert D isa Diagonal
+    @assert D isa Diagonal && V isa AbstractMatrix
     @check_size(D, (m, m))
+    @check_scalar(D, A, complex)
     @check_size(V, (m, m))
-    # Diagonal doesn't need to promote to complex scalartype since we know it is diagonalizable
-    @check_scalar(D, A)
-    @check_scalar(V, A, real)
+    @check_scalar(V, A, complex)
     return nothing
 end
 function check_input(::typeof(eig_vals!), A::AbstractMatrix, D, ::DiagonalAlgorithm)
     m, n = size(A)
-    @assert m == n && isdiag(A)
+    ((m == n) && isdiag(A)) || throw(DimensionMismatch("diagonal input matrix expected"))
     @assert D isa AbstractVector
     @check_size(D, (n,))
-    # Diagonal doesn't need to promote to complex scalartype since we know it is diagonalizable
-    @check_scalar(D, A)
+    @check_scalar(D, A, complex)
     return nothing
 end
 
@@ -70,10 +68,14 @@ function initialize_output(::Union{typeof(eig_trunc!), typeof(eig_trunc_no_error
 end
 
 function initialize_output(::typeof(eig_full!), A::Diagonal, ::DiagonalAlgorithm)
-    return A, similar(A, real(eltype(A)), size(A))
+    T = eltype(A)
+    Tc = complex(T)
+    D = T <: Complex ? A : Diagonal(similar(A, Tc, size(A, 1)))
+    return D, similar(A, Tc, size(A))
 end
 function initialize_output(::typeof(eig_vals!), A::Diagonal, ::DiagonalAlgorithm)
-    return diagview(A)
+    T = eltype(A)
+    return T <: Complex ? diagview(A) : similar(A, complex(T), size(A, 1))
 end
 
 # Implementation
