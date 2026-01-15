@@ -1,60 +1,30 @@
-using SafeTestsets
+using ParallelTestRunner
+using MatrixAlgebraKit
 
-is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
-# don't run all tests on GPU, only the GPU
-# specific ones
-if !is_buildkite
-    @safetestset "Algorithms" begin
-        include("algorithms.jl")
-    end
-    @safetestset "Truncate" begin
-        include("truncate.jl")
-    end
-    @safetestset "Generalized Eigenvalue Decomposition" begin
-        include("gen_eig.jl")
-    end
-    @safetestset "Mooncake" begin
-        include("mooncake.jl")
-    end
-    @safetestset "ChainRules" begin
-        include("chainrules.jl")
-    end
-    @safetestset "MatrixAlgebraKit.jl" begin
-        @safetestset "Code quality (Aqua.jl)" begin
-            using MatrixAlgebraKit
-            using Aqua
-            Aqua.test_all(MatrixAlgebraKit)
-        end
-        @safetestset "Code linting (JET.jl)" begin
-            using MatrixAlgebraKit
-            using JET
-            JET.test_package(MatrixAlgebraKit; target_defined_modules = true)
-        end
+# Start with autodiscovered tests
+testsuite = find_tests(@__DIR__)
+
+# remove testsuite
+filter!(!(startswith("testsuite") ∘ first), testsuite)
+
+# remove utils
+delete!(testsuite, "utilities")
+delete!(testsuite, "ad_utils")
+
+# Parse arguments
+args = parse_args(ARGS)
+
+if filter_tests!(testsuite, args)
+    # don't run all tests on GPU, only the GPU specific ones
+    is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
+    if is_buildkite
+        delete!(testsuite, "algorithms")
+        delete!(testsuite, "truncate")
+        delete!(testsuite, "gen_eig")
+        delete!(testsuite, "mooncake")
+        delete!(testsuite, "chainrules")
+        delete!(testsuite, "codequality")
     end
 end
 
-@safetestset "QR / LQ Decomposition" begin
-    include("qr.jl")
-    include("lq.jl")
-end
-@safetestset "Polar Decomposition" begin
-    include("polar.jl")
-end
-@safetestset "Projections" begin
-    include("projections.jl")
-end
-@safetestset "Schur Decomposition" begin
-    include("schur.jl")
-end
-@safetestset "General Eigenvalue Decomposition" begin
-    include("eig.jl")
-end
-@safetestset "Hermitian Eigenvalue Decomposition" begin
-    include("eigh.jl")
-end
-@safetestset "Image and Null Space" begin
-    include("orthnull.jl")
-end
-@safetestset "Singular Value Decomposition" begin
-    include("svd.jl")
-end
+runtests(MatrixAlgebraKit, args; testsuite)
