@@ -12,7 +12,7 @@ function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::AbstractAl
     @check_scalar(T, A)
     @check_size(Z, (m, m))
     @check_scalar(Z, A)
-    @check_size(vals, (n,))
+    @check_size(vals, (m,))
     @check_scalar(vals, A, complex)
     return nothing
 end
