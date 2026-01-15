@@ -28,7 +28,7 @@ function test_eig_full(
     return @testset "eig_full! $summary_str" begin
         A = instantiate_matrix(T, sz)
         Ac = deepcopy(A)
-        Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
+        Tc = complex(eltype(T))
         D, V = @testinferred eig_full(A)
         @test eltype(D) == eltype(V) == Tc
         @test A * V ≈ V * D
@@ -51,7 +51,7 @@ function test_eig_full_algs(
     return @testset "eig_full! algorithm $alg $summary_str" for alg in algs
         A = instantiate_matrix(T, sz)
         Ac = deepcopy(A)
-        Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
+        Tc = complex(eltype(T))
         D, V = @testinferred eig_full(A; alg)
         @test eltype(D) == eltype(V) == Tc
         @test A * V ≈ V * D
