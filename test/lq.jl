@@ -52,8 +52,8 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             TestSuite.test_lq_algs(T, (m, n), LAPACK_LQ_ALGS)
         elseif T ∈ GenericFloats
             TestSuite.test_lq(T, (m, n); test_pivoted = false, test_blocksize = false)
-            NATIVE_LQ_ALGS = (Native_HouseholderLQ(),)
-            TestSuite.test_lq_algs(T, (m, n), NATIVE_LQ_ALGS)
+            GENERIC_LQ_ALGS = (Native_HouseholderLQ(), GLA_HouseholderLQ())
+            TestSuite.test_lq_algs(T, (m, n), GENERIC_LQ_ALGS)
         end
         if m == n
             AT = Diagonal{T, Vector{T}}
