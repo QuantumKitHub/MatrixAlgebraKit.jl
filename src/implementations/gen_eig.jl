@@ -24,7 +24,7 @@ function check_input(::typeof(gen_eig_vals!), A::AbstractMatrix, B::AbstractMatr
     mb = LinearAlgebra.checksquare(B)
     ma == mb || throw(DimensionMismatch(lazy"Expected matching input sizes, dimensions are $ma and $mb"))
     @assert W isa AbstractVector
-    @check_size(W, (na,))
+    @check_size(W, (ma,))
     @check_scalar(W, A, complex)
     @check_scalar(W, B, complex)
     return nothing
