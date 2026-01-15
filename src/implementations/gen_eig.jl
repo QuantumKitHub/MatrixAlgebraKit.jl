@@ -5,13 +5,6 @@ function copy_input(::typeof(gen_eig_full), A::AbstractMatrix, B::AbstractMatrix
 end
 copy_input(::typeof(gen_eig_vals), A, B) = copy_input(gen_eig_full, A, B)
 
-@noinline function _check_gen_eig_size(A, B)
-    m = size(A, 1)
-    n = size(B, 1)
-    m == n || throw(DimensionMismatch(lazy"Expected matching input sizes, dimensions are $m and $n"))
-    return m
-end
-
 function check_input(::typeof(gen_eig_full!), A::AbstractMatrix, B::AbstractMatrix, WV, ::AbstractAlgorithm)
     ma = LinearAlgebra.checksquare(A)
     mb = LinearAlgebra.checksquare(B)
