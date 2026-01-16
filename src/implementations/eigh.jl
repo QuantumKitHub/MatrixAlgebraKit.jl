@@ -11,8 +11,7 @@ copy_input(::typeof(eigh_full), A::Diagonal) = copy(A)
 check_hermitian(A, ::AbstractAlgorithm) = check_hermitian(A)
 check_hermitian(A, alg::Algorithm) = check_hermitian(A; atol = get(alg.kwargs, :hermitian_tol, default_hermitian_tol(A)))
 function check_hermitian(A; atol::Real = default_hermitian_tol(A), rtol::Real = 0)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected"))
+    LinearAlgebra.checksquare(A)
     ishermitian(A; atol, rtol) ||
         throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix."))
     return nothing

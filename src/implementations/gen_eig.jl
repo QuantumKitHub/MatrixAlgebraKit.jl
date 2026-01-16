@@ -6,12 +6,9 @@ end
 copy_input(::typeof(gen_eig_vals), A, B) = copy_input(gen_eig_full, A, B)
 
 function check_input(::typeof(gen_eig_full!), A::AbstractMatrix, B::AbstractMatrix, WV, ::AbstractAlgorithm)
-    ma, na = size(A)
-    mb, nb = size(B)
-    ma == na || throw(DimensionMismatch("square input matrix A expected"))
-    mb == nb || throw(DimensionMismatch("square input matrix B expected"))
-    ma == mb || throw(DimensionMismatch("first dimension of input matrices expected to match"))
-    na == nb || throw(DimensionMismatch("second dimension of input matrices expected to match"))
+    ma = LinearAlgebra.checksquare(A)
+    mb = LinearAlgebra.checksquare(B)
+    ma == mb || throw(DimensionMismatch(lazy"Expected matching input sizes, dimensions are $ma and $mb"))
     W, V = WV
     @assert W isa Diagonal && V isa AbstractMatrix
     @check_size(W, (ma, ma))
@@ -23,13 +20,11 @@ function check_input(::typeof(gen_eig_full!), A::AbstractMatrix, B::AbstractMatr
     return nothing
 end
 function check_input(::typeof(gen_eig_vals!), A::AbstractMatrix, B::AbstractMatrix, W, ::AbstractAlgorithm)
-    ma, na = size(A)
-    mb, nb = size(B)
-    ma == na || throw(DimensionMismatch("square input matrix A expected"))
-    mb == nb || throw(DimensionMismatch("square input matrix B expected"))
-    ma == mb || throw(DimensionMismatch("dimension of input matrices expected to match"))
+    ma = LinearAlgebra.checksquare(A)
+    mb = LinearAlgebra.checksquare(B)
+    ma == mb || throw(DimensionMismatch(lazy"Expected matching input sizes, dimensions are $ma and $mb"))
     @assert W isa AbstractVector
-    @check_size(W, (na,))
+    @check_size(W, (ma,))
     @check_scalar(W, A, complex)
     @check_scalar(W, B, complex)
     return nothing

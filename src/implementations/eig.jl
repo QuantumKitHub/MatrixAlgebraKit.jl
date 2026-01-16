@@ -9,8 +9,7 @@ copy_input(::Union{typeof(eig_trunc), typeof(eig_trunc_no_error)}, A) = copy_inp
 copy_input(::typeof(eig_full), A::Diagonal) = copy(A)
 
 function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::AbstractAlgorithm)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected"))
+    m = LinearAlgebra.checksquare(A)
     D, V = DV
     @assert D isa Diagonal && V isa AbstractMatrix
     @check_size(D, (m, m))
@@ -20,17 +19,16 @@ function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::AbstractAlgor
     return nothing
 end
 function check_input(::typeof(eig_vals!), A::AbstractMatrix, D, ::AbstractAlgorithm)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected"))
+    m = LinearAlgebra.checksquare(A)
     @assert D isa AbstractVector
-    @check_size(D, (n,))
+    @check_size(D, (m,))
     @check_scalar(D, A, complex)
     return nothing
 end
 
 function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::DiagonalAlgorithm)
-    m, n = size(A)
-    ((m == n) && isdiag(A)) || throw(DimensionMismatch("diagonal input matrix expected"))
+    m = LinearAlgebra.checksquare(A)
+    isdiag(A) || throw(DimensionMismatch("diagonal input matrix expected"))
     D, V = DV
     @assert D isa Diagonal && V isa AbstractMatrix
     @check_size(D, (m, m))
@@ -40,10 +38,10 @@ function check_input(::typeof(eig_full!), A::AbstractMatrix, DV, ::DiagonalAlgor
     return nothing
 end
 function check_input(::typeof(eig_vals!), A::AbstractMatrix, D, ::DiagonalAlgorithm)
-    m, n = size(A)
-    ((m == n) && isdiag(A)) || throw(DimensionMismatch("diagonal input matrix expected"))
+    m = LinearAlgebra.checksquare(A)
+    isdiag(A) || throw(DimensionMismatch("diagonal input matrix expected"))
     @assert D isa AbstractVector
-    @check_size(D, (n,))
+    @check_size(D, (m,))
     @check_scalar(D, A, complex)
     return nothing
 end
