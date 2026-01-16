@@ -78,6 +78,16 @@ function eig_pullback!(
     end
     return ΔA
 end
+function eig_pullback!(
+        ΔA::Diagonal, A, DV, ΔDV, ind = Colon();
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+    )
+    ΔA_full = zero!(similar(ΔA, size(ΔA)))
+    ΔA_full = eig_pullback!(ΔA_full, A, DV, ΔDV, ind; degeneracy_atol, gauge_atol)
+    diagview(ΔA) .+= diagview(ΔA_full)
+    return ΔA
+end
 
 """
     eig_trunc_pullback!(
@@ -149,6 +159,16 @@ function eig_trunc_pullback!(
     else
         ΔA = mul!(ΔA, Z, V', 1, 1)
     end
+    return ΔA
+end
+function eig_trunc_pullback!(
+        ΔA::Diagonal, A, DV, ΔDV;
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+    )
+    ΔA_full = zero!(similar(ΔA, size(ΔA)))
+    ΔA_full = eig_trunc_pullback!(ΔA_full, A, DV, ΔDV; degeneracy_atol, gauge_atol)
+    diagview(ΔA) .+= diagview(ΔA_full)
     return ΔA
 end
 
