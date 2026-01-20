@@ -99,6 +99,17 @@ function svd_pullback!(
     end
     return ΔA
 end
+function svd_pullback!(
+        ΔA::Diagonal, A, USVᴴ, ΔUSVᴴ, ind = Colon();
+        rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
+    )
+    ΔA_full = zero!(similar(ΔA, size(ΔA)))
+    ΔA_full = svd_pullback!(ΔA_full, A, USVᴴ, ΔUSVᴴ, ind; rank_atol, degeneracy_atol, gauge_atol)
+    diagview(ΔA) .+= diagview(ΔA_full)
+    return ΔA
+end
 
 """
     svd_trunc_pullback!(
@@ -199,6 +210,17 @@ function svd_trunc_pullback!(
     Y = view(XY, m̃ .+ (1:ñ), :)
     ΔA = mul!(ΔA, Ũ, X * Vᴴ, 1, 1)
     ΔA = mul!(ΔA, U, Y' * Ṽᴴ, 1, 1)
+    return ΔA
+end
+function svd_trunc_pullback!(
+        ΔA::Diagonal, A, USVᴴ, ΔUSVᴴ;
+        rank_atol::Real = 0,
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
+    )
+    ΔA_full = zero!(similar(ΔA, size(ΔA)))
+    ΔA_full = svd_trunc_pullback!(ΔA_full, A, USVᴴ, ΔUSVᴴ; rank_atol, degeneracy_atol, gauge_atol)
+    diagview(ΔA) .+= diagview(ΔA_full)
     return ΔA
 end
 

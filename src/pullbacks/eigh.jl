@@ -68,6 +68,16 @@ function eigh_pullback!(
     end
     return ΔA
 end
+function eigh_pullback!(
+        ΔA::Diagonal, A, DV, ΔDV, ind = Colon();
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+    )
+    ΔA_full = zero!(similar(ΔA, size(ΔA)))
+    ΔA_full = eigh_pullback!(ΔA_full, A, DV, ΔDV, ind; degeneracy_atol, gauge_atol)
+    diagview(ΔA) .+= diagview(ΔA_full)
+    return ΔA
+end
 
 """
     eigh_trunc_pullback!(
@@ -139,6 +149,16 @@ function eigh_trunc_pullback!(
         p == length(ΔDvec) || throw(DimensionMismatch())
         ΔA = mul!(ΔA, V * Diagonal(real(ΔDvec)), V', 1, 1)
     end
+    return ΔA
+end
+function eigh_trunc_pullback!(
+        ΔA::Diagonal, A, DV, ΔDV;
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+    )
+    ΔA_full = zero!(similar(ΔA, size(ΔA)))
+    ΔA_full = eigh_trunc_pullback!(ΔA_full, A, DV, ΔDV; degeneracy_atol, gauge_atol)
+    diagview(ΔA) .+= diagview(ΔA_full)
     return ΔA
 end
 
