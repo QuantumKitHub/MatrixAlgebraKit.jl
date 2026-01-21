@@ -443,7 +443,9 @@ left_orth_alg(alg::LeftOrthAlgorithm) = alg
 left_orth_alg(alg::QRAlgorithms) = LeftOrthViaQR(alg)
 left_orth_alg(alg::PolarAlgorithms) = LeftOrthViaPolar(alg)
 left_orth_alg(alg::SVDAlgorithms) = LeftOrthViaSVD(alg)
+left_orth_alg(alg::DiagonalAlgorithm) = LeftOrthViaQR(alg)
 left_orth_alg(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = LeftOrthViaSVD(alg)
+left_orth_alg(alg::TruncatedAlgorithm{DiagonalAlgorithm}) = LeftOrthViaSVD(alg)
 
 """
     right_orth_alg(alg::AbstractAlgorithm) -> RightOrthAlgorithm
@@ -478,7 +480,9 @@ right_orth_alg(alg::RightOrthAlgorithm) = alg
 right_orth_alg(alg::LQAlgorithms) = RightOrthViaLQ(alg)
 right_orth_alg(alg::PolarAlgorithms) = RightOrthViaPolar(alg)
 right_orth_alg(alg::SVDAlgorithms) = RightOrthViaSVD(alg)
+right_orth_alg(alg::DiagonalAlgorithm) = RightOrthViaLQ(alg)
 right_orth_alg(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = RightOrthViaSVD(alg)
+right_orth_alg(alg::TruncatedAlgorithm{DiagonalAlgorithm}) = RightOrthViaSVD(alg)
 
 """
     left_null_alg(alg::AbstractAlgorithm) -> LeftNullAlgorithm

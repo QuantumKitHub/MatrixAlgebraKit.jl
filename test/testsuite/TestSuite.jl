@@ -72,9 +72,11 @@ is_pivoted(alg::MatrixAlgebraKit.LQViaTransposedQR) = is_pivoted(alg.qr_alg)
 isleftcomplete(V, N) = V * V' + N * N' ≈ I
 isleftcomplete(V::AnyCuMatrix, N::AnyCuMatrix) = isleftcomplete(collect(V), collect(N))
 isleftcomplete(V::AnyROCMatrix, N::AnyROCMatrix) = isleftcomplete(collect(V), collect(N))
+isleftcomplete(V::Diagonal{T, <:ROCVector{<:T}}, N::Diagonal{T, <:ROCVector{<:T}}) where {T} = isleftcomplete(collect(V), collect(N))
 isrightcomplete(Vᴴ, Nᴴ) = Vᴴ' * Vᴴ + Nᴴ' * Nᴴ ≈ I
 isrightcomplete(V::AnyCuMatrix, N::AnyCuMatrix) = isrightcomplete(collect(V), collect(N))
 isrightcomplete(V::AnyROCMatrix, N::AnyROCMatrix) = isrightcomplete(collect(V), collect(N))
+isrightcomplete(V::Diagonal{T, <:ROCVector{<:T}}, N::Diagonal{T, <:ROCVector{<:T}}) where {T} = isrightcomplete(collect(V), collect(N))
 
 instantiate_unitary(T, A, sz) = qr_compact(randn!(similar(A, eltype(T), sz, sz)))[1]
 # AMDGPU can't generate ComplexF32 random numbers
