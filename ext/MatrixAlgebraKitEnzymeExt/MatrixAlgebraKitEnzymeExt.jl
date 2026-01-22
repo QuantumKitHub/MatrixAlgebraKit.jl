@@ -379,12 +379,11 @@ for (f!, f_full!, pb!) in (
             ret = TD == Nothing ? diagview(nD) : copy!(D.val, diagview(nD))
             cache_D = (D.val !== ret) || EnzymeRules.overwritten(config)[3] ? copy(ret) : nothing
             primal = EnzymeRules.needs_primal(config) ? ret : nothing
-            dret = if EnzymeRules.needs_shadow(config)
-                TD == Nothing || isa(D, Const) ? zero(ret) : D.dval
-            else
-                nothing
-            end
-            return EnzymeRules.AugmentedReturn(primal, dret, (cache_D, dret, V))
+            # on 1.10, Enzyme can get confused about whether it needs the shadow
+            # create dret no matter what to account for this
+            dret = TD == Nothing || isa(D, Const) ? zero(ret) : D.dval
+            shadow = EnzymeRules.needs_shadow(config) ? dret : nothing
+            return EnzymeRules.AugmentedReturn(primal, shadow, (cache_D, dret, V))
         end
         function EnzymeRules.reverse(
                 config::EnzymeRules.RevConfigWidth{1},
@@ -426,12 +425,11 @@ function EnzymeRules.augmented_primal(
     ret = TS == Nothing ? diagview(nS) : copy!(S.val, diagview(nS))
     cache_S = (S.val !== ret) || EnzymeRules.overwritten(config)[3] ? copy(ret) : nothing
     primal = EnzymeRules.needs_primal(config) ? ret : nothing
-    dret = if EnzymeRules.needs_shadow(config)
-        TS == Nothing || isa(S, Const):zero(ret):S.dval
-    else
-        nothing
-    end
-    return EnzymeRules.AugmentedReturn(primal, dret, (cache_S, dret, U, Vᴴ))
+    # on 1.10, Enzyme can get confused about whether it needs the shadow
+    # create dret no matter what to account for this
+    dret = TS == Nothing || isa(S, Const) ? zero(ret) : S.dval
+    shadow = EnzymeRules.needs_shadow(config) ? dret : nothing
+    return EnzymeRules.AugmentedReturn(primal, shadow, (cache_S, dret, U, Vᴴ))
 end
 function EnzymeRules.reverse(
         config::EnzymeRules.RevConfigWidth{1},
