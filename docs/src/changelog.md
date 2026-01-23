@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.2...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.3...HEAD)
 
 ### Added
 
@@ -30,7 +30,27 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
-- Eigenvalue decompositions of diagonal inputs are sorted and have the same type as non-diagonal inputs ([#151](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/151)
+## [0.6.3](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.2...v0.6.3) - 2026-01-23
+
+### Added
+
+- Reverse-mode automatic differentiation rules for Enzyme ([#86](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/86)).
+- Native algorithm implementations for QR and LQ decompositions ([#90](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/90)).
+- Pullbacks for `Diagonal` input matrices in eigenvalue and singular value decompositions ([#156](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/156)).
+
+### Changed
+
+- Test infrastructure: migrated to `ParallelTestRunner` for improved test execution ([#155](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/155)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Eigenvalue decompositions of diagonal inputs are sorted and have the same type as non-diagonal inputs ([#151](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/151)).
+- Consistent `checksquare` usage across codebase ([#154](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/154)).
+- Typos in error messages ([#153](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/153)).
 
 ## [0.6.2](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.1...v0.6.2) - 2026-01-08
 
