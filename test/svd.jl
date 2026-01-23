@@ -25,6 +25,9 @@ for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
                 CUSOLVER_Jacobi(),
             )
             TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
+            k = 5
+            p = min(m, n) - 2
+            TestSuite.test_randomized_svd(CuMatrix{T}, (m, n), (CUSOLVER_Randomized(; k, p, niters = 20),))
             if n == m
                 TestSuite.test_svd(Diagonal{T, CuVector{T}}, m)
                 TestSuite.test_svd_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
