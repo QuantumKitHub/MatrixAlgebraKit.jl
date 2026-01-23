@@ -322,7 +322,7 @@ function test_randomized_svd(T::Type, sz, algs; kwargs...)
         minmn = min(m, n)
         S₀ = collect(svd_vals(A))
         U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; alg)
-        @test length(diagview(S1)) == alg.alg.k
-        @test collect(diagview(S1)) ≈ S₀[1:alg.alg.k]
+        @test length(diagview(S1)) == alg.k
+        @test collect(diagview(S1)) ≈ S₀[1:alg.k]
     end
 end
