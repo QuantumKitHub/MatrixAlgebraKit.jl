@@ -55,8 +55,7 @@ function eig_pullback!(
 
         check_eig_cotangents(D, VᴴΔV; degeneracy_atol, gauge_atol)
 
-        VᴴΔV ./= conj.(transpose(D) .- D)
-        diagview(VᴴΔV) .= zero(eltype(VᴴΔV))
+        VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
 
         if !iszerotangent(ΔDmat)
             ΔDvec = diagview(ΔDmat)
