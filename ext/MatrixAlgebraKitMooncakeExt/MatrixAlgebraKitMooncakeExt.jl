@@ -7,7 +7,7 @@ using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output, zero!
 using MatrixAlgebraKit: qr_pullback!, qr_pushforward!, lq_pullback!, lq_pushforward!
 using MatrixAlgebraKit: qr_null_pullback!, qr_null_pushforward!, lq_null_pullback!, lq_null_pushforward!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_trunc_pullback!, eigh_trunc_pullback!
-using MatrixalgebraKit: eig_vals_pullback!, eigh_vals_pullback!, eig_vals_pushforward!, eigh_vals_pushforward!
+using MatrixAlgebraKit: eig_vals_pullback!, eigh_vals_pullback!, eig_vals_pushforward!, eigh_vals_pushforward!
 using MatrixAlgebraKit: eig_pushforward!, eigh_pushforward!, eig_trunc_pushforward!, eigh_trunc_pushforward!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!, left_polar_pushforward!, right_polar_pushforward!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!, svd_pushforward!, svd_trunc_pushforward!
@@ -225,7 +225,7 @@ for (f!, f, f_full, pb, pf, adj) in (
     end
 end
 
-for (f, f_ne, pb, adj) in (
+for (f, f_ne, pb, pf, adj) in (
         (:eig_trunc, :eig_trunc_no_error, :eig_trunc_pullback!, :eig_trunc_pushforward!, :eig_trunc_adjoint),
         (:eigh_trunc, :eigh_trunc_no_error, :eigh_trunc_pullback!, :eigh_trunc_pushforward, :eigh_trunc_adjoint),
     )
