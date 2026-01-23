@@ -27,7 +27,7 @@ for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
             TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
             k = 5
             p = min(m, n) - k - 2
-            min(m, n) > k + 2 && TestSuite.test_randomized_svd(CuMatrix{T}, (m, n), (TruncatedAlgorithm(CUSOLVER_Randomized(; k, p, niters = 20), truncrank(k)),))
+            min(m, n) > k + 2 && TestSuite.test_randomized_svd(CuMatrix{T}, (m, n), (MatrixAlgebraKit.TruncatedAlgorithm(CUSOLVER_Randomized(; k, p, niters = 20), truncrank(k)),))
             if n == m
                 TestSuite.test_svd(Diagonal{T, CuVector{T}}, m)
                 TestSuite.test_svd_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
