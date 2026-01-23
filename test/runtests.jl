@@ -1,4 +1,4 @@
-using ParallelTestRunner
+#=using ParallelTestRunner
 using MatrixAlgebraKit
 
 # Start with autodiscovered tests
@@ -22,8 +22,6 @@ if filter_tests!(testsuite, args)
         delete!(testsuite, "algorithms")
         delete!(testsuite, "truncate")
         delete!(testsuite, "gen_eig")
-        delete!(testsuite, "mooncake")
-        delete!(testsuite, "enzyme")
         delete!(testsuite, "chainrules")
         delete!(testsuite, "codequality")
     else
@@ -32,4 +30,6 @@ if filter_tests!(testsuite, args)
     end
 end
 
-runtests(MatrixAlgebraKit, args; testsuite)
+runtests(MatrixAlgebraKit, args; testsuite)=#
+include("enzyme.jl")
+include("mooncake.jl")

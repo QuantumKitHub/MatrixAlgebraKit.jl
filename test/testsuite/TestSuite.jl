@@ -96,6 +96,7 @@ include("eigh.jl")
 include("orthnull.jl")
 include("svd.jl")
 include("mooncake.jl")
+include("enzyme.jl")
 include("chainrules.jl")
 
 end

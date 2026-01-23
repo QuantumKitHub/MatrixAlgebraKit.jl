@@ -46,7 +46,7 @@ function enz_copy_eigh_trunc_no_error!(A, DV, alg)
 end
 
 function test_pullbacks_match(rng, f!, f, A, args, Δargs, alg = nothing; ȳ = copy.(Δargs), return_act = Duplicated)
-    ΔA = randn(rng, eltype(A), size(A)...)
+    ΔA = randn!(similar(A))
     A_ΔA() = Duplicated(copy(A), copy(ΔA))
     function args_Δargs()
         if isnothing(args)
@@ -143,8 +143,8 @@ function test_enzyme_qr(
                 r = min(m, n) - 5
                 Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
                 QR, ΔQR = ad_qr_rank_deficient_compact_setup(Ard)
-                eltype(T) <: BlasFloat && test_reverse(qr_compact, RT, (Ard, TA), (alg, Const); atol, rtol, output_tangent = (ΔQ, ΔR), fdm)
-                test_pullbacks_match(rng, qr_compact!, qr_compact, Ard, (Q, R), (ΔQ, ΔR), alg)
+                eltype(T) <: BlasFloat && test_reverse(qr_compact, RT, (Ard, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
+                test_pullbacks_match(rng, qr_compact!, qr_compact, Ard, QR, ΔQR, alg)
             end
         end
     end
@@ -163,8 +163,8 @@ function test_enzyme_lq(
         @testset "lq_compact" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 LQ, ΔLQ = ad_lq_compact_setup(A)
-                eltype(T) <: BlasFloat && test_reverse(lq_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = (ΔL, ΔQ), fdm)
-                test_pullbacks_match(rng, lq_compact!, lq_compact, A, (L, Q), (ΔL, ΔQ), alg)
+                eltype(T) <: BlasFloat && test_reverse(lq_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔLQ, fdm)
+                test_pullbacks_match(rng, lq_compact!, lq_compact, A, LQ, ΔLQ, alg)
             end
         end
         @testset "lq_null" begin
@@ -177,8 +177,8 @@ function test_enzyme_lq(
         @testset "lq_full" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 LQ, ΔLQ = ad_lq_full_setup(A)
-                eltype(T) <: BlasFloat && test_reverse(lq_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = (ΔL, ΔQ), fdm)
-                test_pullbacks_match(rng, lq_full!, lq_full, A, (L, Q), (ΔL, ΔQ), alg)
+                eltype(T) <: BlasFloat && test_reverse(lq_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔLQ, fdm)
+                test_pullbacks_match(rng, lq_full!, lq_full, A, LQ, ΔLQ, alg)
             end
         end
         @testset "lq_compact -- rank-deficient A" begin
@@ -187,8 +187,8 @@ function test_enzyme_lq(
                 r = min(m, n) - 5
                 Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
                 LQ, ΔLQ = ad_lq_rank_deficient_compact_setup(Ard)
-                eltype(T) <: BlasFloat && test_reverse(lq_compact, RT, (Ard, TA), (alg, Const); atol, rtol, output_tangent = (ΔL, ΔQ), fdm)
-                test_pullbacks_match(rng, lq_compact!, lq_compact, Ard, (L, Q), (ΔL, ΔQ), alg)
+                eltype(T) <: BlasFloat && test_reverse(lq_compact, RT, (Ard, TA), (alg, Const); atol, rtol, output_tangent = ΔLQ, fdm)
+                test_pullbacks_match(rng, lq_compact!, lq_compact, Ard, LQ, ΔLQ, alg)
             end
         end
     end
@@ -209,8 +209,8 @@ function test_enzyme_eig(
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
                 if eltype(T) <: BlasFloat
-                    test_reverse(eig_full, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = (copy(ΔD2), copy(ΔV)), fdm)
-                    test_pullbacks_match(rng, eig_full!, eig_full, A, (D, V), (ΔD2, ΔV), alg)
+                    test_reverse(eig_full, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔD2V, fdm)
+                    test_pullbacks_match(rng, eig_full!, eig_full, A, DV, ΔD2V, alg)
                 else
                     test_pullbacks_match(rng, eig_full!, eig_full, A, (nothing, nothing), (nothing, nothing), alg; ȳ = (ΔD2, ΔV))
                 end
@@ -221,9 +221,9 @@ function test_enzyme_eig(
                 D, ΔD = ad_eig_vals_setup(A)
                 if eltype(T) <: BlasFloat
                     test_reverse(eig_vals, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = copy(ΔD2.diag), fdm)
-                    test_pullbacks_match(rng, eig_vals!, eig_vals, A, D.diag, ΔD2.diag, alg)
+                    test_pullbacks_match(rng, eig_vals!, eig_vals, A, D.diag, ΔD.diag, alg)
                 else
-                    test_pullbacks_match(rng, eig_vals!, eig_vals, A, nothing, nothing, alg; ȳ = ΔD2.diag)
+                    test_pullbacks_match(rng, eig_vals!, eig_vals, A, nothing, nothing, alg; ȳ = ΔD.diag)
                 end
             end
         end
@@ -233,19 +233,19 @@ function test_enzyme_eig(
                     truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_eig_algorithm(A), truncrank(r; by = abs))
                     DV, _, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
                     if eltype(T) <: BlasFloat
-                        test_reverse(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = (ΔDtrunc, ΔVtrunc), fdm)
-                        test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc))
+                        test_reverse(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+                        test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, DV, ΔDV, truncalg, ȳ = ΔDVtrunc)
                     else
-                        test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, (nothing, nothing), (nothing, nothing), truncalg, ȳ = (ΔDtrunc, ΔVtrunc))
+                        test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, (nothing, nothing), (nothing, nothing), truncalg, ȳ = ΔDVtrunc)
                     end
                 end
                 truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_eig_algorithm(A), truncrank(5; by = real))
                 DV, _, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
                 if eltype(T) <: BlasFloat
-                    test_reverse(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = (ΔDtrunc, ΔVtrunc), fdm)
-                    test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc))
+                    test_reverse(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+                    test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, DV, ΔDV, truncalg, ȳ = ΔDVtrunc)
                 else
-                    test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, (nothing, nothing), (nothing, nothing), truncalg, ȳ = (ΔDtrunc, ΔVtrunc))
+                    test_pullbacks_match(rng, eig_trunc_no_error!, eig_trunc_no_error, A, (nothing, nothing), (nothing, nothing), truncalg, ȳ = ΔDVtrunc)
                 end
             end
         end
@@ -265,17 +265,19 @@ function test_enzyme_eigh(
         fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
         @testset "eigh_full" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+                DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
                 if eltype(T) <: BlasFloat
-                    test_reverse(copy_eigh_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = (copy(ΔD2), copy(ΔV)), fdm)
-                    test_reverse(copy_eigh_full!, RT, (copy(A), TA), ((D, V), TA), (alg, Const); atol, rtol, output_tangent = (copy(ΔD2), copy(ΔV)), fdm)
+                    test_reverse(copy_eigh_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
+                    test_reverse(copy_eigh_full!, RT, (A, TA), ((D, V), TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
                 end
-                test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, A, (D, V), (ΔD2, ΔV), alg)
+                test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, A, DV, ΔD2V, alg)
             end
         end
         @testset "eigh_vals" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-                eltype(T) <: BlasFloat && test_reverse(copy_eigh_vals, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = copy(ΔD2.diag), fdm)
-                test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, A, D.diag, ΔD2.diag, alg)
+                D, ΔD = ad_eigh_vals_setup(A)
+                eltype(T) <: BlasFloat && test_reverse(copy_eigh_vals, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔD, fdm)
+                test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, A, D, ΔD, alg)
             end
         end
         @testset "eigh_trunc" begin
@@ -284,14 +286,14 @@ function test_enzyme_eigh(
                     Ddiag = diagview(D)
                     truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
                     DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
-                    eltype(T) <: BlasFloat && test_reverse(copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = (ΔDtrunc, ΔVtrunc), fdm)
-                    test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
+                    eltype(T) <: BlasFloat && test_reverse(copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+                    test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, DV, ΔD2V, truncalg, ȳ = ΔDVtrunc, return_act = RT)
                 end
                 D = eigh_vals(A / 2)
                 truncalg = TruncatedAlgorithm(alg, trunctol(; atol = maximum(abs, D) / 2))
                 DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
-                eltype(T) <: BlasFloat && test_reverse(copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = (ΔDtrunc, ΔVtrunc), fdm)
-                test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, (D, V), (ΔD2, ΔV), truncalg, ȳ = (ΔDtrunc, ΔVtrunc), return_act = RT)
+                eltype(T) <: BlasFloat && test_reverse(copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+                test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, DV, ΔD2V, truncalg, ȳ = ΔDVtrunc, return_act = RT)
             end
         end
     end
@@ -312,11 +314,11 @@ function test_enzyme_svd(
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 USVᴴ, _, ΔUSVᴴ = ad_svd_compact_setup(A)
                 if eltype(T) <: BlasFloat
-                    test_reverse(svd_compact, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = (ΔU, ΔS, ΔVᴴ), fdm)
-                    test_pullbacks_match(rng, svd_compact!, svd_compact, A, (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ), alg)
+                    test_reverse(svd_compact, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔUSVᴴ, fdm)
+                    test_pullbacks_match(rng, svd_compact!, svd_compact, A, USVᴴ, ΔUSVᴴ, alg)
                 else
                     USVᴴ = MatrixAlgebraKit.initialize_output(svd_compact!, A, alg)
-                    test_pullbacks_match(rng, svd_compact!, svd_compact, A, USVᴴ, (nothing, nothing, nothing), alg; ȳ = (ΔU, ΔS, ΔVᴴ))
+                    test_pullbacks_match(rng, svd_compact!, svd_compact, A, USVᴴ, (nothing, nothing, nothing), alg; ȳ = ΔUSVᴴ)
                 end
             end
         end
