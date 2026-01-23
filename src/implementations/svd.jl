@@ -399,7 +399,7 @@ function svd_trunc_no_error!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{
 
     do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
     # the output matrices here are the same size as for svd_full!
-    do_gauge_fix && gaugefix!(svd_full!, Utr, Vᴴtr)
+    do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
 
     return Utr, Str, Vᴴtr
 end
