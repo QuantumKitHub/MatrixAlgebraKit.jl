@@ -411,7 +411,7 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     normA = norm(A)
     # equivalent to sqrt(normA^2 - normS^2)
     # but may be more accurate
-    ϵ = sqrt((normA + normS) * (normA - normS))
+    ϵ = sqrt((normA + normS) * abs(normA - normS))
     return Utr, Str, Vᴴtr, ϵ
 end
 
