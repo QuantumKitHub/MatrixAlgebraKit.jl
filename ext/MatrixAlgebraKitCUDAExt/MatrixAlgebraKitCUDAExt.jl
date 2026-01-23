@@ -3,7 +3,7 @@ module MatrixAlgebraKitCUDAExt
 using MatrixAlgebraKit
 using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
-using MatrixAlgebraKit: diagview, sign_safe, default_pullback_gauge_atol, default_pullback_rank_atol
+using MatrixAlgebraKit: diagview, sign_safe
 using MatrixAlgebraKit: LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_Xgesvdr!, _gpu_gesvdj!, _gpu_geev!
@@ -194,13 +194,6 @@ end
 # TODO: intersect doesn't work on GPU
 MatrixAlgebraKit._ind_intersect(A::CuVector{Int}, B::CuVector{Int}) =
     MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
-
-MatrixAlgebraKit.default_pullback_rank_atol(A::AnyCuArray) = eps(norm(CuArray(A), Inf))^(3 / 4)
-MatrixAlgebraKit.default_pullback_gauge_atol(A::AnyCuArray) = MatrixAlgebraKit.iszerotangent(A) ? 0 : eps(norm(CuArray(A), Inf))^(3 / 4)
-function MatrixAlgebraKit.default_pullback_gauge_atol(A::AnyCuArray, As...)
-    As′ = filter(!MatrixAlgebraKit.iszerotangent, (A, As...))
-    return isempty(As′) ? 0 : eps(norm(CuArray.(As′), Inf))^(3 / 4)
-end
 
 function _sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
     # https://github.com/JuliaGPU/CUDA.jl/issues/3021
