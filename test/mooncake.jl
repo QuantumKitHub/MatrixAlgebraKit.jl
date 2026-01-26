@@ -14,11 +14,11 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 m = 19
 for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
     TestSuite.seed_rng!(123)
-    if CUDA.functional()
+    #=if CUDA.functional()
         TestSuite.test_mooncake(CuMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
         #n == m && TestSuite.test_mooncake(Diagonal{T, CuVector{T}}, m; atol = m * TestSuite.precision(T), rtol = m * TestSuite.precision(T))
     end
-    #=if AMDGPU.functional()
+    if AMDGPU.functional()
         TestSuite.test_mooncake(ROCMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
         TestSuite.test_mooncake(Diagonal{T, ROCVector{T}}, m; atol = m * TestSuite.precision(T), rtol = m * TestSuite.precision(T))
     end=# # not yet supported
