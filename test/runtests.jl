@@ -1,4 +1,4 @@
-#=using ParallelTestRunner
+using ParallelTestRunner
 using MatrixAlgebraKit
 
 # Start with autodiscovered tests
@@ -30,6 +30,4 @@ if filter_tests!(testsuite, args)
     end
 end
 
-runtests(MatrixAlgebraKit, args; testsuite)=#
-include("enzyme.jl")
-include("mooncake.jl")
+runtests(MatrixAlgebraKit, args; testsuite)
