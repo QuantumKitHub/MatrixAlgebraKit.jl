@@ -120,7 +120,7 @@ end
 
 # when one of the ind selections is a bitvector, have to handle differently
 function _ind_intersect(A::AbstractVector{Bool}, B::AbstractVector)
-    result = falses(length(A))
+    result = fill!(similar(A), false)
     result[B] .= @view A[B]
     return result
 end
