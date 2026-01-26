@@ -9,7 +9,6 @@ filter!(!(startswith("testsuite") ∘ first), testsuite)
 
 # remove utils
 delete!(testsuite, "utilities")
-delete!(testsuite, "ad_utils")
 delete!(testsuite, "linearmap")
 
 # Parse arguments
