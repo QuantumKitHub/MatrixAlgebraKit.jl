@@ -312,3 +312,16 @@ function test_svd_trunc_algs(
         end
     end
 end
+
+function test_randomized_svd(T::Type, sz, algs; kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "randomized svd_trunc! algorithm $alg $summary_str" for alg in algs
+        A = instantiate_matrix(T, sz)
+        Ac = deepcopy(A)
+        m, n = size(A)
+        minmn = min(m, n)
+        S₀ = collect(svd_vals(A))
+        U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; alg)
+        @test collect(diagview(S1))[1:alg.alg.k] ≈ S₀[1:alg.alg.k]
+    end
+end
