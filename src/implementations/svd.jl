@@ -398,29 +398,20 @@ function svd_trunc_no_error!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{
     (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
 
     do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    # the output matrices here are the same size as for svd_full!
     do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
 
     return Utr, Str, Vᴴtr
 end
 
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
-    U, S, Vᴴ = USVᴴ
-    check_input(svd_trunc!, A, (U, S, Vᴴ), alg.alg)
-    _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
-
-    # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
-    (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
-
+    Utr, Str, Vᴴtr = svd_trunc_no_error!(A, USVᴴ, alg)
     # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
     normS = norm(diagview(Str))
     normA = norm(A)
     # equivalent to sqrt(normA^2 - normS^2)
     # but may be more accurate
-    ϵ = sqrt((normA + normS) * (normA - normS))
-
-    do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
-
+    ϵ = sqrt((normA + normS) * abs(normA - normS))
     return Utr, Str, Vᴴtr, ϵ
 end
 
