@@ -271,7 +271,7 @@ function test_enzyme_eigh(
                 DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
                 if eltype(T) <: BlasFloat
                     test_reverse(enz_copy_eigh_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
-                    test_reverse(enz_copy_eigh_full!, RT, (A, TA), ((D, V), TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
+                    test_reverse(enz_copy_eigh_full!, RT, (A, TA), (DV, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
                 end
                 is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_full!, copy_eigh_full, A, DV, ΔD2V, alg)
             end
