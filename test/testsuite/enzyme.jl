@@ -270,17 +270,17 @@ function test_enzyme_eigh(
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
                 if eltype(T) <: BlasFloat
-                    test_reverse(copy_eigh_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
-                    test_reverse(copy_eigh_full!, RT, (A, TA), ((D, V), TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
+                    test_reverse(enz_copy_eigh_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
+                    test_reverse(enz_copy_eigh_full!, RT, (A, TA), ((D, V), TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
                 end
-                is_cpu(A) && enz_test_pullbacks_match(rng, copy_eigh_full!, copy_eigh_full, A, DV, ΔD2V, alg)
+                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_full!, copy_eigh_full, A, DV, ΔD2V, alg)
             end
         end
         @testset "eigh_vals" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 D, ΔD = ad_eigh_vals_setup(A)
-                eltype(T) <: BlasFloat && test_reverse(copy_eigh_vals, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔD, fdm)
-                is_cpu(A) && enz_test_pullbacks_match(rng, copy_eigh_vals!, copy_eigh_vals, A, D, ΔD, alg)
+                eltype(T) <: BlasFloat && test_reverse(enz_copy_eigh_vals, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔD, fdm)
+                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_vals!, copy_eigh_vals, A, D, ΔD, alg)
             end
         end
         @testset "eigh_trunc" begin
@@ -289,13 +289,13 @@ function test_enzyme_eigh(
                 for r in 1:4:m
                     truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
                     DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
-                    eltype(T) <: BlasFloat && test_reverse(copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
-                    is_cpu(A) && enz_test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, DV, ΔD2V, truncalg, ȳ = ΔDVtrunc, return_act = RT)
+                    eltype(T) <: BlasFloat && test_reverse(enz_copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+                    is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_trunc_no_error!, enz_copy_eigh_trunc_no_error, A, DV, ΔD2V, truncalg, ȳ = ΔDVtrunc, return_act = RT)
                 end
                 truncalg = TruncatedAlgorithm(alg, trunctol(; atol = maximum(abs, D) / 2))
                 DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
-                eltype(T) <: BlasFloat && test_reverse(copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
-                is_cpu(A) && enz_test_pullbacks_match(rng, copy_eigh_trunc_no_error!, copy_eigh_trunc_no_error, A, DV, ΔD2V, truncalg, ȳ = ΔDVtrunc, return_act = RT)
+                eltype(T) <: BlasFloat && test_reverse(enz_copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_trunc_no_error!, enz_copy_eigh_trunc_no_error, A, DV, ΔD2V, truncalg, ȳ = ΔDVtrunc, return_act = RT)
             end
         end
     end
