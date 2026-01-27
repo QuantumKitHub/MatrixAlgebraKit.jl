@@ -97,7 +97,8 @@ function test_enzyme(T::Type, sz; kwargs...)
         test_enzyme_lq(T, sz; kwargs...)
         if length(sz) == 1 || sz[1] == sz[2]
             test_enzyme_eig(T, sz; kwargs...)
-            test_enzyme_eigh(T, sz; kwargs...)
+            # missing Enzyme rule
+            eltype(T) <: BlasFloat && test_enzyme_eigh(T, sz; kwargs...)
         end
         test_enzyme_svd(T, sz; kwargs...)
         if eltype(T) <: BlasFloat
@@ -215,7 +216,7 @@ function test_enzyme_eig(
                     test_reverse(eig_full, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔD2V, fdm)
                     is_cpu(A) && enz_test_pullbacks_match(rng, eig_full!, eig_full, A, DV, ΔD2V, alg)
                 else
-                    is_cpu(A) && enz_test_pullbacks_match(rng, eig_full!, eig_full, A, (nothing, nothing), (nothing, nothing), alg; ȳ = (ΔD2, ΔV))
+                    is_cpu(A) && enz_test_pullbacks_match(rng, eig_full!, eig_full, A, (nothing, nothing), (nothing, nothing), alg; ȳ = ΔD2V)
                 end
             end
         end
@@ -224,7 +225,7 @@ function test_enzyme_eig(
                 D, ΔD = ad_eig_vals_setup(A)
                 if eltype(T) <: BlasFloat
                     test_reverse(eig_vals, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔD, fdm)
-                    is_cpu(A) && enz_test_pullbacks_match(rng, eig_vals!, eig_vals, A, D.diag, ΔD, alg)
+                    is_cpu(A) && enz_test_pullbacks_match(rng, eig_vals!, eig_vals, A, D, ΔD, alg)
                 else
                     is_cpu(A) && enz_test_pullbacks_match(rng, eig_vals!, eig_vals, A, nothing, nothing, alg; ȳ = ΔD)
                 end
@@ -273,14 +274,14 @@ function test_enzyme_eigh(
                     test_reverse(enz_copy_eigh_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
                     test_reverse(enz_copy_eigh_full!, RT, (A, TA), (DV, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
                 end
-                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_full!, copy_eigh_full, A, DV, ΔD2V, alg)
+                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_full!, enz_copy_eigh_full, A, DV, ΔD2V, alg)
             end
         end
         @testset "eigh_vals" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 D, ΔD = ad_eigh_vals_setup(A)
                 eltype(T) <: BlasFloat && test_reverse(enz_copy_eigh_vals, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔD, fdm)
-                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_vals!, copy_eigh_vals, A, D, ΔD, alg)
+                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_vals!, enz_copy_eigh_vals, A, D, ΔD, alg)
             end
         end
         @testset "eigh_trunc" begin
