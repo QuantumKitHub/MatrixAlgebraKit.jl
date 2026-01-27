@@ -287,7 +287,6 @@ function test_enzyme_eigh(
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
                 D = eigh_vals(A / 2)
                 for r in 1:4:m
-                    Ddiag = diagview(D)
                     truncalg = TruncatedAlgorithm(alg, truncrank(r; by = abs))
                     DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
                     eltype(T) <: BlasFloat && test_reverse(copy_eigh_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
