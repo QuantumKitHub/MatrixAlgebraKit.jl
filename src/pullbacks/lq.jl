@@ -1,3 +1,41 @@
+function check_lq_cotangents(
+        L, Q, ΔL, ΔQ, minmn::Int, p::Int;
+        gauge_atol::Real = default_pullback_gauge_atol(ΔQ)
+    )
+    if minmn > p # case where A is rank-deficient
+        Δgauge = abs(zero(eltype(Q)))
+        if !iszerotangent(ΔQ)
+            # in this case the number Householder reflections will
+            # change upon small variations, and all of the remaining
+            # columns of ΔQ should be zero for a gauge-invariant
+            # cost function
+            ΔQ2 = view(ΔQ, (p + 1):size(Q, 1), :)
+            Δgauge = max(Δgauge, norm(ΔQ2))
+        end
+        if !iszerotangent(ΔL)
+            ΔL22 = view(ΔL, (p + 1):size(L, 1), (p + 1):minmn)
+            Δgauge = max(Δgauge, norm(ΔL22))
+        end
+        Δgauge ≤ gauge_atol ||
+            @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    end
+    return
+end
+
+function check_lq_full_cotangents(Q1, ΔQ2, ΔQ2Q1ᴴ; gauge_atol::Real = default_pullback_gauge_atol(Q1))
+    # in the case where A is full rank, but there are more columns in Q than in A
+    # (the case of `lq_full`), there is gauge-invariant information in the
+    # projection of ΔQ2 onto the column space of Q1, by virtue of Q being a unitary
+    # matrix. As the number of Householder reflections is in fixed in the full rank
+    # case, Q is expected to rotate smoothly (we might even be able to predict) also
+    # how the full Q2 will change, but this we omit for now, and we consider
+    # Q2' * ΔQ2 as a gauge dependent quantity.
+    Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
+    Δgauge ≤ gauge_atol ||
+        @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    return
+end
+
 """
     lq_pullback!(
         ΔA, A, LQ, ΔLQ;
@@ -36,23 +74,7 @@ function lq_pullback!(
     ΔA1 = view(ΔA, 1:p, :)
     ΔA2 = view(ΔA, (p + 1):m, :)
 
-    if minmn > p # case where A is rank-deficient
-        Δgauge = abs(zero(eltype(Q)))
-        if !iszerotangent(ΔQ)
-            # in this case the number Householder reflections will
-            # change upon small variations, and all of the remaining
-            # columns of ΔQ should be zero for a gauge-invariant
-            # cost function
-            ΔQ2 = view(ΔQ, (p + 1):size(Q, 1), :)
-            Δgauge = max(Δgauge, norm(ΔQ2, Inf))
-        end
-        if !iszerotangent(ΔL)
-            ΔL22 = view(ΔL, (p + 1):m, (p + 1):minmn)
-            Δgauge = max(Δgauge, norm(ΔL22, Inf))
-        end
-        Δgauge ≤ gauge_atol ||
-            @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    end
+    check_lq_cotangents(L, Q, ΔL, ΔQ, minmn, p; gauge_atol)
 
     ΔQ̃ = zero!(similar(Q, (p, n)))
     if !iszerotangent(ΔQ)
@@ -61,17 +83,8 @@ function lq_pullback!(
         if p < size(Q, 1)
             Q2 = view(Q, (p + 1):size(Q, 1), :)
             ΔQ2 = view(ΔQ, (p + 1):size(Q, 1), :)
-            # in the case where A is full rank, but there are more columns in Q than in A
-            # (the case of `qr_full`), there is gauge-invariant information in the
-            # projection of ΔQ2 onto the column space of Q1, by virtue of Q being a unitary
-            # matrix. As the number of Householder reflections is in fixed in the full rank
-            # case, Q is expected to rotate smoothly (we might even be able to predict) also
-            # how the full Q2 will change, but this we omit for now, and we consider
-            # Q2' * ΔQ2 as a gauge dependent quantity.
             ΔQ2Q1ᴴ = ΔQ2 * Q1'
-            Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
-            Δgauge ≤ gauge_atol ||
-                @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+            check_lq_full_cotangents(Q1, ΔQ2, ΔQ2Q1ᴴ; gauge_atol)
             ΔQ̃ = mul!(ΔQ̃, ΔQ2Q1ᴴ', Q2, -1, 1)
         end
     end
@@ -102,6 +115,14 @@ function lq_pullback!(
     return ΔA
 end
 
+function check_lq_null_cotangents(Nᴴ, ΔNᴴ; gauge_atol::Real = default_pullback_gauge_atol(ΔNᴴ))
+    aNᴴΔN = project_antihermitian!(Nᴴ * ΔNᴴ')
+    Δgauge = norm(aNᴴΔN)
+    Δgauge ≤ gauge_atol ||
+        @warn "`lq_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    return
+end
+
 """
     lq_null_pullback!(
         ΔA::AbstractMatrix, A, Nᴴ, ΔNᴴ;
@@ -118,10 +139,7 @@ function lq_null_pullback!(
         gauge_atol::Real = default_pullback_gauge_atol(ΔNᴴ)
     )
     if !iszerotangent(ΔNᴴ) && size(Nᴴ, 1) > 0
-        aNᴴΔN = project_antihermitian!(Nᴴ * ΔNᴴ')
-        Δgauge = norm(aNᴴΔN)
-        Δgauge ≤ gauge_atol ||
-            @warn "`lq_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        check_lq_null_cotangents(Nᴴ, ΔNᴴ; gauge_atol)
         L, Q = lq_compact(A; positive = true) # should we be able to provide algorithm here?
         X = ldiv!(LowerTriangular(L)', Q * ΔNᴴ')
         ΔA = mul!(ΔA, X, Nᴴ, -1, 1)

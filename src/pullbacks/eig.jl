@@ -1,3 +1,15 @@
+function check_eig_cotangents(
+        D, VᴴΔV;
+        degeneracy_atol::Real = default_pullback_rank_atol(D),
+        gauge_atol::Real = default_pullback_gauge_atol(VᴴΔV)
+    )
+    mask = abs.(transpose(D) .- D) .< degeneracy_atol
+    Δgauge = norm(view(VᴴΔV, mask))
+    Δgauge ≤ gauge_atol ||
+        @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    return
+end
+
 """
     eig_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV, [ind];
@@ -41,10 +53,7 @@ function eig_pullback!(
         length(indV) == pV || throw(DimensionMismatch())
         mul!(view(VᴴΔV, :, indV), V', ΔV)
 
-        mask = abs.(transpose(D) .- D) .< degeneracy_atol
-        Δgauge = norm(view(VᴴΔV, mask), Inf)
-        Δgauge ≤ gauge_atol ||
-            @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        check_eig_cotangents(D, VᴴΔV; degeneracy_atol, gauge_atol)
 
         VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
 
@@ -129,10 +138,7 @@ function eig_trunc_pullback!(
     if !iszerotangent(ΔV)
         (n, p) == size(ΔV) || throw(DimensionMismatch())
         VᴴΔV = V' * ΔV
-        mask = abs.(transpose(D) .- D) .< degeneracy_atol
-        Δgauge = norm(view(VᴴΔV, mask), Inf)
-        Δgauge ≤ gauge_atol ||
-            @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        check_eig_cotangents(D, VᴴΔV; degeneracy_atol, gauge_atol)
 
         ΔVperp = ΔV - V * inv(G) * VᴴΔV
         VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
@@ -150,7 +156,7 @@ function eig_trunc_pullback!(
     # add contribution from orthogonal complement
     PA = A - (A * V) / V
     Y = mul!(ΔVperp, PA', Z, 1, 1)
-    X = sylvester(PA', -Dmat', Y)
+    X = _sylvester(PA', -Dmat', Y)
     Z .+= X
 
     if eltype(ΔA) <: Real

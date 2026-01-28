@@ -10,3 +10,6 @@ function iszerotangent end
 
 iszerotangent(::Any) = false
 iszerotangent(::Nothing) = true
+
+# fallback
+_sylvester(A, B, C) = LinearAlgebra.sylvester(A, B, C)

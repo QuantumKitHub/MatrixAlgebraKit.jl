@@ -84,6 +84,8 @@ function instantiate_unitary(T, A::ROCMatrix{<:Complex}, sz)
 end
 instantiate_unitary(::Type{<:Diagonal}, A, sz) = Diagonal(fill!(similar(parent(A), eltype(A), sz), one(eltype(A))))
 
+include("ad_utils.jl")
+
 include("qr.jl")
 include("lq.jl")
 include("polar.jl")
@@ -93,5 +95,8 @@ include("eig.jl")
 include("eigh.jl")
 include("orthnull.jl")
 include("svd.jl")
+include("mooncake.jl")
+include("enzyme.jl")
+include("chainrules.jl")
 
 end

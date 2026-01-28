@@ -1,0 +1,423 @@
+function remove_svdgauge_dependence!(
+        ΔU, ΔVᴴ, U, S, Vᴴ;
+        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(S)
+    )
+    gaugepart = mul!(U' * ΔU, Vᴴ, ΔVᴴ', true, true)
+    gaugepart = project_antihermitian!(gaugepart)
+    gaugepart[abs.(transpose(diagview(S)) .- diagview(S)) .>= degeneracy_atol] .= 0
+    mul!(ΔU, U, gaugepart, -1, 1)
+    return ΔU, ΔVᴴ
+end
+function remove_eiggauge_dependence!(
+        ΔV, D, V;
+        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
+    )
+    gaugepart = V' * ΔV
+    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
+    mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
+    return ΔV
+end
+function remove_eighgauge_dependence!(
+        ΔV, D, V;
+        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
+    )
+    gaugepart = V' * ΔV
+    gaugepart = project_antihermitian!(gaugepart)
+    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
+    mul!(ΔV, V, gaugepart, -1, 1)
+    return ΔV
+end
+
+function stabilize_eigvals!(D::AbstractVector)
+    absD = collect(abs.(D))
+    p = invperm(sortperm(collect(absD))) # rank of abs(D)
+    # account for exact degeneracies in absolute value when having complex conjugate pairs
+    for i in 1:(length(D) - 1)
+        if absD[i] == absD[i + 1] # conjugate pairs will appear sequentially
+            p[p .>= p[i + 1]] .-= 1 # lower the rank of all higher ones
+        end
+    end
+    n = maximum(p)
+    # rescale eigenvalues so that they lie on distinct radii in the complex plane
+    # that are chosen randomly in non-overlapping intervals [10 * k/n, 10 * (k+0.5)/n)] for k=1,...,n
+    radii = 10 .* ((1:n) .+ rand(real(eltype(D)), n) ./ 2) ./ n
+    hD = sign.(collect(D)) .* radii[p]
+    copyto!(D, hD)
+    return D
+end
+function make_eig_matrix(T, sz)
+    A = instantiate_matrix(T, sz)
+    D, V = eig_full(A)
+    stabilize_eigvals!(diagview(D))
+    Ac = V * D * inv(V)
+    Af = (eltype(T) <: Real) ? real(Ac) : Ac
+    if T <: Diagonal
+        copyto!(diagview(A), diagview(Af))
+    else
+        copyto!(A, Af)
+    end
+    return A
+end
+function make_eigh_matrix(T, sz)
+    A = project_hermitian!(instantiate_matrix(T, sz))
+    D, V = eigh_full(A)
+    stabilize_eigvals!(diagview(D))
+    return project_hermitian!(V * D * V')
+end
+
+function ad_qr_compact_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    QR = qr_compact(A)
+    T = eltype(A)
+    ΔQ = randn!(similar(A, T, m, minmn))
+    ΔR = randn!(similar(A, T, minmn, n))
+    return QR, (ΔQ, ΔR)
+end
+
+function ad_qr_compact_setup(A::Diagonal)
+    m, n = size(A)
+    minmn = min(m, n)
+    QR = qr_compact(A)
+    T = eltype(A)
+    ΔQ = Diagonal(randn!(similar(A.diag, T, m)))
+    ΔR = Diagonal(randn!(similar(A.diag, T, m)))
+    return QR, (ΔQ, ΔR)
+end
+
+function ad_qr_null_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    Q, R = qr_compact(A)
+    T = eltype(A)
+    ΔN = Q * randn!(similar(A, T, minmn, max(0, m - minmn)))
+    N = qr_null(A)
+    return N, ΔN
+end
+
+function ad_qr_full_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    T = eltype(A)
+    Q, R = qr_full(A)
+    Q1 = view(Q, 1:m, 1:minmn)
+    ΔQ = randn!(similar(A, T, m, m))
+    ΔQ2 = view(ΔQ, :, (minmn + 1):m)
+    mul!(ΔQ2, Q1, Q1' * ΔQ2)
+    ΔR = randn!(similar(A, T, m, n))
+    return (Q, R), (ΔQ, ΔR)
+end
+
+ad_qr_full_setup(A::Diagonal) = ad_qr_compact_setup(A)
+
+function ad_qr_rank_deficient_compact_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    T = eltype(A)
+    r = minmn - 5
+    Ard = randn!(similar(A, T, m, r)) * randn!(similar(A, T, r, n))
+    Q, R = qr_compact(Ard)
+    QR = (Q, R)
+    ΔQ = randn!(similar(A, T, m, minmn))
+    Q1 = view(Q, 1:m, 1:r)
+    Q2 = view(Q, 1:m, (r + 1):minmn)
+    ΔQ2 = view(ΔQ, 1:m, (r + 1):minmn)
+    MatrixAlgebraKit.zero!(ΔQ2)
+    ΔR = randn!(similar(A, T, minmn, n))
+    view(ΔR, (r + 1):minmn, :) .= 0
+    return (Q, R), (ΔQ, ΔR)
+end
+
+function ad_qr_rank_deficient_compact_setup(A::Diagonal)
+    m, n = size(A)
+    minmn = min(m, n)
+    T = eltype(A)
+    r = minmn - 5
+    Ard_ = randn!(similar(A, T, m))
+    MatrixAlgebraKit.zero!(view(Ard_, (r + 1):m))
+    Ard = Diagonal(Ard_)
+    Q, R = qr_compact(Ard)
+    ΔQ = Diagonal(randn!(similar(diagview(A), T, m)))
+    ΔR = Diagonal(randn!(similar(diagview(A), T, m)))
+    MatrixAlgebraKit.zero!(view(diagview(ΔQ), (r + 1):m))
+    MatrixAlgebraKit.zero!(view(diagview(ΔR), (r + 1):m))
+    return (Q, R), (ΔQ, ΔR)
+end
+
+function ad_lq_compact_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    LQ = lq_compact(A)
+    T = eltype(A)
+    ΔL = randn!(similar(A, T, m, minmn))
+    ΔQ = randn!(similar(A, T, minmn, n))
+    return LQ, (ΔL, ΔQ)
+end
+ad_lq_compact_setup(A::Diagonal) = ad_qr_compact_setup(A)
+
+function ad_lq_null_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    T = eltype(A)
+    L, Q = lq_compact(A)
+    ΔNᴴ = randn!(similar(A, T, max(0, n - minmn), minmn)) * Q
+    Nᴴ = randn!(similar(A, T, max(0, n - minmn), n))
+    return Nᴴ, ΔNᴴ
+end
+
+function ad_lq_full_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    T = eltype(A)
+    L, Q = lq_full(A)
+    Q1 = view(Q, 1:minmn, 1:n)
+    ΔQ = randn!(similar(A, T, n, n))
+    ΔQ2 = view(ΔQ, (minmn + 1):n, 1:n)
+    ΔQ2 .= (ΔQ2 * Q1') * Q1
+    ΔL = randn!(similar(A, T, m, n))
+    return (L, Q), (ΔL, ΔQ)
+end
+ad_lq_full_setup(A::Diagonal) = ad_qr_full_setup(A)
+
+function ad_lq_rank_deficient_compact_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    T = eltype(A)
+    r = minmn - 5
+    Ard = randn!(similar(A, T, m, r)) * randn!(similar(A, T, r, n))
+    L, Q = lq_compact(Ard)
+    ΔL = randn!(similar(A, T, m, minmn))
+    ΔQ = randn!(similar(A, T, minmn, n))
+    Q1 = view(Q, 1:r, 1:n)
+    Q2 = view(Q, (r + 1):minmn, 1:n)
+    ΔQ2 = view(ΔQ, (r + 1):minmn, 1:n)
+    ΔQ2 .= 0
+    view(ΔL, :, (r + 1):minmn) .= 0
+    return (L, Q), (ΔL, ΔQ)
+end
+ad_lq_rank_deficient_compact_setup(A::Diagonal) = ad_qr_rank_deficient_compact_setup(A)
+
+function ad_eig_full_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    DV = eig_full(A)
+    D, V = DV
+    Ddiag = diagview(D)
+    ΔV = randn!(similar(A, complex(T), m, m))
+    ΔV = remove_eiggauge_dependence!(ΔV, D, V)
+    ΔD = randn!(similar(A, complex(T), m, m))
+    ΔD2 = Diagonal(randn!(similar(A, complex(T), m)))
+    return DV, (ΔD, ΔV), (ΔD2, ΔV)
+end
+
+function ad_eig_full_setup(A::Diagonal)
+    m, n = size(A)
+    T = complex(eltype(A))
+    DV = eig_full(A)
+    D, V = DV
+    ΔV = randn!(similar(A.diag, T, m, m))
+    ΔV = remove_eiggauge_dependence!(ΔV, D, V)
+    ΔD = Diagonal(randn!(similar(A.diag, T, m)))
+    ΔD2 = Diagonal(randn!(similar(A.diag, T, m)))
+    return DV, (ΔD, ΔV), (ΔD2, ΔV)
+end
+
+function ad_eig_vals_setup(A)
+    m, n = size(A)
+    T = complex(eltype(A))
+    D = eig_vals(A)
+    ΔD = randn!(similar(A, complex(T), m))
+    return D, ΔD
+end
+
+function ad_eig_vals_setup(A::Diagonal)
+    m, n = size(A)
+    T = complex(eltype(A))
+    D = eig_vals(A)
+    ΔD = randn!(similar(A.diag, T, m))
+    return D, ΔD
+end
+
+function ad_eig_trunc_setup(A, truncalg)
+    DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
+    ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
+    Dtrunc = Diagonal(diagview(DV[1])[ind])
+    Vtrunc = DV[2][:, ind]
+    ΔDtrunc = Diagonal(diagview(ΔD2V[1])[ind])
+    ΔVtrunc = ΔDV[2][:, ind]
+    return DV, (Dtrunc, Vtrunc), ΔD2V, (ΔDtrunc, ΔVtrunc)
+end
+
+function ad_eigh_full_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    DV = eigh_full(A)
+    D, V = DV
+    Ddiag = diagview(D)
+    ΔV = randn!(similar(A, T, m, m))
+    ΔV = remove_eighgauge_dependence!(ΔV, D, V)
+    ΔD = randn!(similar(A, real(T), m, m))
+    ΔD2 = Diagonal(randn!(similar(A, real(T), m)))
+    return DV, (ΔD, ΔV), (ΔD2, ΔV)
+end
+
+function ad_eigh_vals_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    D = eigh_vals(A)
+    ΔD = randn!(similar(A, real(T), m))
+    return D, ΔD
+end
+
+function ad_eigh_trunc_setup(A, truncalg)
+    DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
+    ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
+    Dtrunc = Diagonal(diagview(DV[1])[ind])
+    Vtrunc = DV[2][:, ind]
+    ΔDtrunc = Diagonal(diagview(ΔD2V[1])[ind])
+    ΔVtrunc = ΔDV[2][:, ind]
+    return DV, (Dtrunc, Vtrunc), ΔD2V, (ΔDtrunc, ΔVtrunc)
+end
+
+function ad_svd_compact_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    minmn = min(m, n)
+    ΔU = randn!(similar(A, T, m, minmn))
+    ΔS = randn!(similar(A, real(T), minmn, minmn))
+    ΔS2 = Diagonal(randn!(similar(A, real(T), minmn)))
+    ΔVᴴ = randn!(similar(A, T, minmn, n))
+    U, S, Vᴴ = svd_compact(A)
+    ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+    return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ), (ΔU, ΔS2, ΔVᴴ)
+end
+
+function ad_svd_compact_setup(A::Diagonal)
+    m, n = size(A)
+    T = eltype(A)
+    minmn = min(m, n)
+    ΔU = randn!(similar(A.diag, T, m, n))
+    ΔS = Diagonal(randn!(similar(A.diag, real(T), minmn)))
+    ΔS2 = Diagonal(randn!(similar(A.diag, real(T), minmn)))
+    ΔVᴴ = randn!(similar(A.diag, T, m, n))
+    U, S, Vᴴ = svd_compact(A)
+    ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+    return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ), (ΔU, ΔS2, ΔVᴴ)
+end
+
+function ad_svd_full_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    minmn = min(m, n)
+    ΔU = randn!(similar(A, T, m, minmn))
+    ΔS = randn!(similar(A, real(T), minmn, minmn))
+    ΔS2 = Diagonal(randn!(similar(A, real(T), minmn)))
+    ΔVᴴ = randn!(similar(A, T, minmn, n))
+    U, S, Vᴴ = svd_compact(A)
+    ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+    ΔUfull = similar(A, T, m, m)
+    ΔUfull .= zero(T)
+    ΔSfull = similar(A, real(T), m, n)
+    ΔSfull .= zero(real(T))
+    ΔVᴴfull = similar(A, T, n, n)
+    ΔVᴴfull .= zero(T)
+    U, S, Vᴴ = svd_full(A)
+    view(ΔUfull, :, 1:minmn) .= ΔU
+    view(ΔVᴴfull, 1:minmn, :) .= ΔVᴴ
+    diagview(ΔSfull)[1:minmn] .= diagview(ΔS2)
+    return (U, S, Vᴴ), (ΔUfull, ΔSfull, ΔVᴴfull)
+end
+
+ad_svd_full_setup(A::Diagonal) = ad_svd_compact_setup(A)
+
+function ad_svd_vals_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    T = eltype(A)
+    S = svd_vals(A)
+    ΔS = randn!(similar(A, real(T), minmn))
+    return S, ΔS
+end
+
+function ad_svd_trunc_setup(A, truncalg)
+    USVᴴ, ΔUSVᴴ, ΔUS2Vᴴ = ad_svd_compact_setup(A)
+    ind = MatrixAlgebraKit.findtruncated(diagview(USVᴴ[2]), truncalg.trunc)
+    Strunc = Diagonal(diagview(USVᴴ[2])[ind])
+    Utrunc = USVᴴ[1][:, ind]
+    Vᴴtrunc = USVᴴ[3][ind, :]
+    ΔStrunc = Diagonal(diagview(ΔUS2Vᴴ[2])[ind])
+    ΔUtrunc = ΔUSVᴴ[1][:, ind]
+    ΔVᴴtrunc = ΔUSVᴴ[3][ind, :]
+    return USVᴴ, ΔUS2Vᴴ, (ΔUtrunc, ΔStrunc, ΔVᴴtrunc)
+end
+
+function ad_left_polar_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    WP = left_polar(A)
+    ΔWP = (randn!(similar(A, T, m, n)), randn!(similar(A, T, n, n)))
+    return WP, ΔWP
+end
+
+function ad_left_polar_setup(A::Diagonal)
+    m, n = size(A)
+    T = eltype(A)
+    WP = left_polar(A)
+    ΔWP = (Diagonal(randn!(similar(A.diag))), randn!(similar(WP[2])))
+    return WP, ΔWP
+end
+
+function ad_right_polar_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    PWᴴ = right_polar(A)
+    ΔPWᴴ = (randn!(similar(A, T, m, m)), randn!(similar(A, T, m, n)))
+    return PWᴴ, ΔPWᴴ
+end
+function ad_right_polar_setup(A::Diagonal)
+    m, n = size(A)
+    T = eltype(A)
+    PWᴴ = right_polar(A)
+    ΔPWᴴ = (randn!(similar(PWᴴ[1])), Diagonal(randn!(similar(A.diag))))
+    return PWᴴ, ΔPWᴴ
+end
+
+function ad_left_orth_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    VC = left_orth(A)
+    ΔVC = (randn!(similar(A, T, size(VC[1])...)), randn!(similar(A, T, size(VC[2])...)))
+    return VC, ΔVC
+end
+function ad_left_orth_setup(A::Diagonal)
+    m, n = size(A)
+    T = eltype(A)
+    VC = left_orth(A)
+    ΔVC = (Diagonal(randn!(similar(A.diag, T, m))), Diagonal(randn!(similar(A.diag, T, m))))
+    return VC, ΔVC
+end
+
+function ad_left_null_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    N = left_orth(A; alg = :qr)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
+    ΔN = left_orth(A; alg = :qr)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
+    return N, ΔN
+end
+
+function ad_right_orth_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    CVᴴ = right_orth(A)
+    ΔCVᴴ = (randn!(similar(A, T, size(CVᴴ[1])...)), randn!(similar(A, T, size(CVᴴ[2])...)))
+    return CVᴴ, ΔCVᴴ
+end
+ad_right_orth_setup(A::Diagonal) = ad_left_orth_setup(A)
+
+function ad_right_null_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    Nᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A; alg = :lq)[2]
+    ΔNᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A; alg = :lq)[2]
+    return Nᴴ, ΔNᴴ
+end

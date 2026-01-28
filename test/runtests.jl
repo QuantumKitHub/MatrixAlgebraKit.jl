@@ -9,7 +9,6 @@ filter!(!(startswith("testsuite") ∘ first), testsuite)
 
 # remove utils
 delete!(testsuite, "utilities")
-delete!(testsuite, "ad_utils")
 delete!(testsuite, "linearmap")
 
 # Parse arguments
@@ -22,13 +21,16 @@ if filter_tests!(testsuite, args)
         delete!(testsuite, "algorithms")
         delete!(testsuite, "truncate")
         delete!(testsuite, "gen_eig")
-        delete!(testsuite, "mooncake")
-        delete!(testsuite, "enzyme")
         delete!(testsuite, "chainrules")
         delete!(testsuite, "codequality")
     else
         is_apple_ci = Sys.isapple() && get(ENV, "CI", "false") == "true"
-        (Sys.iswindows() || is_apple_ci) && delete!(testsuite, "enzyme")
+        if is_apple_ci
+            delete!(testsuite, "enzyme")
+            delete!(testsuite, "mooncake")
+            delete!(testsuite, "chainrules")
+        end
+        Sys.iswindows() && delete!(testsuite, "enzyme")
     end
 end
 
