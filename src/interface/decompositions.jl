@@ -171,11 +171,24 @@ see also [`gaugefix!`](@ref).
 """
 @algdef LAPACK_Jacobi
 
+"""
+    SafeSVD(; fixgauge::Bool = true)
+
+Algorithm type to denote a combination of LAPACK_DivideAndConquer and LAPACK_QRIteration
+for computing the singular value decomposition of a general matrix.
+This algorithm first tries to perform the SVD using the faster LAPACK_DivideAndConquer method,
+and falls back to the more stable LAPACK_QRIteration method if numerical issues are detected.
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular vectors,
+see also [`gaugefix!`](@ref), [`LAPACK_DivideAndConquer`](@ref) and [`LAPACK_QRIteration`](@ref).
+"""
+@algdef SafeSVD
+
 const LAPACK_SVDAlgorithm = Union{
     LAPACK_QRIteration,
     LAPACK_Bisection,
     LAPACK_DivideAndConquer,
     LAPACK_Jacobi,
+    SafeSVD,
 }
 
 # =========================
