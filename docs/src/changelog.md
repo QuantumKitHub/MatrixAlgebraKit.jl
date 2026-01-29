@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.3...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.4...HEAD)
 
 ### Added
 
@@ -29,6 +29,26 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Removed
 
 ### Fixed
+
+## [0.6.4](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.3...v0.6.4) - 2026-01-29
+
+### Added
+
+- Tests for randomized SVD algorithms ([#159](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/159)).
+
+### Changed
+
+- Bumped Mooncake to v0.5 ([#164](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/164)).
+- Test infrastructure: migrated AD tests to `TestSuite` ([#126](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/126)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Mooncake AD rules now correctly set/reset in and outputs ([#158](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/158)).
+- Storage type is now retained in `_ind_intersect` for GPU arrays ([#161](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/161)).
 
 ## [0.6.3](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.2...v0.6.3) - 2026-01-23
 
