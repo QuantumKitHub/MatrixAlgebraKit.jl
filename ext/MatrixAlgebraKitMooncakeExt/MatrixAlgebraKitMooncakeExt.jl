@@ -3,7 +3,7 @@ module MatrixAlgebraKitMooncakeExt
 using Mooncake
 using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
 using MatrixAlgebraKit
-using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output, zero, zero!
+using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output, zero!
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!
