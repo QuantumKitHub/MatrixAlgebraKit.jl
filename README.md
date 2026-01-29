@@ -32,3 +32,15 @@ The main goals of this package are:
 * Ability to pass pre-allocated output arrays where the result of a computation is stored.
 * Ability to easily switch between different backends and algorithms for the same operation.
 * First class availability of pullback rules that can be used in combination with different AD ecosystems.
+
+## Contributors
+
+MatrixAlgebraKit.jl is developed and maintained by the [QuantumKit](https://github.com/QuantumKitHub) community.
+We gratefully acknowledge the contributions of:
+
+- **[Jutho Haegeman](https://github.com/Jutho)**
+- **[Lukas Devos](https://github.com/lkdvos)**
+- **[Katharine Hyatt](https://github.com/kshyatt)**
+
+As well as the variety of other contributors who have submitted issues, provided feedback, and helped improve this package.
+For a complete list of contributors, see the [GitHub contributors page](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/graphs/contributors).
