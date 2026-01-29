@@ -1,6 +1,6 @@
 name = "MatrixAlgebraKit"
 uuid = "6c742aac-3347-4629-af66-fc926824e5e4"
-version = "0.6.3"
+version = "0.6.4"
 authors = ["Jutho <jutho.haegeman@ugent.be> and contributors"]
 
 [deps]
