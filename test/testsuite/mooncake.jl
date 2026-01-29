@@ -62,26 +62,38 @@ make_mooncake_fdata(x) = make_mooncake_tangent(x)
 make_mooncake_fdata(x::Diagonal) = Mooncake.FData((diag = make_mooncake_tangent(x.diag),))
 make_mooncake_fdata(x::Tuple) = map(make_mooncake_fdata, x)
 
+# copies a preset tangent into a Mooncake CoDual
+# for use in the pullback.
+function copy_tangent(var::Mooncake.CoDual, Δargs)
+    dargs = make_mooncake_fdata(deepcopy(Δargs))
+    copyto!(Mooncake.tangent(var), dargs)
+    return
+end
+
+function copy_tangent(var::Mooncake.CoDual, Δargs::Tuple)
+    dargs = make_mooncake_fdata.(deepcopy(Δargs))
+    for (var_tangent, darg) in zip(Mooncake.tangent(var), dargs)
+        if var_tangent isa Mooncake.FData
+            for (var_f, darg_f) in zip(Mooncake._fields(var_tangent), Mooncake._fields(darg))
+                copyto!(var_f, darg_f)
+            end
+        else
+            copyto!(var_tangent, darg)
+        end
+    end
+    return
+end
+
 # no `alg` argument
 function _get_copying_derivative(f, rrule, A, ΔA, args, Δargs, ::Nothing, rdata)
     dA_copy = make_mooncake_fdata(copy(ΔA))
     A_copy = copy(A)
-    dargs_copy = Δargs isa Tuple ? make_mooncake_fdata.(deepcopy(Δargs)) : make_mooncake_fdata(deepcopy(Δargs))
-    copy_out, copy_pb!! = rrule(Mooncake.CoDual(f, Mooncake.NoFData()), Mooncake.CoDual(A_copy, dA_copy))
-    if args isa Tuple
-        for (copy_out_, dargs_copy_) in zip(Mooncake.tangent(copy_out), dargs_copy)
-            if copy_out_ isa Matrix
-                copyto!(copy_out_, dargs_copy_)
-            elseif copy_out_ isa Mooncake.FData
-                for (c_f, a_f) in zip(Mooncake._fields(copy_out_), Mooncake._fields(dargs_copy_))
-                    copyto!(c_f, a_f)
-                end
-            end
-        end
-    else
-        copyto!(Mooncake.tangent(copy_out), dargs_copy)
-    end
+    A_dA = Mooncake.CoDual(A_copy, dA_copy)
+    copy_out, copy_pb!! = rrule(Mooncake.CoDual(f, Mooncake.NoFData()), A_dA)
+    # copy Δargs into tangent of the output variable for the pullback check
+    copy_tangent(copy_out, Δargs)
     copy_pb!!(rdata)
+    @test Mooncake.primal(A_dA) == A
     return dA_copy, Mooncake.tangent(copy_out)
 end
 
@@ -89,86 +101,68 @@ end
 function _get_copying_derivative(f, rrule, A, ΔA, args, Δargs, alg, rdata)
     dA_copy = make_mooncake_fdata(copy(ΔA))
     A_copy = copy(A)
-    dargs_copy = Δargs isa Tuple ? make_mooncake_fdata.(deepcopy(Δargs)) : make_mooncake_fdata(deepcopy(Δargs))
-    copy_out, copy_pb!! = rrule(Mooncake.CoDual(f, Mooncake.NoFData()), Mooncake.CoDual(A_copy, dA_copy), Mooncake.CoDual(alg, Mooncake.NoFData()))
-    if args isa Tuple
-        for (copy_out_, dargs_copy_) in zip(Mooncake.tangent(copy_out), dargs_copy)
-            if copy_out_ isa Matrix
-                copyto!(copy_out_, dargs_copy_)
-            elseif copy_out_ isa Mooncake.FData
-                for (c_f, a_f) in zip(Mooncake._fields(copy_out_), Mooncake._fields(dargs_copy_))
-                    copyto!(c_f, a_f)
-                end
-            end
-        end
-    else
-        copyto!(Mooncake.tangent(copy_out), dargs_copy)
-    end
+    A_dA = Mooncake.CoDual(A_copy, dA_copy)
+    copy_out, copy_pb!! = rrule(Mooncake.CoDual(f, Mooncake.NoFData()), A_dA, Mooncake.CoDual(alg, Mooncake.NoFData()))
+    # copy Δargs into tangent of the output variable for the pullback check
+    copy_tangent(copy_out, Δargs)
     copy_pb!!(rdata)
+    @test Mooncake.primal(A_dA) == A
     return dA_copy, Mooncake.tangent(copy_out)
 end
 
 function _get_inplace_derivative(f!, A, ΔA, args, Δargs, ::Nothing, rdata; ȳ = Δargs)
     dA_inplace = make_mooncake_fdata(copy(ΔA))
     A_inplace = copy(A)
-    dargs_inplace = Δargs isa Tuple ? make_mooncake_fdata.(deepcopy(Δargs)) : make_mooncake_fdata(deepcopy(Δargs))
+    args_copy = deepcopy(args)
+    dargs_inplace = make_mooncake_fdata(deepcopy(Δargs))
     # not every f! has a handwritten rrule!!
     inplace_sig = Tuple{typeof(f!), typeof(A), typeof(args)}
     has_handwritten_rule = hasmethod(Mooncake.rrule!!, inplace_sig)
+    A_dA = Mooncake.CoDual(A_inplace, dA_inplace)
+    args_dargs = Mooncake.CoDual(args_copy, dargs_inplace)
     if has_handwritten_rule
-        inplace_out, inplace_pb!! = Mooncake.rrule!!(Mooncake.CoDual(f!, Mooncake.NoFData()), Mooncake.CoDual(A_inplace, dA_inplace), Mooncake.CoDual(args, dargs_inplace))
+        inplace_out, inplace_pb!! = Mooncake.rrule!!(Mooncake.CoDual(f!, Mooncake.NoFData()), A_dA, args_dargs)
     else
         inplace_sig = Tuple{typeof(f!), typeof(A), typeof(args)}
         rvs_interp = Mooncake.get_interpreter(Mooncake.ReverseMode)
         inplace_rrule = Mooncake.build_rrule(rvs_interp, inplace_sig)
-        inplace_out, inplace_pb!! = inplace_rrule(Mooncake.CoDual(f!, Mooncake.NoFData()), Mooncake.CoDual(A_inplace, dA_inplace), Mooncake.CoDual(args, dargs_inplace))
+        inplace_out, inplace_pb!! = inplace_rrule(Mooncake.CoDual(f!, Mooncake.NoFData()), A_dA, args_dargs)
     end
-    if args isa Tuple
-        for (inplace_out_, ȳ_) in zip(Mooncake.tangent(inplace_out), ȳ)
-            if inplace_out_ isa Matrix
-                copyto!(inplace_out_, ȳ_)
-            elseif inplace_out_ isa Mooncake.FData
-                for (i_f, a_f) in zip(Mooncake._fields(inplace_out_), Mooncake._fields(make_mooncake_fdata(ȳ_)))
-                    copyto!(i_f, a_f)
-                end
-            end
-        end
-    else
-        copyto!(Mooncake.tangent(inplace_out), ȳ)
-    end
+    # copy reference derivative of output ȳ into inplace_out
+    # needed for inplace methods like svd_trunc! that generate
+    # new output variables
+    copy_tangent(inplace_out, ȳ)
     inplace_pb!!(rdata)
+    @test Mooncake.primal(A_dA) == A
+    @test Mooncake.primal(args_dargs) == args_copy
     return dA_inplace, Mooncake.tangent(inplace_out)
 end
 
 function _get_inplace_derivative(f!, A, ΔA, args, Δargs, alg, rdata; ȳ = Δargs)
     dA_inplace = make_mooncake_fdata(copy(ΔA))
     A_inplace = copy(A)
-    dargs_inplace = Δargs isa Tuple ? make_mooncake_fdata.(Δargs) : make_mooncake_fdata(Δargs)
+    args_copy = deepcopy(args)
+    dargs_inplace = make_mooncake_fdata(deepcopy(Δargs))
     # not every f! has a handwritten rrule!!
     inplace_sig = Tuple{typeof(f!), typeof(A), typeof(args), typeof(alg)}
     has_handwritten_rule = hasmethod(Mooncake.rrule!!, inplace_sig)
+    A_dA = Mooncake.CoDual(A_inplace, dA_inplace)
+    args_dargs = Mooncake.CoDual(args_copy, dargs_inplace)
     if has_handwritten_rule
-        inplace_out, inplace_pb!! = Mooncake.rrule!!(Mooncake.CoDual(f!, Mooncake.NoFData()), Mooncake.CoDual(A_inplace, dA_inplace), Mooncake.CoDual(args, dargs_inplace), Mooncake.CoDual(alg, Mooncake.NoFData()))
+        inplace_out, inplace_pb!! = Mooncake.rrule!!(Mooncake.CoDual(f!, Mooncake.NoFData()), A_dA, args_dargs, Mooncake.CoDual(alg, Mooncake.NoFData()))
     else
         inplace_sig = Tuple{typeof(f!), typeof(A), typeof(args), typeof(alg)}
         rvs_interp = Mooncake.get_interpreter(Mooncake.ReverseMode)
         inplace_rrule = Mooncake.build_rrule(rvs_interp, inplace_sig)
-        inplace_out, inplace_pb!! = inplace_rrule(Mooncake.CoDual(f!, Mooncake.NoFData()), Mooncake.CoDual(A_inplace, dA_inplace), Mooncake.CoDual(args, dargs_inplace), Mooncake.CoDual(alg, Mooncake.NoFData()))
+        inplace_out, inplace_pb!! = inplace_rrule(Mooncake.CoDual(f!, Mooncake.NoFData()), A_dA, args_dargs, Mooncake.CoDual(alg, Mooncake.NoFData()))
     end
-    if args isa Tuple
-        for (inplace_out_, ȳ_) in zip(Mooncake.tangent(inplace_out), ȳ)
-            if inplace_out_ isa Matrix
-                copyto!(inplace_out_, ȳ_)
-            elseif inplace_out_ isa Mooncake.FData
-                for (i_f, a_f) in zip(Mooncake._fields(inplace_out_), Mooncake._fields(make_mooncake_fdata(ȳ_)))
-                    copyto!(i_f, a_f)
-                end
-            end
-        end
-    else
-        copyto!(Mooncake.tangent(inplace_out), ȳ)
-    end
+    # copy reference derivative of output ȳ into inplace_out
+    # needed for inplace methods like svd_trunc! that generate
+    # new output variables
+    copy_tangent(inplace_out, ȳ)
     inplace_pb!!(rdata)
+    @test Mooncake.primal(A_dA) == A
+    @test Mooncake.primal(args_dargs) == args_copy
     return dA_inplace, Mooncake.tangent(inplace_out)
 end
 
