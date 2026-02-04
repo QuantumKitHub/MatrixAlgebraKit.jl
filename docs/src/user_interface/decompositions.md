@@ -16,6 +16,7 @@ f!(A, [F]; kwargs...) -> F...
 
 Here, the input matrix is always the first argument, and optionally the output can be provided as well.
 The keywords are algorithm-specific, and can be used to influence the behavior of the algorithms.
+To check what algorithm is used by default for a given factorization `f` and input `A`, and by extension which keyword arguments it takes, you can call [`MatrixAlgebraKit.default_algorithm(f, A)`](@ref) and check the documentation of resulting algorithm type.
 Importantly, for generic code patterns it is recommended to always use the output `F` explicitly, since some implementations may not be able to reuse the provided memory.
 Additionally, the `f!` method typically assumes that it is allowed to destroy the input `A`, and making use of the contents of `A` afterwards should be deemed as undefined behavior.
 
