@@ -145,7 +145,7 @@ end
 # ------------
 function _lapack_lq!(
         A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
-        positive = false, pivoted = false,
+        positive = true, pivoted = false,
         blocksize = ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
     m, n = size(A)
@@ -203,7 +203,7 @@ end
 
 function _lapack_lq_null!(
         A::AbstractMatrix, Nᴴ::AbstractMatrix;
-        positive = false, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
+        positive = true, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -253,7 +253,7 @@ end
 # Diagonal logic
 # --------------
 function _diagonal_lq!(
-        A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix; positive::Bool = false
+        A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix; positive::Bool = true
     )
     # note: Ad and Qd might share memory here so order of operations is important
     Ad = diagview(A)
@@ -269,7 +269,7 @@ function _diagonal_lq!(
     return L, Q
 end
 
-_diagonal_lq_null!(A::AbstractMatrix, N; positive::Bool = false) = N
+_diagonal_lq_null!(A::AbstractMatrix, N; positive::Bool = true) = N
 
 # Native logic
 # -------------

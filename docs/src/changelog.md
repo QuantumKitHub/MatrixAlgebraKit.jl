@@ -30,6 +30,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- QR and LQ decompositions were supposed to default to `positive = true` ([#170](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/170)).
+
 ## [0.6.4](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.3...v0.6.4) - 2026-01-29
 
 ### Added
