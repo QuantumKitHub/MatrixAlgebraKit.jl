@@ -173,14 +173,17 @@ function select_truncation(trunc)
 end
 
 @doc """
-    MatrixAlgebraKit.select_null_truncation(trunc)
+    MatrixAlgebraKit.select_null_truncation(A, trunc)
 
-Construct a [`TruncationStrategy`](@ref) from the given `NamedTuple` of keywords or input strategy, to implement a nullspace selection.
+Construct a [`TruncationStrategy`](@ref) for `A` from the given `NamedTuple` of keywords or input strategy, to implement a nullspace selection.
 """ select_null_truncation
 
+select_null_truncation(A, trunc) = select_null_truncation(typeof(A), trunc)
+select_null_truncation(A::Type, trunc) =
+    isnothing(trunc) ? select_null_truncation((; atol = defaulttol(eltype(A)))) : select_null_truncation(trunc)
 function select_null_truncation(trunc)
     if isnothing(trunc)
-        return NoTruncation()
+        return null_truncation_strategy()
     elseif trunc isa NamedTuple
         return null_truncation_strategy(; trunc...)
     elseif trunc isa TruncationStrategy

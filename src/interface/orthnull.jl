@@ -378,7 +378,7 @@ function select_algorithm(::typeof(left_null!), A, ::Val{:qr}; trunc = nothing, 
 end
 function select_algorithm(::typeof(left_null!), A, ::Val{:svd}; trunc = nothing, kwargs...)
     alg_svd = select_algorithm(svd_full!, A, get(kwargs, :svd, nothing))
-    alg = TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
+    alg = TruncatedAlgorithm(alg_svd, select_null_truncation(A, trunc))
     return LeftNullViaSVD(alg)
 end
 
@@ -390,7 +390,7 @@ function select_algorithm(::typeof(right_null!), A, ::Val{:lq}; trunc = nothing,
 end
 function select_algorithm(::typeof(right_null!), A, ::Val{:svd}; trunc = nothing, kwargs...)
     alg_svd = select_algorithm(svd_full!, A; kwargs...)
-    alg = TruncatedAlgorithm(alg_svd, select_null_truncation(trunc))
+    alg = TruncatedAlgorithm(alg_svd, select_null_truncation(A, trunc))
     return RightNullViaSVD(alg)
 end
 
