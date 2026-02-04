@@ -24,6 +24,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- The default behavior of SVD-based nullspaces now includes some small tolerance ([#172](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/170)).
+
 ### Deprecated
 
 ### Removed
