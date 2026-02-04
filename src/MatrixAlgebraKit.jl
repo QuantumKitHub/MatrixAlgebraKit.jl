@@ -31,7 +31,6 @@ export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
 
-export default_algorithm
 export Native_HouseholderQR, Native_HouseholderLQ
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
@@ -51,7 +50,7 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
 @static if VERSION >= v"1.11.0-DEV.469"
     eval(
         Expr(
-            :public, :findtruncated, :findtruncated_svd,
+            :public, :default_algorithm, :findtruncated, :findtruncated_svd,
             :select_algorithm
         )
     )
