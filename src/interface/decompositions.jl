@@ -28,34 +28,34 @@ by construction.
 @algdef Native_HouseholderLQ
 
 """
-    LAPACK_HouseholderQR(; blocksize, positive = false, pivoted = false)
+    LAPACK_HouseholderQR(; blocksize, positive = true, pivoted = false)
 
 Algorithm type to denote the standard LAPACK algorithm for computing the QR decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
 the keyword arugments, i.e.  `?geqrt` will be chosen if `blocksize > 1`. With
 `blocksize == 1`, `?geqrf` will be chosen if `pivoted == false` and `?geqp3` will be chosen
-if `pivoted == true`. The keyword `positive = true` can be used to ensure that the diagonal
+if `pivoted == true`. The keyword `positive = true` is used to ensure that the diagonal
 elements of `R` are non-negative.
 """
 @algdef LAPACK_HouseholderQR
 
 """
-    LAPACK_HouseholderLQ(; blocksize, positive = false)
+    LAPACK_HouseholderLQ(; blocksize, positive = true)
 
 Algorithm type to denote the standard LAPACK algorithm for computing the LQ decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
 the keyword arugments, i.e. `?gelqt` will be chosen if `blocksize > 1` or `?gelqf` will be
-chosen if `blocksize == 1`. The keyword `positive = true` can be used to ensure that the diagonal
-elements of `L` are non-negative.
+chosen if `blocksize == 1`. The keyword `positive = true` is used to ensure that the
+diagonal elements of `L` are non-negative.
 """
 @algdef LAPACK_HouseholderLQ
 
 """
-    GLA_HouseholderQR(; positive = false)
+    GLA_HouseholderQR(; positive = true)
 
 Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the QR decomposition
 of a matrix using Householder reflectors. Currently, only `blocksize = 1` and `pivoted == false`
-are supported. The keyword `positive = true` can be used to ensure that the diagonal elements
+are supported. The keyword `positive = true` is used to ensure that the diagonal elements
 of `R` are non-negative.
 """
 @algdef GLA_HouseholderQR
@@ -230,7 +230,7 @@ end
 # CUSOLVER ALGORITHMS
 # =========================
 """
-    CUSOLVER_HouseholderQR(; positive = false)
+    CUSOLVER_HouseholderQR(; positive = true)
 
 Algorithm type to denote the standard CUSOLVER algorithm for computing the QR decomposition of
 a matrix using Householder reflectors. The keyword `positive = true` can be used to ensure that
@@ -318,10 +318,10 @@ const CUSOLVER_SVDAlgorithm = Union{
 # ROCSOLVER ALGORITHMS
 # =========================
 """
-    ROCSOLVER_HouseholderQR(; positive = false)
+    ROCSOLVER_HouseholderQR(; positive = true)
 
 Algorithm type to denote the standard ROCSOLVER algorithm for computing the QR decomposition of
-a matrix using Householder reflectors. The keyword `positive=true` can be used to ensure that
+a matrix using Householder reflectors. The keyword `positive = true` is used to ensure that
 the diagonal elements of `R` are non-negative.
 """
 @algdef ROCSOLVER_HouseholderQR

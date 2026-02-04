@@ -78,7 +78,7 @@ function MatrixAlgebraKit.qr_null!(A::AbstractMatrix, N, alg::GLA_HouseholderQR)
     return _gla_householder_qr_null!(A, N; alg.kwargs...)
 end
 
-function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksize = 1, pivoted = false)
+function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = true, blocksize = 1, pivoted = false)
     pivoted && throw(ArgumentError("Only pivoted = false implemented for GLA_HouseholderQR."))
     (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for GLA_HouseholderQR."))
 
@@ -117,7 +117,7 @@ end
 
 function _gla_householder_qr_null!(
         A::AbstractMatrix, N::AbstractMatrix;
-        positive = false, blocksize = 1, pivoted = false
+        positive = true, blocksize = 1, pivoted = false
     )
     pivoted && throw(ArgumentError("Only pivoted = false implemented for GLA_HouseholderQR."))
     (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for GLA_HouseholderQR."))

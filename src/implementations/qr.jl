@@ -129,7 +129,7 @@ end
 # ------------
 function _lapack_qr!(
         A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-        positive = false, pivoted = false,
+        positive = true, pivoted = false,
         blocksize = ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
     m, n = size(A)
@@ -195,7 +195,7 @@ end
 
 function _lapack_qr_null!(
         A::AbstractMatrix, N::AbstractMatrix;
-        positive = false, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
+        positive = true, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -215,7 +215,7 @@ end
 # Diagonal logic
 # --------------
 function _diagonal_qr!(
-        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive::Bool = false
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive::Bool = true
     )
     # note: Ad and Qd might share memory here so order of operations is important
     Ad = diagview(A)
@@ -231,7 +231,7 @@ function _diagonal_qr!(
     return Q, R
 end
 
-_diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool = false) = N
+_diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool = true) = N
 
 # GPU logic
 # --------------
@@ -269,7 +269,7 @@ function _gpu_unmqr!(
 end
 
 function _gpu_qr!(
-        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive = false, blocksize = 1, pivoted = false
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive = true, blocksize = 1, pivoted = false
     )
     blocksize > 1 &&
         throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
@@ -310,7 +310,7 @@ function _gpu_qr!(
 end
 
 function _gpu_qr_null!(
-        A::AbstractMatrix, N::AbstractMatrix; positive = false, blocksize = 1, pivoted = false
+        A::AbstractMatrix, N::AbstractMatrix; positive = true, blocksize = 1, pivoted = false
     )
     blocksize > 1 &&
         throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
