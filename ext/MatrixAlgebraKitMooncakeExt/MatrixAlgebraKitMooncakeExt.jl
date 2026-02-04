@@ -10,6 +10,7 @@ using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!
 using MatrixAlgebraKit: eig_trunc_pullback!, eigh_trunc_pullback!, eigh_vals_pullback!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!, svd_vals_pullback!
+using MatrixAlgebraKit: TruncatedAlgorithm
 using LinearAlgebra
 
 
@@ -437,6 +438,48 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
     end
     return output_codual, svd_trunc_adjoint
 end
+function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
+    # unpack variables
+    A, dA = arrayify(A_dA)
+    USVᴴ_dUSVᴴ_arr = arrayify.(Mooncake.primal(USVᴴ_dUSVᴴ), Mooncake.tangent(USVᴴ_dUSVᴴ))
+    USVᴴ, dUSVᴴ = first.(USVᴴ_dUSVᴴ_arr), last.(USVᴴ_dUSVᴴ_arr)
+    alg = Mooncake.primal(alg_dalg)
+
+    # store state prior to primal call
+    Ac = copy(A)
+    USVᴴc = copy.(USVᴴ)
+
+    # compute primal - capture full USVᴴ and ind
+    USVᴴ = svd_compact!(A, USVᴴ, alg.alg)
+    USVᴴtrunc, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+    ϵ = MatrixAlgebraKit.truncation_error(diagview(USVᴴ[2]), ind)
+
+    # pack output - note that we allocate new dUSVᴴtrunc because these aren't actually
+    # overwritten in the input!
+    USVᴴtrunc_dUSVᴴtrunc = Mooncake.zero_fcodual((USVᴴtrunc..., ϵ))
+
+    # define pullback
+    local svd_trunc_adjoint
+    let ind = ind, dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Base.front(Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc))))
+        function svd_trunc_adjoint((_, _, _, dϵ)::Tuple{NoRData, NoRData, NoRData, Real})
+            abs(dϵ) ≤ MatrixAlgebraKit.defaulttol(dϵ) ||
+                @warn "Pullback for `svd_trunc` ignores non-zero tangents for truncation error"
+
+            # compute pullbacks
+            svd_pullback!(dA, Ac, USVᴴc, dUSVᴴtrunc, ind)
+            zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
+            zero!.(dUSVᴴ)
+
+            # restore state
+            copy!(A, Ac)
+            copy!.(USVᴴ, USVᴴc)
+
+            return ntuple(Returns(NoRData()), 4)
+        end
+    end
+
+    return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
+end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc), Any, MatrixAlgebraKit.AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual)
@@ -463,6 +506,33 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
         return NoRData(), NoRData(), NoRData()
     end
     return output_codual, svd_trunc_adjoint
+end
+function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
+    # unpack variables
+    A, dA = arrayify(A_dA)
+    alg = Mooncake.primal(alg_dalg)
+
+    # compute primal - capture full USVᴴ and ind
+    USVᴴ = svd_compact(A, alg.alg)
+    USVᴴtrunc, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+    ϵ = MatrixAlgebraKit.truncation_error(diagview(USVᴴ[2]), ind)
+
+    # pack output
+    USVᴴtrunc_dUSVᴴtrunc = Mooncake.zero_fcodual((USVᴴtrunc..., ϵ))
+
+    # define pullback
+    local svd_trunc_adjoint
+    let ind = ind, dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Base.front(Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc))))
+        function svd_trunc_adjoint((_, _, _, dϵ)::Tuple{NoRData, NoRData, NoRData, Real})
+            abs(dϵ) ≤ MatrixAlgebraKit.defaulttol(dϵ) ||
+                @warn "Pullback for `svd_trunc` ignores non-zero tangents for truncation error"
+            svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, ind)
+            zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
+            return ntuple(Returns(NoRData()), 3)
+        end
+    end
+
+    return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -504,6 +574,44 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
     end
     return output_codual, svd_trunc_adjoint
 end
+function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
+    # unpack variables
+    A, dA = arrayify(A_dA)
+    USVᴴ_dUSVᴴ_arr = arrayify.(Mooncake.primal(USVᴴ_dUSVᴴ), Mooncake.tangent(USVᴴ_dUSVᴴ))
+    USVᴴ, dUSVᴴ = first.(USVᴴ_dUSVᴴ_arr), last.(USVᴴ_dUSVᴴ_arr)
+    alg = Mooncake.primal(alg_dalg)
+
+    # store state prior to primal call
+    Ac = copy(A)
+    USVᴴc = copy.(USVᴴ)
+
+    # compute primal - capture full USVᴴ and ind
+    USVᴴ = svd_compact!(A, USVᴴ, alg.alg)
+    USVᴴtrunc, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+
+    # pack output - note that we allocate new dUSVᴴtrunc because these aren't actually
+    # overwritten in the input!
+    USVᴴtrunc_dUSVᴴtrunc = Mooncake.zero_fcodual(USVᴴtrunc)
+
+    # define pullback
+    local svd_trunc_adjoint
+    let ind = ind, dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc)))
+        function svd_trunc_adjoint(::NoRData)
+            # compute pullbacks
+            svd_pullback!(dA, Ac, USVᴴc, dUSVᴴtrunc, ind)
+            zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
+            zero!.(dUSVᴴ)
+
+            # restore state
+            copy!(A, Ac)
+            copy!.(USVᴴ, USVᴴc)
+
+            return ntuple(Returns(NoRData()), 4)
+        end
+    end
+
+    return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
+end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error), Any, MatrixAlgebraKit.AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual)
@@ -529,6 +637,30 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, al
         return NoRData(), NoRData(), NoRData()
     end
     return output_codual, svd_trunc_adjoint
+end
+function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
+    # unpack variables
+    A, dA = arrayify(A_dA)
+    alg = Mooncake.primal(alg_dalg)
+
+    # compute primal - capture full USVᴴ and ind
+    USVᴴ = svd_compact(A, alg.alg)
+    USVᴴtrunc, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+
+    # pack output
+    USVᴴtrunc_dUSVᴴtrunc = Mooncake.zero_fcodual(USVᴴtrunc)
+
+    # define pullback
+    local svd_trunc_adjoint
+    let ind = ind, dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc)))
+        function svd_trunc_adjoint(::NoRData)
+            svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, ind)
+            zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
+            return ntuple(Returns(NoRData()), 3)
+        end
+    end
+
+    return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
 end
