@@ -21,9 +21,10 @@ _warn_pullback_truncerror(dϵ::Real; tol = MatrixAlgebraKit.defaulttol(dϵ)) =
 # --------------
 Mooncake.tangent_type(::Type{<:AbstractAlgorithm}) = Mooncake.NoTangent
 
-Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.initialize_output), Vararg{Any}}
+Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.select_algorithm), Any, Any, Any}
+Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(Core.kwcall), NamedTuple, typeof(MAK.select_algorithm), Any, Any, Any}
+Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.initialize_output), Any, Any, Any}
 Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.check_input), Vararg{Any}}
-
 
 @is_rev_primitive Tuple{typeof(copy_input), Any, Any}
 function rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDual)
