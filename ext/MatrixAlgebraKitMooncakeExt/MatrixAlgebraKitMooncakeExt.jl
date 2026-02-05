@@ -17,6 +17,8 @@ end
 _warn_pullback_truncerror(dϵ::Real; tol = MatrixAlgebraKit.defaulttol(dϵ)) =
     abs(dϵ) ≤ tol || @warn "Pullback ignores non-zero tangents for truncation error"
 
+const _nordata = Returns(NoRData())
+
 # No derivatives
 # --------------
 Mooncake.tangent_type(::Type{<:AbstractAlgorithm}) = Mooncake.NoTangent
@@ -24,22 +26,36 @@ Mooncake.tangent_type(::Type{<:AbstractAlgorithm}) = Mooncake.NoTangent
 Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.select_algorithm), Any, Any, Any}
 Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(Core.kwcall), NamedTuple, typeof(MAK.select_algorithm), Any, Any, Any}
 Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.initialize_output), Any, Any, Any}
-Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.check_input), Vararg{Any}}
+Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.check_input), Any, Any, Any, Any}
 
-@is_rev_primitive Tuple{typeof(copy_input), Any, Any}
-function rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDual)
-    Ac = copy_input(primal(f_df), primal(A_dA))
+@is_rev_primitive Tuple{typeof(MAK.copy_input), Any, Any}
+function rrule!!(::CoDual{typeof(MAK.copy_input)}, f_df::CoDual, A_dA::CoDual)
+    Ac = MAK.copy_input(primal(f_df), primal(A_dA))
     Ac_dAc = zero_fcodual(Ac)
     dAc = tangent(Ac_dAc)
     function copy_input_pb(::NoRData)
         Mooncake.increment!!(tangent(A_dA), dAc)
-        return NoRData()
+        return ntuple(_nordata, 3)
     end
     return Ac_dAc, copy_input_pb
 end
 
 # Factorizations
 # --------------
+
+# The general approach here is to define the functions in terms of the non-mutating versions first.
+# Since we are not guaranteeing that we will be mutating the input, nor that we will make
+# use of the provided output buffers, we can simplify our lives by calling the non-mutating
+# implementations instead of the mutating ones.
+#
+# The main benefit here is that we do not have to guarantee that we will restore the state
+# after executing the pullback - ensuring that we don't have to keep as many copied objects
+# around. This being said, the total number of allocations does not become smaller because
+# of this, and in cases where the pullback would be used multiple times we now have to
+# allocate multiple times. On the other hand, we can also free these objects inbetween, so
+# this might also reduce the total GC pressure...
+
+
 for (f, pullback!, adjoint) in (
         (:qr_full, :qr_pullback!, :qr_adjoint),
         (:lq_full, :lq_pullback!, :lq_adjoint),
@@ -72,21 +88,23 @@ for (f, pullback!, adjoint) in (
             dargs = last.(arrayify.(args, tangent(args_dargs)))
             function $adjoint(::NoRData)
                 MAK.$pullback!(dA, A, args, dargs)
-                return NoRData()
+                return ntuple(_nordata, 3)
             end
 
-            return args, $adjoint
+            return args_dargs, $adjoint
         end
 
         @is_rev_primitive Tuple{typeof($f!), Any, Tuple, AbstractAlgorithm}
-        rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm}) =
-            rrule!!(zero_fcodual($f), A_dA, alg_dalg)
+        function rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
+            args_dargs, pb! = rrule!!(zero_fcodual($f), A_dA, alg_dalg)
+            return args_dargs, Returns(ntuple(_nordata, 4)) ∘ pb!
+        end
     end
 end
 
 # Nullspaces
 # ----------
-for (f, pullback, adjoint) in (
+for (f, pullback!, adjoint) in (
         (:qr_null, :qr_null_pullback!, :qr_null_adjoint),
         (:lq_null, :lq_null_pullback!, :lq_null_adjoint),
     )
@@ -107,24 +125,26 @@ for (f, pullback, adjoint) in (
             dN = last(arrayify(N, tangent(N_dN)))
             function $adjoint(::NoRData)
                 MAK.$pullback!(dA, A, N, dN)
-                return NoRData()
+                return ntuple(_nordata, 3)
             end
 
-            return N, $adjoint
+            return N_dN, $adjoint
         end
 
         @is_rev_primitive Tuple{typeof($f!), Any, Any, AbstractAlgorithm}
-        rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, N_dN::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm}) =
-            rrule!!(zero_fcodual($f), A_dA, alg_dalg)
+        function rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, N_dN::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
+            arg_darg, pb! = rrule!!(zero_fcodual($f), A_dA, alg_dalg)
+            return arg_darg, Returns(ntuple(_nordata, 4)) ∘ pb!
+        end
     end
 end
 
 for f in (:eig, :eigh, :svd)
     f_vals = Symbol(f, :_vals)
     f_vals! = Symbol(f_vals, :!)
-    f_full = Symbol(f, :_full)
-    vals_pulback! = Symbol(f, :_vals_pullback!)
-    adjoint! = Symbol(f, :_adjoint)
+    f_full = f === :svd ? Symbol(f, :_compact) : Symbol(f, :_full)
+    vals_pullback! = Symbol(f, :_vals_pullback!)
+    adjoint = Symbol(f, :_adjoint)
 
     # f_values
     # --------
@@ -144,15 +164,17 @@ for f in (:eig, :eigh, :svd)
             dvals = last(arrayify(vals, tangent(vals_dvals)))
             function $adjoint(::NoRData)
                 MAK.$vals_pullback!(dA, A, F, dvals)
-                return NoRData()
+                return ntuple(_nordata, 3)
             end
 
             return vals_dvals, $adjoint
         end
 
         @is_rev_primitive Tuple{typeof($f_vals!), Any, Any, AbstractAlgorithm}
-        rrule!!(::CoDual{typeof($f_vals!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual) =
-            rrule!!(zero_fcodual($f_vals), A_dA, alg_dalg)
+        function rrule!!(::CoDual{typeof($f_vals!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual)
+            args_dargs, pb! = rrule!!(zero_fcodual($f_vals), A_dA, alg_dalg)
+            return args_dargs, Returns(ntuple(_nordata, 4)) ∘ pb!
+        end
     end
 
 
@@ -180,7 +202,7 @@ for f in (:eig, :eigh, :svd)
             function $adjoint(dy)
                 _warn_pullback_truncerror(last(dy))
                 MAK.$trunc_pullback!(dA, A, args, dargs)
-                return NoRData()
+                return ntuple(_nordata, 3)
             end
 
             return argsϵ_dargsϵ, $adjoint
@@ -199,17 +221,19 @@ for f in (:eig, :eigh, :svd)
 
             # define pullback
             dargs = last.(arrayify.(args, Base.front(tangent(argsϵ_dargsϵ))))
-            function $f_adjoint!(dy)
+            function $adjoint(dy)
                 _warn_pullback_truncerror(last(dy))
                 MAK.$pullback!(dA, A, args_full, dargs, ind)
-                return NoRData()
+                return ntuple(_nordata, 3)
             end
 
-            return DVtrunc_dDVtrunc, $f_adjoint!
+            return argsϵ_dargsϵ, $adjoint
         end
         @is_rev_primitive Tuple{typeof($f_trunc!), Any, Any, AbstractAlgorithm}
-        rrule!!(::CoDual{typeof($f_trunc!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual) =
-            rrule!!(zero_fcodual($f_trunc), A_dA, alg_dalg)
+        function rrule!!(::CoDual{typeof($f_trunc!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual)
+            args_dargs, pb! = rrule!!(zero_fcodual($f_trunc), A_dA, alg_dalg)
+            return args_dargs, Returns(ntuple(_nordata, 4)) ∘ pb!
+        end
     end
 
     # Truncated decompositions - no error
@@ -232,7 +256,7 @@ for f in (:eig, :eigh, :svd)
             dargs = last.(arrayify.(args, tangent(args_dargs)))
             function $adjoint(::NoRData)
                 MAK.$trunc_pullback!(dA, A, args, dargs)
-                return NoRData()
+                return ntuple(_nordata, 3)
             end
 
             return args_dargs, $adjoint
@@ -251,15 +275,17 @@ for f in (:eig, :eigh, :svd)
             dargs = last.(arrayify.(args, tangent(args_dargs)))
             function $adjoint(::NoRData)
                 MAK.$pullback!(dA, A, args_full, dargs, ind)
-                return NoRData()
+                return ntuple(_nordata, 3)
             end
 
             return args_dargs, $adjoint
         end
 
         @is_rev_primitive Tuple{typeof($f_trunc_no_error!), Any, Any, AbstractAlgorithm}
-        rrule!!(::CoDual{typeof($f_trunc_no_error!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual) =
-            rrule!!(zero_fcodual($f_trunc_no_error), A_dA, alg_dalg)
+        function rrule!!(::CoDual{typeof($f_trunc_no_error!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual)
+            args_dargs, pb! = rrule!!(zero_fcodual($f_trunc_no_error), A_dA, alg_dalg)
+            return args_dargs, Returns(ntuple(_nordata, 4)) ∘ pb!
+        end
     end
 end
 
