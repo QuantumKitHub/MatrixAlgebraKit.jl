@@ -1,7 +1,7 @@
 module MatrixAlgebraKitMooncakeExt
 
 using Mooncake
-using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
+using Mooncake: CoDual, Dual, NoRData, rrule!!, frule!!, arrayify
 using MatrixAlgebraKit
 using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output, zero!
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
@@ -15,7 +15,11 @@ using LinearAlgebra
 
 Mooncake.tangent_type(::Type{<:AbstractAlgorithm}) = Mooncake.NoTangent
 
-@is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof(copy_input), Any, Any}
+macro is_rev_primitive(sig)
+    return esc(:(Mooncake.@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode $sig))
+end
+
+@is_rev_primitive Tuple{typeof(copy_input), Any, Any}
 function Mooncake.rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDual)
     Ac = copy_input(Mooncake.primal(f_df), Mooncake.primal(A_dA))
     Ac_dAc = Mooncake.zero_fcodual(Ac)
@@ -41,7 +45,7 @@ for (f!, f, pb, adj) in (
     )
 
     @eval begin
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Tuple{<:Any, <:Any}, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f!), Any, Tuple{<:Any, <:Any}, AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             args = Mooncake.primal(args_dargs)
@@ -63,7 +67,7 @@ for (f!, f, pb, adj) in (
             end
             return args_dargs, $adj
         end
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f), Any, AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
@@ -92,7 +96,7 @@ for (f!, f, pb, adj) in (
         (:lq_null!, :lq_null, :lq_null_pullback!, :lq_null_adjoint),
     )
     @eval begin
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f!), Any, Any, AbstractAlgorithm}
         function Mooncake.rrule!!(f_df::CoDual{typeof($f!)}, A_dA::CoDual, arg_darg::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             Ac = copy(A)
@@ -108,7 +112,7 @@ for (f!, f, pb, adj) in (
             end
             return arg_darg, $adj
         end
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f), Any, AbstractAlgorithm}
         function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
@@ -129,7 +133,7 @@ for (f!, f, f_full, pb, adj) in (
         (:eigh_vals!, :eigh_vals, :eigh_full, :eigh_vals_pullback!, :eigh_vals_adjoint),
     )
     @eval begin
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f!), Any, Any, AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -147,7 +151,7 @@ for (f!, f, f_full, pb, adj) in (
             end
             return D_dD, $adj
         end
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f), Any, AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -182,8 +186,8 @@ for f in (:eig, :eigh)
     f_trunc_no_error! = Symbol(f_trunc_no_error, :!)
 
     @eval begin
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f_trunc!), Any, Any, AbstractAlgorithm}
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f_trunc), Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f_trunc!), Any, Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f_trunc), Any, AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f_trunc!)}, A_dA::CoDual, DV_dDV::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -298,8 +302,8 @@ for f in (:eig, :eigh)
 
             return DVtrunc_dDVtrunc, $f_adjoint!
         end
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f_trunc_no_error!), Any, Any, AbstractAlgorithm}
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f_trunc_no_error), Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f_trunc_no_error!), Any, Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f_trunc_no_error), Any, AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f_trunc_no_error!)}, A_dA::CoDual, DV_dDV::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -415,7 +419,7 @@ for (f!, f) in (
         (:svd_compact!, :svd_compact),
     )
     @eval begin
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Tuple{<:Any, <:Any, <:Any}, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f!), Any, Tuple{<:Any, <:Any, <:Any}, AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
             Ac = copy(A)
@@ -450,7 +454,7 @@ for (f!, f) in (
             end
             return CoDual(output, dUSVᴴ), svd_adjoint
         end
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, AbstractAlgorithm}
+        @is_rev_primitive Tuple{typeof($f), Any, AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
             USVᴴ = $f(A, Mooncake.primal(alg_dalg))
@@ -487,7 +491,7 @@ for (f!, f) in (
     end
 end
 
-@is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_vals!), Any, Any, AbstractAlgorithm}
+@is_rev_primitive Tuple{typeof(svd_vals!), Any, Any, AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -504,7 +508,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDua
     return S_dS, svd_vals_adjoint
 end
 
-@is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_vals), Any, AbstractAlgorithm}
+@is_rev_primitive Tuple{typeof(svd_vals), Any, AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -524,7 +528,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::Co
     return S_codual, svd_vals_adjoint
 end
 
-@is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc!), Any, Any, AbstractAlgorithm}
+@is_rev_primitive Tuple{typeof(svd_trunc!), Any, Any, AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -604,7 +608,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
-@is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc), Any, AbstractAlgorithm}
+@is_rev_primitive Tuple{typeof(svd_trunc), Any, AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -655,7 +659,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
-@is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error!), Any, Any, AbstractAlgorithm}
+@is_rev_primitive Tuple{typeof(svd_trunc_no_error!), Any, Any, AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -731,7 +735,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
-@is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error), Any, AbstractAlgorithm}
+@is_rev_primitive Tuple{typeof(svd_trunc_no_error), Any, AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
