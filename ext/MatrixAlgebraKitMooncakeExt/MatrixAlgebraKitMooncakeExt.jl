@@ -19,6 +19,9 @@ macro is_rev_primitive(sig)
     return esc(:(Mooncake.@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode $sig))
 end
 
+# return n copies of NoRData()
+@inline n_NoRData(n) = ntuple(Returns(NoRData()), n)
+
 @is_rev_primitive Tuple{typeof(copy_input), Any, Any}
 function Mooncake.rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDual)
     Ac = copy_input(Mooncake.primal(f_df), Mooncake.primal(A_dA))
@@ -26,7 +29,7 @@ function Mooncake.rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDu
     dAc = Mooncake.tangent(Ac_dAc)
     function copy_input_pb(::NoRData)
         Mooncake.increment!!(Mooncake.tangent(A_dA), dAc)
-        return NoRData(), NoRData(), NoRData()
+        return n_NoRData(3)
     end
     return Ac_dAc, copy_input_pb
 end
@@ -63,7 +66,7 @@ for (f!, f, pb, adj) in (
                 copy!(arg2, arg2c)
                 zero!(darg1)
                 zero!(darg2)
-                return NoRData(), NoRData(), NoRData(), NoRData()
+                return n_NoRData(4)
             end
             return args_dargs, $adj
         end
@@ -84,7 +87,7 @@ for (f!, f, pb, adj) in (
                 $pb(dA, A, (arg1, arg2), (darg1, darg2))
                 zero!(darg1)
                 zero!(darg2)
-                return NoRData(), NoRData(), NoRData()
+                return n_NoRData(3)
             end
             return output_codual, $adj
         end
@@ -108,7 +111,7 @@ for (f!, f, pb, adj) in (
                 $pb(dA, A, arg, darg)
                 copy!(arg, argc)
                 zero!(darg)
-                return NoRData(), NoRData(), NoRData(), NoRData()
+                return n_NoRData(4)
             end
             return arg_darg, $adj
         end
@@ -121,7 +124,7 @@ for (f!, f, pb, adj) in (
                 arg, darg = arrayify(output_codual)
                 $pb(dA, A, arg, darg)
                 zero!(darg)
-                return NoRData(), NoRData(), NoRData()
+                return n_NoRData(3)
             end
             return output_codual, $adj
         end
@@ -147,7 +150,7 @@ for (f!, f, f_full, pb, adj) in (
                 $pb(dA, A, DV, dD)
                 copy!(D, Dc)
                 zero!(dD)
-                return NoRData(), NoRData(), NoRData(), NoRData()
+                return n_NoRData(4)
             end
             return D_dD, $adj
         end
@@ -164,7 +167,7 @@ for (f!, f, f_full, pb, adj) in (
                 D, dD = arrayify(output_codual)
                 $pb(dA, A, DV, dD)
                 zero!(dD)
-                return NoRData(), NoRData(), NoRData()
+                return n_NoRData(3)
             end
             return output_codual, $adj
         end
@@ -214,7 +217,7 @@ for f in (:eig, :eigh)
                 copy!(DV[2], DVc[2])
                 zero!(dD′)
                 zero!(dV′)
-                return NoRData(), NoRData(), NoRData(), NoRData()
+                return n_NoRData(4)
             end
             return output_codual, $f_adjoint!
         end
@@ -250,7 +253,7 @@ for f in (:eig, :eigh)
                 copy!(A, Ac)
                 copy!.(DV, DVc)
 
-                return ntuple(Returns(NoRData()), 4)
+                return n_NoRData(4)
             end
 
             return DVtrunc_dDVtrunc, $f_adjoint!
@@ -274,7 +277,7 @@ for f in (:eig, :eigh)
                 $f_trunc_pullback!(dA, A, (D, V), (dD, dV))
                 zero!(dD)
                 zero!(dV)
-                return NoRData(), NoRData(), NoRData()
+                return n_NoRData(3)
             end
             return output_codual, $f_adjoint!
         end
@@ -297,7 +300,7 @@ for f in (:eig, :eigh)
                 _warn_pullback_truncerror(dϵ)
                 $f_pullback!(dA, A, DV, dDVtrunc, ind)
                 zero!.(dDVtrunc) # since this is allocated in this function this is probably not required
-                return ntuple(Returns(NoRData()), 3)
+                return n_NoRData(3)
             end
 
             return DVtrunc_dDVtrunc, $f_adjoint!
@@ -329,7 +332,7 @@ for f in (:eig, :eigh)
                 copy!(DV[2], DVc[2])
                 zero!(dD′)
                 zero!(dV′)
-                return NoRData(), NoRData(), NoRData(), NoRData()
+                return n_NoRData(4)
             end
             return output_codual, $f_adjoint!
         end
@@ -362,7 +365,7 @@ for f in (:eig, :eigh)
                 copy!(A, Ac)
                 copy!.(DV, DVc)
 
-                return ntuple(Returns(NoRData()), 4)
+                return n_NoRData(4)
             end
 
             return DVtrunc_dDVtrunc, $f_adjoint!
@@ -385,7 +388,7 @@ for f in (:eig, :eigh)
                 $f_trunc_pullback!(dA, A, (D, V), (dD, dV))
                 zero!(dD)
                 zero!(dV)
-                return NoRData(), NoRData(), NoRData()
+                return n_NoRData(3)
             end
             return output_codual, $f_adjoint!
         end
@@ -406,7 +409,7 @@ for f in (:eig, :eigh)
             function $f_adjoint!(::NoRData)
                 $f_pullback!(dA, A, DV, dDVtrunc, ind)
                 zero!.(dDVtrunc) # since this is allocated in this function this is probably not required
-                return ntuple(Returns(NoRData()), 3)
+                return n_NoRData(3)
             end
 
             return DVtrunc_dDVtrunc, $f_adjoint!
@@ -450,7 +453,7 @@ for (f!, f) in (
                 zero!(dU)
                 zero!(dS)
                 zero!(dVᴴ)
-                return NoRData(), NoRData(), NoRData(), NoRData()
+                return n_NoRData(4)
             end
             return CoDual(output, dUSVᴴ), svd_adjoint
         end
@@ -484,7 +487,7 @@ for (f!, f) in (
                 zero!(dU)
                 zero!(dS)
                 zero!(dVᴴ)
-                return NoRData(), NoRData(), NoRData()
+                return n_NoRData(3)
             end
             return USVᴴ_codual, svd_adjoint
         end
@@ -503,7 +506,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDua
         svd_vals_pullback!(dA, A, USVᴴ, dS)
         zero!(dS)
         copy!(S, Sc)
-        return NoRData(), NoRData(), NoRData(), NoRData()
+        return n_NoRData(4)
     end
     return S_dS, svd_vals_adjoint
 end
@@ -523,7 +526,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::Co
         S, dS = arrayify(S_codual)
         svd_vals_pullback!(dA, A, USVᴴ, dS)
         zero!(dS)
-        return NoRData(), NoRData(), NoRData()
+        return n_NoRData(3)
     end
     return S_codual, svd_vals_adjoint
 end
@@ -564,7 +567,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
         zero!(dU′)
         zero!(dS′)
         zero!(dVᴴ′)
-        return NoRData(), NoRData(), NoRData()
+        return n_NoRData(3)
     end
     return output_codual, svd_trunc_adjoint
 end
@@ -602,7 +605,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
         copy!(A, Ac)
         copy!.(USVᴴ, USVᴴc)
 
-        return ntuple(Returns(NoRData()), 4)
+        return n_NoRData(4)
     end
 
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
@@ -630,7 +633,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
         zero!(dU)
         zero!(dS)
         zero!(dVᴴ)
-        return NoRData(), NoRData(), NoRData()
+        return n_NoRData(3)
     end
     return output_codual, svd_trunc_adjoint
 end
@@ -653,7 +656,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
         _warn_pullback_truncerror(dϵ)
         svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, ind)
         zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
-        return ntuple(Returns(NoRData()), 3)
+        return n_NoRData(3)
     end
 
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
@@ -694,7 +697,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
         zero!(dU′)
         zero!(dS′)
         zero!(dVᴴ′)
-        return NoRData(), NoRData(), NoRData()
+        return n_NoRData(3)
     end
     return output_codual, svd_trunc_adjoint
 end
@@ -729,7 +732,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
         copy!(A, Ac)
         copy!.(USVᴴ, USVᴴc)
 
-        return ntuple(Returns(NoRData()), 4)
+        return n_NoRData(4)
     end
 
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
@@ -756,7 +759,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, al
         zero!(dU)
         zero!(dS)
         zero!(dVᴴ)
-        return NoRData(), NoRData(), NoRData()
+        return n_NoRData(3)
     end
     return output_codual, svd_trunc_adjoint
 end
@@ -777,7 +780,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, al
     function svd_trunc_adjoint(::NoRData)
         svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, ind)
         zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
-        return ntuple(Returns(NoRData()), 3)
+        return n_NoRData(3)
     end
 
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
