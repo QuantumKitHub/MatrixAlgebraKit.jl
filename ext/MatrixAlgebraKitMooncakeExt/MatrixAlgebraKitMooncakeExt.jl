@@ -13,14 +13,22 @@ using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!, svd_vals_pullback!
 using MatrixAlgebraKit: AbstractAlgorithm, TruncatedAlgorithm
 using LinearAlgebra
 
-Mooncake.tangent_type(::Type{<:AbstractAlgorithm}) = Mooncake.NoTangent
 
+# Utility
+# -------
+# convenience helper for marking DefaultCtx ReverseMode signature as primitive
 macro is_rev_primitive(sig)
     return esc(:(Mooncake.@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode $sig))
 end
 
 # return n copies of NoRData()
 @inline n_NoRData(n) = ntuple(Returns(NoRData()), n)
+
+# No derivatives
+# --------------
+Mooncake.tangent_type(::Type{<:AbstractAlgorithm}) = Mooncake.NoTangent
+Mooncake.@zero_derivative DefaultCtx Tuple{typeof(initialize_output), Any, Any, Any}
+
 
 @is_rev_primitive Tuple{typeof(copy_input), Any, Any}
 function Mooncake.rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDual)
@@ -34,7 +42,6 @@ function Mooncake.rrule!!(::CoDual{typeof(copy_input)}, f_df::CoDual, A_dA::CoDu
     return Ac_dAc, copy_input_pb
 end
 
-Mooncake.@zero_derivative DefaultCtx Tuple{typeof(initialize_output), Any, Any, Any}
 # two-argument in-place factorizations like LQ, QR, EIG
 for (f!, f, pb, adj) in (
         (:qr_full!, :qr_full, :qr_pullback!, :qr_adjoint),
