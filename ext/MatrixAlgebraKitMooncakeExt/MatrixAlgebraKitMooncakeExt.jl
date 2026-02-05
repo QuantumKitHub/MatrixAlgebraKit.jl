@@ -168,6 +168,9 @@ for (f!, f, f_full, pb, adj) in (
     end
 end
 
+_warn_pullback_truncerror(dϵ::Real; tol = MatrixAlgebraKit.defaulttol(dϵ)) =
+    abs(dϵ) ≤ tol || @warn "Pullback ignores non-zero tangents for truncation error"
+
 for f in (:eig, :eigh)
     f_trunc = Symbol(f, :_trunc)
     f_trunc! = Symbol(f_trunc, :!)
@@ -200,7 +203,7 @@ for f in (:eig, :eigh)
                 copy!(A, Ac)
                 Dtrunc, Vtrunc, ϵ = Mooncake.primal(output_codual)
                 dDtrunc_, dVtrunc_, dϵ = Mooncake.tangent(output_codual)
-                abs(dy[3]) > MatrixAlgebraKit.defaulttol(dy[3]) && @warn "Pullback for $f does not yet support non-zero tangent for the truncation error"
+                _warn_pullback_truncerror(dy[3])
                 D′, dD′ = arrayify(Dtrunc, dDtrunc_)
                 V′, dV′ = arrayify(Vtrunc, dVtrunc_)
                 $f_trunc_pullback!(dA, A, (D′, V′), (dD′, dV′))
@@ -235,8 +238,7 @@ for f in (:eig, :eigh)
             local $f_adjoint!
             let ind = ind, dDVtrunc = last.(arrayify.(DVtrunc, Base.front(Mooncake.tangent(DVtrunc_dDVtrunc))))
                 function $f_adjoint!((_, _, dϵ)::Tuple{NoRData, NoRData, Real})
-                    abs(dϵ) ≤ MatrixAlgebraKit.defaulttol(dϵ) ||
-                        @warn "Pullback for `$f!` ignores non-zero tangents for truncation error"
+                    _warn_pullback_truncerror(dϵ)
 
                     # compute pullbacks
                     $f_pullback!(dA, Ac, DVc, dDVtrunc, ind)
@@ -265,7 +267,7 @@ for f in (:eig, :eigh)
             function $f_adjoint!(dy::Tuple{NoRData, NoRData, T}) where {T <: Real}
                 Dtrunc, Vtrunc, ϵ = Mooncake.primal(output_codual)
                 dDtrunc_, dVtrunc_, dϵ = Mooncake.tangent(output_codual)
-                abs(dy[3]) > MatrixAlgebraKit.defaulttol(dy[3]) && @warn "Pullback for $f does not yet support non-zero tangent for the truncation error"
+                _warn_pullback_truncerror(dy[3])
                 D, dD = arrayify(Dtrunc, dDtrunc_)
                 V, dV = arrayify(Vtrunc, dVtrunc_)
                 $f_trunc_pullback!(dA, A, (D, V), (dD, dV))
@@ -292,8 +294,7 @@ for f in (:eig, :eigh)
             local $f_adjoint!
             let ind = ind, dDVtrunc = last.(arrayify.(DVtrunc, Base.front(Mooncake.tangent(DVtrunc_dDVtrunc))))
                 function $f_adjoint!((_, _, dϵ)::Tuple{NoRData, NoRData, Real})
-                    abs(dϵ) ≤ MatrixAlgebraKit.defaulttol(dϵ) ||
-                        @warn "Pullback for `$f_trunc` ignores non-zero tangents for truncation error"
+                    _warn_pullback_truncerror(dϵ)
                     $f_pullback!(dA, A, DV, dDVtrunc, ind)
                     zero!.(dDVtrunc) # since this is allocated in this function this is probably not required
                     return ntuple(Returns(NoRData()), 3)
@@ -554,7 +555,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
         copy!(A, Ac)
         Utrunc, Strunc, Vᴴtrunc, ϵ = Mooncake.primal(output_codual)
         dUtrunc_, dStrunc_, dVᴴtrunc_, dϵ = Mooncake.tangent(output_codual)
-        abs(dy[4]) > MatrixAlgebraKit.defaulttol(dy[4]) && @warn "Pullback for svd_trunc does not yet support non-zero tangent for the truncation error"
+        _warn_pullback_truncerror(dy[4])
         U′, dU′ = arrayify(Utrunc, dUtrunc_)
         S′, dS′ = arrayify(Strunc, dStrunc_)
         Vᴴ′, dVᴴ′ = arrayify(Vᴴtrunc, dVᴴtrunc_)
@@ -596,8 +597,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
     local svd_trunc_adjoint
     let ind = ind, dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Base.front(Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc))))
         function svd_trunc_adjoint((_, _, _, dϵ)::Tuple{NoRData, NoRData, NoRData, Real})
-            abs(dϵ) ≤ MatrixAlgebraKit.defaulttol(dϵ) ||
-                @warn "Pullback for `svd_trunc` ignores non-zero tangents for truncation error"
+            _warn_pullback_truncerror(dϵ)
 
             # compute pullbacks
             svd_pullback!(dA, Ac, USVᴴc, dUSVᴴtrunc, ind)
@@ -629,7 +629,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     function svd_trunc_adjoint(dy::Tuple{NoRData, NoRData, NoRData, T}) where {T <: Real}
         Utrunc, Strunc, Vᴴtrunc, ϵ = Mooncake.primal(output_codual)
         dUtrunc_, dStrunc_, dVᴴtrunc_, dϵ = Mooncake.tangent(output_codual)
-        abs(dy[4]) > MatrixAlgebraKit.defaulttol(dy[4]) && @warn "Pullback for svd_trunc does not yet support non-zero tangent for the truncation error"
+        _warn_pullback_truncerror(dy[4])
         U, dU = arrayify(Utrunc, dUtrunc_)
         S, dS = arrayify(Strunc, dStrunc_)
         Vᴴ, dVᴴ = arrayify(Vᴴtrunc, dVᴴtrunc_)
@@ -658,8 +658,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     local svd_trunc_adjoint
     let ind = ind, dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Base.front(Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc))))
         function svd_trunc_adjoint((_, _, _, dϵ)::Tuple{NoRData, NoRData, NoRData, Real})
-            abs(dϵ) ≤ MatrixAlgebraKit.defaulttol(dϵ) ||
-                @warn "Pullback for `svd_trunc` ignores non-zero tangents for truncation error"
+            _warn_pullback_truncerror(dϵ)
             svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, ind)
             zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
             return ntuple(Returns(NoRData()), 3)
