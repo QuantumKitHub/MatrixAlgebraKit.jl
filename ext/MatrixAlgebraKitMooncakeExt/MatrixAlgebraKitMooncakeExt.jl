@@ -1,10 +1,10 @@
 module MatrixAlgebraKitMooncakeExt
 
-using Mooncake
-using Mooncake: CoDual, Dual, NoRData, arrayify, primal, tangent, zero_fcodual
-import Mooncake: rrule!!
+using Mooncake: Mooncake as MC,
+    CoDual, Dual, NoRData, arrayify, primal, tangent, zero_fcodual
 using MatrixAlgebraKit
-using MatrixAlgebraKit: MatrixAlgebraKit as MAK, diagview, zero!, AbstractAlgorithm, TruncatedAlgorithm
+using MatrixAlgebraKit: MatrixAlgebraKit as MAK,
+    diagview, zero!, AbstractAlgorithm, TruncatedAlgorithm
 using LinearAlgebra
 
 
@@ -12,8 +12,9 @@ using LinearAlgebra
 # -------
 # convenience helper for marking DefaultCtx ReverseMode signature as primitive
 macro is_rev_primitive(sig)
-    return esc(:(Mooncake.@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode $sig))
+    return esc(:(MC.@is_primitive MC.DefaultCtx MC.ReverseMode $sig))
 end
+
 _warn_pullback_truncerror(dϵ::Real; tol = MatrixAlgebraKit.defaulttol(dϵ)) =
     abs(dϵ) ≤ tol || @warn "Pullback ignores non-zero tangents for truncation error"
 
@@ -21,20 +22,20 @@ const _nordata = Returns(NoRData())
 
 # No derivatives
 # --------------
-Mooncake.tangent_type(::Type{<:AbstractAlgorithm}) = Mooncake.NoTangent
+MC.tangent_type(::Type{<:AbstractAlgorithm}) = MC.NoTangent
 
-Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.select_algorithm), Any, Any, Any}
-Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(Core.kwcall), NamedTuple, typeof(MAK.select_algorithm), Any, Any, Any}
-Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.initialize_output), Any, Any, Any}
-Mooncake.@zero_derivative Mooncake.DefaultCtx Tuple{typeof(MAK.check_input), Any, Any, Any, Any}
+MC.@zero_derivative MC.DefaultCtx Tuple{typeof(MAK.select_algorithm), Any, Any, Any}
+MC.@zero_derivative MC.DefaultCtx Tuple{typeof(Core.kwcall), NamedTuple, typeof(MAK.select_algorithm), Any, Any, Any}
+MC.@zero_derivative MC.DefaultCtx Tuple{typeof(MAK.initialize_output), Any, Any, Any}
+MC.@zero_derivative MC.DefaultCtx Tuple{typeof(MAK.check_input), Any, Any, Any, Any}
 
 @is_rev_primitive Tuple{typeof(MAK.copy_input), Any, Any}
-function rrule!!(::CoDual{typeof(MAK.copy_input)}, f_df::CoDual, A_dA::CoDual)
+function MC.rrule!!(::CoDual{typeof(MAK.copy_input)}, f_df::CoDual, A_dA::CoDual)
     Ac = MAK.copy_input(primal(f_df), primal(A_dA))
     Ac_dAc = zero_fcodual(Ac)
     dAc = tangent(Ac_dAc)
     function copy_input_pb(::NoRData)
-        Mooncake.increment!!(tangent(A_dA), dAc)
+        MC.increment!!(tangent(A_dA), dAc)
         return ntuple(_nordata, 3)
     end
     return Ac_dAc, copy_input_pb
@@ -75,7 +76,7 @@ for (f, pullback!, adjoint) in (
 
     @eval begin
         @is_rev_primitive Tuple{typeof($f), Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
+        function MC.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
             # unpack variables
             A, dA = arrayify(A_dA)
             alg = primal(alg_dalg)
@@ -95,8 +96,8 @@ for (f, pullback!, adjoint) in (
         end
 
         @is_rev_primitive Tuple{typeof($f!), Any, Tuple, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
-            args_dargs, pb! = rrule!!(zero_fcodual($f), A_dA, alg_dalg)
+        function MC.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
+            args_dargs, pb! = MC.rrule!!(zero_fcodual($f), A_dA, alg_dalg)
             return args_dargs, Returns(ntuple(_nordata, 4)) ∘ pb!
         end
     end
@@ -112,7 +113,7 @@ for (f, pullback!, adjoint) in (
 
     @eval begin
         @is_rev_primitive Tuple{typeof($f), Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
+        function MC.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
             # unpack variables
             A, dA = arrayify(A_dA)
             alg = primal(alg_dalg)
@@ -132,8 +133,8 @@ for (f, pullback!, adjoint) in (
         end
 
         @is_rev_primitive Tuple{typeof($f!), Any, Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, N_dN::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
-            arg_darg, pb! = rrule!!(zero_fcodual($f), A_dA, alg_dalg)
+        function MC.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, N_dN::CoDual, alg_dalg::CoDual{<:AbstractAlgorithm})
+            arg_darg, pb! = MC.rrule!!(zero_fcodual($f), A_dA, alg_dalg)
             return arg_darg, Returns(ntuple(_nordata, 4)) ∘ pb!
         end
     end
@@ -150,7 +151,7 @@ for f in (:eig, :eigh, :svd)
     # --------
     @eval begin
         @is_rev_primitive Tuple{typeof($f_vals), Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f_vals)}, A_dA::CoDual, alg_dalg::CoDual)
+        function MC.rrule!!(::CoDual{typeof($f_vals)}, A_dA::CoDual, alg_dalg::CoDual)
             # unpack variables
             A, dA = arrayify(A_dA)
             alg = primal(alg_dalg)
@@ -171,8 +172,8 @@ for f in (:eig, :eigh, :svd)
         end
 
         @is_rev_primitive Tuple{typeof($f_vals!), Any, Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f_vals!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual)
-            args_dargs, pb! = rrule!!(zero_fcodual($f_vals), A_dA, alg_dalg)
+        function MC.rrule!!(::CoDual{typeof($f_vals!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual)
+            args_dargs, pb! = MC.rrule!!(zero_fcodual($f_vals), A_dA, alg_dalg)
             return args_dargs, Returns(ntuple(_nordata, 4)) ∘ pb!
         end
     end
@@ -184,10 +185,11 @@ for f in (:eig, :eigh, :svd)
     f_trunc! = Symbol(f_trunc, :!)
     pullback! = Symbol(f, :_pullback!)
     trunc_pullback! = Symbol(f_trunc, :_pullback!)
+    f_trunc_no_error = Symbol(f_trunc, :_no_error)
 
     @eval begin
         @is_rev_primitive Tuple{typeof($f_trunc), Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f_trunc)}, A_dA::CoDual, alg_dalg::CoDual)
+        function MC.rrule!!(::CoDual{typeof($f_trunc)}, A_dA::CoDual, alg_dalg::CoDual)
             # unpack variables
             A, dA = arrayify(A_dA)
             alg = primal(alg_dalg)
@@ -207,15 +209,15 @@ for f in (:eig, :eigh, :svd)
 
             return argsϵ_dargsϵ, $adjoint
         end
-        function rrule!!(::CoDual{typeof($f_trunc)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
+        function MC.rrule!!(::CoDual{typeof($f_trunc)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
             # unpack variables
             A, dA = arrayify(A_dA)
-            alg = Mooncake.primal(alg_dalg)
+            alg = primal(alg_dalg)
 
             # compute primal and pack output - capture full DV and ind
             args_full = $f_full(A, alg.alg)
             args, ind = MAK.truncate($f_trunc!, args_full, alg.trunc)
-            ϵ = MAK.truncation_error(diagview(args[1]), ind)
+            ϵ = MAK.truncation_error(diagview(args_full[$(f === :svd ? 2 : 1)]), ind)
             argsϵ = (args..., ϵ)
             argsϵ_dargsϵ = zero_fcodual(argsϵ)
 
@@ -229,39 +231,15 @@ for f in (:eig, :eigh, :svd)
 
             return argsϵ_dargsϵ, $adjoint
         end
+
         @is_rev_primitive Tuple{typeof($f_trunc!), Any, Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f_trunc!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual)
-            args_dargs, pb! = rrule!!(zero_fcodual($f_trunc), A_dA, alg_dalg)
+        function MC.rrule!!(::CoDual{typeof($f_trunc!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual)
+            args_dargs, pb! = MC.rrule!!(zero_fcodual($f_trunc), A_dA, alg_dalg)
             return args_dargs, Returns(ntuple(_nordata, 4)) ∘ pb!
         end
-    end
 
-    # Truncated decompositions - no error
-    # -----------------------------------
-    f_trunc_no_error = Symbol(f_trunc, :_no_error)
-    f_trunc_no_error! = Symbol(f_trunc_no_error, :!)
-
-    @eval begin
-        @is_rev_primitive Tuple{typeof($f_trunc_no_error), Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual)
-            # unpack variables
-            A, dA = arrayify(A_dA)
-            alg = primal(alg_dalg)
-
-            # compute primal and pack output
-            args = $f_trunc(A, alg)
-            args_dargs = zero_fcodual(args)
-
-            # define pullback
-            dargs = last.(arrayify.(args, tangent(args_dargs)))
-            function $adjoint(::NoRData)
-                MAK.$trunc_pullback!(dA, A, args, dargs)
-                return ntuple(_nordata, 3)
-            end
-
-            return args_dargs, $adjoint
-        end
-        function rrule!!(::CoDual{typeof($f_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
+        # still need specialized implementation for <:TruncatedAlgorithm
+        function MC.rrule!!(::CoDual{typeof($f_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
             # unpack variables
             A, dA = arrayify(A_dA)
             alg = primal(alg_dalg)
@@ -279,12 +257,6 @@ for f in (:eig, :eigh, :svd)
             end
 
             return args_dargs, $adjoint
-        end
-
-        @is_rev_primitive Tuple{typeof($f_trunc_no_error!), Any, Any, AbstractAlgorithm}
-        function rrule!!(::CoDual{typeof($f_trunc_no_error!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual)
-            args_dargs, pb! = rrule!!(zero_fcodual($f_trunc_no_error), A_dA, alg_dalg)
-            return args_dargs, Returns(ntuple(_nordata, 4)) ∘ pb!
         end
     end
 end
