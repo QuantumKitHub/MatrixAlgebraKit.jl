@@ -274,46 +274,22 @@ function ChainRulesCore.rrule(::typeof(right_polar!), A, PWᴴ, alg)
     return PWᴴ, right_polar_pullback
 end
 
-function ChainRulesCore.rrule(::typeof(project_hermitian!), A, Aₕ, alg)
-    Ac = copy_input(project_hermitian, A)
-    Aₕ = project_hermitian!(Ac, Aₕ, alg)
+function ChainRulesCore.rrule(::typeof(project_hermitian), A, alg)
+    Aₕ = project_hermitian(A, alg)
     function project_hermitian_pullback(ΔAₕ)
         ΔA = project_hermitian(unthunk(ΔAₕ))
-        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
-    end
-    function project_hermitian_pullback(::ZeroTangent)
-        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+        return NoTangent(), ΔA, NoTangent()
     end
     return Aₕ, project_hermitian_pullback
 end
 
-function ChainRulesCore.rrule(::typeof(project_antihermitian!), A, Aₐ, alg)
-    Ac = copy_input(project_antihermitian, A)
-    Aₐ = project_antihermitian!(Ac, Aₐ, alg)
+function ChainRulesCore.rrule(::typeof(project_antihermitian), A, alg)
+    Aₐ = project_antihermitian(A, alg)
     function project_antihermitian_pullback(ΔAₐ)
         ΔA = project_antihermitian(unthunk(ΔAₐ))
-        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
-    end
-    function project_antihermitian_pullback(::ZeroTangent)
-        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+        return NoTangent(), ΔA, NoTangent()
     end
     return Aₐ, project_antihermitian_pullback
-end
-
-function ChainRulesCore.rrule(::typeof(project_isometric!), A, W, alg)
-    Ac = copy_input(project_isometric, A)
-    # Compute the full polar decomposition to cache P for the pullback
-    WP = left_polar!(Ac, (similar(W), similar(W, size(W, 2), size(W, 2))), alg)
-    W_out = copy!(W, WP[1])
-    function project_isometric_pullback(ΔW)
-        ΔA = zero(A)
-        MatrixAlgebraKit.left_polar_pullback!(ΔA, A, WP, (unthunk(ΔW), nothing))
-        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
-    end
-    function project_isometric_pullback(::ZeroTangent)
-        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
-    end
-    return W_out, project_isometric_pullback
 end
 
 end
