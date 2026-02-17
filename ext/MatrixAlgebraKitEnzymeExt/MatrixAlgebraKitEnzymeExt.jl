@@ -454,4 +454,91 @@ function EnzymeRules.reverse(
     return (nothing, nothing, nothing)
 end
 
+# single-output projections: project_hermitian!, project_antihermitian!
+# single-output projections: project_hermitian!, project_antihermitian!
+for (f!, project_f) in (
+        (project_hermitian!, project_hermitian),
+        (project_antihermitian!, project_antihermitian),
+    )
+    @eval begin
+        function EnzymeRules.augmented_primal(
+                config::EnzymeRules.RevConfigWidth{1},
+                func::Const{typeof($f!)},
+                ::Type{RT},
+                A::Annotation,
+                arg::Annotation{TA},
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT, TA}
+            ret = func.val(A.val, arg.val, alg.val)
+            cache_arg = (arg.val !== ret) || EnzymeRules.overwritten(config)[3] ? copy(ret) : nothing
+            dret = if EnzymeRules.needs_shadow(config)
+                (TA == Nothing || isa(arg, Const)) ? zero(ret) : arg.dval
+            else
+                nothing
+            end
+            primal = EnzymeRules.needs_primal(config) ? ret : nothing
+            return EnzymeRules.AugmentedReturn(primal, dret, (cache_arg, dret))
+        end
+        function EnzymeRules.reverse(
+                config::EnzymeRules.RevConfigWidth{1},
+                func::Const{typeof($f!)},
+                ::Type{RT},
+                cache,
+                A::Annotation,
+                arg::Annotation,
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT}
+            cache_arg, darg = cache
+            argdval = something(darg, arg.dval)
+            if !isa(A, Const)
+                A.dval .+= $project_f(argdval)
+            end
+            !isa(arg, Const) && make_zero!(arg.dval)
+            return (nothing, nothing, nothing)
+        end
+    end
+end
+
+# project_isometric! needs special handling: compute full polar decomposition
+function EnzymeRules.augmented_primal(
+        config::EnzymeRules.RevConfigWidth{1},
+        func::Const{typeof(project_isometric!)},
+        ::Type{RT},
+        A::Annotation,
+        W::Annotation{TW},
+        alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+    ) where {RT, TW}
+    # Compute the full polar decomposition for the pullback
+    Ac = copy(A.val)
+    m, n = size(A.val)
+    P = similar(A.val, n, n)
+    WP = left_polar!(Ac, (W.val, P), alg.val)
+    cache_WP = EnzymeRules.overwritten(config)[3] ? copy.(WP) : nothing
+    dret = if EnzymeRules.needs_shadow(config)
+        (TW == Nothing || isa(W, Const)) ? zero(WP[1]) : W.dval
+    else
+        nothing
+    end
+    primal = EnzymeRules.needs_primal(config) ? WP[1] : nothing
+    return EnzymeRules.AugmentedReturn(primal, dret, (cache_WP, dret))
+end
+function EnzymeRules.reverse(
+        config::EnzymeRules.RevConfigWidth{1},
+        func::Const{typeof(project_isometric!)},
+        ::Type{RT},
+        cache,
+        A::Annotation,
+        W::Annotation,
+        alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+    ) where {RT}
+    cache_WP, dW = cache
+    Aval = nothing
+    WPval = something(cache_WP, (W.val, cache_WP[2]))
+    if !isa(A, Const)
+        left_polar_pullback!(A.dval, Aval, WPval, (dW, nothing))
+    end
+    !isa(W, Const) && make_zero!(W.dval)
+    return (nothing, nothing, nothing)
+end
+
 end

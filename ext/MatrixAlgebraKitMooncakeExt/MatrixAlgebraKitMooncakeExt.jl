@@ -778,4 +778,82 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, al
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
+# single-output projections: project_hermitian!, project_antihermitian!
+# single-output projections: project_hermitian!, project_antihermitian!
+for (f!, f, adj) in (
+        (:project_hermitian!, :project_hermitian, :project_hermitian_adjoint),
+        (:project_antihermitian!, :project_antihermitian, :project_antihermitian_adjoint),
+    )
+    @eval begin
+        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.rrule!!(f_df::CoDual{typeof($f!)}, A_dA::CoDual, arg_darg::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
+            A, dA = arrayify(A_dA)
+            Ac = copy(A)
+            arg, darg = arrayify(arg_darg)
+            argc = copy(arg)
+            $f!(A, arg, Mooncake.primal(alg_dalg))
+            function $adj(::NoRData)
+                copy!(A, Ac)
+                dA .+= $f(darg)
+                copy!(arg, argc)
+                zero!(darg)
+                return NoRData(), NoRData(), NoRData(), NoRData()
+            end
+            return arg_darg, $adj
+        end
+        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
+            A, dA = arrayify(A_dA)
+            output = $f(A, Mooncake.primal(alg_dalg))
+            output_codual = CoDual(output, Mooncake.zero_tangent(output))
+            function $adj(::NoRData)
+                arg, darg = arrayify(output_codual)
+                dA .+= $f(darg)
+                zero!(darg)
+                return NoRData(), NoRData(), NoRData()
+            end
+            return output_codual, $adj
+        end
+    end
+end
+
+# project_isometric! needs special handling: compute full polar decomposition
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(project_isometric!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(f_df::CoDual{typeof(project_isometric!)}, A_dA::CoDual, W_dW::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
+    A, dA = arrayify(A_dA)
+    W, dW = arrayify(W_dW)
+    Ac = copy(A)
+    Wc = copy(W)
+    # Compute the full polar decomposition for the pullback
+    m, n = size(A)
+    P = similar(A, n, n)
+    WP = left_polar!(copy(A), (copy(W), P), Mooncake.primal(alg_dalg))
+    copy!(W, WP[1])
+    function project_isometric_adjoint(::NoRData)
+        copy!(A, Ac)
+        left_polar_pullback!(dA, A, WP, (dW, nothing))
+        copy!(W, Wc)
+        zero!(dW)
+        return NoRData(), NoRData(), NoRData(), NoRData()
+    end
+    return W_dW, project_isometric_adjoint
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(project_isometric), Any, MatrixAlgebraKit.AbstractAlgorithm}
+function Mooncake.rrule!!(f_df::CoDual{typeof(project_isometric)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
+    A, dA = arrayify(A_dA)
+    alg = Mooncake.primal(alg_dalg)
+    # Compute the full polar decomposition for the pullback
+    WP = left_polar(A, alg)
+    W_out = WP[1]
+    output_codual = CoDual(W_out, Mooncake.zero_tangent(W_out))
+    function project_isometric_adjoint(::NoRData)
+        W, dW = arrayify(output_codual)
+        left_polar_pullback!(dA, A, WP, (dW, nothing))
+        zero!(dW)
+        return NoRData(), NoRData(), NoRData()
+    end
+    return output_codual, project_isometric_adjoint
+end
+
 end

@@ -537,3 +537,27 @@ function ad_right_null_setup(A)
     ΔNᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A; alg = :lq)[2]
     return Nᴴ, ΔNᴴ
 end
+
+function ad_project_hermitian_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    Aₕ = project_hermitian(A)
+    ΔAₕ = randn!(similar(A, T, m, n))
+    return Aₕ, ΔAₕ
+end
+
+function ad_project_antihermitian_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    Aₐ = project_antihermitian(A)
+    ΔAₐ = randn!(similar(A, T, m, n))
+    return Aₐ, ΔAₐ
+end
+
+function ad_project_isometric_setup(A)
+    m, n = size(A)
+    T = eltype(A)
+    W = project_isometric(A)
+    ΔW = randn!(similar(A, T, m, n))
+    return W, ΔW
+end

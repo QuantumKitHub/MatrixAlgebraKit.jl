@@ -105,6 +105,7 @@ function test_enzyme(T::Type, sz; kwargs...)
             test_enzyme_polar(T, sz; kwargs...)
             test_enzyme_orthnull(T, sz; kwargs...)
         end
+        test_enzyme_projections(T, sz; kwargs...)
     end
 end
 
@@ -458,6 +459,44 @@ function test_enzyme_orthnull(
                 right_null_lq(A) = right_null(A; alg = :lq)
                 eltype(T) <: BlasFloat && test_reverse(right_null_lq, RT, (A, TA); output_tangent = ΔNᴴ, atol, rtol)
                 is_cpu(A) && enz_test_pullbacks_match(rng, right_null_lq!, right_null_lq, A, Nᴴ, ΔNᴴ)
+            end
+        end
+    end
+end
+
+function test_enzyme_projections(
+        T::Type, sz;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "Projections Enzyme AD rules $summary_str" begin
+        A = instantiate_matrix(T, sz)
+        m, n = size(A)
+        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        if m == n
+            @testset "project_hermitian" begin
+                @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+                    Aₕ, ΔAₕ = ad_project_hermitian_setup(A)
+                    eltype(T) <: BlasFloat && test_reverse(project_hermitian, RT, (A, TA); atol, rtol, output_tangent = ΔAₕ, fdm)
+                    is_cpu(A) && enz_test_pullbacks_match(rng, project_hermitian!, project_hermitian, A, Aₕ, ΔAₕ)
+                end
+            end
+            @testset "project_antihermitian" begin
+                @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+                    Aₐ, ΔAₐ = ad_project_antihermitian_setup(A)
+                    eltype(T) <: BlasFloat && test_reverse(project_antihermitian, RT, (A, TA); atol, rtol, output_tangent = ΔAₐ, fdm)
+                    is_cpu(A) && enz_test_pullbacks_match(rng, project_antihermitian!, project_antihermitian, A, Aₐ, ΔAₐ)
+                end
+            end
+        end
+        if m > n
+            @testset "project_isometric" begin
+                @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+                    W, ΔW = ad_project_isometric_setup(A)
+                    eltype(T) <: BlasFloat && test_reverse(project_isometric, RT, (A, TA); atol, rtol, output_tangent = ΔW, fdm)
+                    is_cpu(A) && enz_test_pullbacks_match(rng, project_isometric!, project_isometric, A, W, ΔW)
+                end
             end
         end
     end
