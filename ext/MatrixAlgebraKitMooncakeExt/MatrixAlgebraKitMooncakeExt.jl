@@ -796,7 +796,7 @@ for (f!, f, adj) in (
                 dA .+= $f(darg)
                 dA === darg || zero!(darg)
                 copy!(arg, argc)
-                return NoRData(), NoRData(), NoRData(), NoRData()
+                return ntuple(Returns(NoRData()), 4)
             end
             return arg_darg, $adj
         end
@@ -811,10 +811,11 @@ for (f!, f, adj) in (
             function $adj(::NoRData)
                 # TODO: need accumulating projection to avoid intermediate here
                 dA .+= $f(doutput)
-                return ntuple(Returns(NoRData(), 3))
+                zero!(doutput)
+                return ntuple(Returns(NoRData()), 3)
             end
 
-            return output_codual, $adj
+            return output_doutput, $adj
         end
     end
 end

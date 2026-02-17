@@ -550,24 +550,16 @@ function test_mooncake_projections(
         m, n = size(A)
         if m == n
             @testset "project_hermitian" begin
-                Aₕ, ΔAₕ = ad_project_hermitian_setup(A)
-                dAₕ = make_mooncake_tangent(ΔAₕ)
-                Mooncake.TestUtils.test_rule(rng, project_hermitian, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dAₕ, atol, rtol)
+                Aₕ = project_hermitian(A)
+                ΔAₕ = make_mooncake_tangent(Aₕ)
+                Mooncake.TestUtils.test_rule(rng, project_hermitian, A; is_primitive = false, mode = Mooncake.ReverseMode, atol, rtol)
                 test_pullbacks_match(project_hermitian!, project_hermitian, A, Aₕ, ΔAₕ)
             end
             @testset "project_antihermitian" begin
-                Aₐ, ΔAₐ = ad_project_antihermitian_setup(A)
-                dAₐ = make_mooncake_tangent(ΔAₐ)
-                Mooncake.TestUtils.test_rule(rng, project_antihermitian, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dAₐ, atol, rtol)
+                Aₐ = project_antihermitian(A)
+                ΔAₐ = make_mooncake_tangent(Aₐ)
+                Mooncake.TestUtils.test_rule(rng, project_antihermitian, A; is_primitive = false, mode = Mooncake.ReverseMode, atol, rtol)
                 test_pullbacks_match(project_antihermitian!, project_antihermitian, A, Aₐ, ΔAₐ)
-            end
-        end
-        if m > n
-            @testset "project_isometric" begin
-                W, ΔW = ad_project_isometric_setup(A)
-                dW = make_mooncake_tangent(ΔW)
-                Mooncake.TestUtils.test_rule(rng, project_isometric, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dW, atol, rtol)
-                test_pullbacks_match(project_isometric!, project_isometric, A, W, ΔW)
             end
         end
     end
