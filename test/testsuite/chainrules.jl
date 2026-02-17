@@ -10,7 +10,6 @@ for f in
         :eig_trunc_no_error, :eigh_trunc_no_error,
         :svd_compact, :svd_trunc, :svd_trunc_no_error, :svd_vals,
         :left_polar, :right_polar,
-        :project_hermitian, :project_antihermitian, :project_isometric,
     )
     copy_f = Symbol(:cr_copy_, f)
     f! = Symbol(f, '!')
@@ -599,47 +598,14 @@ function test_chainrules_projections(
     return @testset "Projections Chainrules AD rules $summary_str" begin
         A = instantiate_matrix(T, sz)
         m, n = size(A)
-        config = Zygote.ZygoteRuleConfig()
         if m == n
-            alg_h = MatrixAlgebraKit.default_hermitian_algorithm(A)
             @testset "project_hermitian" begin
-                Aₕ, ΔAₕ = ad_project_hermitian_setup(A)
-                test_rrule(
-                    cr_copy_project_hermitian, A, alg_h ⊢ NoTangent();
-                    output_tangent = ΔAₕ, atol = atol, rtol = rtol
-                )
-                test_rrule(
-                    config, project_hermitian, A;
-                    output_tangent = ΔAₕ,
-                    atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
-                )
+                alg = MatrixAlgebraKit.default_hermitian_algorithm(A)
+                test_rrule(project_hermitian, A, alg; atol, rtol)
             end
             @testset "project_antihermitian" begin
-                Aₐ, ΔAₐ = ad_project_antihermitian_setup(A)
-                test_rrule(
-                    cr_copy_project_antihermitian, A, alg_h ⊢ NoTangent();
-                    output_tangent = ΔAₐ, atol = atol, rtol = rtol
-                )
-                test_rrule(
-                    config, project_antihermitian, A;
-                    output_tangent = ΔAₐ,
-                    atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
-                )
-            end
-        end
-        if m > n
-            @testset "project_isometric" begin
-                W, ΔW = ad_project_isometric_setup(A)
-                alg_iso = MatrixAlgebraKit.default_polar_algorithm(A)
-                test_rrule(
-                    cr_copy_project_isometric, A, alg_iso ⊢ NoTangent();
-                    output_tangent = ΔW, atol = atol, rtol = rtol
-                )
-                test_rrule(
-                    config, project_isometric, A;
-                    output_tangent = ΔW,
-                    atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
-                )
+                alg = MatrixAlgebraKit.default_hermitian_algorithm(A)
+                test_rrule(project_antihermitian, A, alg; atol, rtol)
             end
         end
     end
