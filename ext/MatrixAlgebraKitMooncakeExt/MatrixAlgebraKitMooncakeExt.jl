@@ -792,11 +792,15 @@ for (f!, f, adj) in (
             arg = $f!(A, arg, Mooncake.primal(alg_dalg))
 
             function $adj(::NoRData)
-                dA .+= $f(darg)
-                dA === darg || zero!(darg)
+                $f!(darg)
+                if dA !== darg
+                    dA .+= darg
+                    zero!(darg)
+                end
                 copy!(arg, argc)
                 return ntuple(Returns(NoRData()), 4)
             end
+
             return arg_darg, $adj
         end
 
