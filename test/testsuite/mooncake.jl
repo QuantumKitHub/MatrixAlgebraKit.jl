@@ -229,6 +229,7 @@ function test_mooncake(T::Type, sz; kwargs...)
         if T <: Number
             test_mooncake_orthnull(T, sz; kwargs...)
         end
+        test_mooncake_projections(T, sz; kwargs...)
     end
 end
 
@@ -535,5 +536,31 @@ function test_mooncake_orthnull(
         dNᴴ = make_mooncake_tangent(ΔNᴴ)
         Mooncake.TestUtils.test_rule(rng, right_null_lq, A; mode = Mooncake.ReverseMode, atol, rtol, is_primitive = false, output_tangent = dNᴴ)
         test_pullbacks_match(((X, Nᴴ) -> right_null!(X, Nᴴ; alg = :lq)), right_null_lq, A, Nᴴ, ΔNᴴ)
+    end
+end
+
+function test_mooncake_projections(
+        T::Type, sz;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "Projections Mooncake AD rules $summary_str" begin
+        A = instantiate_matrix(T, sz)
+        m, n = size(A)
+        if m == n
+            @testset "project_hermitian" begin
+                Aₕ = project_hermitian(A)
+                ΔAₕ = make_mooncake_tangent(Aₕ)
+                Mooncake.TestUtils.test_rule(rng, project_hermitian, A; is_primitive = false, mode = Mooncake.ReverseMode, atol, rtol)
+                test_pullbacks_match(project_hermitian!, project_hermitian, A, Aₕ, ΔAₕ)
+            end
+            @testset "project_antihermitian" begin
+                Aₐ = project_antihermitian(A)
+                ΔAₐ = make_mooncake_tangent(Aₐ)
+                Mooncake.TestUtils.test_rule(rng, project_antihermitian, A; is_primitive = false, mode = Mooncake.ReverseMode, atol, rtol)
+                test_pullbacks_match(project_antihermitian!, project_antihermitian, A, Aₐ, ΔAₐ)
+            end
+        end
     end
 end
