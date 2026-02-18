@@ -86,17 +86,24 @@ instantiate_unitary(::Type{<:Diagonal}, A, sz) = Diagonal(fill!(similar(parent(A
 
 include("ad_utils.jl")
 
-include("qr.jl")
-include("lq.jl")
-include("polar.jl")
 include("projections.jl")
-include("schur.jl")
-include("eig.jl")
-include("eigh.jl")
-include("orthnull.jl")
-include("svd.jl")
-include("mooncake.jl")
-include("enzyme.jl")
-include("chainrules.jl")
+
+# Decompositions
+# --------------
+include("decompositions/qr.jl")
+include("decompositions/lq.jl")
+include("decompositions/polar.jl")
+include("decompositions/schur.jl")
+include("decompositions/eig.jl")
+include("decompositions/eigh.jl")
+include("decompositions/orthnull.jl")
+include("decompositions/svd.jl")
+
+# Mooncake
+# --------
+include("mooncake/mooncake.jl")
+include("mooncake/qr.jl")
+# include("enzyme.jl")
+# include("chainrules.jl")
 
 end
