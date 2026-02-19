@@ -214,6 +214,13 @@ function test_pullbacks_match(f!, f, A, args, Δargs, alg = nothing; rdata = Moo
     return
 end
 
+function make_input_scratch!(f!, A, F, alg)
+    F′ = f!(A, F, alg)
+    MatrixAlgebraKit.zero!(A)
+    F === F′ || MatrixAlgebraKit.zero!.(F)
+    return F′
+end
+
 function test_mooncake(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "Mooncake AD $summary_str" begin
@@ -228,44 +235,6 @@ function test_mooncake(T::Type, sz; kwargs...)
         # doesn't work for Diagonals yet?
         if T <: Number
             test_mooncake_orthnull(T, sz; kwargs...)
-        end
-    end
-end
-
-function test_mooncake_qr(
-        T::Type, sz;
-        atol::Real = 0, rtol::Real = precision(T),
-        kwargs...
-    )
-    summary_str = testargs_summary(T, sz)
-    return @testset "QR Mooncake AD rules $summary_str" begin
-        A = instantiate_matrix(T, sz)
-        @testset "qr_compact" begin
-            QR, ΔQR = ad_qr_compact_setup(A)
-            dQR = make_mooncake_tangent(ΔQR)
-            Mooncake.TestUtils.test_rule(rng, qr_compact, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dQR, atol, rtol)
-            test_pullbacks_match(qr_compact!, qr_compact, A, QR, ΔQR)
-        end
-        @testset "qr_null" begin
-            N, ΔN = ad_qr_null_setup(A)
-            dN = make_mooncake_tangent(copy(ΔN))
-            Mooncake.TestUtils.test_rule(rng, qr_null, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dN, atol, rtol)
-            test_pullbacks_match(qr_null!, qr_null, A, N, ΔN)
-        end
-        @testset "qr_full" begin
-            QR, ΔQR = ad_qr_full_setup(A)
-            dQR = make_mooncake_tangent(ΔQR)
-            Mooncake.TestUtils.test_rule(rng, qr_full, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dQR, atol, rtol)
-            test_pullbacks_match(qr_full!, qr_full, A, QR, ΔQR)
-        end
-        @testset "qr_compact - rank-deficient A" begin
-            m, n = size(A)
-            r = min(m, n) - 5
-            Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            QR, ΔQR = ad_qr_rank_deficient_compact_setup(Ard)
-            dQR = make_mooncake_tangent(ΔQR)
-            Mooncake.TestUtils.test_rule(rng, qr_compact, Ard; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dQR, atol, rtol)
-            test_pullbacks_match(qr_compact!, qr_compact, Ard, QR, ΔQR)
         end
     end
 end
