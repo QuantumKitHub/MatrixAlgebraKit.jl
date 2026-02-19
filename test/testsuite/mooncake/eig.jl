@@ -10,6 +10,16 @@ function test_mooncake_eig(
     end
 end
 
+function remove_eig_gauge_dependence!(
+        ΔV, D, V;
+        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
+    )
+    gaugepart = V' * ΔV
+    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
+    mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
+    return ΔV
+end
+
 function test_mooncake_eig_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -19,7 +29,7 @@ function test_mooncake_eig_full(
         alg = MatrixAlgebraKit.select_algorithm(eig_full, A)
         DV = eig_full(A, alg)
         ΔDV = Mooncake.randn_tangent(rng, DV)
-        remove_eiggauge_dependence!(ΔDV[2], DV...)
+        remove_eig_gauge_dependence!(ΔDV[2], DV...)
 
         Mooncake.TestUtils.test_rule(
             rng, eig_full, A, alg;
