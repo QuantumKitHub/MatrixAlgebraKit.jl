@@ -178,7 +178,7 @@ end
 
 function test_mooncake(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
-    return @testset "Mooncake AD $summary_str" begin
+    return @testset "Mooncake AD $summary_str" verbose = true begin
         test_mooncake_qr(T, sz; kwargs...)
         test_mooncake_lq(T, sz; kwargs...)
         if length(sz) == 1 || sz[1] == sz[2]
