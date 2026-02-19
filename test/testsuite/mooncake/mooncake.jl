@@ -214,10 +214,9 @@ function test_pullbacks_match(f!, f, A, args, Δargs, alg = nothing; rdata = Moo
     return
 end
 
-function make_input_scratch!(f!, A, F, alg)
-    F′ = f!(A, F, alg)
+function make_input_scratch!(f!, A, alg)
+    F′ = f!(A, alg)
     MatrixAlgebraKit.zero!(A)
-    F === F′ || MatrixAlgebraKit.zero!.(F)
     return F′
 end
 
