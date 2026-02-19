@@ -64,7 +64,7 @@ function test_mooncake_left_orth(
                 mode = Mooncake.ReverseMode, output_tangent = ΔVC, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, make_input_scratch!, left_orth!, A, alg;
+                rng, call_and_zero!, left_orth!, A, alg;
                 mode = Mooncake.ReverseMode, output_tangent = ΔVC, is_primitive = false, atol, rtol
             )
         end
@@ -80,7 +80,7 @@ function test_mooncake_left_orth(
                     mode = Mooncake.ReverseMode, output_tangent = ΔVC, is_primitive = false, atol, rtol
                 )
                 Mooncake.TestUtils.test_rule(
-                    rng, make_input_scratch!, left_orth!, A, alg;
+                    rng, call_and_zero!, left_orth!, A, alg;
                     mode = Mooncake.ReverseMode, output_tangent = ΔVC, is_primitive = false, atol, rtol
                 )
             end
@@ -112,7 +112,7 @@ function test_mooncake_right_orth(
                 mode = Mooncake.ReverseMode, output_tangent = ΔCVᴴ, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, make_input_scratch!, right_orth!, A, alg;
+                rng, call_and_zero!, right_orth!, A, alg;
                 mode = Mooncake.ReverseMode, output_tangent = ΔCVᴴ, is_primitive = false, atol, rtol
             )
         end
@@ -128,7 +128,7 @@ function test_mooncake_right_orth(
                     mode = Mooncake.ReverseMode, output_tangent = ΔCVᴴ, is_primitive = false, atol, rtol
                 )
                 Mooncake.TestUtils.test_rule(
-                    rng, make_input_scratch!, right_orth!, A, alg;
+                    rng, call_and_zero!, right_orth!, A, alg;
                     mode = Mooncake.ReverseMode, output_tangent = ΔCVᴴ, is_primitive = false, atol, rtol
                 )
             end
@@ -160,7 +160,7 @@ function test_mooncake_left_null(
                 mode = Mooncake.ReverseMode, output_tangent = ΔN, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, make_input_scratch!, left_null!, A, alg;
+                rng, call_and_zero!, left_null!, A, alg;
                 mode = Mooncake.ReverseMode, output_tangent = ΔN, is_primitive = false, atol, rtol
             )
         end
@@ -191,7 +191,7 @@ function test_mooncake_right_null(
                 mode = Mooncake.ReverseMode, output_tangent = ΔNᴴ, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, make_input_scratch!, right_null!, A, alg;
+                rng, call_and_zero!, right_null!, A, alg;
                 mode = Mooncake.ReverseMode, output_tangent = ΔNᴴ, is_primitive = false, atol, rtol
             )
         end

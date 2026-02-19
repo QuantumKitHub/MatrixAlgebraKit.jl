@@ -1,11 +1,12 @@
 """
-    make_input_scratch!(f!, A, alg)
+    call_and_zero!(f!, A, alg)
 
-Helper for testing in-place Mooncake rules. Calls `f!(A, alg)`, zeros out `A` (since `f!`
-uses it as scratch space), and returns the output. This allows `Mooncake.TestUtils.test_rule`
-to verify the reverse rule of `f!` without pre-allocating the output structure.
+Helper for testing in-place Mooncake rules.
+Calls `f!(A, alg)`, followed by zeroing out `A` and returns the output of `f!`.
+This allows `Mooncake.TestUtils.test_rule` to verify the reverse rule of `f!` through finite differences,
+without counting the contributions of `A`, as this is used solely as scratch space.
 """
-function make_input_scratch!(f!, A, alg)
+function call_and_zero!(f!, A, alg)
     F′ = f!(A, alg)
     MatrixAlgebraKit.zero!(A)
     return F′

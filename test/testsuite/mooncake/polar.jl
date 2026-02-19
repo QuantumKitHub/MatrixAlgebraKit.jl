@@ -34,7 +34,7 @@ function test_mooncake_left_polar(
                 mode = Mooncake.ReverseMode, output_tangent = ΔWP, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, make_input_scratch!, left_polar!, A, alg;
+                rng, call_and_zero!, left_polar!, A, alg;
                 mode = Mooncake.ReverseMode, output_tangent = ΔWP, atol, rtol, is_primitive = false
             )
         end
@@ -64,7 +64,7 @@ function test_mooncake_right_polar(
                 mode = Mooncake.ReverseMode, output_tangent = ΔPWᴴ, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, make_input_scratch!, right_polar!, A, alg;
+                rng, call_and_zero!, right_polar!, A, alg;
                 mode = Mooncake.ReverseMode, output_tangent = ΔPWᴴ, atol, rtol, is_primitive = false
             )
         end

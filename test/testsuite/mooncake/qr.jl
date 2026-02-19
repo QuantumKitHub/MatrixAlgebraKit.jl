@@ -63,7 +63,7 @@ function test_mooncake_qr_compact(
             mode = Mooncake.ReverseMode, output_tangent = ΔQR, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
-            rng, make_input_scratch!, qr_compact!, A, alg;
+            rng, call_and_zero!, qr_compact!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔQR, atol, rtol, is_primitive = false
         )
     end
@@ -90,7 +90,7 @@ function test_mooncake_qr_full(
             mode = Mooncake.ReverseMode, output_tangent = ΔQR, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
-            rng, make_input_scratch!, qr_full!, A, alg;
+            rng, call_and_zero!, qr_full!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔQR, atol, rtol, is_primitive = false
         )
     end
@@ -117,7 +117,7 @@ function test_mooncake_qr_null(
             mode = Mooncake.ReverseMode, output_tangent = ΔN, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
-            rng, make_input_scratch!, qr_null!, A, alg;
+            rng, call_and_zero!, qr_null!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔN, atol, rtol, is_primitive = false
         )
     end

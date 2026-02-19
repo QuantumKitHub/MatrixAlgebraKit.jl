@@ -64,7 +64,7 @@ function test_mooncake_lq_compact(
             mode = Mooncake.ReverseMode, output_tangent = ΔLQ, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
-            rng, make_input_scratch!, lq_compact!, A, alg;
+            rng, call_and_zero!, lq_compact!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔLQ, atol, rtol, is_primitive = false
         )
     end
@@ -91,7 +91,7 @@ function test_mooncake_lq_full(
             mode = Mooncake.ReverseMode, output_tangent = ΔLQ, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
-            rng, make_input_scratch!, lq_full!, A, alg;
+            rng, call_and_zero!, lq_full!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔLQ, atol, rtol, is_primitive = false
         )
     end
@@ -118,7 +118,7 @@ function test_mooncake_lq_null(
             mode = Mooncake.ReverseMode, output_tangent = ΔNᴴ, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
-            rng, make_input_scratch!, lq_null!, A, alg;
+            rng, call_and_zero!, lq_null!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔNᴴ, atol, rtol, is_primitive = false
         )
     end
