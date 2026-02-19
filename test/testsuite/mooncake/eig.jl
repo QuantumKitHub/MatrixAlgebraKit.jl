@@ -1,0 +1,102 @@
+function test_mooncake_eig(
+        T::Type, sz;
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "Mooncake eig $summary_str" begin
+        test_mooncake_eig_full(T, sz; kwargs...)
+        test_mooncake_eig_vals(T, sz; kwargs...)
+        test_mooncake_eig_trunc(T, sz; kwargs...)
+    end
+end
+
+function test_mooncake_eig_full(
+        T, sz;
+        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+    )
+    return @testset "eig_full" begin
+        A = make_eig_matrix(T, sz)
+        alg = MatrixAlgebraKit.select_algorithm(eig_full, A)
+        DV = eig_full(A, alg)
+        ΔDV = Mooncake.randn_tangent(rng, DV)
+        remove_eiggauge_dependence!(ΔDV[2], DV...)
+
+        Mooncake.TestUtils.test_rule(
+            rng, eig_full, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent = ΔDV, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, make_input_scratch!, eig_full!, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent = ΔDV, atol, rtol, is_primitive = false
+        )
+    end
+end
+
+function test_mooncake_eig_vals(
+        T, sz;
+        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+    )
+    return @testset "eig_vals" begin
+        A = make_eig_matrix(T, sz)
+        alg = MatrixAlgebraKit.select_algorithm(eig_vals, A)
+        D = eig_vals(A, alg)
+        ΔD = Mooncake.randn_tangent(rng, D)
+
+        Mooncake.TestUtils.test_rule(
+            rng, eig_vals, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent = ΔD, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, make_input_scratch!, eig_vals!, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent = ΔD, atol, rtol, is_primitive = false
+        )
+    end
+end
+
+function test_mooncake_eig_trunc(
+        T, sz;
+        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+    )
+    return @testset "eig_trunc" begin
+        A = make_eig_matrix(T, sz)
+        m = size(A, 1)
+
+        alg = MatrixAlgebraKit.select_algorithm(eig_full, A)
+        DV = eig_full(A, alg)
+        ΔDV = Mooncake.randn_tangent(rng, DV)
+        remove_eig_gauge_dependence!(ΔDV[2], DV...)
+
+        @testset "truncrank($r)" for r in round.(Int, range(1, m + 4, 4))
+            trunc = truncrank(r; by = abs)
+            alg_trunc = TruncatedAlgorithm(alg, trunc)
+
+            # truncate the gauge-corrected tangents
+            DVtrunc, ind = MatrixAlgebraKit.truncate(eig_trunc!, DV, trunc)
+            ΔDV_primal = Mooncake.tangent_to_primal!!(copy.(DV), ΔDV)
+            ΔDVtrunc_primal = (Diagonal(diagview(ΔDV_primal[1])[ind]), ΔDV_primal[2][:, ind])
+            ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_primal)
+
+            Mooncake.TestUtils.test_rule(
+                rng, eig_trunc_no_error, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, make_input_scratch!, eig_trunc_no_error!, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol, is_primitive = false
+            )
+
+            DVϵ = eig_trunc(A, alg_trunc)
+            Δϵ = Mooncake.zero_tangent(DVϵ[end])
+            ΔDVϵtrunc = (ΔDVtrunc..., Δϵ)
+
+            Mooncake.TestUtils.test_rule(
+                rng, eig_trunc, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, make_input_scratch!, eig_trunc!, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol, is_primitive = false
+            )
+        end
+    end
+end

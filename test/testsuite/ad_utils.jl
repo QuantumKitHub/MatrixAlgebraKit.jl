@@ -8,15 +8,6 @@ function remove_svdgauge_dependence!(
     mul!(ΔU, U, gaugepart, -1, 1)
     return ΔU, ΔVᴴ
 end
-function remove_eiggauge_dependence!(
-        ΔV, D, V;
-        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
-    )
-    gaugepart = V' * ΔV
-    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
-    mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
-    return ΔV
-end
 function remove_eighgauge_dependence!(
         ΔV, D, V;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
@@ -204,7 +195,7 @@ function ad_eig_full_setup(A)
     D, V = DV
     Ddiag = diagview(D)
     ΔV = randn!(similar(A, complex(T), m, m))
-    ΔV = remove_eiggauge_dependence!(ΔV, D, V)
+    ΔV = remove_eig_gauge_dependence!(ΔV, D, V)
     ΔD = randn!(similar(A, complex(T), m, m))
     ΔD2 = Diagonal(randn!(similar(A, complex(T), m)))
     return DV, (ΔD, ΔV), (ΔD2, ΔV)
@@ -216,7 +207,7 @@ function ad_eig_full_setup(A::Diagonal)
     DV = eig_full(A)
     D, V = DV
     ΔV = randn!(similar(A.diag, T, m, m))
-    ΔV = remove_eiggauge_dependence!(ΔV, D, V)
+    ΔV = remove_eig_gauge_dependence!(ΔV, D, V)
     ΔD = Diagonal(randn!(similar(A.diag, T, m)))
     ΔD2 = Diagonal(randn!(similar(A.diag, T, m)))
     return DV, (ΔD, ΔV), (ΔD2, ΔV)
