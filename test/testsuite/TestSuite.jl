@@ -106,6 +106,7 @@ include("mooncake/qr.jl")
 include("mooncake/lq.jl")
 include("mooncake/eig.jl")
 include("mooncake/eigh.jl")
+include("mooncake/svd.jl")
 # include("enzyme.jl")
 # include("chainrules.jl")
 

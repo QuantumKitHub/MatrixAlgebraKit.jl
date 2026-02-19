@@ -195,61 +195,6 @@ function test_mooncake(T::Type, sz; kwargs...)
 end
 
 
-function test_mooncake_svd(
-        T::Type, sz;
-        atol::Real = 0, rtol::Real = precision(T),
-        kwargs...
-    )
-    summary_str = testargs_summary(T, sz)
-    return @testset "SVD Mooncake AD rules $summary_str" begin
-        A = instantiate_matrix(T, sz)
-        minmn = min(size(A)...)
-        @testset "svd_compact" begin
-            USVᴴ, _, ΔUSVᴴ = ad_svd_compact_setup(A)
-            dUSVᴴ = make_mooncake_tangent(ΔUSVᴴ)
-            Mooncake.TestUtils.test_rule(rng, svd_compact, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dUSVᴴ, atol, rtol)
-            test_pullbacks_match(svd_compact!, svd_compact, A, USVᴴ, ΔUSVᴴ)
-        end
-        @testset "svd_full" begin
-            USVᴴ, ΔUSVᴴ = ad_svd_full_setup(A)
-            dUSVᴴ = make_mooncake_tangent(ΔUSVᴴ)
-            Mooncake.TestUtils.test_rule(rng, svd_full, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dUSVᴴ, atol, rtol)
-            test_pullbacks_match(svd_full!, svd_full, A, USVᴴ, ΔUSVᴴ)
-        end
-        @testset "svd_vals" begin
-            S, ΔS = ad_svd_vals_setup(A)
-            Mooncake.TestUtils.test_rule(rng, svd_vals, A; is_primitive = false, mode = Mooncake.ReverseMode, atol, rtol)
-            test_pullbacks_match(svd_vals!, svd_vals, A, S, ΔS)
-        end
-        @testset "svd_trunc" begin
-            @testset for r in 1:4:minmn
-                truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_svd_algorithm(A), truncrank(r))
-                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
-                ϵ = zero(real(eltype(T)))
-                dUSVᴴerr = make_mooncake_tangent((ΔUSVᴴtrunc..., ϵ))
-                Mooncake.TestUtils.test_rule(rng, svd_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dUSVᴴerr, atol, rtol)
-                test_pullbacks_match(svd_trunc!, svd_trunc, A, USVᴴ, ΔUSVᴴ, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), zero(real(eltype(T)))), ȳ = ΔUSVᴴtrunc)
-                dUSVᴴ = make_mooncake_tangent(ΔUSVᴴtrunc)
-                Mooncake.TestUtils.test_rule(rng, svd_trunc_no_error, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dUSVᴴ, atol, rtol)
-                test_pullbacks_match(svd_trunc_no_error!, svd_trunc_no_error, A, USVᴴ, ΔUSVᴴ, truncalg; ȳ = ΔUSVᴴtrunc)
-            end
-            @testset "trunctol" begin
-                A = instantiate_matrix(T, sz)
-                S, ΔS = ad_svd_vals_setup(A)
-                truncalg = TruncatedAlgorithm(MatrixAlgebraKit.default_svd_algorithm(A), trunctol(atol = S[1, 1] / 2))
-                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
-                ϵ = zero(real(eltype(T)))
-                dUSVᴴerr = make_mooncake_tangent((ΔUSVᴴtrunc..., ϵ))
-                Mooncake.TestUtils.test_rule(rng, svd_trunc, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dUSVᴴerr, atol, rtol)
-                test_pullbacks_match(svd_trunc!, svd_trunc, A, USVᴴ, ΔUSVᴴ, truncalg; rdata = (Mooncake.NoRData(), Mooncake.NoRData(), Mooncake.NoRData(), zero(real(eltype(T)))), ȳ = ΔUSVᴴtrunc)
-                dUSVᴴ = make_mooncake_tangent(ΔUSVᴴtrunc)
-                Mooncake.TestUtils.test_rule(rng, svd_trunc_no_error, A, truncalg; mode = Mooncake.ReverseMode, output_tangent = dUSVᴴ, atol, rtol)
-                test_pullbacks_match(svd_trunc_no_error!, svd_trunc_no_error, A, USVᴴ, ΔUSVᴴ, truncalg; ȳ = ΔUSVᴴtrunc)
-            end
-        end
-    end
-end
-
 function test_mooncake_polar(
         T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
