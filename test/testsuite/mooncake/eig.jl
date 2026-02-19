@@ -1,15 +1,10 @@
-function test_mooncake_eig(
-        T::Type, sz;
-        kwargs...
-    )
-    summary_str = testargs_summary(T, sz)
-    return @testset "Mooncake eig $summary_str" begin
-        test_mooncake_eig_full(T, sz; kwargs...)
-        test_mooncake_eig_vals(T, sz; kwargs...)
-        test_mooncake_eig_trunc(T, sz; kwargs...)
-    end
-end
+"""
+    remove_eig_gauge_dependence!(ΔV, D, V)
 
+Remove the gauge-dependent part from the cotangent `ΔV` of the eigenvector matrix `V`. The
+eigenvectors are only determined up to complex phase (and unitary mixing for degenerate
+eigenvalues), so the corresponding components of `ΔV` are projected out.
+"""
 function remove_eig_gauge_dependence!(
         ΔV, D, V;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
@@ -20,6 +15,25 @@ function remove_eig_gauge_dependence!(
     return ΔV
 end
 
+"""
+    test_mooncake_eig(T, sz; kwargs...)
+
+Run all Mooncake AD tests for eigendecompositions of element type `T` and size `sz`.
+"""
+function test_mooncake_eig(T::Type, sz; kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "Mooncake eig $summary_str" begin
+        test_mooncake_eig_full(T, sz; kwargs...)
+        test_mooncake_eig_vals(T, sz; kwargs...)
+        test_mooncake_eig_trunc(T, sz; kwargs...)
+    end
+end
+
+"""
+    test_mooncake_eig_full(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `eig_full` and its in-place variant.
+"""
 function test_mooncake_eig_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -42,6 +56,11 @@ function test_mooncake_eig_full(
     end
 end
 
+"""
+    test_mooncake_eig_vals(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `eig_vals` and its in-place variant.
+"""
 function test_mooncake_eig_vals(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -63,6 +82,12 @@ function test_mooncake_eig_vals(
     end
 end
 
+"""
+    test_mooncake_eig_trunc(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rules for `eig_trunc`, `eig_trunc_no_error`, and their
+in-place variants, over a range of truncation ranks and a tolerance-based truncation.
+"""
 function test_mooncake_eig_trunc(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)

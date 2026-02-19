@@ -1,15 +1,10 @@
-function test_mooncake_qr(
-        T::Type, sz;
-        kwargs...
-    )
-    summary_str = testargs_summary(T, sz)
-    return @testset "Mooncake qr $summary_str" begin
-        test_mooncake_qr_compact(T, sz; kwargs...)
-        test_mooncake_qr_full(T, sz; kwargs...)
-        test_mooncake_qr_null(T, sz; kwargs...)
-    end
-end
+"""
+    remove_qr_gauge_dependence!(ΔQ, A, Q, R)
 
+Remove the gauge-dependent part from the cotangent `ΔQ` of the full-QR orthogonal factor `Q`.
+For the full QR decomposition, the extra columns of `Q` beyond `min(m, n)` are not uniquely
+determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
+"""
 function remove_qr_gauge_dependence!(ΔQ, A, Q, R)
     m, n = size(A)
     minmn = min(m, n)
@@ -21,11 +16,37 @@ function remove_qr_gauge_dependence!(ΔQ, A, Q, R)
     return ΔQ
 end
 
+"""
+    remove_qr_null_gauge_dependence!(ΔN, A, N)
+
+Remove the gauge-dependent part from the cotangent `ΔN` of the QR null space `N`. The null
+space is only determined up to a unitary rotation, so `ΔN` is projected onto the column span
+of the compact QR factor `Q₁`.
+"""
 function remove_qr_null_gauge_dependence!(ΔN, A, N)
     Q, _ = qr_compact(A)
     return mul!(ΔN, Q, Q' * ΔN)
 end
 
+"""
+    test_mooncake_qr(T, sz; kwargs...)
+
+Run all Mooncake AD tests for QR decompositions of element type `T` and size `sz`.
+"""
+function test_mooncake_qr(T::Type, sz; kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "Mooncake qr $summary_str" begin
+        test_mooncake_qr_compact(T, sz; kwargs...)
+        test_mooncake_qr_full(T, sz; kwargs...)
+        test_mooncake_qr_null(T, sz; kwargs...)
+    end
+end
+
+"""
+    test_mooncake_qr_compact(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `qr_compact` and its in-place variant.
+"""
 function test_mooncake_qr_compact(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -48,6 +69,11 @@ function test_mooncake_qr_compact(
     end
 end
 
+"""
+    test_mooncake_qr_full(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `qr_full` and its in-place variant.
+"""
 function test_mooncake_qr_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -70,6 +96,11 @@ function test_mooncake_qr_full(
     end
 end
 
+"""
+    test_mooncake_qr_null(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `qr_null` and its in-place variant.
+"""
 function test_mooncake_qr_null(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -85,7 +116,6 @@ function test_mooncake_qr_null(
             rng, qr_null, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔN, atol, rtol
         )
-        N, ΔN = ad_qr_null_setup(A)
         Mooncake.TestUtils.test_rule(
             rng, make_input_scratch!, qr_null!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔN, atol, rtol, is_primitive = false

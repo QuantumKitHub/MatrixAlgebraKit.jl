@@ -13,6 +13,7 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
 using LinearAlgebra: Diagonal, norm, istriu, istril, I
 using Random, StableRNGs
+using Mooncake
 using AMDGPU, CUDA
 
 const tests = Dict()
@@ -109,7 +110,8 @@ include("mooncake/eigh.jl")
 include("mooncake/svd.jl")
 include("mooncake/polar.jl")
 include("mooncake/orthnull.jl")
-# include("enzyme.jl")
-# include("chainrules.jl")
+
+include("enzyme.jl")
+include("chainrules.jl")
 
 end

@@ -1,7 +1,9 @@
-function test_mooncake_polar(
-        T::Type, sz;
-        kwargs...
-    )
+"""
+    test_mooncake_polar(T, sz; kwargs...)
+
+Run all Mooncake AD tests for polar decompositions of element type `T` and size `sz`.
+"""
+function test_mooncake_polar(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "Mooncake polar $summary_str" begin
         test_mooncake_left_polar(T, sz; kwargs...)
@@ -9,6 +11,12 @@ function test_mooncake_polar(
     end
 end
 
+"""
+    test_mooncake_left_polar(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `left_polar` and its in-place variant. Only runs
+for tall or square matrices (`m >= n`).
+"""
 function test_mooncake_left_polar(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -33,6 +41,12 @@ function test_mooncake_left_polar(
     end
 end
 
+"""
+    test_mooncake_right_polar(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `right_polar` and its in-place variant. Only runs
+for wide or square matrices (`m <= n`).
+"""
 function test_mooncake_right_polar(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)

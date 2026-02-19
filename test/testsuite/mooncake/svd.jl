@@ -1,3 +1,12 @@
+"""
+    remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+
+Remove the gauge-dependent part from the cotangents `ΔU` and `ΔVᴴ` of the SVD factors. The
+singular vectors are only determined up to a common complex phase per singular value (and
+unitary mixing for degenerate singular values), so the corresponding anti-Hermitian components
+of `U₁' * ΔU₁ + Vᴴ₁ * ΔVᴴ₁'` are projected out. For the full SVD, the extra columns of `U`
+and rows of `Vᴴ` beyond `min(m, n)` are additionally zeroed out.
+"""
 function remove_svd_gauge_dependence!(
         ΔU, ΔVᴴ, U, S, Vᴴ;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(S)
@@ -17,10 +26,12 @@ function remove_svd_gauge_dependence!(
     return ΔU, ΔVᴴ
 end
 
-function test_mooncake_svd(
-        T::Type, sz;
-        kwargs...
-    )
+"""
+    test_mooncake_svd(T, sz; kwargs...)
+
+Run all Mooncake AD tests for SVD decompositions of element type `T` and size `sz`.
+"""
+function test_mooncake_svd(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "Mooncake svd $summary_str" begin
         test_mooncake_svd_compact(T, sz; kwargs...)
@@ -30,6 +41,11 @@ function test_mooncake_svd(
     end
 end
 
+"""
+    test_mooncake_svd_compact(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `svd_compact` and its in-place variant.
+"""
 function test_mooncake_svd_compact(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -52,6 +68,12 @@ function test_mooncake_svd_compact(
     end
 end
 
+"""
+    test_mooncake_svd_full(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `svd_full` and its in-place variant. The
+gauge-dependent extra columns of `U` and rows of `Vᴴ` are zeroed out in the cotangent.
+"""
 function test_mooncake_svd_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -74,6 +96,11 @@ function test_mooncake_svd_full(
     end
 end
 
+"""
+    test_mooncake_svd_vals(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `svd_vals` and its in-place variant.
+"""
 function test_mooncake_svd_vals(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -95,6 +122,12 @@ function test_mooncake_svd_vals(
     end
 end
 
+"""
+    test_mooncake_svd_trunc(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rules for `svd_trunc`, `svd_trunc_no_error`, and their
+in-place variants, over a range of truncation ranks and a tolerance-based truncation.
+"""
 function test_mooncake_svd_trunc(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)

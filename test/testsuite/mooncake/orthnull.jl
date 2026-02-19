@@ -1,19 +1,36 @@
+"""
+    remove_left_null_gauge_dependence!(ΔN, A, N)
+
+Remove the gauge-dependent part from the cotangent `ΔN` of the left null space `N`. The null
+space basis is only determined up to a unitary rotation, so `ΔN` is projected onto the column
+span of the compact QR factor `Q₁` of `A`.
+"""
 function remove_left_null_gauge_dependence!(ΔN, A, N)
     Q, _ = qr_compact(A)
     mul!(ΔN, Q, Q' * ΔN)
     return ΔN
 end
 
+"""
+    remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+
+Remove the gauge-dependent part from the cotangent `ΔNᴴ` of the right null space `Nᴴ`. The
+null space basis is only determined up to a unitary rotation, so `ΔNᴴ` is projected onto the
+row span of the compact LQ factor `Q₁` of `A`.
+"""
 function remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
     _, Q = lq_compact(A)
     mul!(ΔNᴴ, ΔNᴴ * Q', Q)
     return ΔNᴴ
 end
 
-function test_mooncake_orthnull(
-        T::Type, sz;
-        kwargs...
-    )
+"""
+    test_mooncake_orthnull(T, sz; kwargs...)
+
+Run all Mooncake AD tests for orthogonal basis and null space computations of element type `T`
+and size `sz`.
+"""
+function test_mooncake_orthnull(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "Mooncake orthnull $summary_str" begin
         test_mooncake_left_orth(T, sz; kwargs...)
@@ -23,6 +40,12 @@ function test_mooncake_orthnull(
     end
 end
 
+"""
+    test_mooncake_left_orth(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rules for `left_orth` with QR and polar (when `m >= n`)
+algorithms, and their in-place variants.
+"""
 function test_mooncake_left_orth(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -65,6 +88,12 @@ function test_mooncake_left_orth(
     end
 end
 
+"""
+    test_mooncake_right_orth(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rules for `right_orth` with LQ and polar (when `m <= n`)
+algorithms, and their in-place variants.
+"""
 function test_mooncake_right_orth(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -107,6 +136,12 @@ function test_mooncake_right_orth(
     end
 end
 
+"""
+    test_mooncake_left_null(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `left_null` with the QR algorithm and its
+in-place variant.
+"""
 function test_mooncake_left_null(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -132,6 +167,12 @@ function test_mooncake_left_null(
     end
 end
 
+"""
+    test_mooncake_right_null(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `right_null` with the LQ algorithm and its
+in-place variant.
+"""
 function test_mooncake_right_null(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)

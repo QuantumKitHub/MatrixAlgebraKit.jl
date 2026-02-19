@@ -1,48 +1,11 @@
-function mc_copy_eigh_full(A, alg)
-    A = (A + A') / 2
-    return eigh_full(A, alg)
-end
+"""
+    remove_eigh_gauge_dependence!(ΔV, D, V)
 
-function mc_copy_eigh_full!(A, DV, alg)
-    A = (A + A') / 2
-    return eigh_full!(A, DV, alg)
-end
-
-function mc_copy_eigh_vals(A, alg)
-    A = (A + A') / 2
-    return eigh_vals(A, alg)
-end
-
-function mc_copy_eigh_vals!(A, D, alg)
-    A = (A + A') / 2
-    return eigh_vals!(A, D, alg)
-end
-
-function mc_copy_eigh_trunc(A, alg)
-    A = (A + A') / 2
-    return eigh_trunc(A, alg)
-end
-
-function mc_copy_eigh_trunc!(A, DV, alg)
-    A = (A + A') / 2
-    return eigh_trunc!(A, DV, alg)
-end
-
-function mc_copy_eigh_trunc_no_error(A, alg)
-    A = (A + A') / 2
-    return eigh_trunc_no_error(A, alg)
-end
-
-function mc_copy_eigh_trunc_no_error!(A, DV, alg)
-    A = (A + A') / 2
-    return eigh_trunc_no_error!(A, DV, alg)
-end
-
-MatrixAlgebraKit.copy_input(::typeof(mc_copy_eigh_full), A) = MatrixAlgebraKit.copy_input(eigh_full, A)
-MatrixAlgebraKit.copy_input(::typeof(mc_copy_eigh_vals), A) = MatrixAlgebraKit.copy_input(eigh_vals, A)
-MatrixAlgebraKit.copy_input(::typeof(mc_copy_eigh_trunc), A) = MatrixAlgebraKit.copy_input(eigh_trunc, A)
-MatrixAlgebraKit.copy_input(::typeof(mc_copy_eigh_trunc_no_error), A) = MatrixAlgebraKit.copy_input(eigh_trunc, A)
-
+Remove the gauge-dependent part from the cotangent `ΔV` of the Hermitian eigenvector matrix
+`V`. The eigenvectors are only determined up to complex phase (and unitary mixing for
+degenerate eigenvalues), so the corresponding anti-Hermitian components of `V' * ΔV` are
+projected out.
+"""
 function remove_eigh_gauge_dependence!(
         ΔV, D, V;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
@@ -54,13 +17,28 @@ function remove_eigh_gauge_dependence!(
     return ΔV
 end
 
+"""
+    eigh_wrapper(f, A, alg)
+
+Wrapper that symmetrizes `A` before calling `f(A, alg)`. Used to test Hermitian
+eigendecomposition rules on a general matrix by first projecting onto the Hermitian subspace.
+"""
 eigh_wrapper(f, A, alg) = f(project_hermitian(A), alg)
+
+"""
+    eigh!_wrapper(f!, A, alg)
+
+Wrapper that symmetrizes `A` in-place before calling `f!(A, alg)`, then zeros `A`. Used to
+test in-place Hermitian eigendecomposition rules via Mooncake's non-primitive AD path.
+"""
 eigh!_wrapper(f!, A, alg) = (F = f!(project_hermitian!(A), alg); MatrixAlgebraKit.zero!(A); F)
 
-function test_mooncake_eigh(
-        T::Type, sz;
-        kwargs...
-    )
+"""
+    test_mooncake_eigh(T, sz; kwargs...)
+
+Run all Mooncake AD tests for Hermitian eigendecompositions of element type `T` and size `sz`.
+"""
+function test_mooncake_eigh(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "Mooncake eigh $summary_str" begin
         test_mooncake_eigh_full(T, sz; kwargs...)
@@ -69,6 +47,11 @@ function test_mooncake_eigh(
     end
 end
 
+"""
+    test_mooncake_eigh_full(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `eigh_full` and its in-place variant.
+"""
 function test_mooncake_eigh_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -86,11 +69,16 @@ function test_mooncake_eigh_full(
         )
         Mooncake.TestUtils.test_rule(
             rng, eigh!_wrapper, eigh_full!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔDV, atol, rtol, is_primitive = false
+            mode = Mooncake.ReverseMode, output_tangent = ΔDV, is_primitive = false, atol, rtol
         )
     end
 end
 
+"""
+    test_mooncake_eigh_vals(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `eigh_vals` and its in-place variant.
+"""
 function test_mooncake_eigh_vals(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -107,11 +95,17 @@ function test_mooncake_eigh_vals(
         )
         Mooncake.TestUtils.test_rule(
             rng, eigh!_wrapper, eigh_vals!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔD, atol, rtol, is_primitive = false
+            mode = Mooncake.ReverseMode, output_tangent = ΔD, is_primitive = false, atol, rtol
         )
     end
 end
 
+"""
+    test_mooncake_eigh_trunc(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rules for `eigh_trunc`, `eigh_trunc_no_error`, and their
+in-place variants, over a range of truncation ranks.
+"""
 function test_mooncake_eigh_trunc(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -137,11 +131,11 @@ function test_mooncake_eigh_trunc(
 
             Mooncake.TestUtils.test_rule(
                 rng, eigh_wrapper, eigh_trunc_no_error, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol, is_primitive = false
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
                 rng, eigh!_wrapper, eigh_trunc_no_error!, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol, is_primitive = false
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, is_primitive = false, atol, rtol
             )
 
             DVϵ = eigh_trunc(A, alg_trunc)
@@ -150,11 +144,11 @@ function test_mooncake_eigh_trunc(
 
             Mooncake.TestUtils.test_rule(
                 rng, eigh_wrapper, eigh_trunc, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol, is_primitive = false
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
                 rng, eigh!_wrapper, eigh_trunc!, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol, is_primitive = false
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, is_primitive = false, atol, rtol
             )
         end
     end

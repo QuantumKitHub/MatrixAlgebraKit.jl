@@ -1,15 +1,10 @@
-function test_mooncake_lq(
-        T::Type, sz;
-        kwargs...
-    )
-    summary_str = testargs_summary(T, sz)
-    return @testset "Mooncake lq $summary_str" begin
-        test_mooncake_lq_compact(T, sz; kwargs...)
-        test_mooncake_lq_full(T, sz; kwargs...)
-        test_mooncake_lq_null(T, sz; kwargs...)
-    end
-end
+"""
+    remove_lq_gauge_dependence!(ΔQ, A, L, Q)
 
+Remove the gauge-dependent part from the cotangent `ΔQ` of the full-LQ orthogonal factor `Q`.
+For the full LQ decomposition, the extra rows of `Q` beyond `min(m, n)` are not uniquely
+determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
+"""
 function remove_lq_gauge_dependence!(ΔQ, A, L, Q)
     m, n = size(A)
     minmn = min(m, n)
@@ -21,12 +16,38 @@ function remove_lq_gauge_dependence!(ΔQ, A, L, Q)
     return ΔQ
 end
 
+"""
+    remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+
+Remove the gauge-dependent part from the cotangent `ΔNᴴ` of the LQ null space `Nᴴ`. The null
+space is only determined up to a unitary rotation, so `ΔNᴴ` is projected onto the row span of
+the compact LQ factor `Q₁`.
+"""
 function remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
     _, Q = lq_compact(A)
     ΔNᴴQᴴ = ΔNᴴ * Q'
     return mul!(ΔNᴴ, ΔNᴴQᴴ, Q)
 end
 
+"""
+    test_mooncake_lq(T, sz; kwargs...)
+
+Run all Mooncake AD tests for LQ decompositions of element type `T` and size `sz`.
+"""
+function test_mooncake_lq(T::Type, sz; kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "Mooncake lq $summary_str" begin
+        test_mooncake_lq_compact(T, sz; kwargs...)
+        test_mooncake_lq_full(T, sz; kwargs...)
+        test_mooncake_lq_null(T, sz; kwargs...)
+    end
+end
+
+"""
+    test_mooncake_lq_compact(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `lq_compact` and its in-place variant.
+"""
 function test_mooncake_lq_compact(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -49,6 +70,11 @@ function test_mooncake_lq_compact(
     end
 end
 
+"""
+    test_mooncake_lq_full(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `lq_full` and its in-place variant.
+"""
 function test_mooncake_lq_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -71,6 +97,11 @@ function test_mooncake_lq_full(
     end
 end
 
+"""
+    test_mooncake_lq_null(T, sz; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rule for `lq_null` and its in-place variant.
+"""
 function test_mooncake_lq_null(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
@@ -86,7 +117,6 @@ function test_mooncake_lq_null(
             rng, lq_null, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔNᴴ, atol, rtol
         )
-        Nᴴ, ΔNᴴ = ad_lq_null_setup(A)
         Mooncake.TestUtils.test_rule(
             rng, make_input_scratch!, lq_null!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent = ΔNᴴ, atol, rtol, is_primitive = false
