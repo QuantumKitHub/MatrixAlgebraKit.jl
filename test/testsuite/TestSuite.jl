@@ -103,6 +103,7 @@ include("decompositions/svd.jl")
 # --------
 include("mooncake/mooncake.jl")
 include("mooncake/qr.jl")
+include("mooncake/lq.jl")
 # include("enzyme.jl")
 # include("chainrules.jl")
 

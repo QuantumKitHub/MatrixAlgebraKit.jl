@@ -238,42 +238,6 @@ function test_mooncake(T::Type, sz; kwargs...)
     end
 end
 
-function test_mooncake_lq(
-        T::Type, sz;
-        atol::Real = 0, rtol::Real = precision(T),
-        kwargs...
-    )
-    summary_str = testargs_summary(T, sz)
-    return @testset "LQ Mooncake AD rules $summary_str" begin
-        A = instantiate_matrix(T, sz)
-        @testset "lq_compact" begin
-            LQ, ΔLQ = ad_lq_compact_setup(A)
-            Mooncake.TestUtils.test_rule(rng, lq_compact, A; is_primitive = false, mode = Mooncake.ReverseMode, atol, rtol)
-            test_pullbacks_match(lq_compact!, lq_compact, A, LQ, ΔLQ)
-        end
-        @testset "lq_null" begin
-            Nᴴ, ΔNᴴ = ad_lq_null_setup(A)
-            dNᴴ = make_mooncake_tangent(ΔNᴴ)
-            Mooncake.TestUtils.test_rule(rng, lq_null, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dNᴴ, atol, rtol)
-            test_pullbacks_match(lq_null!, lq_null, A, Nᴴ, ΔNᴴ)
-        end
-        @testset "lq_full" begin
-            LQ, ΔLQ = ad_lq_full_setup(A)
-            dLQ = make_mooncake_tangent(ΔLQ)
-            Mooncake.TestUtils.test_rule(rng, lq_full, A; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dLQ, atol, rtol)
-            test_pullbacks_match(lq_full!, lq_full, A, LQ, ΔLQ)
-        end
-        @testset "lq_compact - rank-deficient A" begin
-            m, n = size(A)
-            r = min(m, n) - 5
-            Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            LQ, ΔLQ = ad_lq_rank_deficient_compact_setup(Ard)
-            dLQ = make_mooncake_tangent(ΔLQ)
-            Mooncake.TestUtils.test_rule(rng, lq_compact, Ard; is_primitive = false, mode = Mooncake.ReverseMode, output_tangent = dLQ, atol, rtol)
-            test_pullbacks_match(lq_compact!, lq_compact, Ard, LQ, ΔLQ)
-        end
-    end
-end
 
 function test_mooncake_eig(
         T::Type, sz;
