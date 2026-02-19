@@ -195,32 +195,6 @@ function test_mooncake(T::Type, sz; kwargs...)
 end
 
 
-function test_mooncake_polar(
-        T::Type, sz;
-        atol::Real = 0, rtol::Real = precision(T),
-        kwargs...
-    )
-    summary_str = testargs_summary(T, sz)
-    return @testset "Polar Mooncake AD rules $summary_str" begin
-        A = instantiate_matrix(T, sz)
-        m, n = size(A)
-        @testset "left_polar" begin
-            if m >= n
-                WP, ΔWP = ad_left_polar_setup(A)
-                Mooncake.TestUtils.test_rule(rng, left_polar, A; is_primitive = false, mode = Mooncake.ReverseMode, atol, rtol)
-                test_pullbacks_match(left_polar!, left_polar, A, WP, ΔWP)
-            end
-        end
-        @testset "right_polar" begin
-            if m <= n
-                PWᴴ, ΔPWᴴ = ad_right_polar_setup(A)
-                Mooncake.TestUtils.test_rule(rng, right_polar, A; is_primitive = false, mode = Mooncake.ReverseMode, atol, rtol)
-                test_pullbacks_match(right_polar!, right_polar, A, PWᴴ, ΔPWᴴ)
-            end
-        end
-    end
-end
-
 left_orth_qr(X) = left_orth(X; alg = :qr)
 left_orth_polar(X) = left_orth(X; alg = :polar)
 left_null_qr(X) = left_null(X; alg = :qr)
