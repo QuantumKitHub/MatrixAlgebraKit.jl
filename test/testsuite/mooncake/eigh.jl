@@ -1,23 +1,4 @@
 """
-    remove_eigh_gauge_dependence!(ΔV, D, V)
-
-Remove the gauge-dependent part from the cotangent `ΔV` of the Hermitian eigenvector matrix
-`V`. The eigenvectors are only determined up to complex phase (and unitary mixing for
-degenerate eigenvalues), so the corresponding anti-Hermitian components of `V' * ΔV` are
-projected out.
-"""
-function remove_eigh_gauge_dependence!(
-        ΔV, D, V;
-        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
-    )
-    gaugepart = V' * ΔV
-    gaugepart = project_antihermitian!(gaugepart)
-    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
-    mul!(ΔV, V, gaugepart, -1, 1)
-    return ΔV
-end
-
-"""
     eigh_wrapper(f, A, alg)
 
 Wrapper that symmetrizes `A` before calling `f(A, alg)`. Used to test Hermitian

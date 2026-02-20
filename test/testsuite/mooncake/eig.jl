@@ -1,21 +1,4 @@
 """
-    remove_eig_gauge_dependence!(ΔV, D, V)
-
-Remove the gauge-dependent part from the cotangent `ΔV` of the eigenvector matrix `V`. The
-eigenvectors are only determined up to complex phase (and unitary mixing for degenerate
-eigenvalues), so the corresponding components of `ΔV` are projected out.
-"""
-function remove_eig_gauge_dependence!(
-        ΔV, D, V;
-        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
-    )
-    gaugepart = V' * ΔV
-    gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
-    mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
-    return ΔV
-end
-
-"""
     test_mooncake_eig(T, sz; kwargs...)
 
 Run all Mooncake AD tests for eigendecompositions of element type `T` and size `sz`.

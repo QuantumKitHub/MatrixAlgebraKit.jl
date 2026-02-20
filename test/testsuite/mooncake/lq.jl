@@ -1,35 +1,4 @@
 """
-    remove_lq_gauge_dependence!(ΔQ, A, L, Q)
-
-Remove the gauge-dependent part from the cotangent `ΔQ` of the full-LQ orthogonal factor `Q`.
-For the full LQ decomposition, the extra rows of `Q` beyond `min(m, n)` are not uniquely
-determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
-"""
-function remove_lq_gauge_dependence!(ΔQ, A, L, Q)
-    m, n = size(A)
-    minmn = min(m, n)
-    Q₁ = @view Q[1:minmn, :]
-    ΔQ₂ = @view ΔQ[(minmn + 1):end, :]
-    ΔQ₂Q₁ᴴ = ΔQ₂ * Q₁'
-    mul!(ΔQ₂, ΔQ₂Q₁ᴴ, Q₁)
-    MatrixAlgebraKit.check_lq_full_cotangents(Q₁, ΔQ₂, ΔQ₂Q₁ᴴ)
-    return ΔQ
-end
-
-"""
-    remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
-
-Remove the gauge-dependent part from the cotangent `ΔNᴴ` of the LQ null space `Nᴴ`. The null
-space is only determined up to a unitary rotation, so `ΔNᴴ` is projected onto the row span of
-the compact LQ factor `Q₁`.
-"""
-function remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
-    _, Q = lq_compact(A)
-    ΔNᴴQᴴ = ΔNᴴ * Q'
-    return mul!(ΔNᴴ, ΔNᴴQᴴ, Q)
-end
-
-"""
     test_mooncake_lq(T, sz; kwargs...)
 
 Run all Mooncake AD tests for LQ decompositions of element type `T` and size `sz`.

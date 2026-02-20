@@ -1,34 +1,4 @@
 """
-    remove_qr_gauge_dependence!(ΔQ, A, Q, R)
-
-Remove the gauge-dependent part from the cotangent `ΔQ` of the full-QR orthogonal factor `Q`.
-For the full QR decomposition, the extra columns of `Q` beyond `min(m, n)` are not uniquely
-determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
-"""
-function remove_qr_gauge_dependence!(ΔQ, A, Q, R)
-    m, n = size(A)
-    minmn = min(m, n)
-    Q₁ = @view Q[:, 1:minmn]
-    ΔQ₂ = @view ΔQ[:, (minmn + 1):end]
-    Q₁ᴴΔQ₂ = Q₁' * ΔQ₂
-    mul!(ΔQ₂, Q₁, Q₁ᴴΔQ₂)
-    MatrixAlgebraKit.check_qr_full_cotangents(Q₁, ΔQ₂, Q₁ᴴΔQ₂)
-    return ΔQ
-end
-
-"""
-    remove_qr_null_gauge_dependence!(ΔN, A, N)
-
-Remove the gauge-dependent part from the cotangent `ΔN` of the QR null space `N`. The null
-space is only determined up to a unitary rotation, so `ΔN` is projected onto the column span
-of the compact QR factor `Q₁`.
-"""
-function remove_qr_null_gauge_dependence!(ΔN, A, N)
-    Q, _ = qr_compact(A)
-    return mul!(ΔN, Q, Q' * ΔN)
-end
-
-"""
     test_mooncake_qr(T, sz; kwargs...)
 
 Run all Mooncake AD tests for QR decompositions of element type `T` and size `sz`.

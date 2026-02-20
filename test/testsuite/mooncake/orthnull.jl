@@ -1,30 +1,4 @@
 """
-    remove_left_null_gauge_dependence!(ΔN, A, N)
-
-Remove the gauge-dependent part from the cotangent `ΔN` of the left null space `N`. The null
-space basis is only determined up to a unitary rotation, so `ΔN` is projected onto the column
-span of the compact QR factor `Q₁` of `A`.
-"""
-function remove_left_null_gauge_dependence!(ΔN, A, N)
-    Q, _ = qr_compact(A)
-    mul!(ΔN, Q, Q' * ΔN)
-    return ΔN
-end
-
-"""
-    remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
-
-Remove the gauge-dependent part from the cotangent `ΔNᴴ` of the right null space `Nᴴ`. The
-null space basis is only determined up to a unitary rotation, so `ΔNᴴ` is projected onto the
-row span of the compact LQ factor `Q₁` of `A`.
-"""
-function remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
-    _, Q = lq_compact(A)
-    mul!(ΔNᴴ, ΔNᴴ * Q', Q)
-    return ΔNᴴ
-end
-
-"""
     test_mooncake_orthnull(T, sz; kwargs...)
 
 Run all Mooncake AD tests for orthogonal basis and null space computations of element type `T`

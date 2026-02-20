@@ -1,32 +1,4 @@
 """
-    remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
-
-Remove the gauge-dependent part from the cotangents `ΔU` and `ΔVᴴ` of the SVD factors. The
-singular vectors are only determined up to a common complex phase per singular value (and
-unitary mixing for degenerate singular values), so the corresponding anti-Hermitian components
-of `U₁' * ΔU₁ + Vᴴ₁ * ΔVᴴ₁'` are projected out. For the full SVD, the extra columns of `U`
-and rows of `Vᴴ` beyond `min(m, n)` are additionally zeroed out.
-"""
-function remove_svd_gauge_dependence!(
-        ΔU, ΔVᴴ, U, S, Vᴴ;
-        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(S)
-    )
-    minmn = length(diagview(S))
-    U₁ = view(U, :, 1:minmn)
-    Vᴴ₁ = view(Vᴴ, 1:minmn, :)
-    ΔU₁ = view(ΔU, :, 1:minmn)
-    ΔVᴴ₁ = view(ΔVᴴ, 1:minmn, :)
-    Sdiag = diagview(S)
-    gaugepart = mul!(U₁' * ΔU₁, Vᴴ₁, ΔVᴴ₁', true, true)
-    gaugepart = project_antihermitian!(gaugepart)
-    gaugepart[abs.(transpose(Sdiag) .- Sdiag) .>= degeneracy_atol] .= 0
-    mul!(ΔU₁, U₁, gaugepart, -1, 1)
-    ΔU[:, (minmn + 1):end] .= 0
-    ΔVᴴ[(minmn + 1):end, :] .= 0
-    return ΔU, ΔVᴴ
-end
-
-"""
     test_mooncake_svd(T, sz; kwargs...)
 
 Run all Mooncake AD tests for SVD decompositions of element type `T` and size `sz`.
