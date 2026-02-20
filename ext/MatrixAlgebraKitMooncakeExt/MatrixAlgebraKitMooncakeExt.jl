@@ -239,7 +239,7 @@ for f in (:eig, :eigh)
                 _warn_pullback_truncerror(dϵ)
 
                 # compute pullbacks
-                $f_pullback!(dA, Ac, DVc, dDVtrunc, ind)
+                $f_pullback!(dA, Ac, DV, dDVtrunc, ind)
                 zero!.(dDVtrunc) # since this is allocated in this function this is probably not required
 
                 # restore state
@@ -351,8 +351,8 @@ for f in (:eig, :eigh)
             dDVtrunc = last.(arrayify.(DVtrunc, Mooncake.tangent(DVtrunc_dDVtrunc)))
             function $f_adjoint!(::NoRData)
                 # compute pullbacks
-                $f_pullback!(dA, Ac, DVc, dDVtrunc, ind)
-                zero!.(dDVtrunc) # since this is allocated in this function this is probably not required
+                $f_pullback!(dA, Ac, DV, dDVtrunc, ind)
+                zero!.(dDV)
 
                 # restore state
                 copy!(A, Ac)
@@ -425,7 +425,7 @@ for (f!, f) in (
             S, dS = arrayify(USVᴴ[2], dUSVᴴ[2])
             Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
             USVᴴc = copy.(USVᴴ)
-            output = $f!(A, Mooncake.primal(alg_dalg))
+            output = $f!(A, USVᴴ, Mooncake.primal(alg_dalg))
             function svd_adjoint(::NoRData)
                 copy!(A, Ac)
                 if $(f! == svd_compact!)
@@ -590,7 +590,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
         _warn_pullback_truncerror(dϵ)
 
         # compute pullbacks
-        svd_pullback!(dA, Ac, USVᴴc, dUSVᴴtrunc, ind)
+        svd_pullback!(dA, Ac, USVᴴ, dUSVᴴtrunc, ind)
         zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
         zero!.(dUSVᴴ)
 
@@ -717,8 +717,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
     dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc)))
     function svd_trunc_adjoint(::NoRData)
         # compute pullbacks
-        svd_pullback!(dA, Ac, USVᴴc, dUSVᴴtrunc, ind)
-        zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
+        svd_pullback!(dA, Ac, USVᴴ, dUSVᴴtrunc, ind)
         zero!.(dUSVᴴ)
 
         # restore state

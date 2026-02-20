@@ -1,14 +1,11 @@
-function remove_svdgauge_dependence!(
-        ΔU, ΔVᴴ, U, S, Vᴴ;
-        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(S)
-    )
-    gaugepart = mul!(U' * ΔU, Vᴴ, ΔVᴴ', true, true)
-    gaugepart = project_antihermitian!(gaugepart)
-    gaugepart[abs.(transpose(diagview(S)) .- diagview(S)) .>= degeneracy_atol] .= 0
-    mul!(ΔU, U, gaugepart, -1, 1)
-    return ΔU, ΔVᴴ
-end
-function remove_eiggauge_dependence!(
+"""
+    remove_eig_gauge_dependence!(ΔV, D, V)
+
+Remove the gauge-dependent part from the cotangent `ΔV` of the eigenvector matrix `V`. The
+eigenvectors are only determined up to complex phase (and unitary mixing for degenerate
+eigenvalues), so the corresponding components of `ΔV` are projected out.
+"""
+function remove_eig_gauge_dependence!(
         ΔV, D, V;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
     )
@@ -17,7 +14,16 @@ function remove_eiggauge_dependence!(
     mul!(ΔV, V / (V' * V), gaugepart, -1, 1)
     return ΔV
 end
-function remove_eighgauge_dependence!(
+
+"""
+    remove_eigh_gauge_dependence!(ΔV, D, V)
+
+Remove the gauge-dependent part from the cotangent `ΔV` of the Hermitian eigenvector matrix
+`V`. The eigenvectors are only determined up to complex phase (and unitary mixing for
+degenerate eigenvalues), so the corresponding anti-Hermitian components of `V' * ΔV` are
+projected out.
+"""
+function remove_eigh_gauge_dependence!(
         ΔV, D, V;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
     )
@@ -26,6 +32,121 @@ function remove_eighgauge_dependence!(
     gaugepart[abs.(transpose(diagview(D)) .- diagview(D)) .>= degeneracy_atol] .= 0
     mul!(ΔV, V, gaugepart, -1, 1)
     return ΔV
+end
+
+"""
+    remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+
+Remove the gauge-dependent part from the cotangents `ΔU` and `ΔVᴴ` of the SVD factors. The
+singular vectors are only determined up to a common complex phase per singular value (and
+unitary mixing for degenerate singular values), so the corresponding anti-Hermitian components
+of `U₁' * ΔU₁ + Vᴴ₁ * ΔVᴴ₁'` are projected out. For the full SVD, the extra columns of `U`
+and rows of `Vᴴ` beyond `min(m, n)` are additionally zeroed out.
+"""
+function remove_svd_gauge_dependence!(
+        ΔU, ΔVᴴ, U, S, Vᴴ;
+        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(S)
+    )
+    minmn = length(diagview(S))
+    U₁ = view(U, :, 1:minmn)
+    Vᴴ₁ = view(Vᴴ, 1:minmn, :)
+    ΔU₁ = view(ΔU, :, 1:minmn)
+    ΔVᴴ₁ = view(ΔVᴴ, 1:minmn, :)
+    Sdiag = diagview(S)
+    gaugepart = mul!(U₁' * ΔU₁, Vᴴ₁, ΔVᴴ₁', true, true)
+    gaugepart = project_antihermitian!(gaugepart)
+    gaugepart[abs.(transpose(Sdiag) .- Sdiag) .>= degeneracy_atol] .= 0
+    mul!(ΔU₁, U₁, gaugepart, -1, 1)
+    ΔU[:, (minmn + 1):end] .= 0
+    ΔVᴴ[(minmn + 1):end, :] .= 0
+    return ΔU, ΔVᴴ
+end
+
+"""
+    remove_qr_gauge_dependence!(ΔQ, A, Q, R)
+
+Remove the gauge-dependent part from the cotangent `ΔQ` of the full-QR orthogonal factor `Q`.
+For the full QR decomposition, the extra columns of `Q` beyond `min(m, n)` are not uniquely
+determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
+"""
+function remove_qr_gauge_dependence!(ΔQ, A, Q, R)
+    m, n = size(A)
+    minmn = min(m, n)
+    Q₁ = @view Q[:, 1:minmn]
+    ΔQ₂ = @view ΔQ[:, (minmn + 1):end]
+    Q₁ᴴΔQ₂ = Q₁' * ΔQ₂
+    mul!(ΔQ₂, Q₁, Q₁ᴴΔQ₂)
+    MatrixAlgebraKit.check_qr_full_cotangents(Q₁, ΔQ₂, Q₁ᴴΔQ₂)
+    return ΔQ
+end
+
+"""
+    remove_qr_null_gauge_dependence!(ΔN, A, N)
+
+Remove the gauge-dependent part from the cotangent `ΔN` of the QR null space `N`. The null
+space is only determined up to a unitary rotation, so `ΔN` is projected onto the column span
+of the compact QR factor `Q₁`.
+"""
+function remove_qr_null_gauge_dependence!(ΔN, A, N)
+    Q, _ = qr_compact(A)
+    return mul!(ΔN, Q, Q' * ΔN)
+end
+
+"""
+    remove_lq_gauge_dependence!(ΔQ, A, L, Q)
+
+Remove the gauge-dependent part from the cotangent `ΔQ` of the full-LQ orthogonal factor `Q`.
+For the full LQ decomposition, the extra rows of `Q` beyond `min(m, n)` are not uniquely
+determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
+"""
+function remove_lq_gauge_dependence!(ΔQ, A, L, Q)
+    m, n = size(A)
+    minmn = min(m, n)
+    Q₁ = @view Q[1:minmn, :]
+    ΔQ₂ = @view ΔQ[(minmn + 1):end, :]
+    ΔQ₂Q₁ᴴ = ΔQ₂ * Q₁'
+    mul!(ΔQ₂, ΔQ₂Q₁ᴴ, Q₁)
+    MatrixAlgebraKit.check_lq_full_cotangents(Q₁, ΔQ₂, ΔQ₂Q₁ᴴ)
+    return ΔQ
+end
+
+"""
+    remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+
+Remove the gauge-dependent part from the cotangent `ΔNᴴ` of the LQ null space `Nᴴ`. The null
+space is only determined up to a unitary rotation, so `ΔNᴴ` is projected onto the row span of
+the compact LQ factor `Q₁`.
+"""
+function remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+    _, Q = lq_compact(A)
+    ΔNᴴQᴴ = ΔNᴴ * Q'
+    return mul!(ΔNᴴ, ΔNᴴQᴴ, Q)
+end
+
+"""
+    remove_left_null_gauge_dependence!(ΔN, A, N)
+
+Remove the gauge-dependent part from the cotangent `ΔN` of the left null space `N`. The null
+space basis is only determined up to a unitary rotation, so `ΔN` is projected onto the column
+span of the compact QR factor `Q₁` of `A`.
+"""
+function remove_left_null_gauge_dependence!(ΔN, A, N)
+    Q, _ = qr_compact(A)
+    mul!(ΔN, Q, Q' * ΔN)
+    return ΔN
+end
+
+"""
+    remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+
+Remove the gauge-dependent part from the cotangent `ΔNᴴ` of the right null space `Nᴴ`. The
+null space basis is only determined up to a unitary rotation, so `ΔNᴴ` is projected onto the
+row span of the compact LQ factor `Q₁` of `A`.
+"""
+function remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+    _, Q = lq_compact(A)
+    mul!(ΔNᴴ, ΔNᴴ * Q', Q)
+    return ΔNᴴ
 end
 
 function stabilize_eigvals!(D::AbstractVector)
@@ -204,7 +325,7 @@ function ad_eig_full_setup(A)
     D, V = DV
     Ddiag = diagview(D)
     ΔV = randn!(similar(A, complex(T), m, m))
-    ΔV = remove_eiggauge_dependence!(ΔV, D, V)
+    ΔV = remove_eig_gauge_dependence!(ΔV, D, V)
     ΔD = randn!(similar(A, complex(T), m, m))
     ΔD2 = Diagonal(randn!(similar(A, complex(T), m)))
     return DV, (ΔD, ΔV), (ΔD2, ΔV)
@@ -216,7 +337,7 @@ function ad_eig_full_setup(A::Diagonal)
     DV = eig_full(A)
     D, V = DV
     ΔV = randn!(similar(A.diag, T, m, m))
-    ΔV = remove_eiggauge_dependence!(ΔV, D, V)
+    ΔV = remove_eig_gauge_dependence!(ΔV, D, V)
     ΔD = Diagonal(randn!(similar(A.diag, T, m)))
     ΔD2 = Diagonal(randn!(similar(A.diag, T, m)))
     return DV, (ΔD, ΔV), (ΔD2, ΔV)
@@ -255,7 +376,7 @@ function ad_eigh_full_setup(A)
     D, V = DV
     Ddiag = diagview(D)
     ΔV = randn!(similar(A, T, m, m))
-    ΔV = remove_eighgauge_dependence!(ΔV, D, V)
+    ΔV = remove_eigh_gauge_dependence!(ΔV, D, V)
     ΔD = randn!(similar(A, real(T), m, m))
     ΔD2 = Diagonal(randn!(similar(A, real(T), m)))
     return DV, (ΔD, ΔV), (ΔD2, ΔV)
@@ -288,7 +409,7 @@ function ad_svd_compact_setup(A)
     ΔS2 = Diagonal(randn!(similar(A, real(T), minmn)))
     ΔVᴴ = randn!(similar(A, T, minmn, n))
     U, S, Vᴴ = svd_compact(A)
-    ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+    ΔU, ΔVᴴ = remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
     return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ), (ΔU, ΔS2, ΔVᴴ)
 end
 
@@ -301,7 +422,7 @@ function ad_svd_compact_setup(A::Diagonal)
     ΔS2 = Diagonal(randn!(similar(A.diag, real(T), minmn)))
     ΔVᴴ = randn!(similar(A.diag, T, m, n))
     U, S, Vᴴ = svd_compact(A)
-    ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+    ΔU, ΔVᴴ = remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
     return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ), (ΔU, ΔS2, ΔVᴴ)
 end
 
@@ -314,7 +435,7 @@ function ad_svd_full_setup(A)
     ΔS2 = Diagonal(randn!(similar(A, real(T), minmn)))
     ΔVᴴ = randn!(similar(A, T, minmn, n))
     U, S, Vᴴ = svd_compact(A)
-    ΔU, ΔVᴴ = remove_svdgauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+    ΔU, ΔVᴴ = remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
     ΔUfull = similar(A, T, m, m)
     ΔUfull .= zero(T)
     ΔSfull = similar(A, real(T), m, n)

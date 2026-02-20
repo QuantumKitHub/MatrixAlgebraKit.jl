@@ -1,4 +1,11 @@
-function check_qr_cotangents(Q, R, ΔQ, ΔR, minmn::Int, p::Int; gauge_atol::Real = default_pullback_gauge_atol(ΔQ))
+qr_rank(R; rank_atol = default_pullback_rank_atol(R)) =
+    @something findlast(>=(rank_atol) ∘ abs, diagview(R)) 0
+
+function check_qr_cotangents(
+        Q, R, ΔQ, ΔR, p::Int;
+        gauge_atol::Real = default_pullback_gauge_atol(ΔQ)
+    )
+    minmn = min(size(Q, 1), size(R, 2))
     if minmn > p # case where A is rank-deficient
         Δgauge = abs(zero(eltype(Q)))
         if !iszerotangent(ΔQ)
@@ -7,11 +14,13 @@ function check_qr_cotangents(Q, R, ΔQ, ΔR, minmn::Int, p::Int; gauge_atol::Rea
             # columns of ΔQ should be zero for a gauge-invariant
             # cost function
             ΔQ2 = view(ΔQ, :, (p + 1):size(Q, 2))
-            Δgauge = max(Δgauge, norm(ΔQ2, Inf))
+            Δgauge_Q = norm(ΔQ2, Inf)
+            Δgauge = max(Δgauge, Δgauge_Q)
         end
         if !iszerotangent(ΔR)
             ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):size(R, 2))
-            Δgauge = max(Δgauge, norm(ΔR22, Inf))
+            Δgauge_R = norm(ΔR22, Inf)
+            Δgauge = max(Δgauge, Δgauge_R)
         end
         Δgauge ≤ gauge_atol ||
             @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
@@ -29,7 +38,7 @@ function check_qr_full_cotangents(Q1, ΔQ2, Q1dΔQ2; gauge_atol::Real = default_
     # Q2' * ΔQ2 as a gauge dependent quantity.
     Δgauge = norm(mul!(copy(ΔQ2), Q1, Q1dΔQ2, -1, 1), Inf)
     Δgauge ≤ gauge_atol ||
-        @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        @warn "`qr` full cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     return
 end
 
@@ -60,9 +69,8 @@ function qr_pullback!(
     Q, R = QR
     m = size(Q, 1)
     n = size(R, 2)
-    minmn = min(m, n)
     Rd = diagview(R)
-    p = @something findlast(>=(rank_atol) ∘ abs, Rd) 0
+    p = qr_rank(R)
 
     ΔQ, ΔR = ΔQR
 
@@ -72,7 +80,7 @@ function qr_pullback!(
     ΔA1 = view(ΔA, :, 1:p)
     ΔA2 = view(ΔA, :, (p + 1):n)
 
-    check_qr_cotangents(Q, R, ΔQ, ΔR, minmn, p; gauge_atol)
+    check_qr_cotangents(Q, R, ΔQ, ΔR, p; gauge_atol)
 
     ΔQ̃ = zero!(similar(Q, (m, p)))
     if !iszerotangent(ΔQ)
