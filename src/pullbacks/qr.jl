@@ -38,7 +38,7 @@ function check_qr_full_cotangents(Q1, ΔQ2, Q1dΔQ2; gauge_atol::Real = default_
     # Q2' * ΔQ2 as a gauge dependent quantity.
     Δgauge = norm(mul!(copy(ΔQ2), Q1, Q1dΔQ2, -1, 1), Inf)
     Δgauge ≤ gauge_atol ||
-        @warn "`qr` full cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        @warn "`qr_full` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     return
 end
 
