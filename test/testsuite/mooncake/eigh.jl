@@ -68,7 +68,7 @@ end
     test_mooncake_eigh_trunc(T, sz; rng, atol, rtol)
 
 Test the Mooncake reverse-mode AD rules for `eigh_trunc`, `eigh_trunc_no_error`, and their
-in-place variants, over a range of truncation ranks.
+in-place variants, over a range of truncation ranks and a tolerance-based truncation.
 """
 function test_mooncake_eigh_trunc(
         T, sz;
@@ -87,6 +87,37 @@ function test_mooncake_eigh_trunc(
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
             # truncate the gauge-corrected tangents
+            DVtrunc, ind = MatrixAlgebraKit.truncate(eigh_trunc!, DV, trunc)
+            ΔDVtrunc_arrays = (Diagonal(diagview(ΔDV_arrays[1])[ind]), ΔDV_arrays[2][:, ind])
+            ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_arrays)
+
+            Mooncake.TestUtils.test_rule(
+                rng, eigh_wrapper, eigh_trunc_no_error, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, is_primitive = false, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, eigh!_wrapper, eigh_trunc_no_error!, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, is_primitive = false, atol, rtol
+            )
+
+            DVϵ = eigh_trunc(A, alg_trunc)
+            Δϵ = Mooncake.zero_tangent(DVϵ[end])
+            ΔDVϵtrunc = (ΔDVtrunc..., Δϵ)
+
+            Mooncake.TestUtils.test_rule(
+                rng, eigh_wrapper, eigh_trunc, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, is_primitive = false, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, eigh!_wrapper, eigh_trunc!, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, is_primitive = false, atol, rtol
+            )
+        end
+
+        @testset "trunctol" begin
+            trunc = trunctol(atol = maximum(abs, diagview(DV[1])) / 2; by = abs)
+            alg_trunc = TruncatedAlgorithm(alg, trunc)
+
             DVtrunc, ind = MatrixAlgebraKit.truncate(eigh_trunc!, DV, trunc)
             ΔDVtrunc_arrays = (Diagonal(diagview(ΔDV_arrays[1])[ind]), ΔDV_arrays[2][:, ind])
             ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_arrays)
