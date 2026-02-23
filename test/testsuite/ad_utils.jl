@@ -466,7 +466,7 @@ function ad_svd_trunc_setup(A, truncalg)
     ΔStrunc = Diagonal(diagview(ΔUSVᴴ[2])[ind])
     ΔUtrunc = ΔUSVᴴ[1][:, ind]
     ΔVᴴtrunc = ΔUSVᴴ[3][ind, :]
-    return USVᴴ, ΔUSVᴴ, (ΔUtrunc, ΔStrunc, ΔVᴴtrunc)
+    return USVᴴ, (Utrunc, Strunc, Vᴴtrunc), ΔUSVᴴ, (ΔUtrunc, ΔStrunc, ΔVᴴtrunc)
 end
 
 function ad_left_polar_setup(A)

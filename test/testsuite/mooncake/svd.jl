@@ -108,16 +108,12 @@ function test_mooncake_svd_trunc(
         minmn = min(m, n)
 
         alg = MatrixAlgebraKit.select_algorithm(svd_compact, A)
-        USVᴴ, ΔUSVᴴ_arrays = ad_svd_compact_setup(A)
-        ΔUSVᴴ = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(USVᴴ), ΔUSVᴴ_arrays)
 
         @testset "truncrank($r)" for r in round.(Int, range(1, minmn + 4, 4))
             trunc = truncrank(r)
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
-            # truncate the gauge-corrected tangents
-            USVᴴtrunc, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, trunc)
-            ΔUSVᴴtrunc_arrays = (ΔUSVᴴ_arrays[1][:, ind], Diagonal(diagview(ΔUSVᴴ_arrays[2])[ind]), ΔUSVᴴ_arrays[3][ind, :])
+            USVᴴ, USVᴴtrunc, ΔUSVᴴ_arrays, ΔUSVᴴtrunc_arrays = ad_svd_trunc_setup(A, alg_trunc)
             ΔUSVᴴtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(USVᴴtrunc), ΔUSVᴴtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(
@@ -144,11 +140,11 @@ function test_mooncake_svd_trunc(
         end
 
         @testset "trunctol" begin
-            trunc = trunctol(atol = diagview(USVᴴ[2])[1] / 2)
+            S = svd_vals(A)
+            trunc = trunctol(atol = S[1] / 2)
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
-            USVᴴtrunc, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, trunc)
-            ΔUSVᴴtrunc_arrays = (ΔUSVᴴ_arrays[1][:, ind], Diagonal(diagview(ΔUSVᴴ_arrays[2])[ind]), ΔUSVᴴ_arrays[3][ind, :])
+            USVᴴ, USVᴴtrunc, ΔUSVᴴ_arrays, ΔUSVᴴtrunc_arrays = ad_svd_trunc_setup(A, alg_trunc)
             ΔUSVᴴtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(USVᴴtrunc), ΔUSVᴴtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(

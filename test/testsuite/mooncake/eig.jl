@@ -79,16 +79,12 @@ function test_mooncake_eig_trunc(
         m = size(A, 1)
 
         alg = MatrixAlgebraKit.select_algorithm(eig_full, A)
-        DV, ΔDV_arrays = ad_eig_full_setup(A)
-        ΔDV = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DV), ΔDV_arrays)
 
         @testset "truncrank($r)" for r in round.(Int, range(1, m + 4, 4))
             trunc = truncrank(r; by = abs)
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
-            # truncate the gauge-corrected tangents
-            DVtrunc, ind = MatrixAlgebraKit.truncate(eig_trunc!, DV, trunc)
-            ΔDVtrunc_arrays = (Diagonal(diagview(ΔDV_arrays[1])[ind]), ΔDV_arrays[2][:, ind])
+            DV, DVtrunc, ΔDV_arrays, ΔDVtrunc_arrays = ad_eig_trunc_setup(A, alg_trunc)
             ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(
@@ -115,11 +111,11 @@ function test_mooncake_eig_trunc(
         end
 
         @testset "trunctol" begin
-            trunc = trunctol(atol = maximum(abs, diagview(DV[1])) / 2; by = abs)
+            D = eig_vals(A)
+            trunc = trunctol(atol = maximum(abs, D) / 2; by = abs)
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
-            DVtrunc, ind = MatrixAlgebraKit.truncate(eig_trunc!, DV, trunc)
-            ΔDVtrunc_arrays = (Diagonal(diagview(ΔDV_arrays[1])[ind]), ΔDV_arrays[2][:, ind])
+            DV, DVtrunc, ΔDV_arrays, ΔDVtrunc_arrays = ad_eig_trunc_setup(A, alg_trunc)
             ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(
