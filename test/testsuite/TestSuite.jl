@@ -85,6 +85,12 @@ function instantiate_unitary(T, A::ROCMatrix{<:Complex}, sz)
 end
 instantiate_unitary(::Type{<:Diagonal}, A, sz) = Diagonal(fill!(similar(parent(A), eltype(A), sz), one(eltype(A))))
 
+function instantiate_rank_deficient_matrix(T, sz; trunc = trunctol(rtol = 0.5))
+    A = instantiate_matrix(T, sz)
+    V, C = left_orth!(A; trunc = trunctol(rtol = 0.5))
+    return mul!(A, V, C)
+end
+
 include("ad_utils.jl")
 
 include("projections.jl")

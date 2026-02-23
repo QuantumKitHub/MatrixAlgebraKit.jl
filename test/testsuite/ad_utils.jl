@@ -70,13 +70,11 @@ For the full QR decomposition, the extra columns of `Q` beyond `min(m, n)` are n
 determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
 """
 function remove_qr_gauge_dependence!(ΔQ, A, Q, R)
-    m, n = size(A)
-    minmn = min(m, n)
-    Q₁ = @view Q[:, 1:minmn]
-    ΔQ₂ = @view ΔQ[:, (minmn + 1):end]
+    r = MatrixAlgebraKit.qr_rank(R)
+    Q₁ = @view Q[:, 1:r]
+    ΔQ₂ = @view ΔQ[:, (r + 1):end]
     Q₁ᴴΔQ₂ = Q₁' * ΔQ₂
     mul!(ΔQ₂, Q₁, Q₁ᴴΔQ₂)
-    MatrixAlgebraKit.check_qr_full_cotangents(Q₁, ΔQ₂, Q₁ᴴΔQ₂)
     return ΔQ
 end
 
@@ -100,13 +98,11 @@ For the full LQ decomposition, the extra rows of `Q` beyond `min(m, n)` are not 
 determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
 """
 function remove_lq_gauge_dependence!(ΔQ, A, L, Q)
-    m, n = size(A)
-    minmn = min(m, n)
-    Q₁ = @view Q[1:minmn, :]
-    ΔQ₂ = @view ΔQ[(minmn + 1):end, :]
+    r = MatrixAlgebraKit.lq_rank(L)
+    Q₁ = @view Q[1:r, :]
+    ΔQ₂ = @view ΔQ[(r + 1):end, :]
     ΔQ₂Q₁ᴴ = ΔQ₂ * Q₁'
     mul!(ΔQ₂, ΔQ₂Q₁ᴴ, Q₁)
-    MatrixAlgebraKit.check_lq_full_cotangents(Q₁, ΔQ₂, ΔQ₂Q₁ᴴ)
     return ΔQ
 end
 
@@ -217,13 +213,10 @@ function make_eigh_matrix(T, sz)
 end
 
 function ad_qr_compact_setup(A)
-    m, n = size(A)
-    minmn = min(m, n)
     QR = qr_compact(A)
-    T = eltype(A)
-    ΔQ = randn!(similar(A, T, m, minmn))
-    ΔR = randn!(similar(A, T, minmn, n))
-    return QR, (ΔQ, ΔR)
+    ΔQR = randn!.(copy.(QR))
+    remove_qr_gauge_dependence!(ΔQR[1], A, QR...)
+    return QR, ΔQR
 end
 
 function ad_qr_compact_setup(A::Diagonal)
@@ -237,9 +230,8 @@ function ad_qr_compact_setup(A::Diagonal)
 end
 
 function ad_qr_null_setup(A)
-    T = eltype(A)
     N = qr_null(A)
-    ΔN = randn!(similar(A, T, size(N)...))
+    ΔN = randn!(copy(N))
     remove_qr_null_gauge_dependence!(ΔN, A, N)
     return N, ΔN
 end
@@ -291,13 +283,10 @@ function ad_qr_rank_deficient_compact_setup(A::Diagonal)
 end
 
 function ad_lq_compact_setup(A)
-    m, n = size(A)
-    minmn = min(m, n)
     LQ = lq_compact(A)
-    T = eltype(A)
-    ΔL = randn!(similar(A, T, m, minmn))
-    ΔQ = randn!(similar(A, T, minmn, n))
-    return LQ, (ΔL, ΔQ)
+    ΔLQ = randn!.(copy.(LQ))
+    remove_lq_gauge_dependence!(ΔLQ[2], A, LQ...)
+    return LQ, ΔLQ
 end
 ad_lq_compact_setup(A::Diagonal) = ad_qr_compact_setup(A)
 

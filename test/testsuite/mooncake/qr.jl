@@ -35,6 +35,20 @@ function test_mooncake_qr_compact(
             rng, call_and_zero!, qr_compact!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
+
+        A = instantiate_rank_deficient_matrix(T, sz)
+        alg = MatrixAlgebraKit.select_algorithm(qr_compact, A; positive = true)
+        QR, ΔQR = ad_qr_compact_setup(A)
+        output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(QR), ΔQR)
+
+        Mooncake.TestUtils.test_rule(
+            rng, qr_compact, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, call_and_zero!, qr_compact!, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+        )
     end
 end
 

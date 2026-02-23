@@ -1,7 +1,10 @@
+lq_rank(L; kwargs...) = qr_rank(L; kwargs...)
+
 function check_lq_cotangents(
-        L, Q, ΔL, ΔQ, minmn::Int, p::Int;
+        L, Q, ΔL, ΔQ, p::Int;
         gauge_atol::Real = default_pullback_gauge_atol(ΔQ)
     )
+    minmn = min(size(L, 1), size(Q, 2))
     if minmn > p # case where A is rank-deficient
         Δgauge = abs(zero(eltype(Q)))
         if !iszerotangent(ΔQ)
@@ -32,7 +35,7 @@ function check_lq_full_cotangents(Q1, ΔQ2, ΔQ2Q1ᴴ; gauge_atol::Real = defaul
     # Q2' * ΔQ2 as a gauge dependent quantity.
     Δgauge = norm(mul!(copy(ΔQ2), ΔQ2Q1ᴴ, Q1, -1, 1), Inf)
     Δgauge ≤ gauge_atol ||
-        @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+        @warn "`lq_full` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     return
 end
 
@@ -62,9 +65,7 @@ function lq_pullback!(
     L, Q = LQ
     m = size(L, 1)
     n = size(Q, 2)
-    minmn = min(m, n)
-    Ld = diagview(L)
-    p = @something findlast(>=(rank_atol) ∘ abs, Ld) 0
+    p = lq_rank(L; rank_atol)
 
     ΔL, ΔQ = ΔLQ
 
@@ -74,7 +75,7 @@ function lq_pullback!(
     ΔA1 = view(ΔA, 1:p, :)
     ΔA2 = view(ΔA, (p + 1):m, :)
 
-    check_lq_cotangents(L, Q, ΔL, ΔQ, minmn, p; gauge_atol)
+    check_lq_cotangents(L, Q, ΔL, ΔQ, p; gauge_atol)
 
     ΔQ̃ = zero!(similar(Q, (p, n)))
     if !iszerotangent(ΔQ)

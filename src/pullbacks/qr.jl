@@ -70,7 +70,7 @@ function qr_pullback!(
     m = size(Q, 1)
     n = size(R, 2)
     Rd = diagview(R)
-    p = qr_rank(R)
+    p = qr_rank(R; rank_atol)
 
     ΔQ, ΔR = ΔQR
 

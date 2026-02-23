@@ -35,6 +35,20 @@ function test_mooncake_lq_compact(
             rng, call_and_zero!, lq_compact!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
+
+        A = instantiate_rank_deficient_matrix(T, sz)
+        alg = MatrixAlgebraKit.select_algorithm(lq_compact, A; positive = true)
+        LQ, ΔLQ = ad_lq_compact_setup(A)
+        output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(LQ), ΔLQ)
+
+        Mooncake.TestUtils.test_rule(
+            rng, lq_compact, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, call_and_zero!, lq_compact!, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+        )
     end
 end
 
