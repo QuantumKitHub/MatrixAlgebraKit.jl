@@ -75,7 +75,6 @@ function qr_pullback!(
     ΔQ, ΔR = ΔQR
 
     Q1 = view(Q, :, 1:p)
-    Q2 = view(Q, :, (p + 1):size(Q, 2))
     R11 = view(R, 1:p, 1:p)
     ΔA1 = view(ΔA, :, 1:p)
     ΔA2 = view(ΔA, :, (p + 1):n)
