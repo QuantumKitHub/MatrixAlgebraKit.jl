@@ -1,20 +1,4 @@
 """
-    eigh_wrapper(f, A, alg)
-
-Wrapper that symmetrizes `A` before calling `f(A, alg)`. Used to test Hermitian
-eigendecomposition rules on a general matrix by first projecting onto the Hermitian subspace.
-"""
-eigh_wrapper(f, A, alg) = f(project_hermitian(A), alg)
-
-"""
-    eigh!_wrapper(f!, A, alg)
-
-Wrapper that symmetrizes `A` in-place before calling `f!(A, alg)`, then zeros `A`. Used to
-test in-place Hermitian eigendecomposition rules via Mooncake's non-primitive AD path.
-"""
-eigh!_wrapper(f!, A, alg) = (F = f!(project_hermitian!(A), alg); MatrixAlgebraKit.zero!(A); F)
-
-"""
     test_mooncake_eigh(T, sz; kwargs...)
 
 Run all Mooncake AD tests for Hermitian eigendecompositions of element type `T` and size `sz`.

@@ -149,6 +149,36 @@ function remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
     return ΔNᴴ
 end
 
+"""
+    call_and_zero!(f!, A, alg)
+
+Helper for testing in-place Mooncake rules.
+Calls `f!(A, alg)`, followed by zeroing out `A` and returns the output of `f!`.
+This allows `Mooncake.TestUtils.test_rule` to verify the reverse rule of `f!` through finite differences,
+without counting the contributions of `A`, as this is used solely as scratch space.
+"""
+function call_and_zero!(f!, A, alg)
+    F′ = f!(A, alg)
+    MatrixAlgebraKit.zero!(A)
+    return F′
+end
+
+"""
+    eigh_wrapper(f, A, alg)
+
+Wrapper that symmetrizes `A` before calling `f(A, alg)`. Used to test Hermitian
+eigendecomposition rules on a general matrix by first projecting onto the Hermitian subspace.
+"""
+eigh_wrapper(f, A, alg) = f(project_hermitian(A), alg)
+
+"""
+    eigh!_wrapper(f!, A, alg)
+
+Wrapper that symmetrizes `A` in-place before calling `f!(A, alg)`, then zeros `A`. Used to
+test in-place Hermitian eigendecomposition rules via Mooncake's non-primitive AD path.
+"""
+eigh!_wrapper(f!, A, alg) = (F = f!(project_hermitian!(A), alg); MatrixAlgebraKit.zero!(A); F)
+
 function stabilize_eigvals!(D::AbstractVector)
     absD = collect(abs.(D))
     p = invperm(sortperm(collect(absD))) # rank of abs(D)

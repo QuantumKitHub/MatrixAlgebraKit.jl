@@ -1,18 +1,4 @@
 """
-    call_and_zero!(f!, A, alg)
-
-Helper for testing in-place Mooncake rules.
-Calls `f!(A, alg)`, followed by zeroing out `A` and returns the output of `f!`.
-This allows `Mooncake.TestUtils.test_rule` to verify the reverse rule of `f!` through finite differences,
-without counting the contributions of `A`, as this is used solely as scratch space.
-"""
-function call_and_zero!(f!, A, alg)
-    F′ = f!(A, alg)
-    MatrixAlgebraKit.zero!(A)
-    return F′
-end
-
-"""
     test_mooncake(T, sz; kwargs...)
 
 Run all Mooncake AD tests for element type `T` and size `sz`. Dispatches to per-decomposition
