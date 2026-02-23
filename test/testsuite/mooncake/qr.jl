@@ -24,17 +24,16 @@ function test_mooncake_qr_compact(
     return @testset "qr_compact" begin
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(qr_compact, A; positive = true)
-        QR = qr_compact(A, alg)
-        ΔQR = Mooncake.randn_tangent(rng, QR)
-        remove_qr_gauge_dependence!(ΔQR[1], A, QR...)
+        QR, ΔQR = ad_qr_compact_setup(A)
+        output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(QR), ΔQR)
 
         Mooncake.TestUtils.test_rule(
             rng, qr_compact, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔQR, atol, rtol
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, qr_compact!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔQR, atol, rtol, is_primitive = false
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
@@ -51,17 +50,16 @@ function test_mooncake_qr_full(
     return @testset "qr_full" begin
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(qr_full, A; positive = true)
-        QR = qr_full(A, alg)
-        ΔQR = Mooncake.randn_tangent(rng, QR)
-        remove_qr_gauge_dependence!(ΔQR[1], A, QR...)
+        QR, ΔQR = ad_qr_full_setup(A)
+        output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(QR), ΔQR)
 
         Mooncake.TestUtils.test_rule(
             rng, qr_full, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔQR, atol, rtol
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, qr_full!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔQR, atol, rtol, is_primitive = false
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
@@ -78,17 +76,16 @@ function test_mooncake_qr_null(
     return @testset "qr_null" begin
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(qr_null, A; positive = true)
-        N = qr_null(A, alg)
-        ΔN = Mooncake.randn_tangent(rng, N)
-        remove_qr_null_gauge_dependence!(ΔN, A, N)
+        N, ΔN = ad_qr_null_setup(A)
+        output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(N), ΔN)
 
         Mooncake.TestUtils.test_rule(
             rng, qr_null, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔN, atol, rtol
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, qr_null!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔN, atol, rtol, is_primitive = false
+            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
     end
 end

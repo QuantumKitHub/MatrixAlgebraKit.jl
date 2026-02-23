@@ -31,15 +31,15 @@ function test_mooncake_left_orth(
         @testset "qr" begin
             alg = MatrixAlgebraKit.select_algorithm(left_orth!, A, :qr)
             VC = left_orth(A, alg)
-            ΔVC = Mooncake.randn_tangent(rng, VC)
+            output_tangent = Mooncake.randn_tangent(rng, VC)
 
             Mooncake.TestUtils.test_rule(
                 rng, left_orth, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent = ΔVC, is_primitive = false, atol, rtol
+                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
                 rng, call_and_zero!, left_orth!, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent = ΔVC, is_primitive = false, atol, rtol
+                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
         end
 
@@ -47,15 +47,15 @@ function test_mooncake_left_orth(
             @testset "polar" begin
                 alg = MatrixAlgebraKit.select_algorithm(left_orth!, A, :polar)
                 VC = left_orth(A, alg)
-                ΔVC = Mooncake.randn_tangent(rng, VC)
+                output_tangent = Mooncake.randn_tangent(rng, VC)
 
                 Mooncake.TestUtils.test_rule(
                     rng, left_orth, A, alg;
-                    mode = Mooncake.ReverseMode, output_tangent = ΔVC, is_primitive = false, atol, rtol
+                    mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
                 )
                 Mooncake.TestUtils.test_rule(
                     rng, call_and_zero!, left_orth!, A, alg;
-                    mode = Mooncake.ReverseMode, output_tangent = ΔVC, is_primitive = false, atol, rtol
+                    mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
                 )
             end
         end
@@ -79,15 +79,15 @@ function test_mooncake_right_orth(
         @testset "lq" begin
             alg = MatrixAlgebraKit.select_algorithm(right_orth!, A, :lq)
             CVᴴ = right_orth(A, alg)
-            ΔCVᴴ = Mooncake.randn_tangent(rng, CVᴴ)
+            output_tangent = Mooncake.randn_tangent(rng, CVᴴ)
 
             Mooncake.TestUtils.test_rule(
                 rng, right_orth, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent = ΔCVᴴ, is_primitive = false, atol, rtol
+                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
                 rng, call_and_zero!, right_orth!, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent = ΔCVᴴ, is_primitive = false, atol, rtol
+                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
         end
 
@@ -95,15 +95,15 @@ function test_mooncake_right_orth(
             @testset "polar" begin
                 alg = MatrixAlgebraKit.select_algorithm(right_orth!, A, :polar)
                 CVᴴ = right_orth(A, alg)
-                ΔCVᴴ = Mooncake.randn_tangent(rng, CVᴴ)
+                output_tangent = Mooncake.randn_tangent(rng, CVᴴ)
 
                 Mooncake.TestUtils.test_rule(
                     rng, right_orth, A, alg;
-                    mode = Mooncake.ReverseMode, output_tangent = ΔCVᴴ, is_primitive = false, atol, rtol
+                    mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
                 )
                 Mooncake.TestUtils.test_rule(
                     rng, call_and_zero!, right_orth!, A, alg;
-                    mode = Mooncake.ReverseMode, output_tangent = ΔCVᴴ, is_primitive = false, atol, rtol
+                    mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
                 )
             end
         end
@@ -125,17 +125,16 @@ function test_mooncake_left_null(
 
         @testset "qr" begin
             alg = MatrixAlgebraKit.select_algorithm(left_null!, A, :qr)
-            N = left_null(A, alg)
-            ΔN = Mooncake.randn_tangent(rng, N)
-            remove_left_null_gauge_dependence!(ΔN, A, N)
+            N, ΔN = ad_left_null_setup(A)
+            output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(N), ΔN)
 
             Mooncake.TestUtils.test_rule(
                 rng, left_null, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent = ΔN, is_primitive = false, atol, rtol
+                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
                 rng, call_and_zero!, left_null!, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent = ΔN, is_primitive = false, atol, rtol
+                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
         end
     end
@@ -156,17 +155,16 @@ function test_mooncake_right_null(
 
         @testset "lq" begin
             alg = MatrixAlgebraKit.select_algorithm(right_null!, A, :lq)
-            Nᴴ = right_null(A, alg)
-            ΔNᴴ = Mooncake.randn_tangent(rng, Nᴴ)
-            remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+            Nᴴ, ΔNᴴ = ad_right_null_setup(A)
+            output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(Nᴴ), ΔNᴴ)
 
             Mooncake.TestUtils.test_rule(
                 rng, right_null, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent = ΔNᴴ, is_primitive = false, atol, rtol
+                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
                 rng, call_and_zero!, right_null!, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent = ΔNᴴ, is_primitive = false, atol, rtol
+                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
         end
     end

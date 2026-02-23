@@ -211,12 +211,12 @@ function test_enzyme_eig(
         alg = MatrixAlgebraKit.default_eig_algorithm(A)
         @testset "eig_full" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-                DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
+                DV, ΔDV = ad_eig_full_setup(A)
                 if eltype(T) <: BlasFloat
-                    test_reverse(eig_full, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔD2V, fdm)
-                    is_cpu(A) && enz_test_pullbacks_match(rng, eig_full!, eig_full, A, DV, ΔD2V, alg)
+                    test_reverse(eig_full, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔDV, fdm)
+                    is_cpu(A) && enz_test_pullbacks_match(rng, eig_full!, eig_full, A, DV, ΔDV, alg)
                 else
-                    is_cpu(A) && enz_test_pullbacks_match(rng, eig_full!, eig_full, A, (nothing, nothing), (nothing, nothing), alg; ȳ = ΔD2V)
+                    is_cpu(A) && enz_test_pullbacks_match(rng, eig_full!, eig_full, A, (nothing, nothing), (nothing, nothing), alg; ȳ = ΔDV)
                 end
             end
         end
@@ -269,12 +269,12 @@ function test_enzyme_eigh(
         fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
         @testset "eigh_full" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-                DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
+                DV, ΔDV = ad_eigh_full_setup(A)
                 if eltype(T) <: BlasFloat
-                    test_reverse(enz_copy_eigh_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
-                    test_reverse(enz_copy_eigh_full!, RT, (A, TA), (DV, TA), (alg, Const); atol, rtol, output_tangent = ΔD2V, fdm)
+                    test_reverse(enz_copy_eigh_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
+                    test_reverse(enz_copy_eigh_full!, RT, (A, TA), (DV, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
                 end
-                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_full!, enz_copy_eigh_full, A, DV, ΔD2V, alg)
+                is_cpu(A) && enz_test_pullbacks_match(rng, enz_copy_eigh_full!, enz_copy_eigh_full, A, DV, ΔDV, alg)
             end
         end
         @testset "eigh_vals" begin
@@ -315,7 +315,7 @@ function test_enzyme_svd(
         fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
         @testset "svd_compact" begin
             @testset "reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
-                USVᴴ, _, ΔUSVᴴ = ad_svd_compact_setup(A)
+                USVᴴ, ΔUSVᴴ = ad_svd_compact_setup(A)
                 if eltype(T) <: BlasFloat
                     test_reverse(svd_compact, RT, (A, TA); fkwargs = (alg = alg,), atol, rtol, output_tangent = ΔUSVᴴ, fdm)
                     is_cpu(A) && enz_test_pullbacks_match(rng, svd_compact!, svd_compact, A, USVᴴ, ΔUSVᴴ, alg)

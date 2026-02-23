@@ -24,17 +24,16 @@ function test_mooncake_eigh_full(
     return @testset "eigh_full" begin
         A = make_eigh_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eigh_full, A)
-        DV = eigh_full(A, alg)
-        ΔDV = Mooncake.randn_tangent(rng, DV)
-        remove_eigh_gauge_dependence!(ΔDV[2], DV...)
+        DV, ΔDV = ad_eigh_full_setup(A)
+        output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DV), ΔDV)
 
         Mooncake.TestUtils.test_rule(
             rng, eigh_wrapper, eigh_full, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔDV, is_primitive = false, atol, rtol
+            mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, eigh!_wrapper, eigh_full!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔDV, is_primitive = false, atol, rtol
+            mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
         )
     end
 end
@@ -52,15 +51,15 @@ function test_mooncake_eigh_vals(
         A = make_eigh_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eigh_vals, A)
         D = eigh_vals(A, alg)
-        ΔD = Mooncake.randn_tangent(rng, D)
+        output_tangent = Mooncake.randn_tangent(rng, D)
 
         Mooncake.TestUtils.test_rule(
             rng, eigh_wrapper, eigh_vals, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔD, is_primitive = false, atol, rtol
+            mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, eigh!_wrapper, eigh_vals!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent = ΔD, is_primitive = false, atol, rtol
+            mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
         )
     end
 end
@@ -80,9 +79,8 @@ function test_mooncake_eigh_trunc(
         m = size(A, 1)
 
         alg = MatrixAlgebraKit.select_algorithm(eigh_full, A)
-        DV = eigh_full(A, alg)
-        ΔDV = Mooncake.randn_tangent(rng, DV)
-        remove_eigh_gauge_dependence!(ΔDV[2], DV...)
+        DV, ΔDV_arrays = ad_eigh_full_setup(A)
+        ΔDV = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DV), ΔDV_arrays)
 
         @testset "truncrank($r)" for r in round.(Int, range(1, m + 4, 4))
             trunc = truncrank(r; by = abs)
@@ -90,9 +88,8 @@ function test_mooncake_eigh_trunc(
 
             # truncate the gauge-corrected tangents
             DVtrunc, ind = MatrixAlgebraKit.truncate(eigh_trunc!, DV, trunc)
-            ΔDV_primal = Mooncake.tangent_to_primal!!(copy.(DV), ΔDV)
-            ΔDVtrunc_primal = (Diagonal(diagview(ΔDV_primal[1])[ind]), ΔDV_primal[2][:, ind])
-            ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_primal)
+            ΔDVtrunc_arrays = (Diagonal(diagview(ΔDV_arrays[1])[ind]), ΔDV_arrays[2][:, ind])
+            ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(
                 rng, eigh_wrapper, eigh_trunc_no_error, A, alg_trunc;

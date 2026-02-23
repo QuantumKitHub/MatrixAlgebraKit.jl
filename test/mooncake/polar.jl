@@ -14,6 +14,8 @@ m = 19
 for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
     TestSuite.seed_rng!(123)
     if !is_buildkite
-        TestSuite.test_mooncake_polar(T, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        atol = rtol = m * n * TestSuite.precision(T)
+        m >= n && TestSuite.test_mooncake_left_polar(T, (m, n); atol, rtol)
+        n >= m && TestSuite.test_mooncake_right_polar(T, (m, n); atol, rtol)
     end
 end

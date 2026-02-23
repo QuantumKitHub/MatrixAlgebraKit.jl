@@ -237,25 +237,20 @@ function ad_qr_compact_setup(A::Diagonal)
 end
 
 function ad_qr_null_setup(A)
-    m, n = size(A)
-    minmn = min(m, n)
-    Q, R = qr_compact(A)
     T = eltype(A)
-    ΔN = Q * randn!(similar(A, T, minmn, max(0, m - minmn)))
     N = qr_null(A)
+    ΔN = randn!(similar(A, T, size(N)...))
+    remove_qr_null_gauge_dependence!(ΔN, A, N)
     return N, ΔN
 end
 
 function ad_qr_full_setup(A)
     m, n = size(A)
-    minmn = min(m, n)
     T = eltype(A)
     Q, R = qr_full(A)
-    Q1 = view(Q, 1:m, 1:minmn)
     ΔQ = randn!(similar(A, T, m, m))
-    ΔQ2 = view(ΔQ, :, (minmn + 1):m)
-    mul!(ΔQ2, Q1, Q1' * ΔQ2)
     ΔR = randn!(similar(A, T, m, n))
+    remove_qr_gauge_dependence!(ΔQ, A, Q, R)
     return (Q, R), (ΔQ, ΔR)
 end
 
@@ -307,25 +302,20 @@ end
 ad_lq_compact_setup(A::Diagonal) = ad_qr_compact_setup(A)
 
 function ad_lq_null_setup(A)
-    m, n = size(A)
-    minmn = min(m, n)
     T = eltype(A)
-    L, Q = lq_compact(A)
-    ΔNᴴ = randn!(similar(A, T, max(0, n - minmn), minmn)) * Q
-    Nᴴ = randn!(similar(A, T, max(0, n - minmn), n))
+    Nᴴ = lq_null(A)
+    ΔNᴴ = randn!(similar(A, T, size(Nᴴ)...))
+    remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
     return Nᴴ, ΔNᴴ
 end
 
 function ad_lq_full_setup(A)
     m, n = size(A)
-    minmn = min(m, n)
     T = eltype(A)
     L, Q = lq_full(A)
-    Q1 = view(Q, 1:minmn, 1:n)
     ΔQ = randn!(similar(A, T, n, n))
-    ΔQ2 = view(ΔQ, (minmn + 1):n, 1:n)
-    ΔQ2 .= (ΔQ2 * Q1') * Q1
     ΔL = randn!(similar(A, T, m, n))
+    remove_lq_gauge_dependence!(ΔQ, A, L, Q)
     return (L, Q), (ΔL, ΔQ)
 end
 ad_lq_full_setup(A::Diagonal) = ad_qr_full_setup(A)
@@ -353,12 +343,10 @@ function ad_eig_full_setup(A)
     T = eltype(A)
     DV = eig_full(A)
     D, V = DV
-    Ddiag = diagview(D)
     ΔV = randn!(similar(A, complex(T), m, m))
     ΔV = remove_eig_gauge_dependence!(ΔV, D, V)
-    ΔD = randn!(similar(A, complex(T), m, m))
-    ΔD2 = Diagonal(randn!(similar(A, complex(T), m)))
-    return DV, (ΔD, ΔV), (ΔD2, ΔV)
+    ΔD = Diagonal(randn!(similar(A, complex(T), m)))
+    return DV, (ΔD, ΔV)
 end
 
 function ad_eig_full_setup(A::Diagonal)
@@ -369,8 +357,7 @@ function ad_eig_full_setup(A::Diagonal)
     ΔV = randn!(similar(A.diag, T, m, m))
     ΔV = remove_eig_gauge_dependence!(ΔV, D, V)
     ΔD = Diagonal(randn!(similar(A.diag, T, m)))
-    ΔD2 = Diagonal(randn!(similar(A.diag, T, m)))
-    return DV, (ΔD, ΔV), (ΔD2, ΔV)
+    return DV, (ΔD, ΔV)
 end
 
 function ad_eig_vals_setup(A)
@@ -390,13 +377,13 @@ function ad_eig_vals_setup(A::Diagonal)
 end
 
 function ad_eig_trunc_setup(A, truncalg)
-    DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
+    DV, ΔDV = ad_eig_full_setup(A)
     ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
     Dtrunc = Diagonal(diagview(DV[1])[ind])
     Vtrunc = DV[2][:, ind]
-    ΔDtrunc = Diagonal(diagview(ΔD2V[1])[ind])
+    ΔDtrunc = Diagonal(diagview(ΔDV[1])[ind])
     ΔVtrunc = ΔDV[2][:, ind]
-    return DV, (Dtrunc, Vtrunc), ΔD2V, (ΔDtrunc, ΔVtrunc)
+    return DV, (Dtrunc, Vtrunc), ΔDV, (ΔDtrunc, ΔVtrunc)
 end
 
 function ad_eigh_full_setup(A)
@@ -404,12 +391,10 @@ function ad_eigh_full_setup(A)
     T = eltype(A)
     DV = eigh_full(A)
     D, V = DV
-    Ddiag = diagview(D)
     ΔV = randn!(similar(A, T, m, m))
     ΔV = remove_eigh_gauge_dependence!(ΔV, D, V)
-    ΔD = randn!(similar(A, real(T), m, m))
-    ΔD2 = Diagonal(randn!(similar(A, real(T), m)))
-    return DV, (ΔD, ΔV), (ΔD2, ΔV)
+    ΔD = Diagonal(randn!(similar(A, real(T), m)))
+    return DV, (ΔD, ΔV)
 end
 
 function ad_eigh_vals_setup(A)
@@ -421,13 +406,13 @@ function ad_eigh_vals_setup(A)
 end
 
 function ad_eigh_trunc_setup(A, truncalg)
-    DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
+    DV, ΔDV = ad_eigh_full_setup(A)
     ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
     Dtrunc = Diagonal(diagview(DV[1])[ind])
     Vtrunc = DV[2][:, ind]
-    ΔDtrunc = Diagonal(diagview(ΔD2V[1])[ind])
+    ΔDtrunc = Diagonal(diagview(ΔDV[1])[ind])
     ΔVtrunc = ΔDV[2][:, ind]
-    return DV, (Dtrunc, Vtrunc), ΔD2V, (ΔDtrunc, ΔVtrunc)
+    return DV, (Dtrunc, Vtrunc), ΔDV, (ΔDtrunc, ΔVtrunc)
 end
 
 function ad_svd_compact_setup(A)
@@ -435,12 +420,11 @@ function ad_svd_compact_setup(A)
     T = eltype(A)
     minmn = min(m, n)
     ΔU = randn!(similar(A, T, m, minmn))
-    ΔS = randn!(similar(A, real(T), minmn, minmn))
-    ΔS2 = Diagonal(randn!(similar(A, real(T), minmn)))
+    ΔS = Diagonal(randn!(similar(A, real(T), minmn)))
     ΔVᴴ = randn!(similar(A, T, minmn, n))
     U, S, Vᴴ = svd_compact(A)
     ΔU, ΔVᴴ = remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
-    return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ), (ΔU, ΔS2, ΔVᴴ)
+    return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ)
 end
 
 function ad_svd_compact_setup(A::Diagonal)
@@ -449,23 +433,17 @@ function ad_svd_compact_setup(A::Diagonal)
     minmn = min(m, n)
     ΔU = randn!(similar(A.diag, T, m, n))
     ΔS = Diagonal(randn!(similar(A.diag, real(T), minmn)))
-    ΔS2 = Diagonal(randn!(similar(A.diag, real(T), minmn)))
     ΔVᴴ = randn!(similar(A.diag, T, m, n))
     U, S, Vᴴ = svd_compact(A)
     ΔU, ΔVᴴ = remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
-    return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ), (ΔU, ΔS2, ΔVᴴ)
+    return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ)
 end
 
 function ad_svd_full_setup(A)
     m, n = size(A)
     T = eltype(A)
     minmn = min(m, n)
-    ΔU = randn!(similar(A, T, m, minmn))
-    ΔS = randn!(similar(A, real(T), minmn, minmn))
-    ΔS2 = Diagonal(randn!(similar(A, real(T), minmn)))
-    ΔVᴴ = randn!(similar(A, T, minmn, n))
-    U, S, Vᴴ = svd_compact(A)
-    ΔU, ΔVᴴ = remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
+    (_, _, _), (ΔU, ΔS, ΔVᴴ) = ad_svd_compact_setup(A)
     ΔUfull = similar(A, T, m, m)
     ΔUfull .= zero(T)
     ΔSfull = similar(A, real(T), m, n)
@@ -475,7 +453,7 @@ function ad_svd_full_setup(A)
     U, S, Vᴴ = svd_full(A)
     view(ΔUfull, :, 1:minmn) .= ΔU
     view(ΔVᴴfull, 1:minmn, :) .= ΔVᴴ
-    diagview(ΔSfull)[1:minmn] .= diagview(ΔS2)
+    diagview(ΔSfull)[1:minmn] .= diagview(ΔS)
     return (U, S, Vᴴ), (ΔUfull, ΔSfull, ΔVᴴfull)
 end
 
@@ -491,15 +469,15 @@ function ad_svd_vals_setup(A)
 end
 
 function ad_svd_trunc_setup(A, truncalg)
-    USVᴴ, ΔUSVᴴ, ΔUS2Vᴴ = ad_svd_compact_setup(A)
+    USVᴴ, ΔUSVᴴ = ad_svd_compact_setup(A)
     ind = MatrixAlgebraKit.findtruncated(diagview(USVᴴ[2]), truncalg.trunc)
     Strunc = Diagonal(diagview(USVᴴ[2])[ind])
     Utrunc = USVᴴ[1][:, ind]
     Vᴴtrunc = USVᴴ[3][ind, :]
-    ΔStrunc = Diagonal(diagview(ΔUS2Vᴴ[2])[ind])
+    ΔStrunc = Diagonal(diagview(ΔUSVᴴ[2])[ind])
     ΔUtrunc = ΔUSVᴴ[1][:, ind]
     ΔVᴴtrunc = ΔUSVᴴ[3][ind, :]
-    return USVᴴ, ΔUS2Vᴴ, (ΔUtrunc, ΔStrunc, ΔVᴴtrunc)
+    return USVᴴ, ΔUSVᴴ, (ΔUtrunc, ΔStrunc, ΔVᴴtrunc)
 end
 
 function ad_left_polar_setup(A)
