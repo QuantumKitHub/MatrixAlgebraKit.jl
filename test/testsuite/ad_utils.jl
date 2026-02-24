@@ -63,19 +63,21 @@ function remove_svd_gauge_dependence!(
 end
 
 """
-    remove_qr_gauge_dependence!(ΔQ, A, Q, R)
+    remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R)
 
-Remove the gauge-dependent part from the cotangent `ΔQ` of the full-QR orthogonal factor `Q`.
-For the full QR decomposition, the extra columns of `Q` beyond `min(m, n)` are not uniquely
-determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
+Remove the gauge-dependent part from the cotangents `ΔQ` and `ΔR` of the QR factors `Q` and
+`R`. For the full QR decomposition, the extra columns of `Q` beyond the rank `r` are not
+uniquely determined by `A`, so the corresponding part of `ΔQ` is projected to remove this
+ambiguity. Additionally, rows of `ΔR` beyond the rank are zeroed out.
 """
-function remove_qr_gauge_dependence!(ΔQ, A, Q, R)
+function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R)
     r = MatrixAlgebraKit.qr_rank(R)
     Q₁ = @view Q[:, 1:r]
     ΔQ₂ = @view ΔQ[:, (r + 1):end]
     Q₁ᴴΔQ₂ = Q₁' * ΔQ₂
     mul!(ΔQ₂, Q₁, Q₁ᴴΔQ₂)
-    return ΔQ
+    view(ΔR, (r + 1):size(ΔR, 1), :) .= 0
+    return ΔQ, ΔR
 end
 
 """
@@ -91,19 +93,21 @@ function remove_qr_null_gauge_dependence!(ΔN, A, N)
 end
 
 """
-    remove_lq_gauge_dependence!(ΔQ, A, L, Q)
+    remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q)
 
-Remove the gauge-dependent part from the cotangent `ΔQ` of the full-LQ orthogonal factor `Q`.
-For the full LQ decomposition, the extra rows of `Q` beyond `min(m, n)` are not uniquely
+Remove the gauge-dependent part from the cotangents `ΔL` and `ΔQ` of the LQ factors `L` and
+`Q`. For the full LQ decomposition, the extra rows of `Q` beyond the rank `r` are not uniquely
 determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
+Additionally, columns of `ΔL` beyond the rank are zeroed out.
 """
-function remove_lq_gauge_dependence!(ΔQ, A, L, Q)
+function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q)
     r = MatrixAlgebraKit.lq_rank(L)
     Q₁ = @view Q[1:r, :]
     ΔQ₂ = @view ΔQ[(r + 1):end, :]
     ΔQ₂Q₁ᴴ = ΔQ₂ * Q₁'
     mul!(ΔQ₂, ΔQ₂Q₁ᴴ, Q₁)
-    return ΔQ
+    view(ΔL, :, (r + 1):size(ΔL, 2)) .= 0
+    return ΔL, ΔQ
 end
 
 """
@@ -215,7 +219,7 @@ end
 function ad_qr_compact_setup(A)
     QR = qr_compact(A)
     ΔQR = randn!.(copy.(QR))
-    remove_qr_gauge_dependence!(ΔQR[1], A, QR...)
+    remove_qr_gauge_dependence!(ΔQR..., A, QR...)
     return QR, ΔQR
 end
 
@@ -237,13 +241,10 @@ function ad_qr_null_setup(A)
 end
 
 function ad_qr_full_setup(A)
-    m, n = size(A)
-    T = eltype(A)
-    Q, R = qr_full(A)
-    ΔQ = randn!(similar(A, T, m, m))
-    ΔR = randn!(similar(A, T, m, n))
-    remove_qr_gauge_dependence!(ΔQ, A, Q, R)
-    return (Q, R), (ΔQ, ΔR)
+    QR = qr_full(A)
+    ΔQR = randn!.(copy.(QR))
+    remove_qr_gauge_dependence!(ΔQR..., A, QR...)
+    return QR, ΔQR
 end
 
 ad_qr_full_setup(A::Diagonal) = ad_qr_compact_setup(A)
@@ -285,7 +286,7 @@ end
 function ad_lq_compact_setup(A)
     LQ = lq_compact(A)
     ΔLQ = randn!.(copy.(LQ))
-    remove_lq_gauge_dependence!(ΔLQ[2], A, LQ...)
+    remove_lq_gauge_dependence!(ΔLQ..., A, LQ...)
     return LQ, ΔLQ
 end
 ad_lq_compact_setup(A::Diagonal) = ad_qr_compact_setup(A)
@@ -299,13 +300,10 @@ function ad_lq_null_setup(A)
 end
 
 function ad_lq_full_setup(A)
-    m, n = size(A)
-    T = eltype(A)
-    L, Q = lq_full(A)
-    ΔQ = randn!(similar(A, T, n, n))
-    ΔL = randn!(similar(A, T, m, n))
-    remove_lq_gauge_dependence!(ΔQ, A, L, Q)
-    return (L, Q), (ΔL, ΔQ)
+    LQ = lq_full(A)
+    ΔLQ = randn!.(copy.(LQ))
+    remove_lq_gauge_dependence!(ΔLQ..., A, LQ...)
+    return LQ, ΔLQ
 end
 ad_lq_full_setup(A::Diagonal) = ad_qr_full_setup(A)
 
