@@ -50,7 +50,7 @@ function test_mooncake_eig_vals(
     return @testset "eig_vals" begin
         A = make_eig_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eig_vals, A)
-        D = eig_vals(A, alg)
+        D = eig_vals(A)
         output_tangent = Mooncake.randn_tangent(rng, D)
 
         Mooncake.TestUtils.test_rule(

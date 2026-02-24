@@ -50,8 +50,8 @@ function test_mooncake_eigh_vals(
     return @testset "eigh_vals" begin
         A = make_eigh_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eigh_vals, A)
-        D = eigh_vals(A, alg)
-        output_tangent = Mooncake.randn_tangent(rng, D)
+        D, ΔD = ad_eigh_vals_setup(A)
+        output_tangent = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(D), ΔD)
 
         Mooncake.TestUtils.test_rule(
             rng, eigh_wrapper, eigh_vals, A, alg;
