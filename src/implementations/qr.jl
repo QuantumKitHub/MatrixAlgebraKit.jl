@@ -89,6 +89,30 @@ end
 # Implementation
 # --------------
 # actual implementation
+function qr_full!(A::AbstractMatrix, QR, alg::Householder)
+    check_input(qr_full!, A, QR, alg)
+    Q, R = QR
+    driver = get(alg.kwargs, :driver, default_householder_driver(A))
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:driver,)})
+    householder_qr!(driver, A, Q, R; alg_kwargs...)
+    return Q, R
+end
+function qr_compact!(A::AbstractMatrix, QR, alg::Householder)
+    check_input(qr_compact!, A, QR, alg)
+    Q, R = QR
+    driver = get(alg.kwargs, :driver, default_householder_driver(A))
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:driver,)})
+    householder_qr!(driver, A, Q, R; alg_kwargs...)
+    return Q, R
+end
+function qr_null!(A::AbstractMatrix, N, alg::Householder)
+    check_input(qr_null!, A, N, alg)
+    driver = get(alg.kwargs, :driver, LAPACK())
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:driver,)})
+    householder_qr_null!(A, N; alg_kwargs...)
+    return N
+end
+
 function qr_full!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
     check_input(qr_full!, A, QR, alg)
     Q, R = QR
@@ -127,8 +151,12 @@ end
 
 # LAPACK logic
 # ------------
-function _lapack_qr!(
-        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+Base.@deprecate(
+    _lapack_qr!(A, Q, R; kwargs...),
+    householder_qr!(LAPACK(), A, Q, R; kwargs...)
+)
+function householder_qr!(
+        ::LAPACK, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive = true, pivoted = false,
         blocksize = ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
@@ -193,8 +221,12 @@ function _lapack_qr!(
     return Q, R
 end
 
-function _lapack_qr_null!(
-        A::AbstractMatrix, N::AbstractMatrix;
+Base.@deprecate(
+    _lapack_qr_null!(A, N; kwargs...),
+    householder_qr_null!(LAPACK(), A, N, kwargs...)
+)
+function householder_qr_null!(
+        ::LAPACK, A::AbstractMatrix, N::AbstractMatrix;
         positive = true, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
     )
     m, n = size(A)
@@ -268,13 +300,19 @@ function _gpu_unmqr!(
     throw(MethodError(_gpu_unmqr!, (side, trans, A, τ, C)))
 end
 
-function _gpu_qr!(
-        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive = true, blocksize = 1, pivoted = false
+Base.@deprecate(
+    _gpu_qr!(A, Q, R; kwargs...),
+    householder_qr!(default_householder_driver(A), A, Q, R; kwargs...)
+)
+
+function householder_qr!(
+        driver::Union{CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+        positive = true, blocksize = 1, pivoted = false
     )
     blocksize > 1 &&
-        throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
+        throw(ArgumentError(lazy"$driver does not provide a blocked implementation for a QR decomposition"))
     pivoted &&
-        throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a pivoted implementation for a QR decomposition"))
+        throw(ArgumentError(lazy"$driver does not provide a pivoted implementation for a QR decomposition"))
     m, n = size(A)
     minmn = min(m, n)
     computeR = length(R) > 0
@@ -309,16 +347,21 @@ function _gpu_qr!(
     return Q, R
 end
 
-function _gpu_qr_null!(
-        A::AbstractMatrix, N::AbstractMatrix; positive = true, blocksize = 1, pivoted = false
+Base.@deprecate(
+    _gpu_qr_null!(A, N; kwargs...),
+    householder_qr_null!(default_householder_driver(A), A, N; kwargs...)
+)
+function householder_qr_null!(
+        driver::Union{CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
+        positive = true, blocksize = 1, pivoted = false
     )
     blocksize > 1 &&
-        throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a blocked implementation for a QR decomposition"))
+        throw(ArgumentError(lazy"$driver does not provide a blocked implementation for a QR decomposition"))
     pivoted &&
-        throw(ArgumentError("CUSOLVER/ROCSOLVER does not provide a pivoted implementation for a QR decomposition"))
+        throw(ArgumentError(lazy"$driver does not provide a pivoted implementation for a QR decomposition"))
     m, n = size(A)
     minmn = min(m, n)
-    fill!(N, zero(eltype(N)))
+    zero!(N)
     one!(view(N, (minmn + 1):m, 1:(m - minmn)))
     A, τ = _gpu_geqrf!(A)
     N = _gpu_unmqr!('L', 'N', A, τ, N)
@@ -349,8 +392,12 @@ function qr_null!(A::AbstractMatrix, N, alg::Native_HouseholderQR)
     return N
 end
 
-function _native_qr!(
-        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+Base.@deprecate(
+    _native_qr!(A, Q, R; kwargs...),
+    householder_qr!(Native(), A, Q, R; kwargs...)
+)
+function householder_qr!(
+        ::Native, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive::Bool = true # always true regardless of setting
     )
     m, n = size(A)
@@ -385,7 +432,13 @@ function _native_qr!(
     return Q, R
 end
 
-function _native_qr_null!(A::AbstractMatrix, N::AbstractMatrix; positive::Bool = true)
+Base.@deprecate(
+    _native_qr_null!(A, N; kwargs...),
+    householder_qr_null!(Native(), A, N; kwargs...)
+)
+function householder_qr_null!(
+        ::Native, A::AbstractMatrix, N::AbstractMatrix; positive::Bool = true
+    )
     m, n = size(A)
     minmn = min(m, n)
     @inbounds for j in 1:minmn
