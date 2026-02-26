@@ -411,8 +411,8 @@ const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
-const QRAlgorithms = Union{LAPACK_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
-const LQAlgorithms = Union{LAPACK_HouseholderLQ, LQViaTransposedQR}
+const QRAlgorithms = Union{Householder, LAPACK_HouseholderQR, Native_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
+const LQAlgorithms = Union{Householder, LAPACK_HouseholderLQ, Native_HouseholderLQ, LQViaTransposedQR}
 const SVDAlgorithms = Union{LAPACK_SVDAlgorithm, GPU_SVDAlgorithm}
 const PolarAlgorithms = Union{PolarViaSVD, PolarNewton}
 
