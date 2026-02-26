@@ -110,60 +110,85 @@ householder_qr!(::DefaultDriver, A, Q, R; kwargs...) =
 householder_qr_null!(::DefaultDriver, A, N; kwargs...) =
     householder_qr_null!(default_householder_driver(A), A, N; kwargs...)
 
+# dispatch helpers
+for f in (:geqrt!, :gemqrt!, :geqp3!, :geqrf!, :ungqr!, :unmqr!)
+    @eval begin
+        $f(::LAPACK, args...) = YALAPACK.$f(args...)
+    end
+end
+
 function householder_qr!(
-        ::LAPACK, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+        driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive = true, pivoted = false,
-        blocksize = ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
+        blocksize = ((driver !== LAPACK() || pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
+    # error messages for disallowing driver - setting combinations
+    (blocksize == 1 || driver === LAPACK()) ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
+    (!pivoted || driver === LAPACK()) ||
+        throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
+    pivoted && (blocksize > 1) &&
+        throw(ArgumentError(lazy"$driver does not provide a blocked pivoted QR decomposition"))
+
     m, n = size(A)
     minmn = min(m, n)
     computeR = length(R) > 0
     inplaceQ = Q === A
 
-    if pivoted && (blocksize > 1)
-        throw(ArgumentError("LAPACK does not provide a blocked implementation for a pivoted QR decomposition"))
-    end
-    if inplaceQ && (computeR || positive || blocksize > 1 || m < n)
-        throw(ArgumentError("inplace Q only supported if matrix is tall (`m >= n`), R is not required, and using the unblocked algorithm (`blocksize=1`) with `positive=false`"))
-    end
+    (inplaceQ && (computeR || positive || blocksize > 1 || m < n)) &&
+        throw(ArgumentError("inplace Q only supported if matrix is tall (`m >= n`), R is not required, and using the unblocked algorithm (`blocksize = 1`) with `positive = false`"))
 
+    # Compute QR in packed form
     if blocksize > 1
         nb = min(minmn, blocksize)
         if computeR # first use R as space for T
-            A, T = YALAPACK.geqrt!(A, view(R, 1:nb, 1:minmn))
+            A, T = geqrt!(driver, A, view(R, 1:nb, 1:minmn))
         else
-            A, T = YALAPACK.geqrt!(A, similar(A, nb, minmn))
+            A, T = geqrt!(driver, A, similar(A, nb, minmn))
         end
-        Q = YALAPACK.gemqrt!('L', 'N', A, T, one!(Q))
+        Q = gemqrt!(driver, 'L', 'N', A, T, one!(Q))
     else
         if pivoted
-            A, τ, jpvt = YALAPACK.geqp3!(A)
+            A, τ, jpvt = geqp3!(driver, A)
         else
-            A, τ = YALAPACK.geqrf!(A)
+            A, τ = geqrf!(driver, A)
         end
         if inplaceQ
-            Q = YALAPACK.ungqr!(A, τ)
+            Q = ungqr!(driver, A, τ)
         else
-            Q = YALAPACK.unmqr!('L', 'N', A, τ, one!(Q))
+            Q = unmqr!(driver, 'L', 'N', A, τ, one!(Q))
         end
     end
 
+
     if positive # already fix Q even if we do not need R
-        @inbounds for j in 1:minmn
-            s = sign_safe(A[j, j])
-            @simd for i in 1:m
-                Q[i, j] *= s
+        if driver === LAPACK()
+            @inbounds for j in 1:minmn
+                s = sign_safe(A[j, j])
+                @simd for i in 1:m
+                    Q[i, j] *= s
+                end
             end
+        else
+            # guaranteed τ exists and no longer needed
+            τ .= sign_safe.(diagview(A))
+            Qf = view(Q, 1:m, 1:minmn) # first minmn columns of Q
+            Qf .= Qf .* transpose(τ)
         end
     end
 
     if computeR
         R̃ = uppertriangular!(view(A, axes(R)...))
         if positive
-            @inbounds for j in n:-1:1
-                @simd for i in 1:min(minmn, j)
-                    R̃[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
+            if driver === LAPACK()
+                @inbounds for j in n:-1:1
+                    @simd for i in 1:min(minmn, j)
+                        R̃[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
+                    end
                 end
+            else
+                R̃f = view(R̃, 1:minmn, 1:n) # first minmn rows of R
+                R̃f .= conj.(τ) .* R̃f
             end
         end
         if !pivoted
@@ -172,47 +197,6 @@ function householder_qr!(
             # probably very inefficient in terms of memory access
             copyto!(view(R, :, jpvt), R̃)
         end
-    end
-    return Q, R
-end
-function householder_qr!(
-        driver::Union{CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-        positive = true, blocksize = 1, pivoted = false
-    )
-    blocksize > 1 &&
-        throw(ArgumentError(lazy"$driver does not provide a blocked implementation for a QR decomposition"))
-    pivoted &&
-        throw(ArgumentError(lazy"$driver does not provide a pivoted implementation for a QR decomposition"))
-    m, n = size(A)
-    minmn = min(m, n)
-    computeR = length(R) > 0
-    inplaceQ = Q === A
-    if inplaceQ && (computeR || positive || m < n)
-        throw(ArgumentError("inplace Q only supported if matrix is tall (`m >= n`), R is not required and using `positive=false`"))
-    end
-
-    A, τ = _gpu_geqrf!(A)
-    if inplaceQ
-        Q = _gpu_ungqr!(A, τ)
-    else
-        Q = _gpu_unmqr!('L', 'N', A, τ, one!(Q))
-    end
-    # henceforth, τ is no longer needed and can be reused
-
-    if positive # already fix Q even if we do not need R
-        # TODO: report that `lmul!` and `rmul!` with `Diagonal` don't work with CUDA
-        τ .= sign_safe.(diagview(A))
-        Qf = view(Q, 1:m, 1:minmn) # first minmn columns of Q
-        Qf .= Qf .* transpose(τ)
-    end
-
-    if computeR
-        R̃ = uppertriangular!(view(A, axes(R)...))
-        if positive
-            R̃f = view(R̃, 1:minmn, 1:n) # first minmn rows of R
-            R̃f .= conj.(τ) .* R̃f
-        end
-        copyto!(R, R̃)
     end
     return Q, R
 end
@@ -253,41 +237,36 @@ function householder_qr!(
 end
 
 function householder_qr_null!(
-        ::LAPACK, A::AbstractMatrix, N::AbstractMatrix;
-        positive = true, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
+        driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
+        positive = true, pivoted = false,
+        blocksize = ((driver !== LAPACK() || pivoted) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
-    m, n = size(A)
-    minmn = min(m, n)
-    fill!(N, zero(eltype(N)))
-    one!(view(N, (minmn + 1):m, 1:(m - minmn)))
-    if blocksize > 1
-        nb = min(minmn, blocksize)
-        A, T = YALAPACK.geqrt!(A, similar(A, nb, minmn))
-        N = YALAPACK.gemqrt!('L', 'N', A, T, N)
-    else
-        A, τ = YALAPACK.geqrf!(A)
-        N = YALAPACK.unmqr!('L', 'N', A, τ, N)
-    end
-    return N
-end
-function householder_qr_null!(
-        driver::Union{CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
-        positive = true, blocksize = 1, pivoted = false
-    )
-    blocksize > 1 &&
-        throw(ArgumentError(lazy"$driver does not provide a blocked implementation for a QR decomposition"))
-    pivoted &&
-        throw(ArgumentError(lazy"$driver does not provide a pivoted implementation for a QR decomposition"))
+    # error messages for disallowing driver - setting combinations
+    (blocksize == 1 || driver === LAPACK()) ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
+    (!pivoted || driver === LAPACK()) ||
+        throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
+    pivoted && (blocksize > 1) &&
+        throw(ArgumentError(lazy"$driver does not provide a blocked pivoted QR decomposition"))
+
     m, n = size(A)
     minmn = min(m, n)
     zero!(N)
     one!(view(N, (minmn + 1):m, 1:(m - minmn)))
-    A, τ = _gpu_geqrf!(A)
-    N = _gpu_unmqr!('L', 'N', A, τ, N)
+
+    if blocksize > 1
+        nb = min(minmn, blocksize)
+        A, T = geqrt!(driver, A, similar(A, nb, minmn))
+        N = gemqrt!(driver, 'L', 'N', A, T, N)
+    else
+        A, τ = geqrf!(driver, A)
+        N = unmqr!(driver, 'L', 'N', A, τ, N)
+    end
     return N
 end
 function householder_qr_null!(
-        ::Native, A::AbstractMatrix, N::AbstractMatrix; positive::Bool = true
+        ::Native, A::AbstractMatrix, N::AbstractMatrix;
+        positive::Bool = true
     )
     m, n = size(A)
     minmn = min(m, n)
@@ -310,13 +289,6 @@ function householder_qr_null!(
     return N
 end
 
-# Utility for sharing GPU implementations
-_gpu_geqrf!(A::AbstractMatrix) =
-    throw(MethodError(_gpu_geqrf!, (A,)))
-_gpu_ungqr!(A::AbstractMatrix, τ::AbstractVector) =
-    throw(MethodError(_gpu_ungqr!, (A, τ)))
-_gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix, τ::AbstractVector, C) =
-    throw(MethodError(_gpu_unmqr!, (side, trans, A, τ, C)))
 
 # Diagonal
 # --------
