@@ -30,6 +30,10 @@ function test_mooncake_project_hermitian(
             mode = Mooncake.ReverseMode, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
+            rng, project_hermitian!, A, A, alg;
+            mode = Mooncake.ReverseMode, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
             rng, project_hermitian!, A, B, alg;
             mode = Mooncake.ReverseMode, atol, rtol
         )
@@ -51,6 +55,10 @@ function test_mooncake_project_antihermitian(
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
         Mooncake.TestUtils.test_rule(
             rng, project_antihermitian, A, alg;
+            mode = Mooncake.ReverseMode, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, project_antihermitian!, A, A, alg;
             mode = Mooncake.ReverseMode, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
