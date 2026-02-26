@@ -13,6 +13,7 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
 using LinearAlgebra: Diagonal, norm, istriu, istril, I
 using Random, StableRNGs
+using Mooncake
 using AMDGPU, CUDA
 
 const tests = Dict()
@@ -84,18 +85,38 @@ function instantiate_unitary(T, A::ROCMatrix{<:Complex}, sz)
 end
 instantiate_unitary(::Type{<:Diagonal}, A, sz) = Diagonal(fill!(similar(parent(A), eltype(A), sz), one(eltype(A))))
 
+function instantiate_rank_deficient_matrix(T, sz; trunc = trunctol(rtol = 0.5))
+    A = instantiate_matrix(T, sz)
+    V, C = left_orth!(A; trunc = trunctol(rtol = 0.5))
+    return mul!(A, V, C)
+end
+
 include("ad_utils.jl")
 
-include("qr.jl")
-include("lq.jl")
-include("polar.jl")
 include("projections.jl")
-include("schur.jl")
-include("eig.jl")
-include("eigh.jl")
-include("orthnull.jl")
-include("svd.jl")
-include("mooncake.jl")
+
+# Decompositions
+# --------------
+include("decompositions/qr.jl")
+include("decompositions/lq.jl")
+include("decompositions/polar.jl")
+include("decompositions/schur.jl")
+include("decompositions/eig.jl")
+include("decompositions/eigh.jl")
+include("decompositions/orthnull.jl")
+include("decompositions/svd.jl")
+
+# Mooncake
+# --------
+include("mooncake/mooncake.jl")
+include("mooncake/qr.jl")
+include("mooncake/lq.jl")
+include("mooncake/eig.jl")
+include("mooncake/eigh.jl")
+include("mooncake/svd.jl")
+include("mooncake/polar.jl")
+include("mooncake/orthnull.jl")
+
 include("enzyme.jl")
 include("chainrules.jl")
 

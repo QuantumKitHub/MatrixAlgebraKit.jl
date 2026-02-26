@@ -215,21 +215,14 @@ function test_chainrules_eig(
         config = Zygote.ZygoteRuleConfig()
         alg = MatrixAlgebraKit.default_eig_algorithm(A)
         @testset "eig_full" begin
-            DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
+            DV, ΔDV = ad_eig_full_setup(A)
             ΔD, ΔV = ΔDV
             test_rrule(
                 cr_copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
             )
             test_rrule(
-                cr_copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔD2V, atol, rtol
-            )
-            test_rrule(
                 config, eig_full, A, alg ⊢ NoTangent();
                 output_tangent = ΔDV, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
-            )
-            test_rrule(
-                config, eig_full, A, alg ⊢ NoTangent();
-                output_tangent = ΔD2V, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
             )
             test_rrule(
                 config, first ∘ eig_full, A, alg ⊢ NoTangent();
@@ -300,22 +293,15 @@ function test_chainrules_eigh(
         alg = MatrixAlgebraKit.default_eigh_algorithm(A)
         # copy_eigh_xxxx includes a projector onto the Hermitian part of the matrix
         @testset "eigh_full" begin
-            DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
+            DV, ΔDV = ad_eigh_full_setup(A)
             ΔD, ΔV = ΔDV
             test_rrule(
                 cr_copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
-            )
-            test_rrule(
-                cr_copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔD2V, atol, rtol
             )
             # eigh_full does not include a projector onto the Hermitian part of the matrix
             test_rrule(
                 config, eigh_full ∘ Matrix ∘ Hermitian, A;
                 output_tangent = ΔDV, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
-            )
-            test_rrule(
-                config, eigh_full ∘ Matrix ∘ Hermitian, A;
-                output_tangent = ΔD2V, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
             )
             test_rrule(
                 config, first ∘ eigh_full ∘ Matrix ∘ Hermitian, A;
@@ -420,23 +406,14 @@ function test_chainrules_svd(
         config = Zygote.ZygoteRuleConfig()
         alg = MatrixAlgebraKit.default_svd_algorithm(A)
         @testset "svd_compact" begin
-            USV, ΔUSVᴴ, ΔUS2Vᴴ = ad_svd_compact_setup(A)
+            USV, ΔUSVᴴ = ad_svd_compact_setup(A)
             test_rrule(
                 cr_copy_svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol
             )
             test_rrule(
-                cr_copy_svd_compact, A, alg ⊢ NoTangent();
-                output_tangent = ΔUS2Vᴴ, atol = atol, rtol = rtol
-            )
-            test_rrule(
                 config, svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol,
-                rrule_f = rrule_via_ad, check_inferred = false
-            )
-            test_rrule(
-                config, svd_compact, A, alg ⊢ NoTangent();
-                output_tangent = ΔUS2Vᴴ, atol = atol, rtol = rtol,
                 rrule_f = rrule_via_ad, check_inferred = false
             )
         end
@@ -454,7 +431,7 @@ function test_chainrules_svd(
         @testset "svd_trunc" begin
             @testset for r in 1:4:minmn
                 truncalg = TruncatedAlgorithm(alg, truncrank(r))
-                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
+                USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
                 test_rrule(
                     cr_copy_svd_trunc, A, truncalg ⊢ NoTangent();
                     output_tangent = (ΔUSVᴴtrunc..., zero(real(T))),
@@ -491,7 +468,7 @@ function test_chainrules_svd(
             end
             S, ΔS = ad_svd_vals_setup(A)
             truncalg = TruncatedAlgorithm(alg, trunctol(atol = S[1, 1] / 2))
-            USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
+            USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
             test_rrule(
                 cr_copy_svd_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔUSVᴴtrunc..., zero(real(T))),
