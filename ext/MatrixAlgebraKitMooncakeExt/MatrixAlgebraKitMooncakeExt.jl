@@ -788,6 +788,8 @@ for (f!, f, adj) in (
         function Mooncake.rrule!!(f_df::CoDual{typeof($f!)}, A_dA::CoDual, arg_darg::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             arg, darg = A_dA === arg_darg ? (A, dA) : arrayify(arg_darg)
+
+            # don't need to copy/restore A since projections don't mutate input
             argc = copy(arg)
             arg = $f!(A, arg, Mooncake.primal(alg_dalg))
 
