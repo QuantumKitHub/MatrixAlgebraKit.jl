@@ -93,6 +93,8 @@ end
 
 include("ad_utils.jl")
 
+include("projections.jl")
+
 # Decompositions
 # --------------
 include("decompositions/qr.jl")
