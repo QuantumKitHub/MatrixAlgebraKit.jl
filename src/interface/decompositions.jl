@@ -64,6 +64,29 @@ of `R` are non-negative.
 @algdef LAPACK_HouseholderQL
 @algdef LAPACK_HouseholderRQ
 
+"""
+    Householder(; [driver], kwargs...)
+
+Algorithm type to denote the algorithm for computing QR, RQ, QL or LQ decompositions of a matrix using Householder reflectors.
+The optional `driver` symbol can be used to choose between different implementations of this algorithm.
+
+### Keyword arguments
+
+- `positive::Bool = true` : Fix the gauge of the resulting factors by making the diagonal elements of `L` or `R` non-negative.
+- `pivoted::Bool = false` : Use column- or row-pivoting for low-rank input matrices.
+- `blocksize::Int` : Use a blocked version of the algorithm if `blocksize > 1`.
+
+Depending on the driver, various other keywords may be (un)available to customize the implementation.
+"""
+struct Householder{D <: Driver, KW} <: AbstractAlgorithm
+    driver::D
+    kwargs::KW
+end
+Householder(driver::Driver = DefaultDriver(); kwargs...) = Householder(driver, kwargs)
+
+default_householder_driver(A) = Native()
+default_householder_driver(::YALAPACK.MaybeBlasMat) = LAPACK()
+
 # General Eigenvalue Decomposition
 # -------------------------------
 """
