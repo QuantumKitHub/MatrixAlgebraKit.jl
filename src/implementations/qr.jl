@@ -86,75 +86,30 @@ for f! in (:qr_full!, :qr_compact!)
     end
 end
 
-# Implementation
-# --------------
-# actual implementation
-function qr_full!(A::AbstractMatrix, QR, alg::Householder)
+# ==========================
+#      IMPLEMENTATIONS
+# ==========================
+
+# Householder
+# -----------
+function qr_full!(A, QR, alg::Householder)
     check_input(qr_full!, A, QR, alg)
-    Q, R = QR
-    driver = get(alg.kwargs, :driver, default_householder_driver(A))
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:driver,)})
-    householder_qr!(driver, A, Q, R; alg_kwargs...)
-    return Q, R
+    return householder_qr!(alg.driver, A, QR...; alg.kwargs...)
 end
-function qr_compact!(A::AbstractMatrix, QR, alg::Householder)
+function qr_compact!(A, QR, alg::Householder)
     check_input(qr_compact!, A, QR, alg)
-    Q, R = QR
-    driver = get(alg.kwargs, :driver, default_householder_driver(A))
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:driver,)})
-    householder_qr!(driver, A, Q, R; alg_kwargs...)
-    return Q, R
+    return householder_qr!(alg.driver, A, QR...; alg.kwargs...)
 end
-function qr_null!(A::AbstractMatrix, N, alg::Householder)
+function qr_null!(A, N, alg::Householder)
     check_input(qr_null!, A, N, alg)
-    driver = get(alg.kwargs, :driver, LAPACK())
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:driver,)})
-    householder_qr_null!(A, N; alg_kwargs...)
-    return N
+    return householder_qr_null!(alg.driver, A, N; alg.kwargs...)
 end
 
-function qr_full!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
-    check_input(qr_full!, A, QR, alg)
-    Q, R = QR
-    _lapack_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
-end
-function qr_compact!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
-    check_input(qr_compact!, A, QR, alg)
-    Q, R = QR
-    _lapack_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
-end
-function qr_null!(A::AbstractMatrix, N, alg::LAPACK_HouseholderQR)
-    check_input(qr_null!, A, N, alg)
-    _lapack_qr_null!(A, N; alg.kwargs...)
-    return N
-end
+householder_qr!(::DefaultDriver, A, Q, R; kwargs...) =
+    householder_qr!(default_householder_driver(A), A, Q, R; kwargs...)
+householder_qr_null!(::DefaultDriver, A, N; kwargs...) =
+    householder_qr_null!(default_householder_driver(A), A, N; kwargs...)
 
-function qr_full!(A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
-    check_input(qr_full!, A, QR, alg)
-    Q, R = QR
-    _diagonal_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
-end
-function qr_compact!(A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
-    check_input(qr_compact!, A, QR, alg)
-    Q, R = QR
-    _diagonal_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
-end
-function qr_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
-    check_input(qr_null!, A, N, alg)
-    _diagonal_qr_null!(A, N; alg.kwargs...)
-    return N
-end
-
-# LAPACK logic
-# ------------
-Base.@deprecate(
-    _lapack_qr!(A, Q, R; kwargs...),
-    householder_qr!(LAPACK(), A, Q, R; kwargs...)
-)
 function householder_qr!(
         ::LAPACK, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive = true, pivoted = false,
@@ -220,91 +175,6 @@ function householder_qr!(
     end
     return Q, R
 end
-
-Base.@deprecate(
-    _lapack_qr_null!(A, N; kwargs...),
-    householder_qr_null!(LAPACK(), A, N, kwargs...)
-)
-function householder_qr_null!(
-        ::LAPACK, A::AbstractMatrix, N::AbstractMatrix;
-        positive = true, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
-    )
-    m, n = size(A)
-    minmn = min(m, n)
-    fill!(N, zero(eltype(N)))
-    one!(view(N, (minmn + 1):m, 1:(m - minmn)))
-    if blocksize > 1
-        nb = min(minmn, blocksize)
-        A, T = YALAPACK.geqrt!(A, similar(A, nb, minmn))
-        N = YALAPACK.gemqrt!('L', 'N', A, T, N)
-    else
-        A, τ = YALAPACK.geqrf!(A)
-        N = YALAPACK.unmqr!('L', 'N', A, τ, N)
-    end
-    return N
-end
-
-# Diagonal logic
-# --------------
-function _diagonal_qr!(
-        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive::Bool = true
-    )
-    # note: Ad and Qd might share memory here so order of operations is important
-    Ad = diagview(A)
-    Qd = diagview(Q)
-    Rd = diagview(R)
-    if positive
-        @. Rd = abs(Ad)
-        @. Qd = sign_safe(Ad)
-    else
-        Rd .= Ad
-        one!(Q)
-    end
-    return Q, R
-end
-
-_diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool = true) = N
-
-# GPU logic
-# --------------
-# placed here to avoid code duplication since much of the logic is replicable across CUDA and AMDGPU
-function MatrixAlgebraKit.qr_full!(
-        A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
-    )
-    check_input(qr_full!, A, QR, alg)
-    Q, R = QR
-    _gpu_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
-end
-function MatrixAlgebraKit.qr_compact!(
-        A::AbstractMatrix, QR, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
-    )
-    check_input(qr_compact!, A, QR, alg)
-    Q, R = QR
-    _gpu_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
-end
-function MatrixAlgebraKit.qr_null!(
-        A::AbstractMatrix, N, alg::Union{CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
-    )
-    check_input(qr_null!, A, N, alg)
-    _gpu_qr_null!(A, N; alg.kwargs...)
-    return N
-end
-
-_gpu_geqrf!(A::AbstractMatrix) = throw(MethodError(_gpu_geqrf!, (A,)))
-_gpu_ungqr!(A::AbstractMatrix, τ::AbstractVector) = throw(MethodError(_gpu_ungqr!, (A, τ)))
-function _gpu_unmqr!(
-        side::AbstractChar, trans::AbstractChar, A::AbstractMatrix, τ::AbstractVector, C
-    )
-    throw(MethodError(_gpu_unmqr!, (side, trans, A, τ, C)))
-end
-
-Base.@deprecate(
-    _gpu_qr!(A, Q, R; kwargs...),
-    householder_qr!(default_householder_driver(A), A, Q, R; kwargs...)
-)
-
 function householder_qr!(
         driver::Union{CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive = true, blocksize = 1, pivoted = false
@@ -346,11 +216,60 @@ function householder_qr!(
     end
     return Q, R
 end
+function householder_qr!(
+        ::Native, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+        positive::Bool = true # always true regardless of setting
+    )
+    m, n = size(A)
+    minmn = min(m, n)
+    @inbounds for j in 1:minmn
+        for i in 1:(j - 1)
+            R[i, j] = A[i, j]
+        end
+        β, v, R[j, j] = _householder!(view(A, j:m, j), 1)
+        for i in (j + 1):size(R, 1)
+            R[i, j] = 0
+        end
+        H = HouseholderReflection(β, v, j:m)
+        lmul!(H, A; cols = (j + 1):n)
+        # A[j,j] == 1; store β instead
+        A[j, j] = β
+    end
+    # copy remaining columns if m < n
+    @inbounds for j in (minmn + 1):n
+        for i in 1:size(R, 1)
+            R[i, j] = A[i, j]
+        end
+    end
+    # build Q
+    one!(Q)
+    @inbounds for j in minmn:-1:1
+        β = A[j, j]
+        A[j, j] = 1
+        Hᴴ = HouseholderReflection(conj(β), view(A, j:m, j), j:m)
+        lmul!(Hᴴ, Q)
+    end
+    return Q, R
+end
 
-Base.@deprecate(
-    _gpu_qr_null!(A, N; kwargs...),
-    householder_qr_null!(default_householder_driver(A), A, N; kwargs...)
-)
+function householder_qr_null!(
+        ::LAPACK, A::AbstractMatrix, N::AbstractMatrix;
+        positive = true, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
+    )
+    m, n = size(A)
+    minmn = min(m, n)
+    fill!(N, zero(eltype(N)))
+    one!(view(N, (minmn + 1):m, 1:(m - minmn)))
+    if blocksize > 1
+        nb = min(minmn, blocksize)
+        A, T = YALAPACK.geqrt!(A, similar(A, nb, minmn))
+        N = YALAPACK.gemqrt!('L', 'N', A, T, N)
+    else
+        A, τ = YALAPACK.geqrf!(A)
+        N = YALAPACK.unmqr!('L', 'N', A, τ, N)
+    end
+    return N
+end
 function householder_qr_null!(
         driver::Union{CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
         positive = true, blocksize = 1, pivoted = false
@@ -367,75 +286,6 @@ function householder_qr_null!(
     N = _gpu_unmqr!('L', 'N', A, τ, N)
     return N
 end
-
-# Native logic
-# --------------
-function qr_full!(A::AbstractMatrix, QR, alg::Native_HouseholderQR)
-    check_input(qr_full!, A, QR, alg)
-    Q, R = QR
-    A === Q &&
-        throw(ArgumentError("inplace Q not supported with native QR implementation"))
-    _native_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
-end
-function qr_compact!(A::AbstractMatrix, QR, alg::Native_HouseholderQR)
-    check_input(qr_compact!, A, QR, alg)
-    Q, R = QR
-    A === Q &&
-        throw(ArgumentError("inplace Q not supported with native QR implementation"))
-    _native_qr!(A, Q, R; alg.kwargs...)
-    return Q, R
-end
-function qr_null!(A::AbstractMatrix, N, alg::Native_HouseholderQR)
-    check_input(qr_null!, A, N, alg)
-    _native_qr_null!(A, N; alg.kwargs...)
-    return N
-end
-
-Base.@deprecate(
-    _native_qr!(A, Q, R; kwargs...),
-    householder_qr!(Native(), A, Q, R; kwargs...)
-)
-function householder_qr!(
-        ::Native, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-        positive::Bool = true # always true regardless of setting
-    )
-    m, n = size(A)
-    minmn = min(m, n)
-    @inbounds for j in 1:minmn
-        for i in 1:(j - 1)
-            R[i, j] = A[i, j]
-        end
-        β, v, R[j, j] = _householder!(view(A, j:m, j), 1)
-        for i in (j + 1):size(R, 1)
-            R[i, j] = 0
-        end
-        H = Householder(β, v, j:m)
-        lmul!(H, A; cols = (j + 1):n)
-        # A[j,j] == 1; store β instead
-        A[j, j] = β
-    end
-    # copy remaining columns if m < n
-    @inbounds for j in (minmn + 1):n
-        for i in 1:size(R, 1)
-            R[i, j] = A[i, j]
-        end
-    end
-    # build Q
-    one!(Q)
-    @inbounds for j in minmn:-1:1
-        β = A[j, j]
-        A[j, j] = 1
-        Hᴴ = Householder(conj(β), view(A, j:m, j), j:m)
-        lmul!(Hᴴ, Q)
-    end
-    return Q, R
-end
-
-Base.@deprecate(
-    _native_qr_null!(A, N; kwargs...),
-    householder_qr_null!(Native(), A, N; kwargs...)
-)
 function householder_qr_null!(
         ::Native, A::AbstractMatrix, N::AbstractMatrix; positive::Bool = true
     )
@@ -443,7 +293,7 @@ function householder_qr_null!(
     minmn = min(m, n)
     @inbounds for j in 1:minmn
         β, v, ν = _householder!(view(A, j:m, j), 1)
-        H = Householder(β, v, j:m)
+        H = HouseholderReflection(β, v, j:m)
         lmul!(H, A; cols = (j + 1):n)
         # A[j,j] == 1; store β instead
         A[j, j] = β
@@ -454,8 +304,75 @@ function householder_qr_null!(
     @inbounds for j in minmn:-1:1
         β = A[j, j]
         A[j, j] = 1
-        Hᴴ = Householder(conj(β), view(A, j:m, j), j:m)
+        Hᴴ = HouseholderReflection(conj(β), view(A, j:m, j), j:m)
         lmul!(Hᴴ, N)
     end
     return N
+end
+
+# Utility for sharing GPU implementations
+_gpu_geqrf!(A::AbstractMatrix) =
+    throw(MethodError(_gpu_geqrf!, (A,)))
+_gpu_ungqr!(A::AbstractMatrix, τ::AbstractVector) =
+    throw(MethodError(_gpu_ungqr!, (A, τ)))
+_gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix, τ::AbstractVector, C) =
+    throw(MethodError(_gpu_unmqr!, (side, trans, A, τ, C)))
+
+# Diagonal
+# --------
+function qr_full!(A, QR, alg::DiagonalAlgorithm)
+    check_input(qr_full!, A, QR, alg)
+    Q, R = QR
+    _diagonal_qr!(A, Q, R; alg.kwargs...)
+    return Q, R
+end
+function qr_compact!(A, QR, alg::DiagonalAlgorithm)
+    check_input(qr_compact!, A, QR, alg)
+    Q, R = QR
+    _diagonal_qr!(A, Q, R; alg.kwargs...)
+    return Q, R
+end
+function qr_null!(A, N, alg::DiagonalAlgorithm)
+    check_input(qr_null!, A, N, alg)
+    _diagonal_qr_null!(A, N; alg.kwargs...)
+    return N
+end
+
+function _diagonal_qr!(
+        A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive::Bool = true
+    )
+    # note: Ad and Qd might share memory here so order of operations is important
+    Ad = diagview(A)
+    Qd = diagview(Q)
+    Rd = diagview(R)
+    if positive
+        @. Rd = abs(Ad)
+        @. Qd = sign_safe(Ad)
+    else
+        Rd .= Ad
+        one!(Q)
+    end
+    return Q, R
+end
+
+_diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool = true) = N
+
+# Deprecations
+# ------------
+for drivertype in (:LAPACK, :CUSOLVER, :ROCSOLVER, :Native)
+    algtype = Symbol(drivertype, :_HouseholderQR)
+    @eval begin
+        Base.@deprecate(
+            qr_full!(A, QR, alg::$algtype),
+            qr_full!(A, QR, Householder($drivertype(), alg.kwargs))
+        )
+        Base.@deprecate(
+            qr_compact!(A, QR, alg::$algtype),
+            qr_compact!(A, QR, Householder($drivertype(), alg.kwargs))
+        )
+        Base.@deprecate(
+            qr_null!(A, N, alg::$algtype),
+            qr_null!(A, N, Householder($drivertype(), alg.kwargs))
+        )
+    end
 end
