@@ -69,18 +69,13 @@ See also [`lq_full(!)`](@ref lq_full) and [`lq_compact(!)`](@ref lq_compact).
 # Algorithm selection
 # -------------------
 default_qr_algorithm(A; kwargs...) = default_qr_algorithm(typeof(A); kwargs...)
-function default_qr_algorithm(T::Type; kwargs...)
+
+default_qr_algorithm(T::Type; kwargs...) =
     throw(MethodError(default_qr_algorithm, (T,)))
-end
-function default_qr_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix}
-    return Native_HouseholderQR(; kwargs...)
-end
-function default_qr_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
-    return LAPACK_HouseholderQR(; kwargs...)
-end
-function default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
-    return DiagonalAlgorithm(; kwargs...)
-end
+default_qr_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix} =
+    Householder(; kwargs...)
+default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
+    DiagonalAlgorithm(; kwargs...)
 
 for f in (:qr_full!, :qr_compact!, :qr_null!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
