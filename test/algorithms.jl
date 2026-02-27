@@ -2,7 +2,7 @@ using MatrixAlgebraKit
 using Test
 using TestExtras
 using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
-    default_algorithm, select_algorithm
+    default_algorithm, select_algorithm, Householder
 
 @testset "default_algorithm" begin
     A = randn(3, 3)
@@ -17,21 +17,21 @@ using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
             LAPACK_MultipleRelativelyRobustRepresentations()
     end
     for f in (lq_full!, lq_full, lq_compact!, lq_compact, lq_null!, lq_null)
-        @test @constinferred(default_algorithm(f, A)) == LAPACK_HouseholderLQ()
+        @test @constinferred(default_algorithm(f, A)) == Householder()
     end
     for f in (left_polar!, left_polar, right_polar!, right_polar)
         @test @constinferred(default_algorithm(f, A)) ==
             PolarViaSVD(LAPACK_DivideAndConquer())
     end
     for f in (qr_full!, qr_full, qr_compact!, qr_compact, qr_null!, qr_null)
-        @test @constinferred(default_algorithm(f, A)) == LAPACK_HouseholderQR()
+        @test @constinferred(default_algorithm(f, A)) == Householder()
     end
     for f in (schur_full!, schur_full, schur_vals!, schur_vals)
         @test @constinferred(default_algorithm(f, A)) === LAPACK_Expert()
     end
 
-    @test @constinferred(default_algorithm(qr_compact!, A; blocksize = 2)) ===
-        LAPACK_HouseholderQR(; blocksize = 2)
+    @test @constinferred(default_algorithm(qr_compact!, A; blocksize = 2)) ==
+        Householder(; blocksize = 2)
 end
 
 @testset "select_algorithm" begin
