@@ -17,5 +17,10 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
         atol = rtol = m * n * TestSuite.precision(T)
         m >= n && TestSuite.test_mooncake_left_polar(T, (m, n); atol, rtol)
         n >= m && TestSuite.test_mooncake_right_polar(T, (m, n); atol, rtol)
+        if m == n
+            AT = Diagonal{T, Vector{T}}
+            TestSuite.test_mooncake_left_polar(AT, m; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+            TestSuite.test_mooncake_right_polar(AT, m; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        end
     end
 end
