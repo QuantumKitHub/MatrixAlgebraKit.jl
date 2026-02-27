@@ -1,8 +1,7 @@
 module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, one!, default_fixgauge
-using MatrixAlgebraKit: left_orth_alg
+using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, one!, zero!, default_fixgauge
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
@@ -57,38 +56,25 @@ function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix, D, ::GLA_QRIteration)
     return eigvals!(Hermitian(A); sortby = real)
 end
 
-function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}}}
-    return GLA_HouseholderQR(; kwargs...)
-end
-
-function MatrixAlgebraKit.qr_full!(A::AbstractMatrix, QR, alg::GLA_HouseholderQR)
-    check_input(qr_full!, A, QR, alg)
-    Q, R = QR
-    return _gla_householder_qr!(A, Q, R; alg.kwargs...)
-end
-
-function MatrixAlgebraKit.qr_compact!(A::AbstractMatrix, QR, alg::GLA_HouseholderQR)
-    check_input(qr_compact!, A, QR, alg)
-    Q, R = QR
-    return _gla_householder_qr!(A, Q, R; alg.kwargs...)
-end
-
-function MatrixAlgebraKit.qr_null!(A::AbstractMatrix, N, alg::GLA_HouseholderQR)
-    check_input(qr_null!, A, N, alg)
-    return _gla_householder_qr_null!(A, N; alg.kwargs...)
-end
-
-function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = true, blocksize = 1, pivoted = false)
-    pivoted && throw(ArgumentError("Only pivoted = false implemented for GLA_HouseholderQR."))
-    (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for GLA_HouseholderQR."))
+function MatrixAlgebraKit.householder_qr!(
+        driver::MatrixAlgebraKit.GLA, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+    )
+    blocksize == 1 ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
+    pivoted &&
+        throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
 
     m, n = size(A)
-    k = min(m, n)
+    minmn = min(m, n)
+    computeR = length(R) > 0
+
+    # compute QR
     Q̃, R̃ = qr!(A)
     lmul!(Q̃, MatrixAlgebraKit.one!(Q))
 
     if positive
-        @inbounds for j in 1:k
+        @inbounds for j in 1:minmn
             s = sign_safe(R̃[j, j])
             @simd for i in 1:m
                 Q[i, j] *= s
@@ -96,42 +82,39 @@ function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = true, blocksiz
         end
     end
 
-    computeR = length(R) > 0
     if computeR
         if positive
             @inbounds for j in n:-1:1
-                @simd for i in 1:min(k, j)
+                @simd for i in 1:min(minmn, j)
                     R[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
                 end
-                @simd for i in (min(k, j) + 1):size(R, 1)
+                @simd for i in (min(minmn, j) + 1):size(R, 1)
                     R[i, j] = zero(eltype(R))
                 end
             end
         else
-            R[1:k, :] .= R̃
-            MatrixAlgebraKit.zero!(@view(R[(k + 1):end, :]))
+            R[1:minmn, :] .= R̃
+            MatrixAlgebraKit.zero!(@view(R[(minmn + 1):end, :]))
         end
     end
     return Q, R
 end
 
-function _gla_householder_qr_null!(
-        A::AbstractMatrix, N::AbstractMatrix;
-        positive = true, blocksize = 1, pivoted = false
+function MatrixAlgebraKit.householder_qr_null!(
+        driver::MatrixAlgebraKit.GLA, A::AbstractMatrix, N::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
     )
-    pivoted && throw(ArgumentError("Only pivoted = false implemented for GLA_HouseholderQR."))
-    (blocksize == 1) || throw(ArgumentError("Only blocksize = 1 implemented for GLA_HouseholderQR."))
+    blocksize == 1 ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
+    pivoted &&
+        throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
+
     m, n = size(A)
     minmn = min(m, n)
-    fill!(N, zero(eltype(N)))
+    zero!(N)
     one!(view(N, (minmn + 1):m, 1:(m - minmn)))
     Q̃, = qr!(A)
-    lmul!(Q̃, N)
-    return N
-end
-
-function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}}}
-    return MatrixAlgebraKit.LQViaTransposedQR(GLA_HouseholderQR(; kwargs...))
+    return lmul!(Q̃, N)
 end
 
 MatrixAlgebraKit.left_orth_alg(alg::GLA_HouseholderQR) = MatrixAlgebraKit.LeftOrthViaQR(alg)
