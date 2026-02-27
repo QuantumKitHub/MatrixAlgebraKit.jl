@@ -15,5 +15,7 @@ for T in (BLASFloats..., GenericFloats...)
     TestSuite.seed_rng!(123)
     if !is_buildkite
         TestSuite.test_mooncake_eigh(T, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
+        AT = Diagonal{T, Vector{T}}
+        TestSuite.test_mooncake_eigh(AT, m; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
     end
 end
