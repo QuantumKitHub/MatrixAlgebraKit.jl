@@ -143,6 +143,59 @@ If this is not possible, for example when the output size is not known a priori 
 this function may return `nothing`.
 """ initialize_output
 
+
+# Drivers
+# -------
+"""
+    abstract type Driver
+
+Supertype used for customizing various implementations of the same algorithm.
+"""
+abstract type Driver end
+
+"""
+    DefaultDriver <: Driver
+
+Select a default driver at runtime, based on the input matrix.
+"""
+struct DefaultDriver <: Driver end
+
+"""
+    LAPACK <: Driver
+
+Driver to select LAPACK as the implementation strategy.
+"""
+struct LAPACK <: Driver end
+
+"""
+    CUSOLVER <: Driver
+
+Driver to select CUSOLVER as the implementation strategy.
+"""
+struct CUSOLVER <: Driver end
+
+"""
+    ROCSOLVER <: Driver
+
+Driver to select ROCSOLVER as the implementation strategy.
+"""
+struct ROCSOLVER <: Driver end
+
+"""
+    GLA <: Driver
+
+Driver to select GenericLinearAlgebra.jl as the implementation strategy.
+"""
+struct GLA <: Driver end
+
+"""
+    Native <: Driver
+
+Driver to select a native implementation in MatrixAlgebraKit as the implementation strategy.
+"""
+struct Native <: Driver end
+
+
 # Truncation strategy
 # -------------------
 """
