@@ -146,7 +146,7 @@ function test_enzyme_qr(
                 m, n = size(A)
                 r = min(m, n) - 5
                 Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-                QR, ΔQR = ad_qr_rank_deficient_compact_setup(Ard)
+                QR, ΔQR = ad_qr_compact_setup(Ard)
                 eltype(T) <: BlasFloat && test_reverse(qr_compact, RT, (Ard, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
                 is_cpu(A) && enz_test_pullbacks_match(rng, qr_compact!, qr_compact, Ard, QR, ΔQR, alg)
             end
@@ -190,7 +190,7 @@ function test_enzyme_lq(
                 m, n = size(A)
                 r = min(m, n) - 5
                 Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-                LQ, ΔLQ = ad_lq_rank_deficient_compact_setup(Ard)
+                LQ, ΔLQ = ad_lq_compact_setup(Ard)
                 eltype(T) <: BlasFloat && test_reverse(lq_compact, RT, (Ard, TA), (alg, Const); atol, rtol, output_tangent = ΔLQ, fdm)
                 is_cpu(A) && enz_test_pullbacks_match(rng, lq_compact!, lq_compact, Ard, LQ, ΔLQ, alg)
             end
