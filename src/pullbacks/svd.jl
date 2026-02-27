@@ -1,4 +1,4 @@
-svd_rank(S, rank_atol) = searchsortedlast(S, rank_atol; rev = true)
+svd_rank(S; rank_atol = default_pullback_rank_atol(S)) = searchsortedlast(S, rank_atol; rev = true)
 
 function check_svd_cotangents(aUΔU, Sr, aVΔV; degeneracy_atol = default_pullback_rank_atol(Sr), gauge_atol = default_pullback_gauge_atol(aUΔU, aVΔV))
     mask = abs.(Sr' .- Sr) .< degeneracy_atol
@@ -43,7 +43,7 @@ function svd_pullback!(
     minmn = min(m, n)
     S = diagview(Smat)
     length(S) == minmn || throw(DimensionMismatch("length of S ($(length(S))) does not matrix minimum dimension of U, Vᴴ ($minmn)"))
-    r = svd_rank(S, rank_atol)
+    r = svd_rank(S; rank_atol)
     Ur = view(U, :, 1:r)
     Vᴴr = view(Vᴴ, 1:r, :)
     Sr = view(S, 1:r)
