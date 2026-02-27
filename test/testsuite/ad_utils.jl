@@ -1,4 +1,22 @@
 """
+    remove_svd_gauge_dependence!(ΔV, D, V)
+
+Remove the gauge-dependent part from the cotangents `ΔU` and ΔVᴴ` of the singular vector matrices `U`
+and `Vᴴ`. The singular vectors are only determined up to complex phase (and unitary mixing for degenerate
+eigenvalues), so the corresponding components of `ΔU` and `ΔVᴴ` are projected out.
+"""
+function remove_svd_gauge_dependence!(
+        ΔU, ΔVᴴ, U, S, Vᴴ;
+        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(S)
+    )
+    gaugepart = mul!(U' * ΔU, Vᴴ, ΔVᴴ', true, true)
+    gaugepart = project_antihermitian!(gaugepart)
+    gaugepart[abs.(transpose(diagview(S)) .- diagview(S)) .>= degeneracy_atol] .= 0
+    mul!(ΔU, U, gaugepart, -1, 1)
+    return ΔU, ΔVᴴ
+end
+
+"""
     remove_eig_gauge_dependence!(ΔV, D, V)
 
 Remove the gauge-dependent part from the cotangent `ΔV` of the eigenvector matrix `V`. The
@@ -163,6 +181,8 @@ function call_and_zero!(f!, A, alg)
     return F′
 end
 
+is_cpu(A) = typeof(parent(A)) <: Array
+
 """
     eigh_wrapper(f, A, alg)
 
@@ -234,6 +254,11 @@ function ad_qr_compact_setup(A::Diagonal)
 end
 
 function ad_qr_null_setup(A)
+    m, n = size(A)
+    minmn = min(m, n)
+    Q, R = qr_compact(A)
+    T = eltype(A)
+    ΔN = Q * randn!(similar(A, T, minmn, max(0, m - minmn)))
     N = qr_null(A)
     ΔN = randn!(copy(N))
     remove_qr_null_gauge_dependence!(ΔN, A, N)
@@ -246,7 +271,6 @@ function ad_qr_full_setup(A)
     remove_qr_gauge_dependence!(ΔQR..., A, QR...)
     return QR, ΔQR
 end
-
 ad_qr_full_setup(A::Diagonal) = ad_qr_compact_setup(A)
 
 function ad_qr_rank_deficient_compact_setup(A)
@@ -516,8 +540,8 @@ end
 function ad_left_null_setup(A)
     m, n = size(A)
     T = eltype(A)
-    N = left_orth(A; alg = :qr)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
-    ΔN = left_orth(A; alg = :qr)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
+    N = left_orth(A)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
+    ΔN = left_orth(A)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
     return N, ΔN
 end
 
@@ -533,7 +557,7 @@ ad_right_orth_setup(A::Diagonal) = ad_left_orth_setup(A)
 function ad_right_null_setup(A)
     m, n = size(A)
     T = eltype(A)
-    Nᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A; alg = :lq)[2]
-    ΔNᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A; alg = :lq)[2]
+    Nᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A)[2]
+    ΔNᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A)[2]
     return Nᴴ, ΔNᴴ
 end
