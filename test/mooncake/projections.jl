@@ -13,7 +13,9 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 m = 19
 for T in (BLASFloats..., GenericFloats...)
     TestSuite.seed_rng!(123)
+    atol = rtol = m * m * TestSuite.precision(T)
     if !is_buildkite
-        TestSuite.test_mooncake_projections(T, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
+        TestSuite.test_mooncake_projections(T, (m, m); atol, rtol)
+        TestSuite.test_mooncake_projections(Diagonal{T, Vector{T}}, (m, m); atol, rtol)
     end
 end
