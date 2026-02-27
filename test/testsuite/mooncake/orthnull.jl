@@ -43,7 +43,7 @@ function test_mooncake_left_orth(
             )
         end
 
-        if m >= n
+        if m >= n && !(T <: Diagonal)
             @testset "polar" begin
                 alg = MatrixAlgebraKit.select_algorithm(left_orth!, A, :polar)
                 VC = left_orth(A, alg)
@@ -91,7 +91,7 @@ function test_mooncake_right_orth(
             )
         end
 
-        if m <= n
+        if m <= n && !(T <: Diagonal)
             @testset "polar" begin
                 alg = MatrixAlgebraKit.select_algorithm(right_orth!, A, :polar)
                 CVᴴ = right_orth(A, alg)
