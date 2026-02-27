@@ -331,7 +331,7 @@ _diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool = true) = N
 
 # Deprecations
 # ------------
-for drivertype in (:LAPACK, :CUSOLVER, :ROCSOLVER, :Native)
+for drivertype in (:LAPACK, :CUSOLVER, :ROCSOLVER, :Native, :GLA)
     algtype = Symbol(drivertype, :_HouseholderQR)
     @eval begin
         Base.@deprecate(
