@@ -274,4 +274,22 @@ function ChainRulesCore.rrule(::typeof(right_polar!), A, PWᴴ, alg)
     return PWᴴ, right_polar_pullback
 end
 
+function ChainRulesCore.rrule(::typeof(project_hermitian), A, alg)
+    Aₕ = project_hermitian(A, alg)
+    function project_hermitian_pullback(ΔAₕ)
+        ΔA = project_hermitian(unthunk(ΔAₕ))
+        return NoTangent(), ΔA, NoTangent()
+    end
+    return Aₕ, project_hermitian_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(project_antihermitian), A, alg)
+    Aₐ = project_antihermitian(A, alg)
+    function project_antihermitian_pullback(ΔAₐ)
+        ΔA = project_antihermitian(unthunk(ΔAₐ))
+        return NoTangent(), ΔA, NoTangent()
+    end
+    return Aₐ, project_antihermitian_pullback
+end
+
 end

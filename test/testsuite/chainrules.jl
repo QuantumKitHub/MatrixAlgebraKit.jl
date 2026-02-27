@@ -46,6 +46,7 @@ function test_chainrules(T::Type, sz; kwargs...)
         test_chainrules_svd(T, sz; kwargs...)
         test_chainrules_polar(T, sz; kwargs...)
         test_chainrules_orthnull(T, sz; kwargs...)
+        test_chainrules_projections(T, sz; kwargs...)
     end
 end
 
@@ -585,5 +586,27 @@ function test_chainrules_orthnull(
             fkwargs = (; alg = :lq), output_tangent = ΔNᴴ,
             atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
+    end
+end
+
+function test_chainrules_projections(
+        T::Type, sz;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "Projections Chainrules AD rules $summary_str" begin
+        A = instantiate_matrix(T, sz)
+        m, n = size(A)
+        if m == n
+            @testset "project_hermitian" begin
+                alg = MatrixAlgebraKit.default_hermitian_algorithm(A)
+                test_rrule(project_hermitian, A, alg; atol, rtol)
+            end
+            @testset "project_antihermitian" begin
+                alg = MatrixAlgebraKit.default_hermitian_algorithm(A)
+                test_rrule(project_antihermitian, A, alg; atol, rtol)
+            end
+        end
     end
 end
