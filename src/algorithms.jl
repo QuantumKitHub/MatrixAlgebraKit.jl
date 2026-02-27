@@ -157,7 +157,6 @@ abstract type Driver end
     DefaultDriver <: Driver
 
 Select a default driver at runtime, based on the input matrix.
-See also [`default_householder_driver`](@ref).
 """
 struct DefaultDriver <: Driver end
 
