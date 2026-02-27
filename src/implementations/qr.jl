@@ -113,6 +113,7 @@ householder_qr_null!(::DefaultDriver, A, N; kwargs...) =
 # dispatch helpers
 for f in (:geqrt!, :gemqrt!, :geqp3!, :geqrf!, :ungqr!, :unmqr!)
     @eval begin
+        $f(driver::Driver, args...) = throw(MethodError($f, (driver, args...))) # make JET not complain
         $f(::LAPACK, args...) = YALAPACK.$f(args...)
     end
 end
