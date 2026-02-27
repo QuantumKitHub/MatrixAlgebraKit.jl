@@ -15,5 +15,9 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
     TestSuite.seed_rng!(123)
     if !is_buildkite
         TestSuite.test_mooncake_svd(T, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        if m == n
+            AT = Diagonal{T, Vector{T}}
+            TestSuite.test_mooncake_svd(AT, m; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        end
     end
 end
