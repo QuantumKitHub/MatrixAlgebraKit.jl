@@ -119,8 +119,8 @@ end
 
 function householder_qr!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-        positive = true, pivoted = false,
-        blocksize = ((driver !== LAPACK() || pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
+        positive::Bool = true, pivoted::Bool = false,
+        blocksize::Int = ((driver !== LAPACK() || pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
     # error messages for disallowing driver - setting combinations
     (blocksize == 1 || driver === LAPACK()) ||
@@ -159,7 +159,6 @@ function householder_qr!(
             Q = unmqr!(driver, 'L', 'N', A, τ, one!(Q))
         end
     end
-
 
     if positive # already fix Q even if we do not need R
         if driver === LAPACK()
@@ -201,9 +200,16 @@ function householder_qr!(
     return Q, R
 end
 function householder_qr!(
-        ::Native, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-        positive::Bool = true # always true regardless of setting
+        driver::Native, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
     )
+    # error messages for disallowing driver - setting combinations
+    blocksize == 1 ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
+    pivoted &&
+        throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
+    # positive = true regardless of setting
+
     m, n = size(A)
     minmn = min(m, n)
     @inbounds for j in 1:minmn
@@ -238,8 +244,8 @@ end
 
 function householder_qr_null!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
-        positive = true, pivoted = false,
-        blocksize = ((driver !== LAPACK() || pivoted) ? 1 : YALAPACK.default_qr_blocksize(A))
+        positive::Bool = true, pivoted::Bool = false,
+        blocksize::Int = ((driver !== LAPACK() || pivoted) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
     # error messages for disallowing driver - setting combinations
     (blocksize == 1 || driver === LAPACK()) ||
@@ -265,20 +271,28 @@ function householder_qr_null!(
     return N
 end
 function householder_qr_null!(
-        ::Native, A::AbstractMatrix, N::AbstractMatrix;
-        positive::Bool = true
+        driver::Native, A::AbstractMatrix, N::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
     )
+    # error messages for disallowing driver - setting combinations
+    blocksize == 1 ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
+    pivoted &&
+        throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
+
     m, n = size(A)
     minmn = min(m, n)
+
     @inbounds for j in 1:minmn
         β, v, ν = _householder!(view(A, j:m, j), 1)
         H = HouseholderReflection(β, v, j:m)
         lmul!(H, A; cols = (j + 1):n)
-        # A[j,j] == 1; store β instead
+        # A[j, j] == 1; store β instead
         A[j, j] = β
     end
+
     # build N
-    fill!(N, zero(eltype(N)))
+    zero!(N)
     one!(view(N, (minmn + 1):m, 1:(m - minmn)))
     @inbounds for j in minmn:-1:1
         β = A[j, j]
