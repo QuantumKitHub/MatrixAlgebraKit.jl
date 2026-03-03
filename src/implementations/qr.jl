@@ -94,21 +94,17 @@ end
 # -----------
 function qr_full!(A, QR, alg::Householder)
     check_input(qr_full!, A, QR, alg)
-    return householder_qr!(alg.driver, A, QR...; alg.kwargs...)
+    return householder_qr!(A, QR...; alg.kwargs...)
 end
 function qr_compact!(A, QR, alg::Householder)
     check_input(qr_compact!, A, QR, alg)
-    return householder_qr!(alg.driver, A, QR...; alg.kwargs...)
+    return householder_qr!(A, QR...; alg.kwargs...)
 end
 function qr_null!(A, N, alg::Householder)
     check_input(qr_null!, A, N, alg)
-    return householder_qr_null!(alg.driver, A, N; alg.kwargs...)
+    return householder_qr_null!(A, N; alg.kwargs...)
 end
 
-householder_qr!(::DefaultDriver, A, Q, R; kwargs...) =
-    householder_qr!(default_householder_driver(A), A, Q, R; kwargs...)
-householder_qr_null!(::DefaultDriver, A, N; kwargs...) =
-    householder_qr_null!(default_householder_driver(A), A, N; kwargs...)
 
 # dispatch helpers
 for f in (:geqrt!, :gemqrt!, :geqp3!, :geqrf!, :ungqr!, :unmqr!)
@@ -118,6 +114,10 @@ for f in (:geqrt!, :gemqrt!, :geqp3!, :geqrf!, :ungqr!, :unmqr!)
     end
 end
 
+@inline householder_qr!(A, Q, R; driver::Driver = DefaultDriver(), kwargs...) =
+    householder_qr!(driver, A, Q, R; kwargs...)
+householder_qr!(::DefaultDriver, A, Q, R; kwargs...) =
+    householder_qr!(default_householder_driver(A), A, Q, R; kwargs...)
 function householder_qr!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false,
@@ -243,6 +243,10 @@ function householder_qr!(
     return Q, R
 end
 
+@inline householder_qr_null!(A, N; driver::Driver = DefaultDriver(), kwargs...) =
+    householder_qr_null!(driver, A, N; kwargs...)
+householder_qr_null!(::DefaultDriver, A, N; kwargs...) =
+    householder_qr_null!(default_householder_driver(A), A, N; kwargs...)
 function householder_qr_null!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false,
@@ -351,15 +355,15 @@ for drivertype in (:LAPACK, :CUSOLVER, :ROCSOLVER, :Native, :GLA)
     @eval begin
         Base.@deprecate(
             qr_full!(A, QR, alg::$algtype),
-            qr_full!(A, QR, Householder($drivertype(), alg.kwargs))
+            qr_full!(A, QR, Householder(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
             qr_compact!(A, QR, alg::$algtype),
-            qr_compact!(A, QR, Householder($drivertype(), alg.kwargs))
+            qr_compact!(A, QR, Householder(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
             qr_null!(A, N, alg::$algtype),
-            qr_null!(A, N, Householder($drivertype(), alg.kwargs))
+            qr_null!(A, N, Householder(; driver = $drivertype(), alg.kwargs...))
         )
     end
 end

@@ -94,21 +94,16 @@ end
 # -----------
 function lq_full!(A, LQ, alg::Householder)
     check_input(lq_full!, A, LQ, alg)
-    return householder_lq!(alg.driver, A, LQ...; alg.kwargs...)
+    return householder_lq!(A, LQ...; alg.kwargs...)
 end
 function lq_compact!(A, LQ, alg::Householder)
     check_input(lq_compact!, A, LQ, alg)
-    return householder_lq!(alg.driver, A, LQ...; alg.kwargs...)
+    return householder_lq!(A, LQ...; alg.kwargs...)
 end
 function lq_null!(A, Nᴴ, alg::Householder)
     check_input(lq_null!, A, Nᴴ, alg)
-    return householder_lq_null!(alg.driver, A, Nᴴ; alg.kwargs...)
+    return householder_lq_null!(A, Nᴴ; alg.kwargs...)
 end
-
-householder_lq!(::DefaultDriver, A, L, Q; kwargs...) =
-    householder_lq!(default_householder_driver(A), A, L, Q; kwargs...)
-householder_lq_null!(::DefaultDriver, A, Nᴴ; kwargs...) =
-    householder_lq_null!(default_householder_driver(A), A, Nᴴ; kwargs...)
 
 # dispatch helpers
 for f in (:gelqt!, :gemlqt!, :gelqf!, :unglq!, :unmlq!)
@@ -117,30 +112,28 @@ for f in (:gelqt!, :gemlqt!, :gelqf!, :unglq!, :unmlq!)
     end
 end
 
-function householder_lq!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, L, Q; kwargs...)
-    qr_alg = driver === GLA() ? GLA_HouseholderQR(; kwargs...) : Householder(driver; kwargs...)
-    return lq_via_qr!(A, L, Q, qr_alg)
-end
-function householder_lq_null!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, Nᴴ; kwargs...)
-    qr_alg = driver === GLA() ? GLA_HouseholderQR(; kwargs...) : Householder(driver; kwargs...)
-    return lq_null_via_qr!(A, Nᴴ, qr_alg)
-end
-
+@inline householder_lq!(A, L, Q; driver::Driver = DefaultDriver(), kwargs...) =
+    householder_lq!(driver, A, L, Q; kwargs...)
+householder_lq!(::DefaultDriver, A, L, Q; kwargs...) =
+    householder_lq!(default_householder_driver(A), A, L, Q; kwargs...)
+householder_lq!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, L, Q; kwargs...) =
+    lq_via_qr!(A, L, Q, Householder(; driver, kwargs...))
 function householder_lq!(
         driver::LAPACK, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
         positive = true, pivoted = false,
         blocksize = ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
+    # error messages for disallowing driver - setting combinations
+    pivoted && (blocksize > 1) &&
+        throw(ArgumentError(lazy"$driver does not provide a blocked pivoted LQ decomposition"))
+
     m, n = size(A)
     minmn = min(m, n)
     computeL = length(L) > 0
     inplaceQ = Q === A
 
-    pivoted && (blocksize > 1) &&
-        throw(ArgumentError(lazy"$driver does not provide a blocked pivoted LQ decomposition"))
     (inplaceQ && (computeL || positive || blocksize > 1 || n < m)) &&
         throw(ArgumentError("inplace Q only supported if matrix is wide (`m <= n`), L is not required, and using the unblocked algorithm (`blocksize = 1`) with `positive = false`"))
-
     if blocksize > 1
         mb = min(minmn, blocksize)
         if computeL # first use L as space for T
@@ -181,28 +174,17 @@ function householder_lq!(
     end
     return L, Q
 end
-function householder_lq_null!(
-        driver::LAPACK, A::AbstractMatrix, Nᴴ::AbstractMatrix;
-        positive = true, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
-    )
-    m, n = size(A)
-    minmn = min(m, n)
-    zero!(Nᴴ)
-    one!(view(Nᴴ, 1:(n - minmn), (minmn + 1):n))
-    if blocksize > 1
-        mb = min(minmn, blocksize)
-        A, T = gelqt!(driver, A, similar(A, mb, minmn))
-        Nᴴ = gemlqt!(driver, 'R', 'N', A, T, Nᴴ)
-    else
-        A, τ = gelqf!(driver, A)
-        Nᴴ = unmlq!(driver, 'R', 'N', A, τ, Nᴴ)
-    end
-    return Nᴴ
-end
 function householder_lq!(
         ::Native, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
-        positive::Bool = true # always true regardless of setting
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
     )
+    # error messages for disallowing driver - setting combinations
+    blocksize == 1 ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked LQ decomposition"))
+    pivoted &&
+        throw(ArgumentError(lazy"$driver does not provide a pivoted LQ decomposition"))
+    # positive = true regardless of setting
+
     m, n = size(A)
     minmn = min(m, n)
     @inbounds for i in 1:minmn
@@ -234,7 +216,46 @@ function householder_lq!(
     end
     return L, Q
 end
-function householder_lq_null!(::Native, A::AbstractMatrix, Nᴴ::AbstractMatrix; positive::Bool = true)
+
+@inline householder_lq_null!(A, Nᴴ; driver::Driver = DefaultDriver(), kwargs...) =
+    householder_lq_null!(driver, A, Nᴴ; kwargs...)
+householder_lq_null!(::DefaultDriver, A, Nᴴ; kwargs...) =
+    householder_lq_null!(default_householder_driver(A), A, Nᴴ; kwargs...)
+householder_lq_null!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, Nᴴ; kwargs...) =
+    lq_null_via_qr!(A, Nᴴ, Householder(; driver, kwargs...))
+function householder_lq_null!(
+        driver::LAPACK, A::AbstractMatrix, Nᴴ::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = pivoted ? 1 : YALAPACK.default_qr_blocksize(A)
+    )
+    # error messages for disallowing driver - setting combinations
+    pivoted && (blocksize > 1) &&
+        throw(ArgumentError(lazy"$driver does not provide a blocked pivoted LQ decomposition"))
+
+    m, n = size(A)
+    minmn = min(m, n)
+    zero!(Nᴴ)
+    one!(view(Nᴴ, 1:(n - minmn), (minmn + 1):n))
+
+    if blocksize > 1
+        mb = min(minmn, blocksize)
+        A, T = gelqt!(driver, A, similar(A, mb, minmn))
+        Nᴴ = gemlqt!(driver, 'R', 'N', A, T, Nᴴ)
+    else
+        A, τ = gelqf!(driver, A)
+        Nᴴ = unmlq!(driver, 'R', 'N', A, τ, Nᴴ)
+    end
+    return Nᴴ
+end
+function householder_lq_null!(
+        ::Native, A::AbstractMatrix, Nᴴ::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+    )
+    # error messages for disallowing driver - setting combinations
+    blocksize == 1 ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked LQ decomposition"))
+    pivoted &&
+        throw(ArgumentError(lazy"$driver does not provide a pivoted LQ decomposition"))
+
     m, n = size(A)
     minmn = min(m, n)
     @inbounds for i in 1:minmn
@@ -280,11 +301,10 @@ end
 function lq_via_qr!(
         A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix, qr_alg::AbstractAlgorithm
     )
-    m, n = size(A)
-    minmn = min(m, n)
     At = adjoint!(similar(A'), A)::AbstractMatrix
     Qt = (A === Q) ? At : similar(Q')
     Lt = similar(L')
+    n = size(A, 2)
     if size(Q) == (n, n)
         Qt, Lt = qr_full!(At, (Qt, Lt), qr_alg)
     else
@@ -296,8 +316,6 @@ function lq_via_qr!(
 end
 
 function lq_null_via_qr!(A::AbstractMatrix, N::AbstractMatrix, qr_alg::AbstractAlgorithm)
-    m, n = size(A)
-    minmn = min(m, n)
     At = adjoint!(similar(A'), A)::AbstractMatrix
     Nt = similar(N')
     Nt = qr_null!(At, Nt, qr_alg)
@@ -351,15 +369,15 @@ for drivertype in (:LAPACK, :Native)
     @eval begin
         Base.@deprecate(
             lq_full!(A, LQ, alg::$algtype),
-            lq_full!(A, LQ, Householder($drivertype(), alg.kwargs))
+            lq_full!(A, LQ, Householder(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
             lq_compact!(A, LQ, alg::$algtype),
-            lq_compact!(A, LQ, Householder($drivertype(), alg.kwargs))
+            lq_compact!(A, LQ, Householder(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
             lq_null!(A, Nᴴ, alg::$algtype),
-            lq_null!(A, Nᴴ, Householder($drivertype(), alg.kwargs))
+            lq_null!(A, Nᴴ, Householder(; driver = $drivertype(), alg.kwargs...))
         )
     end
 end

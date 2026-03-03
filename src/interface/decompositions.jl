@@ -78,11 +78,7 @@ The optional `driver` symbol can be used to choose between different implementat
 
 Depending on the driver, various other keywords may be (un)available to customize the implementation.
 """
-struct Householder{D <: Driver, KW} <: AbstractAlgorithm
-    driver::D
-    kwargs::KW
-end
-Householder(driver::Driver = DefaultDriver(); kwargs...) = Householder(driver, kwargs)
+@algdef Householder
 
 default_householder_driver(A) = Native()
 default_householder_driver(::YALAPACK.MaybeBlasMat) = LAPACK()
