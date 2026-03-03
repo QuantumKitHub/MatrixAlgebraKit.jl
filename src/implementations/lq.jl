@@ -175,7 +175,7 @@ function householder_lq!(
     return L, Q
 end
 function householder_lq!(
-        ::Native, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
+        driver::Native, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
     )
     # error messages for disallowing driver - setting combinations
@@ -247,7 +247,7 @@ function householder_lq_null!(
     return Nᴴ
 end
 function householder_lq_null!(
-        ::Native, A::AbstractMatrix, Nᴴ::AbstractMatrix;
+        driver::Native, A::AbstractMatrix, Nᴴ::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
     )
     # error messages for disallowing driver - setting combinations
