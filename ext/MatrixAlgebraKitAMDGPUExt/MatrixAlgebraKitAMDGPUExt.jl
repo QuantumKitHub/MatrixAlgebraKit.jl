@@ -14,13 +14,7 @@ using LinearAlgebra: BlasFloat
 
 include("yarocsolver.jl")
 
-function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
-    return ROCSOLVER_HouseholderQR(; kwargs...)
-end
-function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
-    qr_alg = ROCSOLVER_HouseholderQR(; kwargs...)
-    return LQViaTransposedQR(qr_alg)
-end
+MatrixAlgebraKit.default_householder_driver(::StridedROCMatrix{<:BlasFloat}) = ROCSOLVER()
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
     return ROCSOLVER_QRIteration(; kwargs...)
 end
