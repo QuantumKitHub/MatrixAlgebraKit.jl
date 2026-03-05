@@ -17,14 +17,14 @@ for f in
     @eval begin
         function $copy_f(input, alg)
             if $_hermitian
-                input = (input + input') / 2
+                input = project_hermitian(input)
             end
             return $f(input, alg)
         end
         function ChainRulesCore.rrule(::typeof($copy_f), input, alg)
             output = MatrixAlgebraKit.initialize_output($f!, input, alg)
             if $_hermitian
-                input = (input + input') / 2
+                input = project_hermitian(input)
             else
                 input = copy(input)
             end
@@ -113,7 +113,7 @@ function test_chainrules_qr(
             m, n = size(A)
             r = min(m, n) - 5
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            QR, ΔQR = ad_qr_rank_deficient_compact_setup(Ard)
+            QR, ΔQR = ad_qr_compact_setup(Ard)
             ΔQ, ΔR = ΔQR
             test_rrule(
                 cr_copy_qr_compact, Ard, alg ⊢ NoTangent();
@@ -190,7 +190,7 @@ function test_chainrules_lq(
             m, n = size(A)
             r = min(m, n) - 5
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            LQ, ΔLQ = ad_lq_rank_deficient_compact_setup(Ard)
+            LQ, ΔLQ = ad_lq_compact_setup(Ard)
             test_rrule(
                 cr_copy_lq_compact, Ard, alg ⊢ NoTangent();
                 output_tangent = ΔLQ, atol = atol, rtol = rtol

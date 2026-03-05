@@ -11,7 +11,7 @@ module TestSuite
 using Test
 using MatrixAlgebraKit
 using MatrixAlgebraKit: diagview
-using LinearAlgebra: Diagonal, norm, istriu, istril, I
+using LinearAlgebra: Diagonal, norm, istriu, istril, I, mul!
 using Random, StableRNGs
 using Mooncake
 using AMDGPU, CUDA
@@ -85,9 +85,9 @@ function instantiate_unitary(T, A::ROCMatrix{<:Complex}, sz)
 end
 instantiate_unitary(::Type{<:Diagonal}, A, sz) = Diagonal(fill!(similar(parent(A), eltype(A), sz), one(eltype(A))))
 
-function instantiate_rank_deficient_matrix(T, sz; trunc = trunctol(rtol = 0.5))
+function instantiate_rank_deficient_matrix(T, sz; trunc = truncrank(div(min(sz...), 2)))
     A = instantiate_matrix(T, sz)
-    V, C = left_orth!(A; trunc = trunctol(rtol = 0.5))
+    V, C = left_orth!(A; trunc)
     return mul!(A, V, C)
 end
 
