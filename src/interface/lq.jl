@@ -75,11 +75,17 @@ end
 function default_lq_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix}
     return Native_HouseholderLQ(; kwargs...)
 end
-function default_lq_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
+function default_lq_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasVecOrMat}
     return LAPACK_HouseholderLQ(; kwargs...)
 end
 function default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)
+end
+function default_lq_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A}
+    return default_lq_algorithm(A)
+end
+function default_lq_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A}
+    return default_lq_algorithm(A)
 end
 
 for f in (:lq_full!, :lq_compact!, :lq_null!)
