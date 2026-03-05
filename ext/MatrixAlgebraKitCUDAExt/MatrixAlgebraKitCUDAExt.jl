@@ -15,7 +15,7 @@ using LinearAlgebra: BlasFloat
 
 include("yacusolver.jl")
 
-MatrixAlgebraKit.default_householder_driver(::StridedCuMatrix{<:BlasFloat}) = CUSOLVER()
+MatrixAlgebraKit.default_householder_driver(::StridedCuVecOrMat{<:BlasFloat}) = CUSOLVER()
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuVecOrMat{TT}}
     return CUSOLVER_QRIteration(; kwargs...)
 end

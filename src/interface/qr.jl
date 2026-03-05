@@ -72,18 +72,14 @@ default_qr_algorithm(A; kwargs...) = default_qr_algorithm(typeof(A); kwargs...)
 
 default_qr_algorithm(T::Type; kwargs...) =
     throw(MethodError(default_qr_algorithm, (T,)))
-end
 default_qr_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix} =
     Householder(; kwargs...)
-function default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
-    return DiagonalAlgorithm(; kwargs...)
-end
-function default_qr_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A}
-    return default_qr_algorithm(A)
-end
-function default_qr_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A}
-    return default_qr_algorithm(A)
-end
+default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
+    DiagonalAlgorithm(; kwargs...)
+default_qr_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
+    default_qr_algorithm(A)
+default_qr_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A} =
+    default_qr_algorithm(A)
 
 for f in (:qr_full!, :qr_compact!, :qr_null!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}

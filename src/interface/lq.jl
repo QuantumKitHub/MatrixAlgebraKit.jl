@@ -72,18 +72,14 @@ default_lq_algorithm(A; kwargs...) = default_lq_algorithm(typeof(A); kwargs...)
 
 default_lq_algorithm(T::Type; kwargs...) =
     throw(MethodError(default_lq_algorithm, (T,)))
-end
 default_lq_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix} =
     Householder(; kwargs...)
-function default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
-    return DiagonalAlgorithm(; kwargs...)
-end
-function default_lq_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A}
-    return default_lq_algorithm(A)
-end
-function default_lq_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A}
-    return default_lq_algorithm(A)
-end
+default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
+    DiagonalAlgorithm(; kwargs...)
+default_lq_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
+    default_lq_algorithm(A)
+default_lq_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A} =
+    default_lq_algorithm(A)
 
 for f in (:lq_full!, :lq_compact!, :lq_null!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
