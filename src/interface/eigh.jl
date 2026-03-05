@@ -167,11 +167,17 @@ default_eigh_algorithm(A; kwargs...) = default_eigh_algorithm(typeof(A); kwargs.
 function default_eigh_algorithm(T::Type; kwargs...)
     throw(MethodError(default_eigh_algorithm, (T,)))
 end
-function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
+function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasVecOrMat}
     return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
 end
 function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)
+end
+function default_eigh_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A}
+    return default_eigh_algorithm(A)
+end
+function default_eigh_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A}
+    return default_eigh_algorithm(A)
 end
 
 for f in (:eigh_full!, :eigh_vals!)
