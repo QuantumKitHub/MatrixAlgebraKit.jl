@@ -61,21 +61,19 @@ function test_enzyme_svd_trunc(
         minmn = min(m, n)
         alg = MatrixAlgebraKit.select_algorithm(svd_compact, A)
         @testset "truncrank($r)" for r in round.(Int, range(1, minmn + 4, 4))
-            A = instantiate_matrix(T, sz)
             trunc = truncrank(r)
             truncalg = TruncatedAlgorithm(alg, trunc)
             USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
             test_reverse(svd_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
-            test_reverse(call_and_zero!, RT, (svd_trunc_no_error!, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
+            test_reverse(call_and_zero!, RT, (svd_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
         end
         @testset "trunctol" begin
-            A = instantiate_matrix(T, sz)
             S = svd_vals(A, alg)
             trunc = trunctol(atol = S[1] / 2)
             truncalg = TruncatedAlgorithm(alg, trunc)
             USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
             test_reverse(svd_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
-            test_reverse(call_and_zero!, RT, (svd_trunc_no_error!, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
+            test_reverse(call_and_zero!, RT, (svd_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
         end
     end
 end
