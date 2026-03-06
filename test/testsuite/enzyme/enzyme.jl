@@ -1,9 +1,3 @@
-function call_and_zero!(f!, A, alg)
-    F′ = f!(A, alg)
-    MatrixAlgebraKit.zero!(A)
-    return F′
-end
-
 function test_enzyme(T::Type, sz; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "Enzyme AD $summary_str" begin
