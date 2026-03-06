@@ -98,7 +98,7 @@ for (bname, fname, elty, relty) in
     end
 end
 
-function Xgesvdp!(
+function gesvdp!(
         A::StridedCuMatrix{T},
         S::StridedCuVector = similar(A, real(T), min(size(A)...)),
         U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
@@ -165,7 +165,7 @@ function Xgesvdp!(
     end
     err = h_err_sigma[]
     if err > tol
-        warn("Xgesvdp! did not attained requested tolerance: error = $err > tolerance = $tol")
+        warn("gesvdp! did not attained requested tolerance: error = $err > tolerance = $tol")
     end
 
     flag = @allowscalar dh.info[1]
@@ -269,7 +269,7 @@ for (bname, fname, elty, relty) in
 end
 
 # Wrapper for randomized SVD
-function Xgesvdr!(
+function gesvdr!(
         A::StridedCuMatrix{T},
         S::StridedCuVector = similar(A, real(T), min(size(A)...)),
         U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),

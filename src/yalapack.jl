@@ -2303,7 +2303,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             end
             return (S, U, Vᴴ)
         end
-        function gesvj!(
+        function gesvdj!(
                 A::AbstractMatrix{$elty},
                 S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::AbstractMatrix{$elty} = similar(
