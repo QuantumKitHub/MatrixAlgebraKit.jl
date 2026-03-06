@@ -11,7 +11,7 @@ end
 function test_enzyme_svd_compact(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "svd_compact reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -25,7 +25,7 @@ end
 function test_enzyme_svd_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "svd_full reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -39,7 +39,7 @@ end
 function test_enzyme_svd_vals(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "svd_vals reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -53,7 +53,7 @@ end
 function test_enzyme_svd_trunc(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "svd_trunc reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)

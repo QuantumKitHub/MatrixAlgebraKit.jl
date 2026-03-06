@@ -23,7 +23,7 @@ algorithms, and their in-place variants.
 function test_enzyme_left_orth(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "left_orth reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -58,7 +58,7 @@ algorithms, and their in-place variants.
 function test_enzyme_right_orth(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "right_orth reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -92,7 +92,7 @@ in-place variant.
 function test_enzyme_left_null(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "left_null reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -114,7 +114,7 @@ in-place variant.
 function test_enzyme_right_null(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "right_null reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)

@@ -165,6 +165,10 @@ end
 
 is_cpu(A) = typeof(parent(A)) <: Array
 
+
+enzyme_fdm(T) = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+
+
 """
     eigh_wrapper(f, A, alg)
 

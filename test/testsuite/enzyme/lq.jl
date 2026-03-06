@@ -16,7 +16,7 @@ end
 function test_enzyme_lq_compact(
         T::Type, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "lq_compact reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -30,7 +30,7 @@ end
 function test_enzyme_lq_compact_rank_deficient(
         T::Type, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "lq_compact rank deficient A reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -47,7 +47,7 @@ end
 function test_enzyme_lq_full(
         T::Type, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "lq_full reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -61,7 +61,7 @@ end
 function test_enzyme_lq_null(
         T::Type, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "lq_null reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)

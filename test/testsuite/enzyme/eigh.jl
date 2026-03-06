@@ -20,7 +20,7 @@ Test the Enzyme reverse-mode AD rule for `eigh_full` and its in-place variant.
 function test_enzyme_eigh_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "eigh_full reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = make_eigh_matrix(T, sz)
@@ -39,7 +39,7 @@ Test the Enzyme reverse-mode AD rule for `eigh_vals` and its in-place variant.
 function test_enzyme_eigh_vals(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "eigh_vals reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = make_eigh_matrix(T, sz)
@@ -59,7 +59,7 @@ in-place variants, over a range of truncation ranks.
 function test_enzyme_eigh_trunc(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
-        fdm = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+        fdm = enzyme_fdm(T)
     )
     return @testset "eigh_trunc reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = make_eigh_matrix(T, sz)
