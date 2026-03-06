@@ -158,11 +158,9 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) an
 # Algorithm selection
 # -------------------
 default_svd_algorithm(A; kwargs...) = default_svd_algorithm(typeof(A); kwargs...)
-function default_svd_algorithm(T::Type; kwargs...)
-    throw(MethodError(default_svd_algorithm, (T,)))
-end
+default_svd_algorithm(T::Type; kwargs...) = throw(MethodError(default_svd_algorithm, (T,)))
 function default_svd_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasVecOrMat}
-    return LAPACK_SafeDivideAndConquer(; kwargs...)
+    return SafeDivideAndConquer(; kwargs...)
 end
 function default_svd_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)

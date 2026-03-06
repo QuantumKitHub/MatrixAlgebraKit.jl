@@ -98,6 +98,61 @@ default_householder_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} =
 default_householder_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
     default_householder_driver(A)
 
+"""
+    DivideAndConquer(; [driver], kwargs...)
+
+Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the divide-and-conquer algorithm.
+
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
+"""
+@algdef DivideAndConquer
+
+"""
+    SafeDivideAndConquer(; [driver], kwargs...)
+
+Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the divide-and-conquer algorithm,
+with an additional fallback to the standard QR iteration algorithm in case the former fails to converge.
+
+The optional `driver` symbol can be used to choose between different implementations of this algorithm.
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
+
+!!! warning
+    This approach requires a copy of the input matrix, and is thus the most memory intensive SVD strategy.
+    However, as it combines the speed of the Divide and Conquer algorithm with the robustness of the
+    QR Iteration algorithm, it is the default SVD strategy for LAPACK-based implementations in MatrixAlgebraKit.
+
+See also [`DivideAndConquer`](@ref) and [`QRIteration`](@ref).
+"""
+@algdef SafeDivideAndConquer
+
+"""
+    QRIteration(; [driver], kwargs...)
+
+Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix via QR iteration.
+
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
+"""
+@algdef QRIteration
+@algdef Bisection
+@algdef Jacobi
+
+for f in (:divide_and_conquer, :qr_iteration, :bisection, :jacobi)
+    default_f_driver = Symbol(:default_, f, :_driver)
+    @eval begin
+        $default_f_driver(A) = $default_f_driver(typeof(A))
+        $default_f_driver(::Type) = Native()
+
+        $default_f_driver(::Type{A}) where {A <: YALAPACK.MaybeBlasMat} = LAPACK()
+
+        # note: StridedVector fallback is needed for handling reshaped parent types
+        $default_f_driver(::Type{A}) where {A <: StridedVector{<:BlasFloat}} = LAPACK()
+        $default_f_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = $default_f_driver(A)
+        $default_f_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = $default_f_driver(A)
+    end
+end
 
 # General Eigenvalue Decomposition
 # -------------------------------
