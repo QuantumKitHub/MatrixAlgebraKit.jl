@@ -22,7 +22,7 @@ function test_enzyme_project_hermitian(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "project_hermitian" begin
+    return @testset "project_hermitian reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         B = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
@@ -42,7 +42,7 @@ function test_enzyme_project_antihermitian(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "project_antihermitian" begin
+    return @testset "project_antihermitian reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         B = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
