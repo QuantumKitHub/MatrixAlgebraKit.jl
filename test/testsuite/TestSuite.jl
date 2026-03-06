@@ -15,6 +15,7 @@ using LinearAlgebra: Diagonal, norm, istriu, istril, I
 using Random, StableRNGs
 using Mooncake
 using AMDGPU, CUDA
+using Enzyme, EnzymeTestUtils
 
 const tests = Dict()
 
@@ -118,7 +119,17 @@ include("mooncake/polar.jl")
 include("mooncake/orthnull.jl")
 include("mooncake/projections.jl")
 
-include("enzyme.jl")
 include("chainrules.jl")
+
+# Enzyme
+# ------
+include("enzyme/eig.jl")
+include("enzyme/eigh.jl")
+include("enzyme/qr.jl")
+include("enzyme/lq.jl")
+include("enzyme/svd.jl")
+include("enzyme/polar.jl")
+include("enzyme/orthnull.jl")
+include("enzyme/projections.jl")
 
 end

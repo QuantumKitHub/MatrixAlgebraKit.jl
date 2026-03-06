@@ -163,6 +163,28 @@ function call_and_zero!(f!, A, alg)
     return F′
 end
 
+is_cpu(A) = typeof(parent(A)) <: Array
+
+"""
+    project_hermitian_inplace!(A, alg)
+
+Wrapper for `project_hermitian!(A, A, alg)`, invoked this way
+to avoid Enzyme's finite differences comparison getting confused.
+"""
+project_hermitian_inplace!(A, alg) = project_hermitian!(A, A, alg)
+
+"""
+    project_antihermitian_inplace!(A, alg)
+
+Wrapper for `project_hermitian!(A, A, alg)`, invoked this way
+to avoid Enzyme's finite differences comparison getting confused.
+"""
+project_antihermitian_inplace!(A, alg) = project_antihermitian!(A, A, alg)
+
+
+enzyme_fdm(T) = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
+
+
 """
     eigh_wrapper(f, A, alg)
 
@@ -246,7 +268,6 @@ function ad_qr_full_setup(A)
     remove_qr_gauge_dependence!(ΔQR..., A, QR...)
     return QR, ΔQR
 end
-
 ad_qr_full_setup(A::Diagonal) = ad_qr_compact_setup(A)
 
 function ad_qr_rank_deficient_compact_setup(A)
@@ -516,8 +537,8 @@ end
 function ad_left_null_setup(A)
     m, n = size(A)
     T = eltype(A)
-    N = left_orth(A; alg = :qr)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
-    ΔN = left_orth(A; alg = :qr)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
+    N = left_orth(A)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
+    ΔN = left_orth(A)[1] * randn!(similar(A, T, min(m, n), m - min(m, n)))
     return N, ΔN
 end
 
@@ -533,7 +554,7 @@ ad_right_orth_setup(A::Diagonal) = ad_left_orth_setup(A)
 function ad_right_null_setup(A)
     m, n = size(A)
     T = eltype(A)
-    Nᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A; alg = :lq)[2]
-    ΔNᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A; alg = :lq)[2]
+    Nᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A)[2]
+    ΔNᴴ = randn!(similar(A, T, n - min(m, n), min(m, n))) * right_orth(A)[2]
     return Nᴴ, ΔNᴴ
 end
