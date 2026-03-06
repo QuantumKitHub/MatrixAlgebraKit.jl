@@ -130,5 +130,6 @@ include("enzyme/lq.jl")
 include("enzyme/svd.jl")
 include("enzyme/polar.jl")
 include("enzyme/orthnull.jl")
+include("enzyme/projections.jl")
 
 end
