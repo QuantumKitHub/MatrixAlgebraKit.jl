@@ -165,6 +165,22 @@ end
 
 is_cpu(A) = typeof(parent(A)) <: Array
 
+"""
+    project_hermitian_inplace!(A, alg)
+
+Wrapper for `project_hermitian!(A, A, alg)`, invoked this way
+to avoid Enzyme's finite differences comparison getting confused.
+"""
+project_hermitian_inplace!(A, alg) = project_hermitian!(A, A, alg)
+
+"""
+    project_antihermitian_inplace!(A, alg)
+
+Wrapper for `project_hermitian!(A, A, alg)`, invoked this way
+to avoid Enzyme's finite differences comparison getting confused.
+"""
+project_antihermitian_inplace!(A, alg) = project_antihermitian!(A, A, alg)
+
 
 enzyme_fdm(T) = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
 

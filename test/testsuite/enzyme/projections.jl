@@ -27,8 +27,8 @@ function test_enzyme_project_hermitian(
         B = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
         test_reverse(project_hermitian, RT, (A, TA), (alg, Const); atol, rtol, fdm)
-        #test_reverse(project_hermitian!, RT, (A, TA), (A, TA), (alg, Const); atol, rtol, fdm)
         test_reverse(project_hermitian!, RT, (A, TA), (B, TA), (alg, Const); atol, rtol, fdm)
+        test_reverse(project_hermitian_inplace!, RT, (A, TA), (alg, Const); atol, rtol, fdm)
     end
 end
 
@@ -47,7 +47,7 @@ function test_enzyme_project_antihermitian(
         B = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
         test_reverse(project_antihermitian, RT, (A, TA), (alg, Const); atol, rtol, fdm)
-        #test_reverse(project_antihermitian!, RT, (A, TA), (A, TA), (alg, Const); atol, rtol, fdm)
         test_reverse(project_antihermitian!, RT, (A, TA), (B, TA), (alg, Const); atol, rtol, fdm)
+        test_reverse(project_antihermitian_inplace!, RT, (A, TA), (alg, Const); atol, rtol, fdm)
     end
 end
