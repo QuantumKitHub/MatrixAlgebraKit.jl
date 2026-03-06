@@ -14,7 +14,7 @@ using LinearAlgebra: BlasFloat
 
 include("yarocsolver.jl")
 
-MatrixAlgebraKit.default_householder_driver(::StridedROCMatrix{<:BlasFloat}) = ROCSOLVER()
+MatrixAlgebraKit.default_householder_driver(::Type{A}) where {A <: StridedROCMatrix{<:BlasFloat}} = ROCSOLVER()
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
     return ROCSOLVER_QRIteration(; kwargs...)
 end

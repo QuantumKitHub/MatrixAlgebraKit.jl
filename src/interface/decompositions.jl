@@ -80,13 +80,17 @@ Depending on the driver, various other keywords may be (un)available to customiz
 """
 @algdef Householder
 
-default_householder_driver(A) = Native()
+default_householder_driver(A) = default_householder_driver(typeof(A))
+default_householder_driver(::Type) = Native()
 
-default_householder_driver(::YALAPACK.MaybeBlasMat) = LAPACK()
+default_householder_driver(::Type{A}) where {A <: YALAPACK.MaybeBlasMat} = LAPACK()
 
 # note: StridedVector fallback is needed for handling reshaped parent types
-default_householder_driver(::StridedVector{<:BlasFloat}) = LAPACK()
-default_householder_driver(A::Union{SubArray, Base.ReshapedArray}) = default_householder_driver(parent(A))
+default_householder_driver(::Type{A}) where {A <: StridedVector{<:BlasFloat}} = LAPACK()
+default_householder_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} =
+    default_householder_driver(A)
+default_householder_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
+    default_householder_driver(A)
 
 
 # General Eigenvalue Decomposition
