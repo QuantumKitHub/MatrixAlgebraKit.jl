@@ -1,22 +1,4 @@
 """
-    remove_svd_gauge_dependence!(ΔV, D, V)
-
-Remove the gauge-dependent part from the cotangents `ΔU` and ΔVᴴ` of the singular vector matrices `U`
-and `Vᴴ`. The singular vectors are only determined up to complex phase (and unitary mixing for degenerate
-eigenvalues), so the corresponding components of `ΔU` and `ΔVᴴ` are projected out.
-"""
-function remove_svd_gauge_dependence!(
-        ΔU, ΔVᴴ, U, S, Vᴴ;
-        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(S)
-    )
-    gaugepart = mul!(U' * ΔU, Vᴴ, ΔVᴴ', true, true)
-    gaugepart = project_antihermitian!(gaugepart)
-    gaugepart[abs.(transpose(diagview(S)) .- diagview(S)) .>= degeneracy_atol] .= 0
-    mul!(ΔU, U, gaugepart, -1, 1)
-    return ΔU, ΔVᴴ
-end
-
-"""
     remove_eig_gauge_dependence!(ΔV, D, V)
 
 Remove the gauge-dependent part from the cotangent `ΔV` of the eigenvector matrix `V`. The
@@ -254,11 +236,6 @@ function ad_qr_compact_setup(A::Diagonal)
 end
 
 function ad_qr_null_setup(A)
-    m, n = size(A)
-    minmn = min(m, n)
-    Q, R = qr_compact(A)
-    T = eltype(A)
-    ΔN = Q * randn!(similar(A, T, minmn, max(0, m - minmn)))
     N = qr_null(A)
     ΔN = randn!(copy(N))
     remove_qr_null_gauge_dependence!(ΔN, A, N)
