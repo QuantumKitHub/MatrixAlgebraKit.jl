@@ -222,6 +222,43 @@ Base.:&(::NoTruncation, ::NoTruncation) = notrunc()
 Base.:&(::NoTruncation, trunc::TruncationIntersection) = trunc
 Base.:&(trunc::TruncationIntersection, ::NoTruncation) = trunc
 
+"""
+    TruncationUnion(trunc::TruncationStrategy, truncs::TruncationStrategy...)
+
+Truncation strategy that composes multiple truncation strategies, keeping values that are
+present in any of them.
+"""
+struct TruncationUnion{T <: Tuple{Vararg{TruncationStrategy}}} <: TruncationStrategy
+    components::T
+end
+function TruncationUnion(trunc::TruncationStrategy, truncs::TruncationStrategy...)
+    return TruncationUnion((trunc, truncs...))
+end
+
+function Base.:|(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
+    return TruncationUnion((trunc1, trunc2))
+end
+
+# flatten components
+function Base.:|(trunc1::TruncationUnion, trunc2::TruncationUnion)
+    return TruncationUnion((trunc1.components..., trunc2.components...))
+end
+function Base.:|(trunc1::TruncationUnion, trunc2::TruncationStrategy)
+    return TruncationUnion((trunc1.components..., trunc2))
+end
+function Base.:|(trunc1::TruncationStrategy, trunc2::TruncationUnion)
+    return TruncationUnion((trunc1, trunc2.components...))
+end
+
+# NoTruncation is the absorbing element for | (union with "keep all" = keep all)
+Base.:|(::NoTruncation, ::TruncationStrategy) = notrunc()
+Base.:|(::TruncationStrategy, ::NoTruncation) = notrunc()
+Base.:|(::NoTruncation, ::NoTruncation) = notrunc()
+
+# disambiguate
+Base.:|(::NoTruncation, ::TruncationUnion) = notrunc()
+Base.:|(::TruncationUnion, ::NoTruncation) = notrunc()
+
 @doc """
     truncation_error(values, ind)
 Compute the truncation error as the 2-norm of the values that are not kept by `ind`.
