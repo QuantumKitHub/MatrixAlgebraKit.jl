@@ -86,98 +86,72 @@ for f! in (:lq_full!, :lq_compact!)
     end
 end
 
-# Implementation
-# --------------
-function lq_full!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
+# ==========================
+#      IMPLEMENTATIONS
+# ==========================
+
+# Householder
+# -----------
+function lq_full!(A, LQ, alg::Householder)
     check_input(lq_full!, A, LQ, alg)
-    L, Q = LQ
-    _lapack_lq!(A, L, Q; alg.kwargs...)
-    return L, Q
+    return householder_lq!(A, LQ...; alg.kwargs...)
 end
-function lq_compact!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
+function lq_compact!(A, LQ, alg::Householder)
     check_input(lq_compact!, A, LQ, alg)
-    L, Q = LQ
-    _lapack_lq!(A, L, Q; alg.kwargs...)
-    return L, Q
+    return householder_lq!(A, LQ...; alg.kwargs...)
 end
-function lq_null!(A::AbstractMatrix, Nᴴ, alg::LAPACK_HouseholderLQ)
+function lq_null!(A, Nᴴ, alg::Householder)
     check_input(lq_null!, A, Nᴴ, alg)
-    _lapack_lq_null!(A, Nᴴ; alg.kwargs...)
-    return Nᴴ
+    return householder_lq_null!(A, Nᴴ; alg.kwargs...)
 end
 
-function lq_full!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
-    check_input(lq_full!, A, LQ, alg)
-    L, Q = LQ
-    lq_via_qr!(A, L, Q, alg.qr_alg)
-    return L, Q
-end
-function lq_compact!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
-    check_input(lq_compact!, A, LQ, alg)
-    L, Q = LQ
-    lq_via_qr!(A, L, Q, alg.qr_alg)
-    return L, Q
-end
-function lq_null!(A::AbstractMatrix, Nᴴ, alg::LQViaTransposedQR)
-    check_input(lq_null!, A, Nᴴ, alg)
-    lq_null_via_qr!(A, Nᴴ, alg.qr_alg)
-    return Nᴴ
+# dispatch helpers
+for f in (:gelqt!, :gemlqt!, :gelqf!, :unglq!, :unmlq!)
+    @eval begin
+        $f(::LAPACK, args...) = YALAPACK.$f(args...)
+    end
 end
 
-function lq_full!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
-    check_input(lq_full!, A, LQ, alg)
-    L, Q = LQ
-    _diagonal_lq!(A, L, Q; alg.kwargs...)
-    return L, Q
-end
-function lq_compact!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
-    check_input(lq_compact!, A, LQ, alg)
-    L, Q = LQ
-    _diagonal_lq!(A, L, Q; alg.kwargs...)
-    return L, Q
-end
-function lq_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
-    check_input(lq_null!, A, N, alg)
-    return _diagonal_lq_null!(A, N; alg.kwargs...)
-end
-
-# LAPACK logic
-# ------------
-function _lapack_lq!(
-        A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
+@inline householder_lq!(A, L, Q; driver::Driver = DefaultDriver(), kwargs...) =
+    householder_lq!(driver, A, L, Q; kwargs...)
+householder_lq!(::DefaultDriver, A, L, Q; kwargs...) =
+    householder_lq!(default_householder_driver(A), A, L, Q; kwargs...)
+householder_lq!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, L, Q; kwargs...) =
+    lq_via_qr!(A, L, Q, Householder(; driver, kwargs...))
+function householder_lq!(
+        driver::LAPACK, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
         positive = true, pivoted = false,
         blocksize = ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
     )
+    # error messages for disallowing driver - setting combinations
+    pivoted && (blocksize > 1) &&
+        throw(ArgumentError(lazy"$driver does not provide a blocked pivoted LQ decomposition"))
+
     m, n = size(A)
     minmn = min(m, n)
     computeL = length(L) > 0
     inplaceQ = Q === A
 
-    if pivoted && (blocksize > 1)
-        throw(ArgumentError("LAPACK does not provide a blocked implementation for a pivoted LQ decomposition"))
-    end
-    if inplaceQ && (computeL || positive || blocksize > 1 || n < m)
-        throw(ArgumentError("inplace Q only supported if matrix is wide (`m <= n`), L is not required, and using the unblocked algorithm (`blocksize=1`) with `positive=false`"))
-    end
-
+    (inplaceQ && (computeL || positive || blocksize > 1 || n < m)) &&
+        throw(ArgumentError("inplace Q only supported if matrix is wide (`m <= n`), L is not required, and using the unblocked algorithm (`blocksize = 1`) with `positive = false`"))
     if blocksize > 1
         mb = min(minmn, blocksize)
         if computeL # first use L as space for T
-            A, T = YALAPACK.gelqt!(A, view(L, 1:mb, 1:minmn))
+            A, T = gelqt!(driver, A, view(L, 1:mb, 1:minmn))
         else
-            A, T = YALAPACK.gelqt!(A, similar(A, mb, minmn))
+            A, T = gelqt!(driver, A, similar(A, mb, minmn))
         end
-        Q = YALAPACK.gemlqt!('R', 'N', A, T, one!(Q))
+        Q = gemlqt!(driver, 'R', 'N', A, T, one!(Q))
     else
-        A, τ = YALAPACK.gelqf!(A)
+        A, τ = gelqf!(driver, A)
         if inplaceQ
-            Q = YALAPACK.unglq!(A, τ)
+            Q = unglq!(driver, A, τ)
         else
-            Q = YALAPACK.unmlq!('R', 'N', A, τ, one!(Q))
+            Q = unmlq!(driver, 'R', 'N', A, τ, one!(Q))
         end
     end
 
-    if positive # already fix Q even if we do not need R
+    if positive # already fix Q even if we do not need L
         @inbounds for j in 1:n
             @simd for i in 1:minmn
                 s = sign_safe(A[i, i])
@@ -200,36 +174,137 @@ function _lapack_lq!(
     end
     return L, Q
 end
-
-function _lapack_lq_null!(
-        A::AbstractMatrix, Nᴴ::AbstractMatrix;
-        positive = true, pivoted = false, blocksize = YALAPACK.default_qr_blocksize(A)
+function householder_lq!(
+        driver::Native, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
     )
+    # error messages for disallowing driver - setting combinations
+    blocksize == 1 ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked LQ decomposition"))
+    pivoted &&
+        throw(ArgumentError(lazy"$driver does not provide a pivoted LQ decomposition"))
+    # positive = true regardless of setting
+
     m, n = size(A)
     minmn = min(m, n)
-    fill!(Nᴴ, zero(eltype(Nᴴ)))
+    @inbounds for i in 1:minmn
+        for j in 1:(i - 1)
+            L[i, j] = A[i, j]
+        end
+        β, v, L[i, i] = _householder!(conj!(view(A, i, i:n)), 1)
+        for j in (i + 1):size(L, 2)
+            L[i, j] = 0
+        end
+        H = HouseholderReflection(conj(β), v, i:n)
+        rmul!(A, H; rows = (i + 1):m)
+        # A[i, i] == 1; store β instead
+        A[i, i] = β
+    end
+    # copy remaining rows for m > n
+    @inbounds for j in 1:size(L, 2)
+        for i in (minmn + 1):m
+            L[i, j] = A[i, j]
+        end
+    end
+    # build Q
+    one!(Q)
+    @inbounds for i in minmn:-1:1
+        β = A[i, i]
+        A[i, i] = 1
+        Hᴴ = HouseholderReflection(β, view(A, i, i:n), i:n)
+        rmul!(Q, Hᴴ)
+    end
+    return L, Q
+end
+
+@inline householder_lq_null!(A, Nᴴ; driver::Driver = DefaultDriver(), kwargs...) =
+    householder_lq_null!(driver, A, Nᴴ; kwargs...)
+householder_lq_null!(::DefaultDriver, A, Nᴴ; kwargs...) =
+    householder_lq_null!(default_householder_driver(A), A, Nᴴ; kwargs...)
+householder_lq_null!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, Nᴴ; kwargs...) =
+    lq_null_via_qr!(A, Nᴴ, Householder(; driver, kwargs...))
+function householder_lq_null!(
+        driver::LAPACK, A::AbstractMatrix, Nᴴ::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = pivoted ? 1 : YALAPACK.default_qr_blocksize(A)
+    )
+    # error messages for disallowing driver - setting combinations
+    pivoted && (blocksize > 1) &&
+        throw(ArgumentError(lazy"$driver does not provide a blocked pivoted LQ decomposition"))
+
+    m, n = size(A)
+    minmn = min(m, n)
+    zero!(Nᴴ)
     one!(view(Nᴴ, 1:(n - minmn), (minmn + 1):n))
+
     if blocksize > 1
         mb = min(minmn, blocksize)
-        A, T = YALAPACK.gelqt!(A, similar(A, mb, minmn))
-        Nᴴ = YALAPACK.gemlqt!('R', 'N', A, T, Nᴴ)
+        A, T = gelqt!(driver, A, similar(A, mb, minmn))
+        Nᴴ = gemlqt!(driver, 'R', 'N', A, T, Nᴴ)
     else
-        A, τ = YALAPACK.gelqf!(A)
-        Nᴴ = YALAPACK.unmlq!('R', 'N', A, τ, Nᴴ)
+        A, τ = gelqf!(driver, A)
+        Nᴴ = unmlq!(driver, 'R', 'N', A, τ, Nᴴ)
+    end
+    return Nᴴ
+end
+function householder_lq_null!(
+        driver::Native, A::AbstractMatrix, Nᴴ::AbstractMatrix;
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+    )
+    # error messages for disallowing driver - setting combinations
+    blocksize == 1 ||
+        throw(ArgumentError(lazy"$driver does not provide a blocked LQ decomposition"))
+    pivoted &&
+        throw(ArgumentError(lazy"$driver does not provide a pivoted LQ decomposition"))
+
+    m, n = size(A)
+    minmn = min(m, n)
+    @inbounds for i in 1:minmn
+        β, v, ν = _householder!(conj!(view(A, i, i:n)), 1)
+        H = HouseholderReflection(conj(β), v, i:n)
+        rmul!(A, H; rows = (i + 1):m)
+        # A[i, i] == 1; store β instead
+        A[i, i] = β
+    end
+    # build Nᴴ
+    zero!(Nᴴ)
+    one!(view(Nᴴ, 1:(n - minmn), (minmn + 1):n))
+    @inbounds for i in minmn:-1:1
+        β = A[i, i]
+        A[i, i] = 1
+        Hᴴ = HouseholderReflection(β, view(A, i, i:n), i:n)
+        rmul!(Nᴴ, Hᴴ)
     end
     return Nᴴ
 end
 
+
 # LQ via transposition and QR
 # ---------------------------
+function lq_full!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
+    check_input(lq_full!, A, LQ, alg)
+    L, Q = LQ
+    lq_via_qr!(A, L, Q, alg.qr_alg)
+    return L, Q
+end
+function lq_compact!(A::AbstractMatrix, LQ, alg::LQViaTransposedQR)
+    check_input(lq_compact!, A, LQ, alg)
+    L, Q = LQ
+    lq_via_qr!(A, L, Q, alg.qr_alg)
+    return L, Q
+end
+function lq_null!(A::AbstractMatrix, Nᴴ, alg::LQViaTransposedQR)
+    check_input(lq_null!, A, Nᴴ, alg)
+    lq_null_via_qr!(A, Nᴴ, alg.qr_alg)
+    return Nᴴ
+end
+
 function lq_via_qr!(
         A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix, qr_alg::AbstractAlgorithm
     )
-    m, n = size(A)
-    minmn = min(m, n)
     At = adjoint!(similar(A'), A)::AbstractMatrix
     Qt = (A === Q) ? At : similar(Q')
     Lt = similar(L')
+    n = size(A, 2)
     if size(Q) == (n, n)
         Qt, Lt = qr_full!(At, (Qt, Lt), qr_alg)
     else
@@ -241,8 +316,6 @@ function lq_via_qr!(
 end
 
 function lq_null_via_qr!(A::AbstractMatrix, N::AbstractMatrix, qr_alg::AbstractAlgorithm)
-    m, n = size(A)
-    minmn = min(m, n)
     At = adjoint!(similar(A'), A)::AbstractMatrix
     Nt = similar(N')
     Nt = qr_null!(At, Nt, qr_alg)
@@ -250,8 +323,26 @@ function lq_null_via_qr!(A::AbstractMatrix, N::AbstractMatrix, qr_alg::AbstractA
     return N
 end
 
-# Diagonal logic
-# --------------
+
+# Diagonal
+# --------
+function lq_full!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
+    check_input(lq_full!, A, LQ, alg)
+    L, Q = LQ
+    _diagonal_lq!(A, L, Q; alg.kwargs...)
+    return L, Q
+end
+function lq_compact!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
+    check_input(lq_compact!, A, LQ, alg)
+    L, Q = LQ
+    _diagonal_lq!(A, L, Q; alg.kwargs...)
+    return L, Q
+end
+function lq_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
+    check_input(lq_null!, A, N, alg)
+    return _diagonal_lq_null!(A, N; alg.kwargs...)
+end
+
 function _diagonal_lq!(
         A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix; positive::Bool = true
     )
@@ -271,84 +362,22 @@ end
 
 _diagonal_lq_null!(A::AbstractMatrix, N; positive::Bool = true) = N
 
-# Native logic
-# -------------
-function lq_full!(A::AbstractMatrix, LQ, alg::Native_HouseholderLQ)
-    check_input(lq_full!, A, LQ, alg)
-    L, Q = LQ
-    A === Q &&
-        throw(ArgumentError("inplace Q not supported with native LQ implementation"))
-    _native_lq!(A, L, Q; alg.kwargs...)
-    return L, Q
-end
-function lq_compact!(A::AbstractMatrix, LQ, alg::Native_HouseholderLQ)
-    check_input(lq_compact!, A, LQ, alg)
-    L, Q = LQ
-    A === Q &&
-        throw(ArgumentError("inplace Q not supported with native LQ implementation"))
-    _native_lq!(A, L, Q; alg.kwargs...)
-    return L, Q
-end
-function lq_null!(A::AbstractMatrix, N, alg::Native_HouseholderLQ)
-    check_input(lq_null!, A, N, alg)
-    _native_lq_null!(A, N; alg.kwargs...)
-    return N
-end
-
-function _native_lq!(
-        A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
-        positive::Bool = true # always true regardless of setting
-    )
-    m, n = size(A)
-    minmn = min(m, n)
-    @inbounds for i in 1:minmn
-        for j in 1:(i - 1)
-            L[i, j] = A[i, j]
-        end
-        β, v, L[i, i] = _householder!(conj!(view(A, i, i:n)), 1)
-        for j in (i + 1):size(L, 2)
-            L[i, j] = 0
-        end
-        H = Householder(conj(β), v, i:n)
-        rmul!(A, H; rows = (i + 1):m)
-        # A[i, i] == 1; store β instead
-        A[i, i] = β
+# Deprecations
+# ------------
+for drivertype in (:LAPACK, :Native)
+    algtype = Symbol(drivertype, :_HouseholderLQ)
+    @eval begin
+        Base.@deprecate(
+            lq_full!(A, LQ, alg::$algtype),
+            lq_full!(A, LQ, Householder(; driver = $drivertype(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            lq_compact!(A, LQ, alg::$algtype),
+            lq_compact!(A, LQ, Householder(; driver = $drivertype(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            lq_null!(A, Nᴴ, alg::$algtype),
+            lq_null!(A, Nᴴ, Householder(; driver = $drivertype(), alg.kwargs...))
+        )
     end
-    # copy remaining rows for m > n
-    @inbounds for j in 1:size(L, 2)
-        for i in (minmn + 1):m
-            L[i, j] = A[i, j]
-        end
-    end
-    # build Q
-    one!(Q)
-    @inbounds for i in minmn:-1:1
-        β = A[i, i]
-        A[i, i] = 1
-        Hᴴ = Householder(β, view(A, i, i:n), i:n)
-        rmul!(Q, Hᴴ)
-    end
-    return L, Q
-end
-
-function _native_lq_null!(A::AbstractMatrix, Nᴴ::AbstractMatrix; positive::Bool = true)
-    m, n = size(A)
-    minmn = min(m, n)
-    @inbounds for i in 1:minmn
-        β, v, ν = _householder!(conj!(view(A, i, i:n)), 1)
-        H = Householder(conj(β), v, i:n)
-        rmul!(A, H; rows = (i + 1):m)
-        # A[i, i] == 1; store β instead
-        A[i, i] = β
-    end
-    # build Nᴴ
-    fill!(Nᴴ, zero(eltype(Nᴴ)))
-    one!(view(Nᴴ, 1:(n - minmn), (minmn + 1):n))
-    @inbounds for i in minmn:-1:1
-        β = A[i, i]
-        A[i, i] = 1
-        Hᴴ = Householder(β, view(A, i, i:n), i:n)
-        rmul!(Nᴴ, Hᴴ)
-    end
-    return Nᴴ
 end

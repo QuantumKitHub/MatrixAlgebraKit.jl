@@ -69,24 +69,16 @@ See also [`lq_full(!)`](@ref lq_full) and [`lq_compact(!)`](@ref lq_compact).
 # Algorithm selection
 # -------------------
 default_qr_algorithm(A; kwargs...) = default_qr_algorithm(typeof(A); kwargs...)
-function default_qr_algorithm(T::Type; kwargs...)
-    throw(MethodError(default_qr_algorithm, (T,)))
-end
-function default_qr_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix}
-    return Native_HouseholderQR(; kwargs...)
-end
-function default_qr_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasVecOrMat}
-    return LAPACK_HouseholderQR(; kwargs...)
-end
-function default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
-    return DiagonalAlgorithm(; kwargs...)
-end
-function default_qr_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A}
-    return default_qr_algorithm(A)
-end
-function default_qr_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A}
-    return default_qr_algorithm(A)
-end
+
+default_qr_algorithm(T::Type; kwargs...) = throw(MethodError(default_qr_algorithm, (T,)))
+default_qr_algorithm(::Type{T}; driver = default_householder_driver(T), kwargs...) where {T <: AbstractMatrix} =
+    Householder(; driver, kwargs...)
+default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
+    DiagonalAlgorithm(; kwargs...)
+default_qr_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
+    default_qr_algorithm(A)
+default_qr_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A} =
+    default_qr_algorithm(A)
 
 for f in (:qr_full!, :qr_compact!, :qr_null!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
