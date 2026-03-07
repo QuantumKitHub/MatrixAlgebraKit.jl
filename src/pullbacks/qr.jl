@@ -6,40 +6,25 @@ function check_qr_cotangents(
         gauge_atol::Real = default_pullback_gauge_atol(ΔQ)
     )
     minmn = min(size(Q, 1), size(R, 2))
-    if minmn > p # case where A is rank-deficient
-        Δgauge = abs(zero(eltype(Q)))
-        if !iszerotangent(ΔQ)
-            # in this case the number Householder reflections will
-            # change upon small variations, and all of the remaining
-            # columns of ΔQ should be zero for a gauge-invariant
-            # cost function
-            ΔQ2 = view(ΔQ, :, (p + 1):size(Q, 2))
-            Δgauge_Q = norm(ΔQ2, Inf)
-            Δgauge = max(Δgauge, Δgauge_Q)
-        end
-        if !iszerotangent(ΔR)
-            ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):size(R, 2))
-            Δgauge_R = norm(ΔR22, Inf)
-            Δgauge = max(Δgauge, Δgauge_R)
-        end
-        Δgauge ≤ gauge_atol ||
-            @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    Δgauge = abs(zero(eltype(Q)))
+    if !iszerotangent(ΔQ)
+        ΔQ₂ = view(ΔQ, :, (p + 1):minmn)
+        ΔQ₃ = ΔQ[:, (minmn + 1):size(Q, 2)] # extra columns in the case of qr_full
+        Δgauge_Q = norm(ΔQ₂, Inf)
+        Q₁ = view(Q, :, 1:p)
+        Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
+        mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃, -1, 1)
+        Δgauge_Q = max(Δgauge_Q, norm(ΔQ₃, Inf))
+        Δgauge = max(Δgauge, Δgauge_Q)
     end
-    return
-end
-
-function check_qr_full_cotangents(Q1, ΔQ2, Q1dΔQ2; gauge_atol::Real = default_pullback_gauge_atol(ΔQ2))
-    # in the case where A is full rank, but there are more columns in Q than in A
-    # (the case of `qr_full`), there is gauge-invariant information in the
-    # projection of ΔQ2 onto the column space of Q1, by virtue of Q being a unitary
-    # matrix. As the number of Householder reflections is in fixed in the full rank
-    # case, Q is expected to rotate smoothly (we might even be able to predict) also
-    # how the full Q2 will change, but this we omit for now, and we consider
-    # Q2' * ΔQ2 as a gauge dependent quantity.
-    Δgauge = norm(mul!(copy(ΔQ2), Q1, Q1dΔQ2, -1, 1), Inf)
+    if !iszerotangent(ΔR)
+        ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):size(R, 2))
+        Δgauge_R = norm(view(ΔR22, uppertriangularind(ΔR22)), Inf)
+        Δgauge = max(Δgauge, Δgauge_R)
+    end
     Δgauge ≤ gauge_atol ||
-        @warn "`qr_full` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    return
+        @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    return nothing
 end
 
 """
@@ -69,13 +54,14 @@ function qr_pullback!(
     Q, R = QR
     m = size(Q, 1)
     n = size(R, 2)
+    minmn = min(m, n)
     Rd = diagview(R)
     p = qr_rank(R; rank_atol)
 
     ΔQ, ΔR = ΔQR
 
     Q1 = view(Q, :, 1:p)
-    R11 = view(R, 1:p, 1:p)
+    R11 = UpperTriangular(view(R, 1:p, 1:p))
     ΔA1 = view(ΔA, :, 1:p)
     ΔA2 = view(ΔA, :, (p + 1):n)
 
@@ -83,13 +69,13 @@ function qr_pullback!(
 
     ΔQ̃ = zero!(similar(Q, (m, p)))
     if !iszerotangent(ΔQ)
-        copy!(ΔQ̃, view(ΔQ, :, 1:p))
-        if p < size(Q, 2)
-            Q2 = view(Q, :, (p + 1):size(Q, 2))
-            ΔQ2 = view(ΔQ, :, (p + 1):size(Q, 2))
-            Q1dΔQ2 = Q1' * ΔQ2
-            check_qr_full_cotangents(Q1, ΔQ2, Q1dΔQ2; gauge_atol)
-            ΔQ̃ = mul!(ΔQ̃, Q2, Q1dΔQ2', -1, 1)
+        ΔQ₁ = view(ΔQ, :, 1:p)
+        copy!(ΔQ̃, ΔQ₁)
+        if minmn < size(Q, 2)
+            ΔQ3 = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
+            Q3 = view(Q, :, (minmn + 1):size(Q, 2))
+            Q1ᴴΔQ3 = Q1' * ΔQ3
+            ΔQ̃ = mul!(ΔQ̃, Q3, Q1ᴴΔQ3', -1, 1)
         end
     end
     if !iszerotangent(ΔR) && n > p
@@ -103,7 +89,7 @@ function qr_pullback!(
     # construct M
     M = zero!(similar(R, (p, p)))
     if !iszerotangent(ΔR)
-        ΔR11 = view(ΔR, 1:p, 1:p)
+        ΔR11 = UpperTriangular(view(ΔR, 1:p, 1:p))
         M = mul!(M, ΔR11, R11', 1, 1)
     end
     M = mul!(M, Q1', ΔQ̃, -1, 1)
@@ -112,8 +98,8 @@ function qr_pullback!(
         Md = diagview(M)
         Md .= real.(Md)
     end
-    rdiv!(M, UpperTriangular(R11)')
-    rdiv!(ΔQ̃, UpperTriangular(R11)')
+    rdiv!(M, R11') # R11 is upper triangular
+    rdiv!(ΔQ̃, R11')
     ΔA1 = mul!(ΔA1, Q1, M, +1, 1)
     ΔA1 .+= ΔQ̃
     return ΔA

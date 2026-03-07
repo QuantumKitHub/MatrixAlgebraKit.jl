@@ -78,13 +78,15 @@ ambiguity. Additionally, rows of `ΔR` beyond the rank are zeroed out.
 """
 function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(R))
     r = MatrixAlgebraKit.qr_rank(R; rank_atol)
-    Q₁ = @view Q[:, 1:r]
-    ΔQ₂ = @view ΔQ[:, (r + 1):end]
+    minmn = min(size(A)...)
+    Q₁ = view(Q, :, 1:r)
+    ΔQ₂ = view(ΔQ, :, (r + 1):minmn)
     ΔQ₂ .= 0
-    # TODO: refine this by differentiating between rank deficiency and qr_full cases
-    # Q₁ᴴΔQ₂ = Q₁' * ΔQ₂
-    # mul!(ΔQ₂, Q₁, Q₁ᴴΔQ₂)
-    view(ΔR, (r + 1):size(ΔR, 1), :) .= 0
+    ΔQ₃ = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
+    Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
+    mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃)
+    ΔR22 = view(ΔR, (r + 1):minmn, (r + 1):size(R, 2))
+    view(ΔR22, MatrixAlgebraKit.uppertriangularind(ΔR22)) .= 0
     return ΔQ, ΔR
 end
 
@@ -110,13 +112,15 @@ Additionally, columns of `ΔL` beyond the rank are zeroed out.
 """
 function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(L))
     r = MatrixAlgebraKit.lq_rank(L; rank_atol)
-    Q₁ = @view Q[1:r, :]
-    ΔQ₂ = @view ΔQ[(r + 1):end, :]
+    minmn = min(size(A)...)
+    Q₁ = view(Q, 1:r, :)
+    ΔQ₂ = view(ΔQ, (r + 1):minmn, :)
     ΔQ₂ .= 0
-    # TODO: refine this by differentiating between rank deficiency and lq_full cases
-    # ΔQ₂Q₁ᴴ = ΔQ₂ * Q₁'
-    # mul!(ΔQ₂, ΔQ₂Q₁ᴴ, Q₁)
-    view(ΔL, :, (r + 1):size(ΔL, 2)) .= 0
+    ΔQ₃ = view(ΔQ, (minmn + 1):size(ΔQ, 1), :) # extra rows in the case of lq_full
+    ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
+    mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁)
+    ΔL22 = view(ΔL, (r + 1):size(ΔL, 1), (r + 1):minmn)
+    view(ΔL22, MatrixAlgebraKit.lowertriangularind(ΔL22)) .= 0
     return ΔL, ΔQ
 end
 
@@ -220,22 +224,22 @@ end
 
 function ad_qr_compact_setup(A)
     QR = qr_compact(A)
-    ΔQR = structured_randn!.(copy.(QR))
-    A isa Diagonal || remove_qr_gauge_dependence!(ΔQR..., A, QR...)
+    ΔQR = structured_randn!.(similar.(QR))
+    remove_qr_gauge_dependence!(ΔQR..., A, QR...)
     return QR, ΔQR
 end
 
 function ad_qr_null_setup(A)
     N = qr_null(A)
-    ΔN = randn!(copy(N))
+    ΔN = structured_randn!(similar(N))
     remove_qr_null_gauge_dependence!(ΔN, A, N)
     return N, ΔN
 end
 
 function ad_qr_full_setup(A)
     QR = qr_full(A)
-    ΔQR = structured_randn!.(copy.(QR))
-    A isa Diagonal || remove_qr_gauge_dependence!(ΔQR..., A, QR...)
+    ΔQR = structured_randn!.(similar.(QR))
+    remove_qr_gauge_dependence!(ΔQR..., A, QR...)
     return QR, ΔQR
 end
 
@@ -275,23 +279,22 @@ end
 
 function ad_lq_compact_setup(A)
     LQ = lq_compact(A)
-    ΔLQ = structured_randn!.(copy.(LQ))
-    A isa Diagonal || remove_lq_gauge_dependence!(ΔLQ..., A, LQ...)
+    ΔLQ = structured_randn!.(similar.(LQ))
+    remove_lq_gauge_dependence!(ΔLQ..., A, LQ...)
     return LQ, ΔLQ
 end
 
 function ad_lq_null_setup(A)
-    T = eltype(A)
     Nᴴ = lq_null(A)
-    ΔNᴴ = randn!(similar(A, T, size(Nᴴ)...))
+    ΔNᴴ = structured_randn!(similar(Nᴴ))
     remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
     return Nᴴ, ΔNᴴ
 end
 
 function ad_lq_full_setup(A)
     LQ = lq_full(A)
-    ΔLQ = structured_randn!.(copy.(LQ))
-    A isa Diagonal || remove_lq_gauge_dependence!(ΔLQ..., A, LQ...)
+    ΔLQ = structured_randn!.(similar.(LQ))
+    remove_lq_gauge_dependence!(ΔLQ..., A, LQ...)
     return LQ, ΔLQ
 end
 
