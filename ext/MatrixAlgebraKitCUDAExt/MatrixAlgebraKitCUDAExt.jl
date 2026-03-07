@@ -165,9 +165,11 @@ function MatrixAlgebraKit._mul_herm!(C::StridedCuMatrix{T}, A::StridedCuMatrix{T
     return C
 end
 
-# TODO: intersect doesn't work on GPU
+# TODO: intersect/union don't work on GPU
 MatrixAlgebraKit._ind_intersect(A::CuVector{Int}, B::CuVector{Int}) =
     MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
+MatrixAlgebraKit._ind_union(A::CuVector{Int}, B::CuVector{Int}) =
+    MatrixAlgebraKit._ind_union(collect(A), collect(B))
 
 function _sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
     # https://github.com/JuliaGPU/CUDA.jl/issues/3021

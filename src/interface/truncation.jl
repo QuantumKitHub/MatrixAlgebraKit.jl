@@ -1,9 +1,10 @@
 const docs_truncation_kwargs = """
-* `atol::Real`      : Absolute tolerance for the truncation
-* `rtol::Real`      : Relative tolerance for the truncation
-* `maxrank::Real`   : Maximal rank for the truncation
-* `maxerror::Real`  : Maximal truncation error.
-* `filter`          : Custom filter to select truncated values.
+* `atol::Real`       : Absolute tolerance for the truncation
+* `rtol::Real`       : Relative tolerance for the truncation
+* `maxrank::Integer` : Maximal rank for the truncation
+* `minrank::Integer` : Minimal rank for the truncation
+* `maxerror::Real`   : Maximal truncation error.
+* `filter`           : Custom filter to select truncated values.
 """
 
 const docs_truncation_strategies = """
@@ -28,16 +29,18 @@ Select a truncation strategy based on the provided keyword arguments.
 ## Keyword arguments
 The following keyword arguments are all optional, and their default value (`nothing`)
 will be ignored. It is also allowed to combine multiple of these, in which case the kept
-values will consist of the intersection of the different truncated strategies.
+values will consist of the intersection of the different truncated strategies (except
+`minrank`, which uses union semantics to guarantee a lower bound on the number of kept values).
 
 $docs_truncation_kwargs
 """
 function TruncationStrategy(;
         atol::Union{Real, Nothing} = nothing,
         rtol::Union{Real, Nothing} = nothing,
-        maxrank::Union{Real, Nothing} = nothing,
+        maxrank::Union{Integer, Nothing} = nothing,
+        minrank::Union{Integer, Nothing} = nothing,
         maxerror::Union{Real, Nothing} = nothing,
-        filter = nothing
+        filter = nothing,
     )
     strategy = notrunc()
 
@@ -50,6 +53,14 @@ function TruncationStrategy(;
     isnothing(maxrank) || (strategy &= truncrank(maxrank))
     isnothing(maxerror) || (strategy &= truncerror(; atol = maxerror))
     isnothing(filter) || (strategy &= truncfilter(filter))
+
+    # union constraint: guarantee a lower bound on number of kept values
+    # special-case NoTruncation: keeping everything already satisfies any minrank
+    if !isnothing(minrank) && !(strategy isa NoTruncation)
+        strategy |= truncrank(minrank)
+    elseif !isnothing(minrank)
+        strategy = truncrank(minrank)
+    end
 
     return strategy
 end
@@ -221,6 +232,43 @@ Base.:&(::NoTruncation, ::NoTruncation) = notrunc()
 # disambiguate
 Base.:&(::NoTruncation, trunc::TruncationIntersection) = trunc
 Base.:&(trunc::TruncationIntersection, ::NoTruncation) = trunc
+
+"""
+    TruncationUnion(trunc::TruncationStrategy, truncs::TruncationStrategy...)
+
+Truncation strategy that composes multiple truncation strategies, keeping values that are
+present in any of them.
+"""
+struct TruncationUnion{T <: Tuple{Vararg{TruncationStrategy}}} <: TruncationStrategy
+    components::T
+end
+function TruncationUnion(trunc::TruncationStrategy, truncs::TruncationStrategy...)
+    return TruncationUnion((trunc, truncs...))
+end
+
+function Base.:|(trunc1::TruncationStrategy, trunc2::TruncationStrategy)
+    return TruncationUnion((trunc1, trunc2))
+end
+
+# flatten components
+function Base.:|(trunc1::TruncationUnion, trunc2::TruncationUnion)
+    return TruncationUnion((trunc1.components..., trunc2.components...))
+end
+function Base.:|(trunc1::TruncationUnion, trunc2::TruncationStrategy)
+    return TruncationUnion((trunc1.components..., trunc2))
+end
+function Base.:|(trunc1::TruncationStrategy, trunc2::TruncationUnion)
+    return TruncationUnion((trunc1, trunc2.components...))
+end
+
+# NoTruncation is the absorbing element for | (union with "keep all" = keep all)
+Base.:|(::NoTruncation, ::TruncationStrategy) = notrunc()
+Base.:|(::TruncationStrategy, ::NoTruncation) = notrunc()
+Base.:|(::NoTruncation, ::NoTruncation) = notrunc()
+
+# disambiguate
+Base.:|(::NoTruncation, ::TruncationUnion) = notrunc()
+Base.:|(::TruncationUnion, ::NoTruncation) = notrunc()
 
 @doc """
     truncation_error(values, ind)

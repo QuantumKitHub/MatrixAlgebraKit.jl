@@ -212,6 +212,29 @@ function test_svd_trunc(
                 @test diagview(S2) ≈ diagview(S)[1:2]
             end
         end
+        @testset "mix minrank and tol" begin
+            m4 = 4
+            U = instantiate_unitary(T, A, m4)
+            Sdiag = similar(A, real(eltype(T)), m4)
+            copyto!(Sdiag, [0.9, 0.3, 0.1, 0.01])
+            S = Diagonal(Sdiag)
+            Vᴴ = instantiate_unitary(T, A, m4)
+            A = U * S * Vᴴ
+            for trunc_fun in (
+                    (rtol, minrank) -> (; rtol, minrank),
+                    (rtol, minrank) -> trunctol(; rtol) | truncrank(minrank),
+                )
+                # trunctol(rtol=0.5) keeps 1 value, truncrank(3) keeps 3, union keeps 3
+                U1, S1, V1ᴴ, ϵ1 = svd_trunc(A; trunc = trunc_fun(0.5, 3))
+                @test length(diagview(S1)) == 3
+                @test diagview(S1) ≈ diagview(S)[1:3]
+
+                # trunctol(rtol=0.2) keeps 2 values, truncrank(1) keeps 1, union keeps 2
+                U2, S2, V2ᴴ = svd_trunc_no_error(A; trunc = trunc_fun(0.2, 1))
+                @test length(diagview(S2)) == 2
+                @test diagview(S2) ≈ diagview(S)[1:2]
+            end
+        end
         @testset "specify truncation algorithm" begin
             atol = sqrt(eps(real(eltype(T))))
             m4 = 4
@@ -290,6 +313,29 @@ function test_svd_trunc_algs(
                 @test collect(diagview(S1)) ≈ collect(diagview(S)[1:1])
 
                 U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; trunc = trunc_fun(0.2, 3), alg)
+                @test length(diagview(S2)) == 2
+                @test collect(diagview(S2)) ≈ collect(diagview(S)[1:2])
+            end
+        end
+        @testset "mix minrank and tol" begin
+            m4 = 4
+            U = instantiate_unitary(T, A, m4)
+            Sdiag = similar(A, real(eltype(T)), m4)
+            copyto!(Sdiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
+            S = Diagonal(Sdiag)
+            Vᴴ = instantiate_unitary(T, A, m4)
+            A = U * S * Vᴴ
+            for trunc_fun in (
+                    (rtol, minrank) -> (; rtol, minrank),
+                    (rtol, minrank) -> trunctol(; rtol) | truncrank(minrank),
+                )
+                # trunctol(rtol=0.5) keeps 1 value, truncrank(3) keeps 3, union keeps 3
+                U1, S1, V1ᴴ, ϵ1 = svd_trunc(A; trunc = trunc_fun(0.5, 3), alg)
+                @test length(diagview(S1)) == 3
+                @test collect(diagview(S1)) ≈ collect(diagview(S)[1:3])
+
+                # trunctol(rtol=0.2) keeps 2 values, truncrank(1) keeps 1, union keeps 2
+                U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; trunc = trunc_fun(0.2, 1), alg)
                 @test length(diagview(S2)) == 2
                 @test collect(diagview(S2)) ≈ collect(diagview(S)[1:2])
             end

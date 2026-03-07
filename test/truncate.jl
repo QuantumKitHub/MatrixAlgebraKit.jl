@@ -1,8 +1,8 @@
 using MatrixAlgebraKit
 using Test
 using TestExtras
-using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
-    TruncationByValue, TruncationStrategy, findtruncated, findtruncated_svd
+using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationUnion,
+    TruncationByOrder, TruncationByValue, TruncationStrategy, findtruncated, findtruncated_svd
 
 @testset "truncate" begin
     trunc = @constinferred TruncationStrategy()
@@ -65,4 +65,32 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationByOrder,
     @test issetequal(values[@constinferred(findtruncated(values, strategy))], values[2:5])
     vals_sorted = sort(values; by = abs, rev = true)
     @test vals_sorted[@constinferred(findtruncated_svd(vals_sorted, strategy))] == vals_sorted[1:4]
+
+    # TruncationUnion / minrank
+    trunc = @constinferred TruncationStrategy(; minrank = 3)
+    @test trunc isa TruncationByOrder
+    @test trunc == truncrank(3)
+
+    trunc = @constinferred TruncationStrategy(; atol, minrank = 3)
+    @test trunc isa TruncationUnion
+    @test trunc == trunctol(; atol) | truncrank(3)
+
+    # | operator
+    values2 = [1.0, 0.9, 0.5, 0.3, 0.01]
+    # trunctol keeps 1:3 (above 0.4), truncrank(4) keeps 1:4, union keeps 1:4
+    strategy = trunctol(; atol = 0.4) | truncrank(4)
+    @test @constinferred(findtruncated_svd(values2, strategy)) == 1:4
+    # trunctol keeps 1:3, truncrank(2) keeps 1:2, union keeps 1:3
+    strategy = trunctol(; atol = 0.4) | truncrank(2)
+    @test @constinferred(findtruncated_svd(values2, strategy)) == 1:3
+
+    # notrunc is absorbing for |
+    @test (notrunc() | truncrank(3)) isa NoTruncation
+    @test (truncrank(3) | notrunc()) isa NoTruncation
+
+    # TruncationUnion flattening
+    union1 = truncrank(2) | trunctol(; atol = 0.4)
+    union2 = union1 | truncrank(4)
+    @test union2 isa TruncationUnion
+    @test length(union2.components) == 3
 end

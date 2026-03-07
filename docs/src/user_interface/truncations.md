@@ -56,9 +56,21 @@ all(>(2.9), diagview(Dtrunc))
 true
 ```
 
+Use `maxrank` together with a tolerance to keep at most `maxrank` values above the tolerance (intersection):
+
 ```jldoctest truncations; output=false
 Dtrunc, Vtrunc, ϵ = eigh_trunc(A; trunc = (maxrank = 2, atol = 2.9));
 size(Dtrunc, 1) <= 2 && all(>(2.9), diagview(Dtrunc))
+
+# output
+true
+```
+
+Use `minrank` together with a tolerance to guarantee at least `minrank` values are kept (union):
+
+```jldoctest truncations; output=false
+Dtrunc, Vtrunc, ϵ = eigh_trunc(A; trunc = (atol = 3.5, minrank = 2));
+size(Dtrunc, 1) >= 2
 
 # output
 true
@@ -84,9 +96,22 @@ size(Dtrunc, 1) <= 2
 true
 ```
 
+Strategies can be combined with `&` (intersection: keep values satisfying **all** conditions):
+
 ```jldoctest truncations; output=false
 Dtrunc, Vtrunc, ϵ = eigh_trunc(A; trunc = truncrank(2) & trunctol(; atol = 2.9))
 size(Dtrunc, 1) <= 2 && all(>(2.9), diagview(Dtrunc))
+
+# output
+true
+```
+
+Strategies can also be combined with `|` (union: keep values satisfying **any** condition).
+This is useful to set a lower bound on the number of kept values with `minrank`:
+
+```jldoctest truncations; output=false
+Dtrunc, Vtrunc, ϵ = eigh_trunc(A; trunc = trunctol(; atol = 3.5) | truncrank(2))
+size(Dtrunc, 1) >= 2
 
 # output
 true
@@ -104,11 +129,20 @@ truncfilter
 truncerror
 ```
 
-Truncation strategies can be combined using the `&` operator to create intersection-based truncation.
-When strategies are combined, only the values that satisfy all conditions are kept.
+Strategies can be composed using the `&` operator ([`TruncationIntersection`](@ref)) to keep only values
+satisfying all conditions, or the `|` operator ([`TruncationUnion`](@ref)) to keep values satisfying any condition.
+
+```@docs; canonical=false
+TruncationIntersection
+TruncationUnion
+```
 
 ```julia
+# Keep at most 10 values, all above tolerance (intersection)
 combined_trunc = truncrank(10) & trunctol(; atol = 1e-6);
+
+# Keep values above tolerance, but always at least 3 (union)
+combined_trunc = trunctol(; atol = 1e-6) | truncrank(3);
 ```
 
 ## Truncation Error

@@ -137,6 +137,32 @@ _ind_intersect(A::AbstractUnitRange{Int}, B::AbstractVector{Int}) = _ind_interse
 # when all else fails, call intersect
 _ind_intersect(A, B) = intersect(A, B)
 
+function findtruncated(values::AbstractVector, strategy::TruncationUnion)
+    length(strategy.components) == 0 && return Base.OneTo(0)
+    length(strategy.components) == 1 && return findtruncated(values, only(strategy.components))
+    ind1 = findtruncated(values, strategy.components[1])
+    ind2 = findtruncated(values, TruncationUnion(Base.tail(strategy.components)))
+    return _ind_union(ind1, ind2)
+end
+function findtruncated_svd(values::AbstractVector, strategy::TruncationUnion)
+    length(strategy.components) == 0 && return Base.OneTo(0)
+    length(strategy.components) == 1 && return findtruncated_svd(values, only(strategy.components))
+    ind1 = findtruncated_svd(values, strategy.components[1])
+    ind2 = findtruncated_svd(values, TruncationUnion(Base.tail(strategy.components)))
+    return _ind_union(ind1, ind2)
+end
+
+_ind_union(A::AbstractVector{Bool}, B::AbstractVector{Bool}) = A .| B
+function _ind_union(A::AbstractVector{Bool}, B::AbstractVector)
+    result = copy(A)
+    result[B] .= true
+    return result
+end
+_ind_union(A::AbstractVector, B::AbstractVector{Bool}) = _ind_union(B, A)
+_ind_union(A::Base.OneTo, B::Base.OneTo) = Base.OneTo(max(length(A), length(B)))
+_ind_union(A::AbstractUnitRange, B::AbstractUnitRange) = union(A, B)
+_ind_union(A, B) = union(A, B)
+
 # Truncation error
 # ----------------
 truncation_error(values::AbstractVector, ind) = truncation_error!(copy(values), ind)
