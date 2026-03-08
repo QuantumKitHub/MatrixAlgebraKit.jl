@@ -4,6 +4,7 @@ function check_lq_cotangents(
         L, Q, ΔL, ΔQ, p::Int;
         gauge_atol::Real = default_pullback_gauge_atol(ΔQ)
     )
+    # check_qr_cotangents(Q', L', ΔQ', ΔL', p; gauge_atol)
     minmn = min(size(L, 1), size(Q, 2))
     Δgauge = abs(zero(eltype(Q)))
     if !iszerotangent(ΔQ)
@@ -19,6 +20,7 @@ function check_lq_cotangents(
     if !iszerotangent(ΔL)
         ΔL22 = view(ΔL, (p + 1):size(ΔL, 1), (p + 1):minmn)
         Δgauge_L = norm(view(ΔL22, lowertriangularind(ΔL22)), Inf)
+        Δgauge_L = max(Δgauge_L, norm(view(ΔL22, diagind(ΔL22)), Inf))
         Δgauge = max(Δgauge, Δgauge_L)
     end
     Δgauge ≤ gauge_atol ||

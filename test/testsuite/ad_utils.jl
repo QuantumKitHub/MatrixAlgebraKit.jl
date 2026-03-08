@@ -86,6 +86,7 @@ function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebr
     Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
     mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃)
     ΔR22 = view(ΔR, (r + 1):minmn, (r + 1):size(R, 2))
+    MatrixAlgebraKit.diagview(ΔR22) .= 0
     view(ΔR22, MatrixAlgebraKit.uppertriangularind(ΔR22)) .= 0
     return ΔQ, ΔR
 end
@@ -120,6 +121,7 @@ function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = MatrixAlgebr
     ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
     mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁)
     ΔL22 = view(ΔL, (r + 1):size(ΔL, 1), (r + 1):minmn)
+    MatrixAlgebraKit.diagview(ΔL22) .= 0
     view(ΔL22, MatrixAlgebraKit.lowertriangularind(ΔL22)) .= 0
     return ΔL, ΔQ
 end

@@ -20,6 +20,7 @@ function check_qr_cotangents(
     if !iszerotangent(ΔR)
         ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):size(R, 2))
         Δgauge_R = norm(view(ΔR22, uppertriangularind(ΔR22)), Inf)
+        Δgauge_R = max(Δgauge_R, norm(view(ΔR22, diagind(ΔR22)), Inf))
         Δgauge = max(Δgauge, Δgauge_R)
     end
     Δgauge ≤ gauge_atol ||
