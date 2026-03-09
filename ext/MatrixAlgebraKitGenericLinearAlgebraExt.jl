@@ -58,9 +58,9 @@ end
 
 function MatrixAlgebraKit.householder_qr!(
         driver::MatrixAlgebraKit.GLA, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
-    blocksize == 1 ||
+    blocksize <= 1 ||
         throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
@@ -102,9 +102,9 @@ end
 
 function MatrixAlgebraKit.householder_qr_null!(
         driver::MatrixAlgebraKit.GLA, A::AbstractMatrix, N::AbstractMatrix;
-        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
-    blocksize == 1 ||
+    blocksize <= 1 ||
         throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))

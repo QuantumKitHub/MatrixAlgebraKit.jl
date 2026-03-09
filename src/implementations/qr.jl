@@ -121,8 +121,10 @@ householder_qr!(::DefaultDriver, A, Q, R; kwargs...) =
 function householder_qr!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false,
-        blocksize::Int = ((driver !== LAPACK() || pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
+        blocksize::Int = 0
     )
+    blocksize = blocksize > 0 ? blocksize : ((driver !== LAPACK() || pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
+
     # error messages for disallowing driver - setting combinations
     (blocksize == 1 || driver === LAPACK()) ||
         throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
@@ -202,10 +204,10 @@ function householder_qr!(
 end
 function householder_qr!(
         driver::Native, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
-        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
     # error messages for disallowing driver - setting combinations
-    blocksize == 1 ||
+    blocksize <= 1 ||
         throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
@@ -249,9 +251,9 @@ householder_qr_null!(::DefaultDriver, A, N; kwargs...) =
     householder_qr_null!(default_householder_driver(A), A, N; kwargs...)
 function householder_qr_null!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
-        positive::Bool = true, pivoted::Bool = false,
-        blocksize::Int = ((driver !== LAPACK() || pivoted) ? 1 : YALAPACK.default_qr_blocksize(A))
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
+    blocksize = blocksize > 0 ? blocksize : ((driver !== LAPACK() || pivoted) ? 1 : YALAPACK.default_qr_blocksize(A))
     # error messages for disallowing driver - setting combinations
     (blocksize == 1 || driver === LAPACK()) ||
         throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
@@ -277,10 +279,10 @@ function householder_qr_null!(
 end
 function householder_qr_null!(
         driver::Native, A::AbstractMatrix, N::AbstractMatrix;
-        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
     # error messages for disallowing driver - setting combinations
-    blocksize == 1 ||
+    blocksize <= 1 ||
         throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))

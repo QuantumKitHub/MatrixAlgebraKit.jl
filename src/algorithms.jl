@@ -19,7 +19,19 @@ See also [`@algdef`](@ref).
 """
 struct Algorithm{name, K} <: AbstractAlgorithm
     kwargs::K
+
+    # Ensure keywords are always in canonical order
+    function Algorithm{Name}(kwargs::NamedTuple) where {Name}
+        kwargs_sorted = _sortkeys(kwargs)
+        return new{Name, typeof(kwargs_sorted)}(kwargs_sorted)
+    end
 end
+Algorithm{Name}(; kwargs...) where {Name} = Algorithm{Name}(NamedTuple(kwargs))
+
+# Utility generated function to canonicalize keys in type-stable way
+@generated _sortkeys(nt::NamedTuple{K}) where {K} =
+    :(NamedTuple{$(Tuple(sort!(collect(K))))}(nt))
+
 name(alg::Algorithm) = name(typeof(alg))
 name(::Type{<:Algorithm{N}}) where {N} = N
 
@@ -299,11 +311,6 @@ macro algdef(name)
     return esc(
         quote
             const $name{K} = Algorithm{$(QuoteNode(name)), K}
-            function $name(; kwargs...)
-                # TODO: is this necessary/useful?
-                kw = NamedTuple(kwargs) # normalize type
-                return $name{typeof(kw)}(kw)
-            end
             function Base.show(io::IO, alg::$name)
                 return ($_show_alg)(io, alg)
             end
