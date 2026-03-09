@@ -168,6 +168,10 @@ end
 # TODO: intersect/union don't work on GPU
 MatrixAlgebraKit._ind_intersect(A::CuVector{Int}, B::CuVector{Int}) =
     MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
+MatrixAlgebraKit._ind_union(A::AbstractVector{<:Integer}, B::CuVector{Int}) =
+    MatrixAlgebraKit._ind_union(A, collect(B))
+MatrixAlgebraKit._ind_union(A::CuVector{Int}, B::AbstractVector{<:Integer}) =
+    MatrixAlgebraKit._ind_union(collect(A), B)
 MatrixAlgebraKit._ind_union(A::CuVector{Int}, B::CuVector{Int}) =
     MatrixAlgebraKit._ind_union(collect(A), collect(B))
 
