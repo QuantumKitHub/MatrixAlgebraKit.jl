@@ -100,7 +100,9 @@ Finally, the same behavior is obtained when the keyword arguments are
 passed as the third positional argument in the form of a `NamedTuple`. 
 """ select_algorithm
 
-@inline function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
+# WARNING: In order to keep everything type stable, this function is marked as foldable.
+# This mostly means that the `default_algorithm` implementation must be foldable as well
+Base.@assume_effects :foldable function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
     if isnothing(alg)
         return default_algorithm(f, A; kwargs...)
     elseif alg isa Symbol
@@ -129,8 +131,10 @@ In general, this is called by [`select_algorithm`](@ref) if no algorithm is spec
 explicitly.
 New types should prefer to register their default algorithms in the type domain.
 """ default_algorithm
-default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
-default_algorithm(f::F, A, B; kwargs...) where {F} = default_algorithm(f, typeof(A), typeof(B); kwargs...)
+@inline default_algorithm(f::F, A; kwargs...) where {F} =
+    default_algorithm(f, typeof(A); kwargs...)
+@inline default_algorithm(f::F, A, B; kwargs...) where {F} =
+    default_algorithm(f, typeof(A), typeof(B); kwargs...)
 # avoid infinite recursion:
 function default_algorithm(f::F, ::Type{T}; kwargs...) where {F, T}
     throw(MethodError(default_algorithm, (f, T)))

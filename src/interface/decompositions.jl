@@ -79,12 +79,11 @@ The optional `driver` symbol can be used to choose between different implementat
 Depending on the driver, various other keywords may be (un)available to customize the implementation.
 """
 @algdef Householder
-
 function Householder(;
-        driver::Driver = DefaultDriver(), blocksize::Int = 0,
+        blocksize::Int = 0, driver::Driver = DefaultDriver(),
         pivoted::Bool = false, positive::Bool = true
     )
-    return Householder((; driver, blocksize, pivoted, positive))
+    return Householder((; blocksize, driver, pivoted, positive))
 end
 
 default_householder_driver(A) = default_householder_driver(typeof(A))

@@ -71,8 +71,8 @@ See also [`qr_full(!)`](@ref lq_full) and [`qr_compact(!)`](@ref lq_compact).
 default_lq_algorithm(A; kwargs...) = default_lq_algorithm(typeof(A); kwargs...)
 
 default_lq_algorithm(T::Type; kwargs...) = throw(MethodError(default_lq_algorithm, (T,)))
-default_lq_algorithm(::Type{T}; driver = default_householder_driver(T), kwargs...) where {T <: AbstractMatrix} =
-    Householder(; driver, kwargs...)
+default_lq_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix} =
+    Householder(; kwargs...)
 default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
     DiagonalAlgorithm(; kwargs...)
 default_lq_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
