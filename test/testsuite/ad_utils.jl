@@ -85,9 +85,9 @@ function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebr
     ΔQ₃ = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
     Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
     mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃)
-    ΔR22 = view(ΔR, (r + 1):minmn, (r + 1):size(R, 2))
-    MatrixAlgebraKit.diagview(ΔR22) .= 0
-    view(ΔR22, MatrixAlgebraKit.uppertriangularind(ΔR22)) .= 0
+    ΔR₂₂ = view(ΔR, (r + 1):minmn, (r + 1):size(R, 2))
+    MatrixAlgebraKit.diagview(ΔR₂₂) .= 0
+    view(ΔR₂₂, MatrixAlgebraKit.uppertriangularind(ΔR₂₂)) .= 0
     return ΔQ, ΔR
 end
 
@@ -120,9 +120,9 @@ function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = MatrixAlgebr
     ΔQ₃ = view(ΔQ, (minmn + 1):size(ΔQ, 1), :) # extra rows in the case of lq_full
     ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
     mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁)
-    ΔL22 = view(ΔL, (r + 1):size(ΔL, 1), (r + 1):minmn)
-    MatrixAlgebraKit.diagview(ΔL22) .= 0
-    view(ΔL22, MatrixAlgebraKit.lowertriangularind(ΔL22)) .= 0
+    ΔL₂₂ = view(ΔL, (r + 1):size(ΔL, 1), (r + 1):minmn)
+    MatrixAlgebraKit.diagview(ΔL₂₂) .= 0
+    view(ΔL₂₂, MatrixAlgebraKit.lowertriangularind(ΔL₂₂)) .= 0
     return ΔL, ΔQ
 end
 

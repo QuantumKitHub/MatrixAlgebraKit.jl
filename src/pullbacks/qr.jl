@@ -61,10 +61,10 @@ function qr_pullback!(
 
     ΔQ, ΔR = ΔQR
 
-    Q1 = view(Q, :, 1:p)
-    R11 = UpperTriangular(view(R, 1:p, 1:p))
-    ΔA1 = view(ΔA, :, 1:p)
-    ΔA2 = view(ΔA, :, (p + 1):n)
+    Q₁ = view(Q, :, 1:p)
+    R₁₁ = UpperTriangular(view(R, 1:p, 1:p))
+    ΔA₁ = view(ΔA, :, 1:p)
+    ΔA₂ = view(ΔA, :, (p + 1):n)
 
     check_qr_cotangents(Q, R, ΔQ, ΔR, p; gauge_atol)
 
@@ -73,36 +73,36 @@ function qr_pullback!(
         ΔQ₁ = view(ΔQ, :, 1:p)
         copy!(ΔQ̃, ΔQ₁)
         if minmn < size(Q, 2)
-            ΔQ3 = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
-            Q3 = view(Q, :, (minmn + 1):size(Q, 2))
-            Q1ᴴΔQ3 = Q1' * ΔQ3
-            ΔQ̃ = mul!(ΔQ̃, Q3, Q1ᴴΔQ3', -1, 1)
+            ΔQ₃ = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
+            Q₃ = view(Q, :, (minmn + 1):size(Q, 2))
+            Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
+            ΔQ̃ = mul!(ΔQ̃, Q₃, Q₁ᴴΔQ₃', -1, 1)
         end
     end
     if !iszerotangent(ΔR) && n > p
-        R12 = view(R, 1:p, (p + 1):n)
-        ΔR12 = view(ΔR, 1:p, (p + 1):n)
-        ΔQ̃ = mul!(ΔQ̃, Q1, ΔR12 * R12', -1, 1)
-        # Adding ΔA2 contribution
-        ΔA2 = mul!(ΔA2, Q1, ΔR12, 1, 1)
+        R₁₂ = view(R, 1:p, (p + 1):n)
+        ΔR₁₂ = view(ΔR, 1:p, (p + 1):n)
+        ΔQ̃ = mul!(ΔQ̃, Q₁, ΔR₁₂ * R₁₂', -1, 1)
+        # Adding ΔA₂ contribution
+        ΔA₂ = mul!(ΔA₂, Q₁, ΔR₁₂, 1, 1)
     end
 
     # construct M
     M = zero!(similar(R, (p, p)))
     if !iszerotangent(ΔR)
-        ΔR11 = UpperTriangular(view(ΔR, 1:p, 1:p))
-        M = mul!(M, ΔR11, R11', 1, 1)
+        ΔR₁₁ = UpperTriangular(view(ΔR, 1:p, 1:p))
+        M = mul!(M, ΔR₁₁, R₁₁', 1, 1)
     end
-    M = mul!(M, Q1', ΔQ̃, -1, 1)
+    M = mul!(M, Q₁', ΔQ̃, -1, 1)
     view(M, lowertriangularind(M)) .= conj.(view(M, uppertriangularind(M)))
     if eltype(M) <: Complex
         Md = diagview(M)
         Md .= real.(Md)
     end
-    rdiv!(M, R11') # R11 is upper triangular
-    rdiv!(ΔQ̃, R11')
-    ΔA1 = mul!(ΔA1, Q1, M, +1, 1)
-    ΔA1 .+= ΔQ̃
+    rdiv!(M, R₁₁') # R₁₁ is upper triangular
+    rdiv!(ΔQ̃, R₁₁')
+    ΔA₁ = mul!(ΔA₁, Q₁, M, +1, 1)
+    ΔA₁ .+= ΔQ̃
     return ΔA
 end
 

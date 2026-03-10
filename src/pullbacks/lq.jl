@@ -59,48 +59,48 @@ function lq_pullback!(
 
     ΔL, ΔQ = ΔLQ
 
-    Q1 = view(Q, 1:p, :)
-    L11 = LowerTriangular(view(L, 1:p, 1:p))
-    ΔA1 = view(ΔA, 1:p, :)
-    ΔA2 = view(ΔA, (p + 1):m, :)
+    Q₁ = view(Q, 1:p, :)
+    L₁₁ = LowerTriangular(view(L, 1:p, 1:p))
+    ΔA₁ = view(ΔA, 1:p, :)
+    ΔA₂ = view(ΔA, (p + 1):m, :)
 
     check_lq_cotangents(L, Q, ΔL, ΔQ, p; gauge_atol)
 
     ΔQ̃ = zero!(similar(Q, (p, n)))
     if !iszerotangent(ΔQ)
-        ΔQ1 = view(ΔQ, 1:p, :)
-        copy!(ΔQ̃, ΔQ1)
+        ΔQ₁ = view(ΔQ, 1:p, :)
+        copy!(ΔQ̃, ΔQ₁)
         if minmn < size(Q, 1)
-            ΔQ3 = view(ΔQ, (minmn + 1):size(ΔQ, 1), :)
-            Q3 = view(Q, (minmn + 1):size(Q, 1), :)
-            ΔQ3Q1ᴴ = ΔQ3 * Q1'
-            ΔQ̃ = mul!(ΔQ̃, ΔQ3Q1ᴴ', Q3, -1, 1)
+            ΔQ₃ = view(ΔQ, (minmn + 1):size(ΔQ, 1), :)
+            Q₃ = view(Q, (minmn + 1):size(Q, 1), :)
+            ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
+            ΔQ̃ = mul!(ΔQ̃, ΔQ₃Q₁ᴴ', Q₃, -1, 1)
         end
     end
     if !iszerotangent(ΔL) && m > p
-        L21 = view(L, (p + 1):m, 1:p)
-        ΔL21 = view(ΔL, (p + 1):m, 1:p)
-        ΔQ̃ = mul!(ΔQ̃, L21' * ΔL21, Q1, -1, 1)
-        # Adding ΔA2 contribution
-        ΔA2 = mul!(ΔA2, ΔL21, Q1, 1, 1)
+        L₂₁ = view(L, (p + 1):m, 1:p)
+        ΔL₂₁ = view(ΔL, (p + 1):m, 1:p)
+        ΔQ̃ = mul!(ΔQ̃, L₂₁' * ΔL₂₁, Q₁, -1, 1)
+        # Adding ΔA₂ contribution
+        ΔA₂ = mul!(ΔA₂, ΔL₂₁, Q₁, 1, 1)
     end
 
     # construct M
     M = zero!(similar(L, (p, p)))
     if !iszerotangent(ΔL)
-        ΔL11 = LowerTriangular(view(ΔL, 1:p, 1:p))
-        M = mul!(M, L11', ΔL11, 1, 1)
+        ΔL₁₁ = LowerTriangular(view(ΔL, 1:p, 1:p))
+        M = mul!(M, L₁₁', ΔL₁₁, 1, 1)
     end
-    M = mul!(M, ΔQ̃, Q1', -1, 1)
+    M = mul!(M, ΔQ̃, Q₁', -1, 1)
     view(M, uppertriangularind(M)) .= conj.(view(M, lowertriangularind(M)))
     if eltype(M) <: Complex
         Md = diagview(M)
         Md .= real.(Md)
     end
-    ldiv!(L11', M)
-    ldiv!(L11', ΔQ̃)
-    ΔA1 = mul!(ΔA1, M, Q1, +1, 1)
-    ΔA1 .+= ΔQ̃
+    ldiv!(L₁₁', M)
+    ldiv!(L₁₁', ΔQ̃)
+    ΔA₁ = mul!(ΔA₁, M, Q₁, +1, 1)
+    ΔA₁ .+= ΔQ̃
     return ΔA
 end
 
