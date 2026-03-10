@@ -3,8 +3,8 @@ const docs_truncation_kwargs = """
 * `rtol::Real`       : Relative tolerance for the truncation
 * `maxrank::Integer` : Maximal rank for the truncation
 * `minrank::Integer` : Minimal rank for the truncation
-* `maxerror::Real`   : Maximal truncation error.
-* `filter`           : Custom filter to select truncated values.
+* `maxerror::Real`   : Maximal truncation error
+* `filter`           : Custom filter to select truncated values
 """
 
 const docs_truncation_strategies = """
