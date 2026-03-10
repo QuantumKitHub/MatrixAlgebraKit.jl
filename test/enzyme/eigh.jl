@@ -3,9 +3,7 @@ using Test
 using LinearAlgebra: Diagonal
 using CUDA, AMDGPU
 
-# infinity-norm doesn't play nicely with Float32, Enzyme, and 1.12
-# see https://github.com/EnzymeAD/Enzyme.jl/issues/2985
-BLASFloats = (Float64, ComplexF64) # full suite is too expensive on CI
+BLASFloats = (Float32, ComplexF64) # full suite is too expensive on CI
 GenericFloats = ()
 @isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
 using .TestSuite
