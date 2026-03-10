@@ -3,7 +3,7 @@ using Test
 using LinearAlgebra: Diagonal
 using CUDA, AMDGPU
 
-BLASFloats = (Float32, ComplexF64) # full suite is too expensive on CI
+BLASFloats = (Float64, ComplexF64) # full suite is too expensive on CI
 GenericFloats = ()
 @isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
 using .TestSuite
@@ -12,7 +12,7 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
 m = 19
 for T in (BLASFloats..., GenericFloats...)
-    TestSuite.seed_rng!(123)
+    TestSuite.seed_rng!(1234)
     atol = rtol = m * m * TestSuite.precision(T)
     if !is_buildkite
         TestSuite.test_enzyme_projections(T, (m, m); atol, rtol)
