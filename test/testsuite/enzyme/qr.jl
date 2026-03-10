@@ -38,7 +38,7 @@ function test_enzyme_qr_compact_rank_deficient(
         r = min(m, n) - 5
         A = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
         alg = MatrixAlgebraKit.select_algorithm(qr_compact, A)
-        QR, ΔQR = ad_qr_rank_deficient_compact_setup(A)
+        QR, ΔQR = ad_qr_compact_setup(A)
         test_reverse(qr_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
         test_reverse(call_and_zero!, RT, (qr_compact!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
     end

@@ -14,7 +14,7 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
 m = 19
 for T in (BLASFloats..., GenericFloats...)
-    TestSuite.seed_rng!(123)
+    TestSuite.seed_rng!(1234)
     if !is_buildkite
         TestSuite.test_enzyme_eig(T, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
     end

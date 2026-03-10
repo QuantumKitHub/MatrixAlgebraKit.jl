@@ -38,7 +38,7 @@ function test_enzyme_lq_compact_rank_deficient(
         r = min(m, n) - 5
         A = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
         alg = MatrixAlgebraKit.select_algorithm(lq_compact, A)
-        LQ, ΔLQ = ad_lq_rank_deficient_compact_setup(A)
+        LQ, ΔLQ = ad_lq_compact_setup(A)
         test_reverse(lq_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔLQ, fdm)
         test_reverse(call_and_zero!, RT, (lq_compact!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔLQ, fdm)
     end
