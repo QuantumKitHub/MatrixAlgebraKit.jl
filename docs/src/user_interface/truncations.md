@@ -129,8 +129,8 @@ truncfilter
 truncerror
 ```
 
-Strategies can be composed using the `&` operator ([`TruncationIntersection`](@ref)) to keep only values
-satisfying all conditions, or the `|` operator ([`TruncationUnion`](@ref)) to keep values satisfying any condition.
+Strategies can be composed using the `&` operator ([`TruncationIntersection`](@ref)) to keep only values satisfying **all** conditions,
+or the `|` operator ([`TruncationUnion`](@ref)) to keep values satisfying **any** condition.
 
 ```@docs; canonical=false
 TruncationIntersection
