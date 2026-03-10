@@ -267,40 +267,6 @@ function ad_qr_full_setup(A)
     return QR, ΔQR
 end
 
-# function ad_qr_rank_deficient_compact_setup(A)
-#     m, n = size(A)
-#     minmn = min(m, n)
-#     T = eltype(A)
-#     r = minmn - 5
-#     Ard = randn!(similar(A, T, m, r)) * randn!(similar(A, T, r, n))
-#     Q, R = qr_compact(Ard)
-#     QR = (Q, R)
-#     ΔQ = randn!(similar(A, T, m, minmn))
-#     Q1 = view(Q, 1:m, 1:r)
-#     Q2 = view(Q, 1:m, (r + 1):minmn)
-#     ΔQ2 = view(ΔQ, 1:m, (r + 1):minmn)
-#     MatrixAlgebraKit.zero!(ΔQ2)
-#     ΔR = randn!(similar(A, T, minmn, n))
-#     view(ΔR, (r + 1):minmn, :) .= 0
-#     return (Q, R), (ΔQ, ΔR)
-# end
-
-# function ad_qr_rank_deficient_compact_setup(A::Diagonal)
-#     m, n = size(A)
-#     minmn = min(m, n)
-#     T = eltype(A)
-#     r = minmn - 5
-#     Ard_ = randn!(similar(A, T, m))
-#     MatrixAlgebraKit.zero!(view(Ard_, (r + 1):m))
-#     Ard = Diagonal(Ard_)
-#     Q, R = qr_compact(Ard)
-#     ΔQ = Diagonal(randn!(similar(diagview(A), T, m)))
-#     ΔR = Diagonal(randn!(similar(diagview(A), T, m)))
-#     MatrixAlgebraKit.zero!(view(diagview(ΔQ), (r + 1):m))
-#     MatrixAlgebraKit.zero!(view(diagview(ΔR), (r + 1):m))
-#     return (Q, R), (ΔQ, ΔR)
-# end
-
 function ad_lq_compact_setup(A)
     LQ = lq_compact(A)
     ΔLQ = structured_randn!.(similar.(LQ))
@@ -322,24 +288,6 @@ function ad_lq_full_setup(A)
     return LQ, ΔLQ
 end
 
-# function ad_lq_rank_deficient_compact_setup(A)
-#     m, n = size(A)
-#     minmn = min(m, n)
-#     T = eltype(A)
-#     r = minmn - 5
-#     Ard = randn!(similar(A, T, m, r)) * randn!(similar(A, T, r, n))
-#     L, Q = lq_compact(Ard)
-#     ΔL = randn!(similar(A, T, m, minmn))
-#     ΔQ = randn!(similar(A, T, minmn, n))
-#     Q1 = view(Q, 1:r, 1:n)
-#     Q2 = view(Q, (r + 1):minmn, 1:n)
-#     ΔQ2 = view(ΔQ, (r + 1):minmn, 1:n)
-#     ΔQ2 .= 0
-#     view(ΔL, :, (r + 1):minmn) .= 0
-#     return (L, Q), (ΔL, ΔQ)
-# end
-# ad_lq_rank_deficient_compact_setup(A::Diagonal) = ad_qr_rank_deficient_compact_setup(A)
-
 function ad_eig_full_setup(A)
     D, V = eig_full(A)
     ΔD, ΔV = structured_randn!.(similar.((D, V)))
@@ -347,30 +295,11 @@ function ad_eig_full_setup(A)
     return (D, V), (ΔD, ΔV)
 end
 
-# function ad_eig_full_setup(A::Diagonal)
-#     m, n = size(A)
-#     T = complex(eltype(A))
-#     DV = eig_full(A)
-#     D, V = DV
-#     ΔV = randn!(similar(A.diag, T, m, m))
-#     ΔV = remove_eig_gauge_dependence!(ΔV, D, V)
-#     ΔD = Diagonal(randn!(similar(A.diag, T, m)))
-#     return DV, (ΔD, ΔV)
-# end
-
 function ad_eig_vals_setup(A)
     D = eig_vals(A)
     ΔD = randn!(similar(D))
     return D, ΔD
 end
-
-# function ad_eig_vals_setup(A::Diagonal)
-#     m, n = size(A)
-#     T = complex(eltype(A))
-#     D = eig_vals(A)
-#     ΔD = randn!(similar(A.diag, T, m))
-#     return D, ΔD
-# end
 
 function ad_eig_trunc_setup(A, truncalg)
     DV, ΔDV = ad_eig_full_setup(A)
@@ -412,18 +341,6 @@ function ad_svd_compact_setup(A)
     return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ)
 end
 
-# function ad_svd_compact_setup(A::Diagonal)
-#     m, n = size(A)
-#     T = eltype(A)
-#     minmn = min(m, n)
-#     ΔU = randn!(similar(A.diag, T, m, n))
-#     ΔS = Diagonal(randn!(similar(A.diag, real(T), minmn)))
-#     ΔVᴴ = randn!(similar(A.diag, T, m, n))
-#     U, S, Vᴴ = svd_compact(A)
-#     ΔU, ΔVᴴ = remove_svd_gauge_dependence!(ΔU, ΔVᴴ, U, S, Vᴴ)
-#     return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ)
-# end
-
 function ad_svd_full_setup(A)
     U, S, Vᴴ = svd_full(A)
     ΔU = structured_randn!(similar(U))
@@ -433,8 +350,6 @@ function ad_svd_full_setup(A)
     randn!(diagview(ΔS))
     return (U, S, Vᴴ), (ΔU, ΔS, ΔVᴴ)
 end
-
-# ad_svd_full_setup(A::Diagonal) = ad_svd_compact_setup(A)
 
 function ad_svd_vals_setup(A)
     S = svd_vals(A)
