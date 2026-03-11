@@ -43,8 +43,9 @@ end
 
 Algorithm for batched matrix multiplication via BLAS. Uses `cblas_?gemm_batch_strided`
 (via YABLAS) for strided 3D arrays, `cblas_?gemm_batch` (via YABLAS) for vectors of
-matrices, or CUBLAS on GPU. Errors if the underlying BLAS does not support the required
-function (e.g. `cblas_?gemm_batch` is not available in standard OpenBLAS).
+matrices, or CUBLAS on GPU. Requires MKL; errors if the underlying BLAS does not support
+the required function. Note that standard OpenBLAS supports `cblas_?gemm_batch` but not
+`cblas_?gemm_batch_strided`.
 """
 @algdef GEMM
 
@@ -65,10 +66,10 @@ Always works regardless of the underlying BLAS implementation.
 
 Select the default algorithm for [`batched_mul!`](@ref) and [`strided_batched_mul!`](@ref).
 
-The default is `GEMM()` for strided 3D `BlasFloat` arrays (where `cblas_?gemm_batch_strided`
-is available in both OpenBLAS and MKL) and `LoopGEMM()` otherwise. Extensions may override
-the default for their specific array types (e.g. the MKL extension selects `GEMM()` for
-vectors of `BlasFloat` matrices, and the CUDA extension selects `GEMM()` for `CuArray`s).
+The default is `LoopGEMM()` for CPU arrays and `GEMM()` for GPU arrays. Extensions may
+override the default for their specific array types (e.g. the MKL extension selects
+`GEMM()` for both strided 3D arrays and vectors of `BlasFloat` matrices, and the CUDA
+extension selects `GEMM()` for `CuArray`s).
 """
 default_batched_mul_algorithm(Cs, As, Bs; kwargs...) =
     default_batched_mul_algorithm(typeof(Cs), typeof(As), typeof(Bs); kwargs...)

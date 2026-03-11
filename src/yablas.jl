@@ -5,9 +5,10 @@ Yet Another BLAS wrapper.
 This module contains bindings for calling BLAS batched matrix multiplication
 functionality from Julia using the CBLAS interface.
 
-`gemm_batch_strided!` wraps `cblas_?gemm_batch_strided`, available in both
-OpenBLAS and MKL. `gemm_batch!` wraps `cblas_?gemm_batch`, which is only
-available in MKL (not standard OpenBLAS) and will error if called otherwise.
+`gemm_batch_strided!` wraps `cblas_?gemm_batch_strided` and `gemm_batch!`
+wraps `cblas_?gemm_batch`. Both are available in MKL. In OpenBLAS,
+`cblas_?gemm_batch` is available but `cblas_?gemm_batch_strided` is not;
+both will error if called with a BLAS that does not support them.
 
 Both functions accept a `layout` keyword argument (`CblasColMajor` or
 `CblasRowMajor`) to select storage order. For `CblasColMajor` (default), a
@@ -96,6 +97,7 @@ end
 # layout = CblasRowMajor: A is (k, m, batch), B is (n, k, batch),
 #   C is (n, m, batch); stride(X, 1) == 1 required.
 #
+# Available in MKL; NOT available in standard OpenBLAS.
 # Real types pass alpha/beta by value; complex types pass them via Ref (pointer).
 # =============================================================================
 
