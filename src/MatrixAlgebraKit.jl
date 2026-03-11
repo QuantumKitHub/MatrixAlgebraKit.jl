@@ -34,7 +34,7 @@ export left_orth!, right_orth!, left_null!, right_null!
 export Native_HouseholderQR, Native_HouseholderLQ
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
-    LAPACK_DivideAndConquer, LAPACK_Jacobi
+    LAPACK_DivideAndConquer, LAPACK_Jacobi, SafeSVD
 export GLA_HouseholderQR, GLA_QRIteration, GS_QRIteration
 export LQViaTransposedQR
 export PolarViaSVD, PolarNewton
