@@ -161,9 +161,15 @@ function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix
     return C
 end
 
-# TODO: intersect doesn't work on GPU
+# TODO: intersect/union don't work on GPU
 MatrixAlgebraKit._ind_intersect(A::ROCVector{Int}, B::ROCVector{Int}) =
     MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
+MatrixAlgebraKit._ind_union(A::AbstractVector{<:Integer}, B::ROCVector{Int}) =
+    MatrixAlgebraKit._ind_union(A, collect(B))
+MatrixAlgebraKit._ind_union(A::ROCVector{Int}, B::AbstractVector{<:Integer}) =
+    MatrixAlgebraKit._ind_union(collect(A), B)
+MatrixAlgebraKit._ind_union(A::ROCVector{Int}, B::ROCVector{Int}) =
+    MatrixAlgebraKit._ind_union(collect(A), collect(B))
 
 function _sylvester(A::AnyROCMatrix, B::AnyROCMatrix, C::AnyROCMatrix)
     hX = sylvester(collect(A), collect(B), collect(C))
