@@ -57,7 +57,7 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
     eval(
         Expr(
             :public, :TruncationByOrder, :TruncationByFilter, :TruncationByValue,
-            :TruncationByError, :TruncationIntersection, :truncate
+            :TruncationByError, :TruncationIntersection, :TruncationUnion, :truncate
         )
     )
     eval(
