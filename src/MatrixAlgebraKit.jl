@@ -85,6 +85,7 @@ include("common/matrixproperties.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
+include("yablas.jl")
 include("interface/projections.jl")
 include("interface/decompositions.jl")
 include("interface/truncation.jl")
