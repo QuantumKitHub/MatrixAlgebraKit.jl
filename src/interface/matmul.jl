@@ -35,25 +35,44 @@ function strided_batched_mul!(C, A, B, α, β; alg = nothing, kwargs...)
     return strided_batched_mul!(C, A, B, α, β, alg)
 end
 
-# Algorithm selection
-# -------------------
+# Algorithm types
+# ---------------
 
 """
-    GEMM(; driver::Driver = DefaultDriver, kwargs...)
+    GEMM(; kwargs...)
 
-Algorithm type for (batched) GEneral Matrix Multiplication.
+Algorithm for batched matrix multiplication via BLAS. Uses `cblas_?gemm_batch_strided`
+(via YABLAS) for strided 3D arrays, `cblas_?gemm_batch` (via YABLAS) for vectors of
+matrices, or CUBLAS on GPU. Errors if the underlying BLAS does not support the required
+function (e.g. `cblas_?gemm_batch` is not available in standard OpenBLAS).
 """
 @algdef GEMM
+
+"""
+    LoopGEMM(; kwargs...)
+
+Algorithm for batched matrix multiplication via a sequential loop over `mul!`.
+Always works regardless of the underlying BLAS implementation.
+"""
+@algdef LoopGEMM
+
+# Algorithm selection
+# -------------------
 
 """
     MatrixAlgebraKit.default_batched_mul_algorithm(Cs, As, Bs; kwargs...)
     MatrixAlgebraKit.default_batched_mul_algorithm(::Type{TC}, ::Type{TA}, ::Type{TB}; kwargs...)
 
-Select the default algorithm for [`batched_mul!`](@ref) given input arrays `As` and `Bs`.
+Select the default algorithm for [`batched_mul!`](@ref) and [`strided_batched_mul!`](@ref).
+
+The default is `GEMM()` for strided 3D `BlasFloat` arrays (where `cblas_?gemm_batch_strided`
+is available in both OpenBLAS and MKL) and `LoopGEMM()` otherwise. Extensions may override
+the default for their specific array types (e.g. the MKL extension selects `GEMM()` for
+vectors of `BlasFloat` matrices, and the CUDA extension selects `GEMM()` for `CuArray`s).
 """
 default_batched_mul_algorithm(Cs, As, Bs; kwargs...) =
     default_batched_mul_algorithm(typeof(Cs), typeof(As), typeof(Bs); kwargs...)
-default_batched_mul_algorithm(::Type, ::Type, ::Type; kwargs...) = GEMM(; kwargs...)
+default_batched_mul_algorithm(::Type, ::Type, ::Type; kwargs...) = LoopGEMM(; kwargs...)
 
 for f in (:batched_mul!, :strided_batched_mul!)
     @eval function default_algorithm(::typeof($f), ::Tuple{C, A, B}; kwargs...) where {C, A, B}

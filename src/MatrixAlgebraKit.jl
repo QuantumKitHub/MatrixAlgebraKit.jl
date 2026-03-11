@@ -31,6 +31,7 @@ export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
 export batched_mul!, strided_batched_mul!
+export GEMM, LoopGEMM
 
 export Native_HouseholderQR, Native_HouseholderLQ
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
@@ -111,6 +112,7 @@ include("implementations/gen_eig.jl")
 include("implementations/schur.jl")
 include("implementations/polar.jl")
 include("implementations/orthnull.jl")
+include("implementations/matmul.jl")
 
 include("pullbacks/qr.jl")
 include("pullbacks/lq.jl")
