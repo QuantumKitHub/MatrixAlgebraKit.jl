@@ -6,8 +6,11 @@ using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
 using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
+using MatrixAlgebraKit: GEMM, LoopGEMM
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_Xgesvdr!, _gpu_gesvdj!, _gpu_geev!
 import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!, _sylvester, svd_rank
+import MatrixAlgebraKit: default_batched_mul_algorithm
+import MatrixAlgebraKit: strided_batched_mul!, batched_mul!
 using CUDA, CUDA.CUBLAS
 using CUDA: i32
 using LinearAlgebra
@@ -177,5 +180,65 @@ function _sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
 end
 
 svd_rank(S::AnyCuVector, rank_atol) = findlast(s -> s ≥ rank_atol, S)
+
+# Batched matrix multiplication on GPU
+# -------------------------------------
+
+# Union type for CuMatrix inputs that may be plain, transposed, or adjointed
+const _CuGemmMat{T} = Union{
+    StridedCuMatrix{T},
+    Adjoint{T, <:StridedCuMatrix{T}},
+    Transpose{T, <:StridedCuMatrix{T}},
+}
+
+# Extract the CUBLAS trans character and the parent array from a matrix
+_gemm_trans(::StridedCuMatrix) = 'N'
+_gemm_trans(::Adjoint{<:Any, <:StridedCuMatrix}) = 'C'
+_gemm_trans(::Transpose{<:Any, <:StridedCuMatrix}) = 'T'
+
+_gemm_parent(A::StridedCuMatrix) = A
+_gemm_parent(A::Union{Adjoint{<:Any, <:StridedCuMatrix}, Transpose{<:Any, <:StridedCuMatrix}}) = parent(A)
+
+# CUBLAS supports both cblas_?gemm_batch_strided and cblas_?gemm_batch equivalents,
+# so GEMM() is the default for all CuArray batched operations.
+function MatrixAlgebraKit.default_batched_mul_algorithm(
+        ::Type{<:StridedCuArray{<:BlasFloat, 3}},
+        ::Type{<:StridedCuArray{<:BlasFloat, 3}},
+        ::Type{<:StridedCuArray{<:BlasFloat, 3}}; kwargs...
+    )
+    return GEMM(; kwargs...)
+end
+
+function MatrixAlgebraKit.default_batched_mul_algorithm(
+        ::Type{<:AbstractVector{<:StridedCuMatrix{<:BlasFloat}}},
+        ::Type{<:AbstractVector{<:_CuGemmMat{<:BlasFloat}}},
+        ::Type{<:AbstractVector{<:_CuGemmMat{<:BlasFloat}}}; kwargs...
+    )
+    return GEMM(; kwargs...)
+end
+
+function MatrixAlgebraKit.strided_batched_mul!(
+        C::StridedCuArray{T, 3}, A::StridedCuArray{T, 3},
+        B::StridedCuArray{T, 3}, alpha, beta, alg::GEMM
+    ) where {T <: BlasFloat}
+    MatrixAlgebraKit.check_input(MatrixAlgebraKit.strided_batched_mul!, C, A, B, alg)
+    CUBLAS.gemm_strided_batched!('N', 'N', T(alpha), A, B, T(beta), C)
+    return C
+end
+
+function MatrixAlgebraKit.batched_mul!(
+        Cs::AbstractVector{<:StridedCuMatrix{T}},
+        As::AbstractVector{<:_CuGemmMat{T}},
+        Bs::AbstractVector{<:_CuGemmMat{T}},
+        alpha, beta, alg::GEMM
+    ) where {T <: BlasFloat}
+    MatrixAlgebraKit.check_input(MatrixAlgebraKit.batched_mul!, Cs, As, Bs, alg)
+    transa = _gemm_trans(first(As))
+    transb = _gemm_trans(first(Bs))
+    As_parents = map(_gemm_parent, As)
+    Bs_parents = map(_gemm_parent, Bs)
+    CUBLAS.gemm_batched!(transa, transb, T(alpha), As_parents, Bs_parents, T(beta), Cs)
+    return Cs
+end
 
 end

@@ -22,13 +22,17 @@ function batched_mul!(Cs, As, Bs, alpha::Number, beta::Number, alg::LoopGEMM)
 end
 
 function batched_mul!(
-        Cs::AbstractVector{<:YABLAS.BlasMat{T}},
-        As::AbstractVector{<:YABLAS.BlasMat{T}},
-        Bs::AbstractVector{<:YABLAS.BlasMat{T}},
+        Cs::AbstractVector{<:AbstractMatrix{T}},
+        As::AbstractVector{<:AbstractMatrix{T}},
+        Bs::AbstractVector{<:AbstractMatrix{T}},
         alpha::Number, beta::Number, alg::GEMM
     ) where {T <: BlasFloat}
     check_input(batched_mul!, Cs, As, Bs, alg)
-    YABLAS.gemm_batch!(Cs, As, Bs, T(alpha), T(beta))
+    transA = YABLAS._trans_char(first(As))
+    transB = YABLAS._trans_char(first(Bs))
+    As_parents = map(YABLAS._cblas_parent, As)
+    Bs_parents = map(YABLAS._cblas_parent, Bs)
+    YABLAS.gemm_batched!(transA, transB, T(alpha), As_parents, Bs_parents, T(beta), Cs)
     return Cs
 end
 
@@ -63,10 +67,10 @@ function strided_batched_mul!(
 end
 
 function strided_batched_mul!(
-        C::YABLAS.BlasArr3{T}, A::YABLAS.BlasArr3{T}, B::YABLAS.BlasArr3{T},
+        C::AbstractArray{T, 3}, A::AbstractArray{T, 3}, B::AbstractArray{T, 3},
         alpha::Number, beta::Number, alg::GEMM
     ) where {T <: BlasFloat}
     check_input(strided_batched_mul!, C, A, B, alg)
-    YABLAS.gemm_batch_strided!(C, A, B, T(alpha), T(beta))
+    YABLAS.gemm_strided_batched!('N', 'N', T(alpha), A, B, T(beta), C)
     return C
 end
