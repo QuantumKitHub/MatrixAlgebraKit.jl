@@ -30,6 +30,7 @@ export left_polar, right_polar
 export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
+export batched_mul!, strided_batched_mul!
 
 export Native_HouseholderQR, Native_HouseholderLQ
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
@@ -95,6 +96,7 @@ include("interface/gen_eig.jl")
 include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
+include("interface/matmul.jl")
 
 include("common/gauge.jl") # needs to be defined after the functions are
 
