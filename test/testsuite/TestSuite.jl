@@ -95,6 +95,7 @@ end
 include("ad_utils.jl")
 
 include("projections.jl")
+include("matmul.jl")
 
 # Decompositions
 # --------------
