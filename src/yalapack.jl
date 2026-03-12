@@ -2157,7 +2157,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 end
                 #! format: on
                 if i == 1
-                    chklapackerror(info[]) # bail out if even the workspace query failed 
+                    chklapackerror(info[]) # bail out if even the workspace query failed
                     # Work around issue with truncated Float32 representation of lwork in
                     # sgesdd by using nextfloat. See
                     # http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=13&t=4587&p=11036&hilit=sgesdd#p11036
@@ -2192,13 +2192,14 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             else
                 rwork = nothing
             end
-            (S, U, Vᴴ), info = _gesdd_body!(copy(A), S, U, Vᴴ, work, rwork)
+            Ac = copy(A)
+            (S, U, Vᴴ), info = _gesdd_body!(Ac, S, U, Vᴴ, work, rwork)
             if info > 0
                 (S, U, Vᴴ), info = _gesvd_body!(A, S, U, Vᴴ, work, rwork)
-        end
-        chklapackerror(info)
+            end
+            chklapackerror(info)
             return S, U, Vᴴ
-        end        
+        end
         #! format: off
         function gesvdx!(
                 A::AbstractMatrix{$elty},
