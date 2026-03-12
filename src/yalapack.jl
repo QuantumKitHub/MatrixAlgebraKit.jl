@@ -2193,8 +2193,9 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 rwork = nothing
             end
             (S, U, Vᴴ), info = _gesdd_body!(copy(A), S, U, Vᴴ, work, rwork)
-            if info != 0
+            if info > 0
                 (S, U, Vᴴ), info = _gesvd_body!(A, S, U, Vᴴ, work, rwork)
+                chklapackerror(info)
             end
             return S, U, Vᴴ
         end        
