@@ -202,41 +202,38 @@ for (fname, elty) in (
             transa_int = _char_to_cblas_trans(transA)
             transb_int = _char_to_cblas_trans(transB)
             batch = length(A)
-            length(B) == batch || throw(DimensionMismatch(lazy"length of A ($batch) and B ($(length(B))) must match"))
-            length(C) == batch || throw(DimensionMismatch(lazy"length of A ($batch) and C ($(length(C))) must match"))
+            length(B) == batch ||
+                throw(DimensionMismatch(lazy"length of A ($batch) and B ($(length(B))) must match"))
+            length(C) == batch ||
+                throw(DimensionMismatch(lazy"length of A ($batch) and C ($(length(C))) must match"))
 
-            transa_arr = fill(transa_int, batch)
-            transb_arr = fill(transb_int, batch)
-            alphas_arr = fill(alpha, batch)
-            betas_arr = fill(beta, batch)
-            group_sizes = ones(Cint, batch)
-
-            m_arr = Vector{Cint}(undef, batch)
-            n_arr = Vector{Cint}(undef, batch)
-            k_arr = Vector{Cint}(undef, batch)
-            lda_arr = Vector{Cint}(undef, batch)
-            ldb_arr = Vector{Cint}(undef, batch)
-            ldc_arr = Vector{Cint}(undef, batch)
-            a_ptrs = Vector{Ptr{$ptr_elty}}(undef, batch)
-            b_ptrs = Vector{Ptr{$ptr_elty}}(undef, batch)
-            c_ptrs = Vector{Ptr{$ptr_elty}}(undef, batch)
+            # Bundle all same-type arrays into single allocations to reduce heap pressure.
+            # int_buf layout:    [transa | transb | m | n | k | lda | ldb | ldc | group_sizes]
+            # scalar_buf layout: [alpha | beta]
+            # ptr_buf layout:    [a_ptrs | b_ptrs | c_ptrs]
+            int_buf = Vector{Cint}(undef, 9 * batch)
+            scalar_buf = Vector{$elty}(undef, 2 * batch)
+            ptr_buf = Vector{Ptr{$ptr_elty}}(undef, 3 * batch)
 
             @inbounds for i in 1:batch
                 require_one_based_indexing(A[i], B[i], C[i])
-                chkstride1(A[i])
-                chkstride1(B[i])
-                chkstride1(C[i])
+                chkstride1(A[i]); chkstride1(B[i]); chkstride1(C[i])
                 m, n, k = _gemm_dims(layout, transa_int, transb_int, A[i], B[i])
                 _check_output_size(layout, m, n, C[i])
-                m_arr[i] = m
-                n_arr[i] = n
-                k_arr[i] = k
-                lda_arr[i] = max(1, stride(A[i], 2))
-                ldb_arr[i] = max(1, stride(B[i], 2))
-                ldc_arr[i] = max(1, stride(C[i], 2))
-                a_ptrs[i] = pointer(A[i])
-                b_ptrs[i] = pointer(B[i])
-                c_ptrs[i] = pointer(C[i])
+                int_buf[i] = transa_int
+                int_buf[batch + i] = transb_int
+                int_buf[2 * batch + i] = m
+                int_buf[3 * batch + i] = n
+                int_buf[4 * batch + i] = k
+                int_buf[5 * batch + i] = max(1, stride(A[i], 2))
+                int_buf[6 * batch + i] = max(1, stride(B[i], 2))
+                int_buf[7 * batch + i] = max(1, stride(C[i], 2))
+                int_buf[8 * batch + i] = 1
+                scalar_buf[i] = alpha
+                scalar_buf[batch + i] = beta
+                ptr_buf[i] = pointer(A[i])
+                ptr_buf[batch + i] = pointer(B[i])
+                ptr_buf[2 * batch + i] = pointer(C[i])
             end
 
             ccall(
@@ -249,12 +246,13 @@ for (fname, elty) in (
                     Ptr{$ptr_elty}, Ptr{Ptr{$ptr_elty}}, Ptr{Cint},
                     Cint, Ptr{Cint},
                 ),
-                layout, transa_arr, transb_arr,
-                m_arr, n_arr, k_arr,
-                alphas_arr, a_ptrs, lda_arr,
-                b_ptrs, ldb_arr,
-                betas_arr, c_ptrs, ldc_arr,
-                batch, group_sizes
+                layout,
+                pointer(int_buf), pointer(int_buf, batch + 1),
+                pointer(int_buf, 2 * batch + 1), pointer(int_buf, 3 * batch + 1), pointer(int_buf, 4 * batch + 1),
+                Ptr{$ptr_elty}(pointer(scalar_buf)), pointer(ptr_buf), pointer(int_buf, 5 * batch + 1),
+                pointer(ptr_buf, batch + 1), pointer(int_buf, 6 * batch + 1),
+                Ptr{$ptr_elty}(pointer(scalar_buf, batch + 1)), pointer(ptr_buf, 2 * batch + 1), pointer(int_buf, 7 * batch + 1),
+                batch, pointer(int_buf, 8 * batch + 1)
             )
             return C
         end
