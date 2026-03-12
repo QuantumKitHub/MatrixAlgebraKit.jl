@@ -7,7 +7,7 @@ using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
 @testset "default_algorithm" begin
     A = randn(3, 3)
     for f in (svd_compact!, svd_compact, svd_full!, svd_full)
-        @test @constinferred(default_algorithm(f, A)) === LAPACK_DivideAndConquer()
+        @test @constinferred(default_algorithm(f, A)) === LAPACK_SafeDivideAndConquer()
     end
     for f in (eig_full!, eig_full, eig_vals!, eig_vals)
         @test @constinferred(default_algorithm(f, A)) === LAPACK_Expert()
@@ -21,7 +21,7 @@ using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
     end
     for f in (left_polar!, left_polar, right_polar!, right_polar)
         @test @constinferred(default_algorithm(f, A)) ==
-            PolarViaSVD(LAPACK_DivideAndConquer())
+            PolarViaSVD(LAPACK_SafeDivideAndConquer())
     end
     for f in (qr_full!, qr_full, qr_compact!, qr_compact, qr_null!, qr_null)
         @test @constinferred(default_algorithm(f, A)) == Householder(; driver = LAPACK())
