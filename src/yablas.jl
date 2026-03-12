@@ -216,23 +216,26 @@ for (fname, elty) in (
             ptr_buf = Vector{Ptr{$ptr_elty}}(undef, 3 * batch)
 
             @inbounds for i in 1:batch
-                require_one_based_indexing(A[i], B[i], C[i])
-                chkstride1(A[i]); chkstride1(B[i]); chkstride1(C[i])
-                m, n, k = _gemm_dims(layout, transa_int, transb_int, A[i], B[i])
+                Ai = _cblas_parent(A[i])
+                Bi = _cblas_parent(B[i])
+                require_one_based_indexing(Ai, Bi, C[i])
+                chkstride1(Ai); chkstride1(Bi); chkstride1(C[i])
+                # _gemm_dims and lda must use the parent (untrансposed) storage
+                m, n, k = _gemm_dims(layout, transa_int, transb_int, Ai, Bi)
                 _check_output_size(layout, m, n, C[i])
                 int_buf[i] = transa_int
                 int_buf[batch + i] = transb_int
                 int_buf[2 * batch + i] = m
                 int_buf[3 * batch + i] = n
                 int_buf[4 * batch + i] = k
-                int_buf[5 * batch + i] = max(1, stride(A[i], 2))
-                int_buf[6 * batch + i] = max(1, stride(B[i], 2))
+                int_buf[5 * batch + i] = max(1, stride(Ai, 2))
+                int_buf[6 * batch + i] = max(1, stride(Bi, 2))
                 int_buf[7 * batch + i] = max(1, stride(C[i], 2))
                 int_buf[8 * batch + i] = 1
                 scalar_buf[i] = alpha
                 scalar_buf[batch + i] = beta
-                ptr_buf[i] = pointer(A[i])
-                ptr_buf[batch + i] = pointer(B[i])
+                ptr_buf[i] = pointer(Ai)
+                ptr_buf[batch + i] = pointer(Bi)
                 ptr_buf[2 * batch + i] = pointer(C[i])
             end
 

@@ -30,9 +30,7 @@ function batched_mul!(
     check_input(batched_mul!, Cs, As, Bs, alg)
     transA = YABLAS._trans_char(first(As))
     transB = YABLAS._trans_char(first(Bs))
-    As_parents = map(YABLAS._cblas_parent, As)
-    Bs_parents = map(YABLAS._cblas_parent, Bs)
-    YABLAS.gemm_batched!(transA, transB, T(alpha), As_parents, Bs_parents, T(beta), Cs)
+    YABLAS.gemm_batched!(transA, transB, T(alpha), As, Bs, T(beta), Cs)
     return Cs
 end
 
