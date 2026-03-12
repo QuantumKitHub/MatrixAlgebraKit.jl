@@ -38,7 +38,7 @@ end
     A = randn(3, 3)
     for f in (svd_trunc!, svd_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
-            TruncatedAlgorithm(LAPACK_DivideAndConquer(), notrunc())
+            TruncatedAlgorithm(LAPACK_SafeDivideAndConquer(), notrunc())
     end
     for f in (eig_trunc!, eig_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
@@ -55,8 +55,8 @@ end
         @test_throws ArgumentError select_algorithm(eig_trunc!, A, alg; trunc = (; maxrank = 2))
     end
 
-    @test @constinferred(select_algorithm(svd_compact!, A)) === LAPACK_DivideAndConquer()
-    @test @constinferred(select_algorithm(svd_compact!, A, nothing)) === LAPACK_DivideAndConquer()
+    @test @constinferred(select_algorithm(svd_compact!, A)) === LAPACK_SafeDivideAndConquer()
+    @test @constinferred(select_algorithm(svd_compact!, A, nothing)) === LAPACK_SafeDivideAndConquer()
     for alg in (:LAPACK_QRIteration, LAPACK_QRIteration, LAPACK_QRIteration())
         @test @constinferred(select_algorithm(svd_compact!, A, $alg)) === LAPACK_QRIteration()
     end
