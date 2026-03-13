@@ -29,6 +29,7 @@ end
 Algorithm{Name}(; kwargs...) where {Name} = Algorithm{Name}(NamedTuple(kwargs))
 
 # Utility function to canonicalize keys
+# TODO: generated function can likely be dropped once Julia 1.10 support is dropped
 @generated _canonicalize_namedtuple(nt::NamedTuple{N}) where {N} =
     :(NamedTuple{$(Tuple(sort(collect(N))))}(nt))
 
