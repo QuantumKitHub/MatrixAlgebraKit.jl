@@ -75,6 +75,49 @@ function test_batched_mul(T::Type, sz; kwargs...)
     end
 end
 
+function test_grouped_batched_mul(T::Type, szs; kwargs...)
+    summary_str = testargs_summary(T, szs)
+    return @testset "grouped_batched_mul $summary_str" begin
+        Te = promote_type(eltype(T), Float64)
+        ngroups = length(szs)
+        Ass = [[instantiate_matrix(T, (m, p)) for _ in 1:batch] for (m, p, n, batch) in szs]
+        Bss = [[instantiate_matrix(T, (p, n)) for _ in 1:batch] for (m, p, n, batch) in szs]
+        Css = [[similar(Ass[g][1], Te, (szs[g][1], szs[g][3])) for _ in 1:szs[g][4]] for g in 1:ngroups]
+        alphas = [Te(2) for _ in 1:ngroups]
+        betas = fill(zero(Te), ngroups)
+
+        Css2 = @testinferred grouped_batched_mul!(Css, Ass, Bss, alphas, betas)
+        @test Css2 === Css
+        for g in 1:ngroups
+            m, p, n, batch = szs[g]
+            for k in 1:batch
+                @test Css2[g][k] ≈ alphas[g] * Ass[g][k] * Bss[g][k]
+            end
+        end
+    end
+end
+
+function test_grouped_batched_mul_algs(T::Type, szs, algs; kwargs...)
+    summary_str = testargs_summary(T, szs)
+    return @testset "grouped_batched_mul algorithms $summary_str" begin
+        Te = promote_type(eltype(T), Float64)
+        ngroups = length(szs)
+        Ass = [[instantiate_matrix(T, (m, p)) for _ in 1:batch] for (m, p, n, batch) in szs]
+        Bss = [[instantiate_matrix(T, (p, n)) for _ in 1:batch] for (m, p, n, batch) in szs]
+        alphas = [Te(1) for _ in 1:ngroups]
+        betas = fill(zero(Te), ngroups)
+        Cssref = [[similar(Ass[g][1], Te, (szs[g][1], szs[g][3])) for _ in 1:szs[g][4]] for g in 1:ngroups]
+        grouped_batched_mul!(Cssref, Ass, Bss, alphas, betas)
+        for alg in algs
+            @testset "$alg" begin
+                Css = [[similar(Ass[g][1], Te, (szs[g][1], szs[g][3])) for _ in 1:szs[g][4]] for g in 1:ngroups]
+                @testinferred grouped_batched_mul!(Css, Ass, Bss, alphas, betas, alg)
+                @test all(all.(Css .≈ Cssref))
+            end
+        end
+    end
+end
+
 function test_batched_mul_algs(T::Type, sz, algs; kwargs...)
     m, p, n, batch = sz
     summary_str = testargs_summary(T, (m, p, n, batch))

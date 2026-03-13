@@ -349,9 +349,9 @@ for (fname, elty) in (
                 transb_arr[g] = transb_int
                 group_sizes[g] = ng
 
-                # Infer M, N, K from the first matrix in the group; validate all
-                # subsequent matrices match its size and leading dimensions.
-                A1 = Ag[1]; B1 = Bg[1]; C1 = Cg[1]
+                # Infer M, N, K from the parent of the first matrix in the group (unwrap
+                # any Adjoint/Transpose); validate all subsequent matrices match.
+                A1 = _cblas_parent(Ag[1]); B1 = _cblas_parent(Bg[1]); C1 = Cg[1]
                 m, n, k = _gemm_dims(layout, transa_int, transb_int, A1, B1)
                 _check_output_size(layout, m, n, C1)
                 m_arr[g] = m; n_arr[g] = n; k_arr[g] = k
@@ -361,7 +361,7 @@ for (fname, elty) in (
                 lda_arr[g] = lda; ldb_arr[g] = ldb; ldc_arr[g] = ldc
 
                 for i in 1:ng
-                    Ai = Ag[i]; Bi = Bg[i]; Ci = Cg[i]
+                    Ai = _cblas_parent(Ag[i]); Bi = _cblas_parent(Bg[i]); Ci = Cg[i]
                     require_one_based_indexing(Ai, Bi, Ci)
                     chkstride1(Ai); chkstride1(Bi); chkstride1(Ci)
                     size(Ai) == size(A1) ||

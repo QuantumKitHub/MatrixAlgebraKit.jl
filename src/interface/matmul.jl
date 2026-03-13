@@ -35,6 +35,27 @@ function strided_batched_mul!(C, A, B, α, β; alg = nothing, kwargs...)
     return strided_batched_mul!(C, A, B, α, β, alg)
 end
 
+# grouped_batched_mul
+# -------------------
+
+@doc """
+    grouped_batched_mul!(Css, Ass, Bss, alphas, betas; kwargs...) -> Css
+    grouped_batched_mul!(Css, Ass, Bss, alphas, betas, alg::AbstractAlgorithm) -> Css
+
+Compute a grouped batched matrix multiplication:
+`Css[g][k] = alphas[g] * Ass[g][k] * Bss[g][k] + betas[g] * Css[g][k]`
+for all group indices `g` and batch indices `k` within each group.
+
+Each of `Css`, `Ass`, `Bss` is a vector of groups, where each group is a vector of matrices.
+All matrices within a group must have compatible and uniform dimensions.
+Different groups may have different dimensions, transpose characters, and scaling factors.
+""" grouped_batched_mul!
+
+function grouped_batched_mul!(Css, Ass, Bss, alphas::AbstractVector, betas::AbstractVector; alg = nothing, kwargs...)
+    alg = select_algorithm(grouped_batched_mul!, (Css, Ass, Bss), alg; kwargs...)
+    return grouped_batched_mul!(Css, Ass, Bss, alphas, betas, alg)
+end
+
 # Algorithm types
 # ---------------
 
@@ -75,7 +96,7 @@ default_batched_mul_algorithm(Cs, As, Bs; kwargs...) =
     default_batched_mul_algorithm(typeof(Cs), typeof(As), typeof(Bs); kwargs...)
 default_batched_mul_algorithm(::Type, ::Type, ::Type; kwargs...) = LoopGEMM(; kwargs...)
 
-for f in (:batched_mul!, :strided_batched_mul!)
+for f in (:batched_mul!, :strided_batched_mul!, :grouped_batched_mul!)
     @eval function default_algorithm(::typeof($f), ::Tuple{C, A, B}; kwargs...) where {C, A, B}
         return default_batched_mul_algorithm(C, A, B; kwargs...)
     end

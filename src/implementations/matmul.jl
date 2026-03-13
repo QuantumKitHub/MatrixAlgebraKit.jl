@@ -34,6 +34,49 @@ function batched_mul!(
     return Cs
 end
 
+# grouped_batched_mul
+# -------------------
+
+function check_input(::typeof(grouped_batched_mul!), Css, Ass, Bss, alphas, betas, ::AbstractAlgorithm)
+    ngroups = length(Ass)
+    length(Bss) == ngroups && length(Css) == ngroups ||
+        throw(DimensionMismatch(lazy"lengths of Css ($(length(Css))), Ass ($ngroups), and Bss ($(length(Bss))) must match"))
+    length(alphas) == ngroups ||
+        throw(DimensionMismatch(lazy"length of alphas ($(length(alphas))) must match number of groups ($ngroups)"))
+    length(betas) == ngroups ||
+        throw(DimensionMismatch(lazy"length of betas ($(length(betas))) must match number of groups ($ngroups)"))
+    for g in 1:ngroups
+        ng = length(Ass[g])
+        length(Bss[g]) == ng && length(Css[g]) == ng ||
+            throw(DimensionMismatch(lazy"group $g: lengths of Css[$g] ($(length(Css[g]))), Ass[$g] ($ng), and Bss[$g] ($(length(Bss[g]))) must match"))
+        foreach(check_matmul_dims, Css[g], Ass[g], Bss[g])
+    end
+    return nothing
+end
+
+function grouped_batched_mul!(Css, Ass, Bss, alphas::AbstractVector, betas::AbstractVector, alg::LoopGEMM)
+    check_input(grouped_batched_mul!, Css, Ass, Bss, alphas, betas, alg)
+    @inbounds for g in eachindex(Css, Ass, Bss, alphas, betas)
+        for k in eachindex(Css[g], Ass[g], Bss[g])
+            mul!(Css[g][k], Ass[g][k], Bss[g][k], alphas[g], betas[g])
+        end
+    end
+    return Css
+end
+
+function grouped_batched_mul!(
+        Css::AbstractVector{<:AbstractVector{<:AbstractMatrix{T}}},
+        Ass::AbstractVector{<:AbstractVector{<:AbstractMatrix{T}}},
+        Bss::AbstractVector{<:AbstractVector{<:AbstractMatrix{T}}},
+        alphas::AbstractVector, betas::AbstractVector, alg::GEMM
+    ) where {T <: BlasFloat}
+    check_input(grouped_batched_mul!, Css, Ass, Bss, alphas, betas, alg)
+    transAs = map(Ag -> YABLAS._trans_char(first(Ag)), Ass)
+    transBs = map(Bg -> YABLAS._trans_char(first(Bg)), Bss)
+    YABLAS.gemm_grouped_batched!(transAs, transBs, T.(alphas), Ass, Bss, T.(betas), Css)
+    return Css
+end
+
 # strided_batched_mul
 # -------------------
 

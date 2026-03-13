@@ -30,7 +30,7 @@ export left_polar, right_polar
 export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
-export batched_mul!, strided_batched_mul!
+export batched_mul!, strided_batched_mul!, grouped_batched_mul!
 export GEMM, LoopGEMM
 
 export Native_HouseholderQR, Native_HouseholderLQ
