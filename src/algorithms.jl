@@ -22,15 +22,14 @@ struct Algorithm{name, K} <: AbstractAlgorithm
 
     # Ensure keywords are always in canonical order
     function Algorithm{Name}(kwargs::NamedTuple) where {Name}
-        kwargs_sorted = _sortkeys(kwargs)
+        kwargs_sorted = _canonicalize_namedtuple(kwargs)
         return new{Name, typeof(kwargs_sorted)}(kwargs_sorted)
     end
 end
 Algorithm{Name}(; kwargs...) where {Name} = Algorithm{Name}(NamedTuple(kwargs))
 
-# Utility generated function to canonicalize keys in type-stable way
-@generated _sortkeys(nt::NamedTuple{K}) where {K} =
-    :(NamedTuple{$(Tuple(sort!(collect(K))))}(nt))
+# Utility function to canonicalize keys
+_canonicalize_namedtuple(nt::NamedTuple{N}) where {N} = NamedTuple{sort(N)}(nt)
 
 name(alg::Algorithm) = name(typeof(alg))
 name(::Type{<:Algorithm{N}}) where {N} = N
