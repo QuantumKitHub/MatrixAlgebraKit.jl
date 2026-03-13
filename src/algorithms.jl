@@ -29,7 +29,9 @@ end
 Algorithm{Name}(; kwargs...) where {Name} = Algorithm{Name}(NamedTuple(kwargs))
 
 # Utility function to canonicalize keys
-_canonicalize_namedtuple(nt::NamedTuple{N}) where {N} = NamedTuple{(isempty(N) ? N : sort(N))}(nt)
+_canonicalize_namedtuple(::Type{T}) where {N, T <: NamedTuple{N}} =
+    NamedTuple{(Tuple(sort(collect(N))))}
+_canonicalize_namedtuple(nt::NamedTuple) = _canonicalize_namedtuple(typeof(nt))(nt)
 
 name(alg::Algorithm) = name(typeof(alg))
 name(::Type{<:Algorithm{N}}) where {N} = N
