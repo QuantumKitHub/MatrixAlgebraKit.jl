@@ -134,7 +134,7 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     elseif alg isa LAPACK_SafeDivideAndConquer
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
-        YALAPACK.gesdvd!(A, view(S, 1:minmn, 1), U, Vᴴ)
+        YALAPACK.gesdvd!(A, copy(A), view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa LAPACK_Bisection
         throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
     elseif alg isa LAPACK_Jacobi
@@ -179,7 +179,7 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     elseif alg isa LAPACK_SafeDivideAndConquer
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
-        YALAPACK.gesdvd!(A, diagview(S), U, Vᴴ)
+        YALAPACK.gesdvd!(A, copy(A), diagview(S), U, Vᴴ)
     elseif alg isa LAPACK_Bisection
         YALAPACK.gesvdx!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi
@@ -218,7 +218,7 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     elseif alg isa LAPACK_SafeDivideAndConquer
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
-        YALAPACK.gesdvd!(A, S, U, Vᴴ)
+        YALAPACK.gesdvd!(A, copy(A), S, U, Vᴴ)
     elseif alg isa LAPACK_Bisection
         YALAPACK.gesvdx!(A, S, U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi
@@ -232,12 +232,93 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
+# avoid double allocation
+function svd_full(A::AbstractMatrix, alg::LAPACK_SafeDivideAndConquer)
+    Ac = copy_input(svd_full, A)
+    USVᴴ = initialize_output(svd_full!, Ac, alg)
+    check_input(svd_full!, Ac, USVᴴ, alg)
+
+    U, S, Vᴴ = USVᴴ
+    zero!(S)
+
+    minmn = min(size(A)...)
+    minmn == 0 && return one!(U), S, one!(Vᴴ)
+
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
+    isempty(alg_kwargs) ||
+        throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
+
+
+    YALAPACK.gesdvd!(A, Ac, view(S, 1:minmn, 1), U, Vᴴ)
+
+    for i in 2:minmn
+        S[i, i] = S[i, 1]
+        S[i, 1] = zero(eltype(S))
+    end
+
+    do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
+
+    return USVᴴ
+end
+function svd_compact(A::AbstractMatrix, alg::LAPACK_SafeDivideAndConquer)
+    Ac = copy_input(svd_compact, A)
+    USVᴴ = initialize_output(svd_compact!, Ac, alg)
+    check_input(svd_compact!, Ac, USVᴴ, alg)
+
+    U, S, Vᴴ = USVᴴ
+    zero!(S)
+
+    minmn = min(size(A)...)
+    minmn == 0 && return one!(U), S, one!(Vᴴ)
+
+    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
+    isempty(alg_kwargs) ||
+        throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
+
+    YALAPACK.gesdvd!(A, Ac, diagview(S), U, Vᴴ)
+
+    do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
+
+    return USVᴴ
+end
+function svd_vals(A::AbstractMatrix, alg::LAPACK_SVDAlgorithm)
+    Ac = copy_input(svd_vals, A)
+    S = initialize_output(svd_vals!, Ac, alg)
+    check_input(svd_vals!, Ac, S, alg)
+
+    minmn = min(size(A)...)
+    minmn == 0 && return zero!(S)
+
+    U, Vᴴ = similar(Ac, (0, 0)), similar(Ac, (0, 0))
+
+    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
+    isempty(alg_kwargs) ||
+        throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
+
+    YALAPACK.gesdvd!(A, Ac, S, U, Vᴴ)
+
+    return S
+end
+
+function svd_trunc_no_error(A, alg::TruncatedAlgorithm)
+    USVᴴ = svd_compact(A, alg.alg)
+    USVᴴtrunc, ind = truncate(svd_trunc!, USVᴴ, alg.trunc)
+    return USVᴴtrunc
+end
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
     return USVᴴtrunc
 end
 
+function svd_trunc(A, alg::TruncatedAlgorithm)
+    USVᴴ = svd_compact(A, alg.alg)
+    USVᴴtrunc, ind = truncate(svd_trunc!, USVᴴ, alg.trunc)
+    ϵ = truncation_error!(diagview(USVᴴ[2]), ind)
+    return USVᴴtrunc..., ϵ
+end
 function svd_trunc!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)

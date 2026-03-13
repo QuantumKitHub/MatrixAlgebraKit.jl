@@ -188,6 +188,15 @@ for svd_f in (:svd_compact, :svd_full)
             end
             return USVᴴ, svd_pullback
         end
+        function ChainRulesCore.rrule(::typeof($svd_f), A, alg)
+            USVᴴ = $(svd_f)(A, alg)
+            function svd_pullback(ΔUSVᴴ)
+                ΔA = zero(A)
+                MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.(ΔUSVᴴ))
+                return NoTangent(), ΔA, NoTangent()
+            end
+            return USVᴴ, svd_pullback
+        end
     end
 end
 
@@ -196,42 +205,56 @@ function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlg
     USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
     USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
     ϵ = truncation_error(diagview(USVᴴ[2]), ind)
-    return (USVᴴ′..., ϵ), _make_svd_trunc_pullback(A, USVᴴ, ind)
-end
-function _make_svd_trunc_pullback(A, USVᴴ, ind)
     function svd_trunc_pullback(ΔUSVᴴϵ)
-        ΔA = zero(A)
-        ΔU, ΔS, ΔVᴴ, Δϵ = ΔUSVᴴϵ
-        if !MatrixAlgebraKit.iszerotangent(Δϵ) && !iszero(unthunk(Δϵ))
-            throw(ArgumentError("Pullback for svd_trunc! does not yet support non-zero tangent for the truncation error"))
-        end
-        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.((ΔU, ΔS, ΔVᴴ)), ind)
+        ΔA = _svd_trunc_pullback(unthunk(ΔUSVᴴϵ), A, USVᴴ, ind)
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
-        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    return (USVᴴ′..., ϵ), svd_trunc_pullback
+end
+function ChainRulesCore.rrule(::typeof(svd_trunc), A, alg::TruncatedAlgorithm)
+    USVᴴ = svd_compact(A, alg.alg)
+    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+    ϵ = truncation_error(diagview(USVᴴ[2]), ind)
+    function svd_trunc_pullback(ΔUSVᴴϵ)
+        ΔA = _svd_trunc_pullback(unthunk(ΔUSVᴴϵ), A, USVᴴ, ind)
+        return NoTangent(), ΔA, NoTangent()
     end
-    return svd_trunc_pullback
+    return (USVᴴ′..., ϵ), svd_trunc_pullback
 end
 
 function ChainRulesCore.rrule(::typeof(svd_trunc_no_error!), A, USVᴴ, alg::TruncatedAlgorithm)
     Ac = copy_input(svd_compact, A)
     USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
     USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
-    return USVᴴ′, _make_svd_trunc_no_error_pullback(A, USVᴴ, ind)
-end
-function _make_svd_trunc_no_error_pullback(A, USVᴴ, ind)
     function svd_trunc_pullback(ΔUSVᴴ)
-        ΔA = zero(A)
-        ΔU, ΔS, ΔVᴴ = ΔUSVᴴ
-        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.((ΔU, ΔS, ΔVᴴ)), ind)
+        ΔA = _svd_trunc_no_error_pullback(unthunk(ΔUSVᴴ), A, USVᴴ, ind)
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
-        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
-    end
-    return svd_trunc_pullback
+    return USVᴴ′, svd_trunc_pullback
 end
+function ChainRulesCore.rrule(::typeof(svd_trunc_no_error), A, alg::TruncatedAlgorithm)
+    USVᴴ = svd_compact(A, alg.alg)
+    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+    function svd_trunc_pullback(ΔUSVᴴ)
+        ΔA = _svd_trunc_no_error_pullback(unthunk(ΔUSVᴴ), A, USVᴴ, ind)
+        return NoTangent(), ΔA, NoTangent()
+    end
+    return USVᴴ′, svd_trunc_pullback
+end
+
+function _svd_trunc_pullback(ΔUSVᴴϵ, A, USVᴴ, ind)
+    Δϵ = last(ΔUSVᴴϵ)
+    !MatrixAlgebraKit.iszerotangent(Δϵ) && !iszero(unthunk(Δϵ)) &&
+        throw(ArgumentError("Pullback for svd_trunc! does not yet support non-zero tangent for the truncation error"))
+    return _make_svd_trunc_no_error_pullback(Base.front(ΔUSVᴴ), A, USVᴴ, ind)
+end
+function _svd_trunc_no_error_pullback(ΔUSVᴴ, A, USVᴴ, ind)
+    ΔA = zero(A)
+    ΔU, ΔS, ΔVᴴ = ΔUSVᴴ
+    MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.((ΔU, ΔS, ΔVᴴ)), ind)
+    return ΔA
+end
+_svd_trunc_no_error_pullback(::NTuple{3, ZeroTangent}, A, USVᴴ, ind) = ZeroTangent()
 
 function ChainRulesCore.rrule(::typeof(svd_vals!), A, S, alg)
     USVᴴ = svd_compact(A, alg)
@@ -240,8 +263,20 @@ function ChainRulesCore.rrule(::typeof(svd_vals!), A, S, alg)
         MatrixAlgebraKit.svd_vals_pullback!(ΔA, A, USVᴴ, unthunk(ΔS))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
-    function svd_pullback(::ZeroTangent) # is this extra definition useful?
+    function svd_vals_pullback(::ZeroTangent) # is this extra definition useful?
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return diagview(USVᴴ[2]), svd_vals_pullback
+end
+function ChainRulesCore.rrule(::typeof(svd_vals), A, alg)
+    USVᴴ = svd_compact(A, alg)
+    function svd_vals_pullback(ΔS)
+        ΔA = zero(A)
+        MatrixAlgebraKit.svd_vals_pullback!(ΔA, A, USVᴴ, unthunk(ΔS))
+        return NoTangent(), ΔA, NoTangent()
+    end
+    function svd_vals_pullback(::ZeroTangent) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), NoTangent()
     end
     return diagview(USVᴴ[2]), svd_vals_pullback
 end
