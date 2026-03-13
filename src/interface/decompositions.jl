@@ -74,11 +74,17 @@ The optional `driver` symbol can be used to choose between different implementat
 
 - `positive::Bool = true` : Fix the gauge of the resulting factors by making the diagonal elements of `L` or `R` non-negative.
 - `pivoted::Bool = false` : Use column- or row-pivoting for low-rank input matrices.
-- `blocksize::Int` : Use a blocked version of the algorithm if `blocksize > 1`.
+- `blocksize::Int` : Use a blocked version of the algorithm if `blocksize > 1`. Use the default if `blocksize ≤ 0`.
 
 Depending on the driver, various other keywords may be (un)available to customize the implementation.
 """
 @algdef Householder
+function Householder(;
+        blocksize::Int = 0, driver::Driver = DefaultDriver(),
+        pivoted::Bool = false, positive::Bool = true
+    )
+    return Householder((; blocksize, driver, pivoted, positive))
+end
 
 default_householder_driver(A) = default_householder_driver(typeof(A))
 default_householder_driver(::Type) = Native()

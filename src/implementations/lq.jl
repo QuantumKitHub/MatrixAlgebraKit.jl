@@ -120,9 +120,10 @@ householder_lq!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, L, Q; kwargs...) =
     lq_via_qr!(A, L, Q, Householder(; driver, kwargs...))
 function householder_lq!(
         driver::LAPACK, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
-        positive = true, pivoted = false,
-        blocksize = ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
+        positive = true, pivoted = false, blocksize::Int = 0
     )
+    blocksize = blocksize > 0 ? blocksize : ((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A))
+
     # error messages for disallowing driver - setting combinations
     pivoted && (blocksize > 1) &&
         throw(ArgumentError(lazy"$driver does not provide a blocked pivoted LQ decomposition"))
@@ -176,10 +177,10 @@ function householder_lq!(
 end
 function householder_lq!(
         driver::Native, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
-        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
     # error messages for disallowing driver - setting combinations
-    blocksize == 1 ||
+    blocksize <= 1 ||
         throw(ArgumentError(lazy"$driver does not provide a blocked LQ decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted LQ decomposition"))
@@ -225,8 +226,10 @@ householder_lq_null!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, Nᴴ; kwargs...
     lq_null_via_qr!(A, Nᴴ, Householder(; driver, kwargs...))
 function householder_lq_null!(
         driver::LAPACK, A::AbstractMatrix, Nᴴ::AbstractMatrix;
-        positive::Bool = true, pivoted::Bool = false, blocksize::Int = pivoted ? 1 : YALAPACK.default_qr_blocksize(A)
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
+    blocksize = blocksize > 0 ? blocksize : (pivoted ? 1 : YALAPACK.default_qr_blocksize(A))
+
     # error messages for disallowing driver - setting combinations
     pivoted && (blocksize > 1) &&
         throw(ArgumentError(lazy"$driver does not provide a blocked pivoted LQ decomposition"))
@@ -248,10 +251,10 @@ function householder_lq_null!(
 end
 function householder_lq_null!(
         driver::Native, A::AbstractMatrix, Nᴴ::AbstractMatrix;
-        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 1
+        positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
     # error messages for disallowing driver - setting combinations
-    blocksize == 1 ||
+    blocksize <= 1 ||
         throw(ArgumentError(lazy"$driver does not provide a blocked LQ decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted LQ decomposition"))
