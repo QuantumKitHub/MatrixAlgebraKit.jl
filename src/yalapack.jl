@@ -2169,14 +2169,12 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             end
             return (S, U, Vᴴ), info[]
         end
-        #! format: off
         function gesdvd!( # SafeSVD implementation
-                A::AbstractMatrix{$elty},
+                A::AbstractMatrix{$elty}, Ac::AbstractMatrix{$elty} = copy(A), # only modifies Ac!
                 S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::AbstractMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
                 Vᴴ::AbstractMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
             )
-            #! format: on
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -2192,10 +2190,10 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             else
                 rwork = nothing
             end
-            Ac = copy(A)
             (S, U, Vᴴ), info = _gesdd_body!(Ac, S, U, Vᴴ, work, rwork)
             if info > 0
-                (S, U, Vᴴ), info = _gesvd_body!(A, S, U, Vᴴ, work, rwork)
+                copy!(Ac, A)
+                (S, U, Vᴴ), info = _gesvd_body!(Ac, S, U, Vᴴ, work, rwork)
             end
             chklapackerror(info)
             return S, U, Vᴴ
