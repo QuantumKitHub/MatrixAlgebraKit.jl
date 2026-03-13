@@ -2420,7 +2420,7 @@ function gesdvd!(
         else
             lrwork = minmn * max(5 * minmn + 5, 2 * max(m, n) + 2 * minmn + 1)
         end
-        rwork = Vector{T}(undef, lrwork)
+        rwork = Vector{Tr}(undef, lrwork)
     else
         rwork = nothing
     end
