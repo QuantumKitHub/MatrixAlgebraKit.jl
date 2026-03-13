@@ -2169,35 +2169,6 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             end
             return (S, U, Vᴴ), info[]
         end
-        function gesdvd!( # SafeSVD implementation
-                A::AbstractMatrix{$elty}, Ac::AbstractMatrix{$elty} = copy(A), # only modifies Ac!
-                S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
-                U::AbstractMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
-                Vᴴ::AbstractMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
-            )
-            require_one_based_indexing(A, U, Vᴴ, S)
-            chkstride1(A, U, Vᴴ, S)
-            m, n = size(A)
-            minmn = min(m, n)
-            work = Vector{$elty}(undef, 1)
-            if eltype(A) <: Complex
-                if length(U) == 0 && length(Vᴴ) == 0
-                    lrwork = (LAPACK.version() <= v"3.6") ? 7 * minmn : 5 * minmn
-                else
-                    lrwork = minmn * max(5 * minmn + 5, 2 * max(m, n) + 2 * minmn + 1)
-                end
-                rwork = Vector{$relty}(undef, lrwork)
-            else
-                rwork = nothing
-            end
-            (S, U, Vᴴ), info = _gesdd_body!(Ac, S, U, Vᴴ, work, rwork)
-            if info > 0
-                copy!(Ac, A)
-                (S, U, Vᴴ), info = _gesvd_body!(Ac, S, U, Vᴴ, work, rwork)
-            end
-            chklapackerror(info)
-            return S, U, Vᴴ
-        end
         #! format: off
         function gesvdx!(
                 A::AbstractMatrix{$elty},
@@ -2426,6 +2397,40 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             return (S, U, Vᴴ)
         end
     end
+end
+
+# SafeSVD implementation:
+# attempts gesdd and falls back to gesvd, requiring two independent copies of A
+# Here A is never modified, and Ac is the matrix that will be passed to LAPACK
+function gesdvd!(
+        A::AbstractMatrix, Ac::AbstractMatrix{T}, # only modifies Ac!
+        S::AbstractVector{Tr} = similar(A, real(T), min(size(A)...)),
+        U::AbstractMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
+        Vᴴ::AbstractMatrix{T} = similar(A, T, min(size(A)...), size(A, 2))
+    ) where {T <: BlasFloat, Tr <: BlasReal}
+    @assert Tr == real(Tr)
+    require_one_based_indexing(A, U, Vᴴ, S)
+    chkstride1(A, U, Vᴴ, S)
+    m, n = size(A)
+    minmn = min(m, n)
+    work = Vector{T}(undef, 1)
+    if eltype(A) <: Complex
+        if length(U) == length(Vᴴ) == 0
+            lrwork = (LAPACK.version() <= v"3.6") ? 7 * minmn : 5 * minmn
+        else
+            lrwork = minmn * max(5 * minmn + 5, 2 * max(m, n) + 2 * minmn + 1)
+        end
+        rwork = Vector{T}(undef, lrwork)
+    else
+        rwork = nothing
+    end
+    (S, U, Vᴴ), info = _gesdd_body!(Ac, S, U, Vᴴ, work, rwork)
+    if info > 0
+        copy!(Ac, A)
+        (S, U, Vᴴ), info = _gesvd_body!(Ac, S, U, Vᴴ, work, rwork)
+    end
+    chklapackerror(info)
+    return S, U, Vᴴ
 end
 
 end
