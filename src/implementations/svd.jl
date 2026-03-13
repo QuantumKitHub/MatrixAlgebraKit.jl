@@ -131,6 +131,10 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, view(S, 1:minmn, 1), U, Vᴴ)
+    elseif alg isa LAPACK_SafeDivideAndConquer
+        isempty(alg_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
+        YALAPACK.gesdvd!(A, view(S, 1:minmn, 1), U, Vᴴ)
     elseif alg isa LAPACK_Bisection
         throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
     elseif alg isa LAPACK_Jacobi
@@ -172,6 +176,10 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, diagview(S), U, Vᴴ)
+    elseif alg isa LAPACK_SafeDivideAndConquer
+        isempty(alg_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
+        YALAPACK.gesdvd!(A, diagview(S), U, Vᴴ)
     elseif alg isa LAPACK_Bisection
         YALAPACK.gesvdx!(A, diagview(S), U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi
@@ -207,6 +215,10 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
         isempty(alg_kwargs) ||
             throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
         YALAPACK.gesdd!(A, S, U, Vᴴ)
+    elseif alg isa LAPACK_SafeDivideAndConquer
+        isempty(alg_kwargs) ||
+            throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
+        YALAPACK.gesdvd!(A, S, U, Vᴴ)
     elseif alg isa LAPACK_Bisection
         YALAPACK.gesvdx!(A, S, U, Vᴴ; alg_kwargs...)
     elseif alg isa LAPACK_Jacobi

@@ -197,6 +197,22 @@ singular vectors, see also [`gaugefix!`](@ref).
 # Singular Value Decomposition
 # ----------------------------
 """
+    LAPACK_SafeDivideAndConquer(; fixgauge::Bool = true)
+
+Algorithm type to denote the LAPACK driver for computing the singular value decomposition of
+a general matrix using the Divide and Conquer algorithm, with an additional fallback to
+the standard QR Iteration algorithm in case the former fails to converge.
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular vectors,
+see also [`gaugefix!`](@ref).
+
+!!! warning
+    This approach requires a copy of the input matrix, and is thus the most memory intensive SVD strategy.
+    However, as it combines the speed of the Divide and Conquer algorithm with the robustness of the
+    QR Iteration algorithm, it is the default SVD strategy for LAPACK-based implementations in MatrixAlgebraKit.
+"""
+@algdef LAPACK_SafeDivideAndConquer
+
+"""
     LAPACK_Jacobi(; fixgauge::Bool = true)
 
 Algorithm type to denote the LAPACK driver for computing the singular value decomposition of
@@ -211,6 +227,7 @@ const LAPACK_SVDAlgorithm = Union{
     LAPACK_Bisection,
     LAPACK_DivideAndConquer,
     LAPACK_Jacobi,
+    LAPACK_SafeDivideAndConquer,
 }
 
 # =========================

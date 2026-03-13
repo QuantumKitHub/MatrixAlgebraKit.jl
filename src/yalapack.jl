@@ -1967,6 +1967,27 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
             minmn = min(m, n)
+            work = Vector{$elty}(undef, 1)
+            cmplx = eltype(A) <: Complex
+            if cmplx
+                rwork = Vector{$relty}(undef, 5 * minmn)
+            else
+                rwork = nothing
+            end
+            (S, U, Vᴴ), info = _gesvd_body!(A, S, U, Vᴴ, work, rwork)
+            chklapackerror(info)
+            return S, U, Vᴴ
+        end
+        function _gesvd_body!(
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty},
+                U::AbstractMatrix{$elty},
+                Vᴴ::AbstractMatrix{$elty},
+                work::Vector{$elty},
+                rwork::Union{Vector{$relty}, Nothing}
+            )
+            m, n = size(A)
+            minmn = min(m, n)
             if length(U) == 0
                 jobu = 'N'
             else
@@ -2007,16 +2028,11 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(U, 2))
             ldv = max(1, stride(Vᴴ, 2))
-            work = Vector{$elty}(undef, 1)
             lwork = BlasInt(-1)
-            cmplx = eltype(A) <: Complex
-            if cmplx
-                rwork = Vector{$relty}(undef, 5 * minmn)
-            end
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
                 #! format: off
-                if cmplx
+                if eltype(A) <: Complex
                     ccall((@blasfunc($gesvd), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
@@ -2038,13 +2054,13 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                           info, 1, 1)
                 end
                 #! format: on
-                chklapackerror(info[])
                 if i == 1
+                    chklapackerror(info[]) # bail out early if even the workspace query failed
                     lwork = BlasInt(real(work[1]))
                     resize!(work, lwork)
                 end
             end
-            return (S, U, Vᴴ)
+            return (S, U, Vᴴ), info[]
         end
         #! format: off
         function gesdd!(
@@ -2056,6 +2072,33 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             #! format: on
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            minmn = min(m, n)
+            work = Vector{$elty}(undef, 1)
+            if eltype(A) <: Complex
+                if length(U) == 0 && length(Vᴴ) == 0
+                    lrwork = (LAPACK.version() <= v"3.6") ? 7 * minmn : 5 * minmn
+                else
+                    lrwork = minmn * max(5 * minmn + 5, 2 * max(m, n) + 2 * minmn + 1)
+                end
+                rwork = Vector{$relty}(undef, lrwork)
+            else
+                rwork = nothing
+            end
+            (S, U, Vᴴ), info = _gesdd_body!(A, S, U, Vᴴ, work, rwork)
+            chklapackerror(info)
+            return S, U, Vᴴ
+        end
+        #! format: off
+        function _gesdd_body!(
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty},
+                U::AbstractMatrix{$elty},
+                Vᴴ::AbstractMatrix{$elty},
+                work::Vector{$elty},
+                rwork::Union{Vector{$relty}, Nothing}
+            )
+            #! format: on
             m, n = size(A)
             minmn = min(m, n)
 
@@ -2086,19 +2129,12 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(U, 2))
             ldv = max(1, stride(Vᴴ, 2))
-            work = Vector{$elty}(undef, 1)
             lwork = BlasInt(-1)
-            cmplx = eltype(A) <: Complex
-            if cmplx
-                lrwork = job == 'N' ? 7 * minmn :
-                    minmn * max(5 * minmn + 7, 2 * max(m, n) + 2 * minmn + 1)
-                rwork = Vector{$relty}(undef, lrwork)
-            end
             iwork = Vector{BlasInt}(undef, 8 * minmn)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
                 #! format: off
-                if cmplx
+                if eltype(A) <: Complex
                     ccall((@blasfunc($gesdd), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
@@ -2120,8 +2156,8 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                           info, 1)
                 end
                 #! format: on
-                chklapackerror(info[])
                 if i == 1
+                    chklapackerror(info[]) # bail out if even the workspace query failed
                     # Work around issue with truncated Float32 representation of lwork in
                     # sgesdd by using nextfloat. See
                     # http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=13&t=4587&p=11036&hilit=sgesdd#p11036
@@ -2131,7 +2167,38 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                     resize!(work, lwork)
                 end
             end
-            return (S, U, Vᴴ)
+            return (S, U, Vᴴ), info[]
+        end
+        #! format: off
+        function gesdvd!( # SafeSVD implementation
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::AbstractMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::AbstractMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+            )
+            #! format: on
+            require_one_based_indexing(A, U, Vᴴ, S)
+            chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            minmn = min(m, n)
+            work = Vector{$elty}(undef, 1)
+            if eltype(A) <: Complex
+                if length(U) == 0 && length(Vᴴ) == 0
+                    lrwork = (LAPACK.version() <= v"3.6") ? 7 * minmn : 5 * minmn
+                else
+                    lrwork = minmn * max(5 * minmn + 5, 2 * max(m, n) + 2 * minmn + 1)
+                end
+                rwork = Vector{$relty}(undef, lrwork)
+            else
+                rwork = nothing
+            end
+            Ac = copy(A)
+            (S, U, Vᴴ), info = _gesdd_body!(Ac, S, U, Vᴴ, work, rwork)
+            if info > 0
+                (S, U, Vᴴ), info = _gesvd_body!(A, S, U, Vᴴ, work, rwork)
+            end
+            chklapackerror(info)
+            return S, U, Vᴴ
         end
         #! format: off
         function gesvdx!(
