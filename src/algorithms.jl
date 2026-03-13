@@ -29,8 +29,8 @@ end
 Algorithm{Name}(; kwargs...) where {Name} = Algorithm{Name}(NamedTuple(kwargs))
 
 # Utility function to canonicalize keys
-Base.@assume_effects :foldable _canonicalize_namedtuple(nt::NamedTuple{N}) where {N} =
-    NamedTuple{(Tuple(sort(collect(N))))}(nt)
+@generated _canonicalize_namedtuple(nt::NamedTuple{N}) where {N} =
+    :(NamedTuple{$(Tuple(sort(collect(N))))}(nt))
 
 name(alg::Algorithm) = name(typeof(alg))
 name(::Type{<:Algorithm{N}}) where {N} = N
