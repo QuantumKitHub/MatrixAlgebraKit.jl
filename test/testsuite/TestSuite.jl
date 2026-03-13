@@ -62,6 +62,8 @@ isrightnull(Nᴴ, A; atol::Real = 0, rtol::Real = precision(eltype(A))) =
 
 is_positive(::MatrixAlgebraKit.AbstractAlgorithm) = false
 is_pivoted(::MatrixAlgebraKit.AbstractAlgorithm) = false
+is_positive(alg::MatrixAlgebraKit.Householder) = alg.positive
+is_pivoted(alg::MatrixAlgebraKit.Householder) = alg.pivoted
 is_positive(alg::MatrixAlgebraKit.LAPACK_HouseholderQR) = alg.positive
 is_pivoted(alg::MatrixAlgebraKit.LAPACK_HouseholderQR) = alg.pivoted
 is_positive(alg::MatrixAlgebraKit.LAPACK_HouseholderLQ) = alg.positive
