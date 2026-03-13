@@ -232,6 +232,16 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     return S
 end
 
+# avoid double allocation
+for f in (:svd_compact, :svd_full, :svd_vals)
+    f! = Symbol(f, :!)
+    @eval $f(A, alg::LAPACK_SafeDivideAndConquer) = $f!(A, alg)
+end
+for f in (:svd_trunc, :svd_trunc_no_error)
+    f! = Symbol(f, :!)
+    @eval $f(A, alg::TruncatedAlgorithm{<:LAPACK_SafeDivideAndConquer}) = $f!(A, alg)
+end
+
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
