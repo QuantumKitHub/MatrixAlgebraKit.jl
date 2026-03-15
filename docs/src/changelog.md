@@ -24,6 +24,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- The default behavior of SVD-based nullspaces now includes some small tolerance ([#172](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/170)).
 - The Mooncake rules for truncated decompositions with `TruncatedAlgorithm` now use the pullbacks that make use of the full decomposition. ([#171](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/171))
 
 ### Deprecated
