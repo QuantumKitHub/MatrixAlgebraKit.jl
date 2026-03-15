@@ -1,4 +1,5 @@
 using MatrixAlgebraKit
+using MatrixAlgebraKit: Native, GLA
 using Test
 using StableRNGs
 using LinearAlgebra: diag, I, Diagonal
@@ -17,7 +18,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
     TestSuite.seed_rng!(123)
     if T ∈ BLASFloats
         if CUDA.functional()
-            CUDA_QR_ALGS = (CUSOLVER_HouseholderQR(; positive = false), CUSOLVER_HouseholderQR(; positive = true))
+            CUDA_QR_ALGS = (Householder(; positive = false), Householder(; positive = true))
             TestSuite.test_qr(CuMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
             TestSuite.test_qr_algs(CuMatrix{T}, (m, n), CUDA_QR_ALGS)
             if n == m
@@ -26,7 +27,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             end
         end
         if AMDGPU.functional()
-            ROC_QR_ALGS = (ROCSOLVER_HouseholderQR(; positive = false), ROCSOLVER_HouseholderQR(; positive = true))
+            ROC_QR_ALGS = (Householder(; positive = false), Householder(; positive = true))
             TestSuite.test_qr(ROCMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
             TestSuite.test_qr_algs(ROCMatrix{T}, (m, n), ROC_QR_ALGS)
             if n == m
@@ -39,19 +40,19 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
         if T ∈ BLASFloats
             TestSuite.test_qr(T, (m, n))
             LAPACK_QR_ALGS = (
-                LAPACK_HouseholderQR(; positive = false, pivoted = false, blocksize = 1),
-                LAPACK_HouseholderQR(; positive = false, pivoted = false, blocksize = 8),
-                LAPACK_HouseholderQR(; positive = false, pivoted = true, blocksize = 1),
+                Householder(; positive = false, pivoted = false, blocksize = 1),
+                Householder(; positive = false, pivoted = false, blocksize = 8),
+                Householder(; positive = false, pivoted = true, blocksize = 1),
                 #LAPACK_HouseholderQR(; positive=false, pivoted=true, blocksize=8), # not supported
-                LAPACK_HouseholderQR(; positive = true, pivoted = false, blocksize = 1),
-                LAPACK_HouseholderQR(; positive = true, pivoted = false, blocksize = 8),
-                LAPACK_HouseholderQR(; positive = true, pivoted = true, blocksize = 1),
+                Householder(; positive = true, pivoted = false, blocksize = 1),
+                Householder(; positive = true, pivoted = false, blocksize = 8),
+                Householder(; positive = true, pivoted = true, blocksize = 1),
                 #LAPACK_HouseholderQR(; positive=true, pivoted=true, blocksize=8), # not supported
             )
             TestSuite.test_qr_algs(T, (m, n), LAPACK_QR_ALGS)
         elseif T ∈ GenericFloats
             TestSuite.test_qr(T, (m, n); test_pivoted = false, test_blocksize = false)
-            GENERIC_QR_ALGS = (Native_HouseholderQR(), GLA_HouseholderQR())
+            GENERIC_QR_ALGS = (Householder(; driver = Native()), Householder(; driver = GLA()))
             TestSuite.test_qr_algs(T, (m, n), GENERIC_QR_ALGS)
         end
         if m == n
