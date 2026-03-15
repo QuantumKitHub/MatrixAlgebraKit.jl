@@ -31,7 +31,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
     end
     if !is_buildkite
         if T ∈ BLASFloats
-            LAPACK_POLAR_ALGS = (PolarViaSVD.((LAPACK_QRIteration(), LAPACK_Bisection(), LAPACK_DivideAndConquer()))..., PolarNewton())
+            LAPACK_POLAR_ALGS = (PolarViaSVD.((LAPACK_QRIteration(), LAPACK_Bisection(), LAPACK_SafeDivideAndConquer()))..., PolarNewton())
             TestSuite.test_polar(T, (m, n), LAPACK_POLAR_ALGS)
             if LAPACK.version() ≥ v"3.12.0"
                 LAPACK_JACOBI = (PolarViaSVD(LAPACK_Jacobi()),)

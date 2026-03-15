@@ -162,7 +162,7 @@ function default_svd_algorithm(T::Type; kwargs...)
     throw(MethodError(default_svd_algorithm, (T,)))
 end
 function default_svd_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasVecOrMat}
-    return LAPACK_DivideAndConquer(; kwargs...)
+    return LAPACK_SafeDivideAndConquer(; kwargs...)
 end
 function default_svd_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)
