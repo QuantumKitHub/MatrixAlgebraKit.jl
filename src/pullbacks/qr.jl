@@ -1,36 +1,31 @@
-function check_qr_cotangents(Q, R, ΔQ, ΔR, minmn::Int, p::Int; gauge_atol::Real = default_pullback_gauge_atol(ΔQ))
-    if minmn > p # case where A is rank-deficient
-        Δgauge = abs(zero(eltype(Q)))
-        if !iszerotangent(ΔQ)
-            # in this case the number Householder reflections will
-            # change upon small variations, and all of the remaining
-            # columns of ΔQ should be zero for a gauge-invariant
-            # cost function
-            ΔQ2 = view(ΔQ, :, (p + 1):size(Q, 2))
-            Δgauge = max(Δgauge, norm(ΔQ2, Inf))
-        end
-        if !iszerotangent(ΔR)
-            ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):size(R, 2))
-            Δgauge = max(Δgauge, norm(ΔR22, Inf))
-        end
-        Δgauge ≤ gauge_atol ||
-            @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    end
-    return
-end
+qr_rank(R; rank_atol = default_pullback_rank_atol(R)) =
+    @something findlast(>=(rank_atol) ∘ abs, diagview(R)) 0
 
-function check_qr_full_cotangents(Q1, ΔQ2, Q1dΔQ2; gauge_atol::Real = default_pullback_gauge_atol(ΔQ2))
-    # in the case where A is full rank, but there are more columns in Q than in A
-    # (the case of `qr_full`), there is gauge-invariant information in the
-    # projection of ΔQ2 onto the column space of Q1, by virtue of Q being a unitary
-    # matrix. As the number of Householder reflections is in fixed in the full rank
-    # case, Q is expected to rotate smoothly (we might even be able to predict) also
-    # how the full Q2 will change, but this we omit for now, and we consider
-    # Q2' * ΔQ2 as a gauge dependent quantity.
-    Δgauge = norm(mul!(copy(ΔQ2), Q1, Q1dΔQ2, -1, 1), Inf)
+function check_qr_cotangents(
+        Q, R, ΔQ, ΔR, p::Int;
+        gauge_atol::Real = default_pullback_gauge_atol(ΔQ)
+    )
+    minmn = min(size(Q, 1), size(R, 2))
+    Δgauge = abs(zero(eltype(Q)))
+    if !iszerotangent(ΔQ)
+        ΔQ₂ = view(ΔQ, :, (p + 1):minmn)
+        ΔQ₃ = ΔQ[:, (minmn + 1):size(Q, 2)] # extra columns in the case of qr_full
+        Δgauge_Q = norm(ΔQ₂, Inf)
+        Q₁ = view(Q, :, 1:p)
+        Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
+        mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃, -1, 1)
+        Δgauge_Q = max(Δgauge_Q, norm(ΔQ₃, Inf))
+        Δgauge = max(Δgauge, Δgauge_Q)
+    end
+    if !iszerotangent(ΔR)
+        ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):size(R, 2))
+        Δgauge_R = norm(view(ΔR22, uppertriangularind(ΔR22)), Inf)
+        Δgauge_R = max(Δgauge_R, norm(view(ΔR22, diagind(ΔR22)), Inf))
+        Δgauge = max(Δgauge, Δgauge_R)
+    end
     Δgauge ≤ gauge_atol ||
         @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    return
+    return nothing
 end
 
 """
@@ -62,53 +57,52 @@ function qr_pullback!(
     n = size(R, 2)
     minmn = min(m, n)
     Rd = diagview(R)
-    p = @something findlast(>=(rank_atol) ∘ abs, Rd) 0
+    p = qr_rank(R; rank_atol)
 
     ΔQ, ΔR = ΔQR
 
-    Q1 = view(Q, :, 1:p)
-    Q2 = view(Q, :, (p + 1):size(Q, 2))
-    R11 = view(R, 1:p, 1:p)
-    ΔA1 = view(ΔA, :, 1:p)
-    ΔA2 = view(ΔA, :, (p + 1):n)
+    Q₁ = view(Q, :, 1:p)
+    R₁₁ = UpperTriangular(view(R, 1:p, 1:p))
+    ΔA₁ = view(ΔA, :, 1:p)
+    ΔA₂ = view(ΔA, :, (p + 1):n)
 
-    check_qr_cotangents(Q, R, ΔQ, ΔR, minmn, p; gauge_atol)
+    check_qr_cotangents(Q, R, ΔQ, ΔR, p; gauge_atol)
 
     ΔQ̃ = zero!(similar(Q, (m, p)))
     if !iszerotangent(ΔQ)
-        copy!(ΔQ̃, view(ΔQ, :, 1:p))
-        if p < size(Q, 2)
-            Q2 = view(Q, :, (p + 1):size(Q, 2))
-            ΔQ2 = view(ΔQ, :, (p + 1):size(Q, 2))
-            Q1dΔQ2 = Q1' * ΔQ2
-            check_qr_full_cotangents(Q1, ΔQ2, Q1dΔQ2; gauge_atol)
-            ΔQ̃ = mul!(ΔQ̃, Q2, Q1dΔQ2', -1, 1)
+        ΔQ₁ = view(ΔQ, :, 1:p)
+        copy!(ΔQ̃, ΔQ₁)
+        if minmn < size(Q, 2)
+            ΔQ₃ = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
+            Q₃ = view(Q, :, (minmn + 1):size(Q, 2))
+            Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
+            ΔQ̃ = mul!(ΔQ̃, Q₃, Q₁ᴴΔQ₃', -1, 1)
         end
     end
     if !iszerotangent(ΔR) && n > p
-        R12 = view(R, 1:p, (p + 1):n)
-        ΔR12 = view(ΔR, 1:p, (p + 1):n)
-        ΔQ̃ = mul!(ΔQ̃, Q1, ΔR12 * R12', -1, 1)
-        # Adding ΔA2 contribution
-        ΔA2 = mul!(ΔA2, Q1, ΔR12, 1, 1)
+        R₁₂ = view(R, 1:p, (p + 1):n)
+        ΔR₁₂ = view(ΔR, 1:p, (p + 1):n)
+        ΔQ̃ = mul!(ΔQ̃, Q₁, ΔR₁₂ * R₁₂', -1, 1)
+        # Adding ΔA₂ contribution
+        ΔA₂ = mul!(ΔA₂, Q₁, ΔR₁₂, 1, 1)
     end
 
     # construct M
     M = zero!(similar(R, (p, p)))
     if !iszerotangent(ΔR)
-        ΔR11 = view(ΔR, 1:p, 1:p)
-        M = mul!(M, ΔR11, R11', 1, 1)
+        ΔR₁₁ = UpperTriangular(view(ΔR, 1:p, 1:p))
+        M = mul!(M, ΔR₁₁, R₁₁', 1, 1)
     end
-    M = mul!(M, Q1', ΔQ̃, -1, 1)
+    M = mul!(M, Q₁', ΔQ̃, -1, 1)
     view(M, lowertriangularind(M)) .= conj.(view(M, uppertriangularind(M)))
     if eltype(M) <: Complex
         Md = diagview(M)
         Md .= real.(Md)
     end
-    rdiv!(M, UpperTriangular(R11)')
-    rdiv!(ΔQ̃, UpperTriangular(R11)')
-    ΔA1 = mul!(ΔA1, Q1, M, +1, 1)
-    ΔA1 .+= ΔQ̃
+    rdiv!(M, R₁₁') # R₁₁ is upper triangular
+    rdiv!(ΔQ̃, R₁₁')
+    ΔA₁ = mul!(ΔA₁, Q₁, M, +1, 1)
+    ΔA₁ .+= ΔQ̃
     return ΔA
 end
 

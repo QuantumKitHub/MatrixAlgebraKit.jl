@@ -15,15 +15,17 @@ using LinearAlgebra
 
 @inline EnzymeRules.inactive_type(::Type{Alg}) where {Alg <: MatrixAlgebraKit.AbstractAlgorithm} = true
 @inline EnzymeRules.inactive_type(::Type{TS}) where {TS <: MatrixAlgebraKit.TruncationStrategy} = true
-@inline EnzymeRules.inactive(f::typeof(MatrixAlgebraKit.select_algorithm), func::F, A::AbstractMatrix, alg::Alg) where {F, Alg} = true
-@inline EnzymeRules.inactive(f::typeof(MatrixAlgebraKit.default_algorithm), func::F, A::AbstractMatrix) where {F} = true
-@inline EnzymeRules.inactive(f::typeof(MatrixAlgebraKit.check_input), func::F, A::AbstractMatrix, alg::Alg) where {F, Alg} = true
+@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.select_algorithm), func::F, A::AbstractMatrix, alg::Alg) where {F, Alg} = true
+@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_algorithm), func::F, A::AbstractMatrix) where {F} = true
+@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.check_input), func::F, A::AbstractMatrix, alg::Alg) where {F, Alg} = true
+@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.check_input), func::F, A::AbstractMatrix, arg::Any, alg::Alg) where {F, Alg} = true
+@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.check_hermitian), A::AbstractMatrix, alg::Alg) where {Alg} = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.defaulttol), ::Any) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_gauge_atol), ::Any) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_gauge_atol), ::Any, ::Any...) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_degeneracy_atol), ::Any) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_rank_atol), ::Any) = true
-@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_hermitian_tol), ::Any) = true
+@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_hermitian_tol), ::AbstractMatrix) = true
 
 #----------- NOTE about derivatives ---------
 # Each Enzyme augmented_return + reverse pair

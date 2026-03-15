@@ -334,79 +334,79 @@ See also [`left_null(!)`](@ref left_null), [`left_orth(!)`](@ref left_orth) and
 @inline select_algorithm(::typeof(right_null!), A, alg::Symbol; kwargs...) =
     select_algorithm(right_null!, A, Val(alg); kwargs...)
 
-function select_algorithm(::typeof(left_orth!), A, ::Val{:qr}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(left_orth!), A, ::Val{:qr}; trunc = nothing, kwargs...)
     isnothing(trunc) ||
         throw(ArgumentError("QR-based `left_orth` is incompatible with specifying `trunc`"))
     alg′ = select_algorithm(qr_compact!, A; kwargs...)
     return LeftOrthViaQR(alg′)
 end
-function select_algorithm(::typeof(left_orth!), A, ::Val{:polar}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(left_orth!), A, ::Val{:polar}; trunc = nothing, kwargs...)
     isnothing(trunc) ||
         throw(ArgumentError("Polar-based `left_orth` is incompatible with specifying `trunc`"))
     alg′ = select_algorithm(left_polar!, A; kwargs...)
     return LeftOrthViaPolar(alg′)
 end
-function select_algorithm(::typeof(left_orth!), A, ::Val{:svd}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(left_orth!), A, ::Val{:svd}; trunc = nothing, kwargs...)
     alg′ = isnothing(trunc) ? select_algorithm(svd_compact!, A; kwargs...) :
         select_algorithm(svd_trunc!, A; trunc, kwargs...)
     return LeftOrthViaSVD(alg′)
 end
 
-function select_algorithm(::typeof(right_orth!), A, ::Val{:lq}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(right_orth!), A, ::Val{:lq}; trunc = nothing, kwargs...)
     isnothing(trunc) ||
         throw(ArgumentError("LQ-based `right_orth` is incompatible with specifying `trunc`"))
     alg = select_algorithm(lq_compact!, A; kwargs...)
     return RightOrthViaLQ(alg)
 end
-function select_algorithm(::typeof(right_orth!), A, ::Val{:polar}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(right_orth!), A, ::Val{:polar}; trunc = nothing, kwargs...)
     isnothing(trunc) ||
         throw(ArgumentError("Polar-based `right_orth` is incompatible with specifying `trunc`"))
     alg = select_algorithm(right_polar!, A; kwargs...)
     return RightOrthViaPolar(alg)
 end
-function select_algorithm(::typeof(right_orth!), A, ::Val{:svd}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(right_orth!), A, ::Val{:svd}; trunc = nothing, kwargs...)
     alg′ = isnothing(trunc) ? select_algorithm(svd_compact!, A; kwargs...) :
         select_algorithm(svd_trunc!, A; trunc, kwargs...)
     return RightOrthViaSVD(alg′)
 end
 
-function select_algorithm(::typeof(left_null!), A, ::Val{:qr}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(left_null!), A, ::Val{:qr}; trunc = nothing, kwargs...)
     isnothing(trunc) ||
         throw(ArgumentError("QR-based `left_null` is incompatible with specifying `trunc`"))
     alg = select_algorithm(qr_null!, A; kwargs...)
     return LeftNullViaQR(alg)
 end
-function select_algorithm(::typeof(left_null!), A, ::Val{:svd}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(left_null!), A, ::Val{:svd}; trunc = nothing, kwargs...)
     alg_svd = select_algorithm(svd_full!, A, get(kwargs, :svd, nothing))
     alg = TruncatedAlgorithm(alg_svd, select_null_truncation(A, trunc))
     return LeftNullViaSVD(alg)
 end
 
-function select_algorithm(::typeof(right_null!), A, ::Val{:lq}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(right_null!), A, ::Val{:lq}; trunc = nothing, kwargs...)
     isnothing(trunc) ||
         throw(ArgumentError("LQ-based `right_null` is incompatible with specifying `trunc`"))
     alg = select_algorithm(lq_null!, A; kwargs...)
     return RightNullViaLQ(alg)
 end
-function select_algorithm(::typeof(right_null!), A, ::Val{:svd}; trunc = nothing, kwargs...)
+@inline function select_algorithm(::typeof(right_null!), A, ::Val{:svd}; trunc = nothing, kwargs...)
     alg_svd = select_algorithm(svd_full!, A; kwargs...)
     alg = TruncatedAlgorithm(alg_svd, select_null_truncation(A, trunc))
     return RightNullViaSVD(alg)
 end
 
-default_algorithm(::typeof(left_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+@inline default_algorithm(::typeof(left_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(left_orth!, A, Val(:qr); kwargs...) :
     select_algorithm(left_orth!, A, Val(:svd); trunc, kwargs...)
 
-default_algorithm(::typeof(right_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+@inline default_algorithm(::typeof(right_orth!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(right_orth!, A, Val(:lq); kwargs...) :
     select_algorithm(right_orth!, A, Val(:svd); trunc, kwargs...)
 
-default_algorithm(::typeof(left_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+@inline default_algorithm(::typeof(left_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(left_null!, A, Val(:qr); kwargs...) :
     select_algorithm(left_null!, A, Val(:svd); trunc, kwargs...)
 
-default_algorithm(::typeof(right_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
+@inline default_algorithm(::typeof(right_null!), ::Type{A}; trunc = nothing, kwargs...) where {A} =
     isnothing(trunc) ? select_algorithm(right_null!, A, Val(:lq); kwargs...) :
     select_algorithm(right_null!, A, Val(:svd); trunc, kwargs...)
 

@@ -40,6 +40,14 @@ function test_project_antihermitian(
             @test Ba === Ac
             @test isantihermitian(Ba)
             @test Ba ≈ Aa
+
+            # can we supply a destination
+            Ac = deepcopy(A)
+            Ba = instantiate_matrix(T, sz)
+            Ba₂ = project_antihermitian!(Ac, Ba)
+            @test A == Ac
+            @test Ba₂ === Ba
+            @test Ba₂ ≈ Aa
         end
 
         # test approximate error calculation
@@ -79,6 +87,7 @@ function test_project_hermitian(
             Aa = (A - A') / 2
 
             Bh = project_hermitian(A; blocksize = 16)
+
             @test ishermitian(Bh)
             @test Bh ≈ Ah
             @test A == Ac
@@ -91,6 +100,14 @@ function test_project_hermitian(
             @test Bh === Ac
             @test ishermitian(Bh)
             @test Bh ≈ Ah
+
+            # can we supply a destination
+            Ac = deepcopy(A)
+            Bh = instantiate_matrix(T, sz)
+            Bh₂ = project_hermitian!(Ac, Bh)
+            @test A == Ac
+            @test Bh₂ === Bh
+            @test Bh₂ ≈ Ah
         end
 
         # test approximate error calculation

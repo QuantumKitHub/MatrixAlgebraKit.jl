@@ -65,11 +65,11 @@ end
 
 function project_hermitian_native!(A::Diagonal, B::Diagonal, ::Val{anti}; kwargs...) where {anti}
     if anti
-        diagview(A) .= _imimag.(diagview(B))
+        diagview(B) .= _imimag.(diagview(A))
     else
-        diagview(A) .= real.(diagview(B))
+        diagview(B) .= real.(diagview(A))
     end
-    return A
+    return B
 end
 
 function project_hermitian_native!(A::AbstractMatrix, B::AbstractMatrix, anti::Val; blocksize = 32)

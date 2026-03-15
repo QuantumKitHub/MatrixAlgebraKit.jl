@@ -1,7 +1,7 @@
 using TestExtras
 using LinearAlgebra
 
-include("../linearmap.jl")
+include("../../linearmap.jl")
 
 _left_orth_svd(x; kwargs...) = left_orth(x; alg = :svd, kwargs...)
 _left_orth_svd!(x, VC; kwargs...) = left_orth!(x, VC; alg = :svd, kwargs...)

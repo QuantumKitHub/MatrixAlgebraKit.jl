@@ -25,12 +25,12 @@ if filter_tests!(testsuite, args)
         delete!(testsuite, "codequality")
     else
         is_apple_ci = Sys.isapple() && get(ENV, "CI", "false") == "true"
+        is_windows_ci = Sys.isapple() && get(ENV, "CI", "false") == "true"
         if is_apple_ci
-            delete!(testsuite, "enzyme")
-            delete!(testsuite, "mooncake")
+            filter!(p -> !startswith(first(p), "mooncake/"), testsuite)
             delete!(testsuite, "chainrules")
         end
-        Sys.iswindows() && delete!(testsuite, "enzyme")
+        (is_windows_ci || is_apple_ci) && filter!(p -> !startswith(first(p), "enzyme/"), testsuite)
     end
 end
 

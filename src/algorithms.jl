@@ -19,7 +19,20 @@ See also [`@algdef`](@ref).
 """
 struct Algorithm{name, K} <: AbstractAlgorithm
     kwargs::K
+
+    # Ensure keywords are always in canonical order
+    function Algorithm{Name}(kwargs::NamedTuple) where {Name}
+        kwargs_sorted = _canonicalize_namedtuple(kwargs)
+        return new{Name, typeof(kwargs_sorted)}(kwargs_sorted)
+    end
 end
+Algorithm{Name}(; kwargs...) where {Name} = Algorithm{Name}(NamedTuple(kwargs))
+
+# Utility function to canonicalize keys
+# TODO: generated function can likely be dropped once Julia 1.10 support is dropped
+@generated _canonicalize_namedtuple(nt::NamedTuple{N}) where {N} =
+    :(NamedTuple{$(Tuple(sort(collect(N))))}(nt))
+
 name(alg::Algorithm) = name(typeof(alg))
 name(::Type{<:Algorithm{N}}) where {N} = N
 
@@ -88,7 +101,9 @@ Finally, the same behavior is obtained when the keyword arguments are
 passed as the third positional argument in the form of a `NamedTuple`. 
 """ select_algorithm
 
-function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
+# WARNING: In order to keep everything type stable, this function is marked as foldable.
+# This mostly means that the `default_algorithm` implementation must be foldable as well
+Base.@assume_effects :foldable function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
     if isnothing(alg)
         return default_algorithm(f, A; kwargs...)
     elseif alg isa Symbol
@@ -117,8 +132,10 @@ In general, this is called by [`select_algorithm`](@ref) if no algorithm is spec
 explicitly.
 New types should prefer to register their default algorithms in the type domain.
 """ default_algorithm
-default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
-default_algorithm(f::F, A, B; kwargs...) where {F} = default_algorithm(f, typeof(A), typeof(B); kwargs...)
+@inline default_algorithm(f::F, A; kwargs...) where {F} =
+    default_algorithm(f, typeof(A); kwargs...)
+@inline default_algorithm(f::F, A, B; kwargs...) where {F} =
+    default_algorithm(f, typeof(A), typeof(B); kwargs...)
 # avoid infinite recursion:
 function default_algorithm(f::F, ::Type{T}; kwargs...) where {F, T}
     throw(MethodError(default_algorithm, (f, T)))
@@ -142,6 +159,59 @@ Whenever possible, allocate the destination for applying a given algorithm in-pl
 If this is not possible, for example when the output size is not known a priori or immutable,
 this function may return `nothing`.
 """ initialize_output
+
+
+# Drivers
+# -------
+"""
+    abstract type Driver
+
+Supertype used for customizing various implementations of the same algorithm.
+"""
+abstract type Driver end
+
+"""
+    DefaultDriver <: Driver
+
+Select a default driver at runtime, based on the input matrix.
+"""
+struct DefaultDriver <: Driver end
+
+"""
+    LAPACK <: Driver
+
+Driver to select LAPACK as the implementation strategy.
+"""
+struct LAPACK <: Driver end
+
+"""
+    CUSOLVER <: Driver
+
+Driver to select CUSOLVER as the implementation strategy.
+"""
+struct CUSOLVER <: Driver end
+
+"""
+    ROCSOLVER <: Driver
+
+Driver to select ROCSOLVER as the implementation strategy.
+"""
+struct ROCSOLVER <: Driver end
+
+"""
+    GLA <: Driver
+
+Driver to select GenericLinearAlgebra.jl as the implementation strategy.
+"""
+struct GLA <: Driver end
+
+"""
+    Native <: Driver
+
+Driver to select a native implementation in MatrixAlgebraKit as the implementation strategy.
+"""
+struct Native <: Driver end
+
 
 # Truncation strategy
 # -------------------
@@ -249,11 +319,6 @@ macro algdef(name)
     return esc(
         quote
             const $name{K} = Algorithm{$(QuoteNode(name)), K}
-            function $name(; kwargs...)
-                # TODO: is this necessary/useful?
-                kw = NamedTuple(kwargs) # normalize type
-                return $name{typeof(kw)}(kw)
-            end
             function Base.show(io::IO, alg::$name)
                 return ($_show_alg)(io, alg)
             end

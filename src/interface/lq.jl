@@ -69,18 +69,16 @@ See also [`qr_full(!)`](@ref lq_full) and [`qr_compact(!)`](@ref lq_compact).
 # Algorithm selection
 # -------------------
 default_lq_algorithm(A; kwargs...) = default_lq_algorithm(typeof(A); kwargs...)
-function default_lq_algorithm(T::Type; kwargs...)
-    throw(MethodError(default_lq_algorithm, (T,)))
-end
-function default_lq_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix}
-    return Native_HouseholderLQ(; kwargs...)
-end
-function default_lq_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
-    return LAPACK_HouseholderLQ(; kwargs...)
-end
-function default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
-    return DiagonalAlgorithm(; kwargs...)
-end
+
+default_lq_algorithm(T::Type; kwargs...) = throw(MethodError(default_lq_algorithm, (T,)))
+default_lq_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix} =
+    Householder(; kwargs...)
+default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
+    DiagonalAlgorithm(; kwargs...)
+default_lq_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
+    default_lq_algorithm(A)
+default_lq_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A} =
+    default_lq_algorithm(A)
 
 for f in (:lq_full!, :lq_compact!, :lq_null!)
     @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}

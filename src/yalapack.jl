@@ -15,10 +15,13 @@ using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, Char, LAPACK,
 using LinearAlgebra.BLAS: @blasfunc, libblastrampoline
 using LinearAlgebra.LAPACK: chkfinite, chktrans, chkside, chkuplofinite, chklapackerror
 
-# type alias for matrices that are definitely supported by YALAPACK
+# type alias for vectors/matrices that are definitely supported by YALAPACK
+const BlasVec{T <: BlasFloat} = StridedVector{T}
 const BlasMat{T <: BlasFloat} = StridedMatrix{T}
-# type alias for matrices that are possibly supported by YALAPACK, after conversion
+# type alias for vectors/matrices that are possibly supported by YALAPACK, after conversion
+const MaybeBlasVec = Union{BlasVec, AbstractVector{<:Integer}}
 const MaybeBlasMat = Union{BlasMat, AbstractMatrix{<:Integer}}
+const MaybeBlasVecOrMat = Union{MaybeBlasVec, MaybeBlasMat}
 
 # LU factorisation (currently unused in MatrixAlgebraKit)
 # for (getrf, getrs, elty) in (

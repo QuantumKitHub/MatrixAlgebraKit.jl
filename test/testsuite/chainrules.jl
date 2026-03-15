@@ -17,14 +17,14 @@ for f in
     @eval begin
         function $copy_f(input, alg)
             if $_hermitian
-                input = (input + input') / 2
+                input = project_hermitian(input)
             end
             return $f(input, alg)
         end
         function ChainRulesCore.rrule(::typeof($copy_f), input, alg)
             output = MatrixAlgebraKit.initialize_output($f!, input, alg)
             if $_hermitian
-                input = (input + input') / 2
+                input = project_hermitian(input)
             else
                 input = copy(input)
             end
@@ -46,6 +46,7 @@ function test_chainrules(T::Type, sz; kwargs...)
         test_chainrules_svd(T, sz; kwargs...)
         test_chainrules_polar(T, sz; kwargs...)
         test_chainrules_orthnull(T, sz; kwargs...)
+        test_chainrules_projections(T, sz; kwargs...)
     end
 end
 
@@ -112,7 +113,7 @@ function test_chainrules_qr(
             m, n = size(A)
             r = min(m, n) - 5
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            QR, ΔQR = ad_qr_rank_deficient_compact_setup(Ard)
+            QR, ΔQR = ad_qr_compact_setup(Ard)
             ΔQ, ΔR = ΔQR
             test_rrule(
                 cr_copy_qr_compact, Ard, alg ⊢ NoTangent();
@@ -189,7 +190,7 @@ function test_chainrules_lq(
             m, n = size(A)
             r = min(m, n) - 5
             Ard = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
-            LQ, ΔLQ = ad_lq_rank_deficient_compact_setup(Ard)
+            LQ, ΔLQ = ad_lq_compact_setup(Ard)
             test_rrule(
                 cr_copy_lq_compact, Ard, alg ⊢ NoTangent();
                 output_tangent = ΔLQ, atol = atol, rtol = rtol
@@ -215,21 +216,14 @@ function test_chainrules_eig(
         config = Zygote.ZygoteRuleConfig()
         alg = MatrixAlgebraKit.default_eig_algorithm(A)
         @testset "eig_full" begin
-            DV, ΔDV, ΔD2V = ad_eig_full_setup(A)
+            DV, ΔDV = ad_eig_full_setup(A)
             ΔD, ΔV = ΔDV
             test_rrule(
                 cr_copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
             )
             test_rrule(
-                cr_copy_eig_full, A, alg ⊢ NoTangent(); output_tangent = ΔD2V, atol, rtol
-            )
-            test_rrule(
                 config, eig_full, A, alg ⊢ NoTangent();
                 output_tangent = ΔDV, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
-            )
-            test_rrule(
-                config, eig_full, A, alg ⊢ NoTangent();
-                output_tangent = ΔD2V, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
             )
             test_rrule(
                 config, first ∘ eig_full, A, alg ⊢ NoTangent();
@@ -300,22 +294,15 @@ function test_chainrules_eigh(
         alg = MatrixAlgebraKit.default_eigh_algorithm(A)
         # copy_eigh_xxxx includes a projector onto the Hermitian part of the matrix
         @testset "eigh_full" begin
-            DV, ΔDV, ΔD2V = ad_eigh_full_setup(A)
+            DV, ΔDV = ad_eigh_full_setup(A)
             ΔD, ΔV = ΔDV
             test_rrule(
                 cr_copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔDV, atol, rtol
-            )
-            test_rrule(
-                cr_copy_eigh_full, A, alg ⊢ NoTangent(); output_tangent = ΔD2V, atol, rtol
             )
             # eigh_full does not include a projector onto the Hermitian part of the matrix
             test_rrule(
                 config, eigh_full ∘ Matrix ∘ Hermitian, A;
                 output_tangent = ΔDV, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
-            )
-            test_rrule(
-                config, eigh_full ∘ Matrix ∘ Hermitian, A;
-                output_tangent = ΔD2V, atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
             )
             test_rrule(
                 config, first ∘ eigh_full ∘ Matrix ∘ Hermitian, A;
@@ -420,23 +407,14 @@ function test_chainrules_svd(
         config = Zygote.ZygoteRuleConfig()
         alg = MatrixAlgebraKit.default_svd_algorithm(A)
         @testset "svd_compact" begin
-            USV, ΔUSVᴴ, ΔUS2Vᴴ = ad_svd_compact_setup(A)
+            USV, ΔUSVᴴ = ad_svd_compact_setup(A)
             test_rrule(
                 cr_copy_svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol
             )
             test_rrule(
-                cr_copy_svd_compact, A, alg ⊢ NoTangent();
-                output_tangent = ΔUS2Vᴴ, atol = atol, rtol = rtol
-            )
-            test_rrule(
                 config, svd_compact, A, alg ⊢ NoTangent();
                 output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol,
-                rrule_f = rrule_via_ad, check_inferred = false
-            )
-            test_rrule(
-                config, svd_compact, A, alg ⊢ NoTangent();
-                output_tangent = ΔUS2Vᴴ, atol = atol, rtol = rtol,
                 rrule_f = rrule_via_ad, check_inferred = false
             )
         end
@@ -454,7 +432,7 @@ function test_chainrules_svd(
         @testset "svd_trunc" begin
             @testset for r in 1:4:minmn
                 truncalg = TruncatedAlgorithm(alg, truncrank(r))
-                USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
+                USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
                 test_rrule(
                     cr_copy_svd_trunc, A, truncalg ⊢ NoTangent();
                     output_tangent = (ΔUSVᴴtrunc..., zero(real(T))),
@@ -491,7 +469,7 @@ function test_chainrules_svd(
             end
             S, ΔS = ad_svd_vals_setup(A)
             truncalg = TruncatedAlgorithm(alg, trunctol(atol = S[1, 1] / 2))
-            USVᴴ, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
+            USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
             test_rrule(
                 cr_copy_svd_trunc, A, truncalg ⊢ NoTangent();
                 output_tangent = (ΔUSVᴴtrunc..., zero(real(T))),
@@ -608,5 +586,27 @@ function test_chainrules_orthnull(
             fkwargs = (; alg = :lq), output_tangent = ΔNᴴ,
             atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
         )
+    end
+end
+
+function test_chainrules_projections(
+        T::Type, sz;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "Projections Chainrules AD rules $summary_str" begin
+        A = instantiate_matrix(T, sz)
+        m, n = size(A)
+        if m == n
+            @testset "project_hermitian" begin
+                alg = MatrixAlgebraKit.default_hermitian_algorithm(A)
+                test_rrule(project_hermitian, A, alg; atol, rtol)
+            end
+            @testset "project_antihermitian" begin
+                alg = MatrixAlgebraKit.default_hermitian_algorithm(A)
+                test_rrule(project_antihermitian, A, alg; atol, rtol)
+            end
+        end
     end
 end
