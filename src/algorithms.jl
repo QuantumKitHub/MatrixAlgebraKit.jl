@@ -250,7 +250,7 @@ Construct a [`TruncationStrategy`](@ref) for `A` from the given `NamedTuple` of 
 
 select_null_truncation(A, trunc) = select_null_truncation(typeof(A), trunc)
 select_null_truncation(A::Type, trunc) =
-    isnothing(trunc) ? select_null_truncation((; atol = defaulttol(eltype(A)))) : select_null_truncation(trunc)
+    isnothing(trunc) ? select_null_truncation((; rtol = defaulttol(eltype(A)))) : select_null_truncation(trunc)
 function select_null_truncation(trunc)
     if isnothing(trunc)
         return null_truncation_strategy()
