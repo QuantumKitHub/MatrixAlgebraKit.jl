@@ -7,7 +7,7 @@ using MatrixAlgebraKit: diagview, sign_safe
 using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!, _gpu_geev!
-import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!, _sylvester, svd_rank
+import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!, _gpu_Xgesvdr!, _sylvester, svd_rank
 using CUDA, CUDA.CUBLAS
 using CUDA: i32
 using LinearAlgebra
@@ -16,8 +16,11 @@ using LinearAlgebra: BlasFloat
 include("yacusolver.jl")
 
 MatrixAlgebraKit.default_householder_driver(::Type{A}) where {A <: StridedCuVecOrMat{<:BlasFloat}} = CUSOLVER()
+MatrixAlgebraKit.default_qr_iteration_driver(::Type{<:StridedCuVecOrMat{<:BlasFloat}}) = CUSOLVER()
+MatrixAlgebraKit.default_jacobi_driver(::Type{<:StridedCuVecOrMat{<:BlasFloat}}) = CUSOLVER()
+MatrixAlgebraKit.default_svd_polar_driver(::Type{<:StridedCuVecOrMat{<:BlasFloat}}) = CUSOLVER()
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuVecOrMat{TT}}
-    return CUSOLVER_QRIteration(; kwargs...)
+    return QRIteration(; kwargs...)
 end
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuVecOrMat{TT}}
     return CUSOLVER_Simple(; kwargs...)
@@ -29,6 +32,33 @@ end
 for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::CUSOLVER, args...) = YACUSOLVER.$f(args...)
 end
+
+function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
+    m, n = size(A)
+    m >= n && return YACUSOLVER.gesvd!(A, S, U, Vᴴ)
+    # CUSOLVER requires m ≥ n; compute SVD via adjoint when m < n
+    minmn = min(m, n)
+    Aᴴ = minmn > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
+    Uᴴ = similar(U')
+    V = similar(Vᴴ')
+    if size(U) == (m, m)
+        YACUSOLVER.gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
+    else
+        YACUSOLVER.gesvd!(Aᴴ, S, V, Uᴴ)
+    end
+    length(U) > 0 && adjoint!(U, Uᴴ)
+    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
+    return S, U, Vᴴ
+end
+
+gesvdj!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
+    YACUSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
+
+gesvdp!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
+    YACUSOLVER.gesvdp!(A, S, U, Vᴴ; kwargs...)
+
+_gpu_Xgesvdr!(A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
+    YACUSOLVER.gesvdr!(A, S, U, Vᴴ; kwargs...)
 
 _gpu_geev!(A::StridedCuMatrix, D::StridedCuVector, V::StridedCuMatrix) =
     YACUSOLVER.Xgeev!(A, D, V)

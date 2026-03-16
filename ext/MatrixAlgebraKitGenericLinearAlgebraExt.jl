@@ -2,42 +2,32 @@ module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, one!, zero!, default_fixgauge
+using MatrixAlgebraKit: GLA
+import MatrixAlgebraKit: gesvd!
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
+MatrixAlgebraKit.default_qr_iteration_driver(::Type{<:StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}) = GLA()
+
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return GLA_QRIteration()
+    return QRIteration(; kwargs...)
 end
 
-for f! in (:svd_compact!, :svd_full!)
-    @eval MatrixAlgebraKit.initialize_output(::typeof($f!), A::AbstractMatrix, ::GLA_QRIteration) = (nothing, nothing, nothing)
-end
-MatrixAlgebraKit.initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::GLA_QRIteration) = nothing
-
-function MatrixAlgebraKit.svd_compact!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration)
-    F = svd!(A)
-    U, S, Vᴴ = F.U, Diagonal(F.S), F.Vt
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
-
-    return U, S, Vᴴ
-end
-
-function MatrixAlgebraKit.svd_full!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration)
-    F = svd!(A; full = true)
-    U, Vᴴ = F.U, F.Vt
-    S = MatrixAlgebraKit.zero!(similar(F.S, (size(U, 2), size(Vᴴ, 1))))
-    diagview(S) .= F.S
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
-
-    return U, S, Vᴴ
-end
-
-function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, ::GLA_QRIteration)
-    return svdvals!(A)
+function gesvd!(::GLA, A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...)
+    m, n = size(A)
+    if length(U) == 0 && length(Vᴴ) == 0
+        Sv = svdvals!(A)
+        copyto!(S, Sv)
+    else
+        minmn = min(m, n)
+        # full SVD if U has m columns or Vᴴ has n rows (beyond the compact min(m,n))
+        full = (length(U) > 0 && size(U, 2) > minmn) || (length(Vᴴ) > 0 && size(Vᴴ, 1) > minmn)
+        F = svd!(A; full = full)
+        length(S) > 0 && copyto!(S, F.S)
+        length(U) > 0 && copyto!(U, F.U)
+        length(Vᴴ) > 0 && copyto!(Vᴴ, F.Vt)
+    end
+    return S, U, Vᴴ
 end
 
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}

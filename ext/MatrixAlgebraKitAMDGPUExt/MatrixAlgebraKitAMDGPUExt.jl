@@ -6,7 +6,7 @@ using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
 using MatrixAlgebraKit: ROCSOLVER, LQViaTransposedQR, TruncationStrategy, NoTruncation, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eigh_algorithm
-import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_gesvdj!
+import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdj!
 import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!, _gpu_heev!, _gpu_heevx!, _sylvester, svd_rank
 using AMDGPU
 using LinearAlgebra
@@ -14,11 +14,13 @@ using LinearAlgebra: BlasFloat
 
 include("yarocsolver.jl")
 
-MatrixAlgebraKit.default_householder_driver(::Type{A}) where {A <: StridedROCMatrix{<:BlasFloat}} = ROCSOLVER()
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
-    return ROCSOLVER_QRIteration(; kwargs...)
+MatrixAlgebraKit.default_householder_driver(::Type{A}) where {A <: StridedROCVecOrMat{<:BlasFloat}} = ROCSOLVER()
+MatrixAlgebraKit.default_qr_iteration_driver(::Type{<:StridedROCVecOrMat}) = ROCSOLVER()
+MatrixAlgebraKit.default_jacobi_driver(::Type{<:StridedROCVecOrMat}) = ROCSOLVER()
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat}
+    return QRIteration(; kwargs...)
 end
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat}
     return ROCSOLVER_DivideAndConquer(; kwargs...)
 end
 
@@ -26,12 +28,25 @@ for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::ROCSOLVER, args...) = YArocSOLVER.$f(args...)
 end
 
-_gpu_gesvd!(A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix) =
-    YArocSOLVER.gesvd!(A, S, U, Vᴴ)
-# not yet supported
-# _gpu_Xgesvdp!(A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
-#     YArocSOLVER.Xgesvdp!(A, S, U, Vᴴ; kwargs...)
-_gpu_gesvdj!(A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
+function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
+    m, n = size(A)
+    m >= n && return YArocSOLVER.gesvd!(A, S, U, Vᴴ)
+    # ROCSOLVER requires m ≥ n; compute SVD via adjoint when m < n
+    minmn = min(m, n)
+    Aᴴ = minmn > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
+    Uᴴ = similar(U')
+    V = similar(Vᴴ')
+    if size(U) == (m, m)
+        YArocSOLVER.gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
+    else
+        YArocSOLVER.gesvd!(Aᴴ, S, V, Uᴴ)
+    end
+    length(U) > 0 && adjoint!(U, Uᴴ)
+    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
+    return S, U, Vᴴ
+end
+
+gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
     YArocSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
 _gpu_heevj!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevj!(A, Dd, V; kwargs...)

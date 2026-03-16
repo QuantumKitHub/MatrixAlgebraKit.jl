@@ -139,6 +139,18 @@ The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of 
 @algdef Bisection
 @algdef Jacobi
 
+"""
+    SVDPolar(; [driver], kwargs...)
+
+Algorithm type to denote the algorithm for computing the singular value decomposition of a general
+matrix via Halley's iterative algorithm for the polar decomposition followed by the Hermitian
+eigenvalue decomposition of the positive definite factor.
+
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular vectors,
+see also [`gaugefix!`](@ref).
+"""
+@algdef SVDPolar
+
 for f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi)
     default_f_driver = Symbol(:default_, f, :_driver)
     @eval begin
@@ -153,6 +165,11 @@ for f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisecti
         $default_f_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = $default_f_driver(A)
     end
 end
+
+default_svd_polar_driver(A) = default_svd_polar_driver(typeof(A))
+default_svd_polar_driver(::Type) = Native()
+default_svd_polar_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = default_svd_polar_driver(A)
+default_svd_polar_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = default_svd_polar_driver(A)
 
 # General Eigenvalue Decomposition
 # -------------------------------

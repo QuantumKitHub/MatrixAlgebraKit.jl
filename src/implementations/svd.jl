@@ -105,6 +105,10 @@ function initialize_output(::typeof(svd_vals!), A::Diagonal, ::DiagonalAlgorithm
     return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
+# Helper functions used by gauge.jl
+_argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
+_largest(x, y) = abs(x) < abs(y) ? y : x
+
 # ==========================
 #      IMPLEMENTATIONS
 # ==========================
@@ -124,6 +128,7 @@ for (f, f_lapack!, Alg) in (
         (:qr_iteration, :gesvd!, :QRIteration),
         (:bisection, :gesvdx!, :Bisection),
         (:jacobi, :gesvdj!, :Jacobi),
+        (:svd_polar, :gesvdp!, :SVDPolar),
     )
     f_svd! = Symbol(f, :_svd!)
     f_svd_full! = Symbol(f, :_svd_full!)
@@ -196,8 +201,14 @@ end
 
 supports_svd(::Driver, ::Symbol) = false
 supports_svd(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi)
+supports_svd(::GLA, f::Symbol) = f === :qr_iteration
+supports_svd(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
+supports_svd(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
 supports_svd_full(::Driver, ::Symbol) = false
 supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration)
+supports_svd_full(::GLA, f::Symbol) = f === :qr_iteration
+supports_svd_full(::CUSOLVER, f::Symbol) = f === :qr_iteration
+supports_svd_full(::ROCSOLVER, f::Symbol) = f === :qr_iteration
 
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
@@ -261,11 +272,8 @@ function svd_vals!(A::AbstractMatrix, S, alg::DiagonalAlgorithm)
     return S
 end
 
-# GPU logic
-# ---------
-# placed here to avoid code duplication since much of the logic is replicable across
-# CUDA and AMDGPU
-###
+# GPU logic (randomized SVD - CUSOLVER_Randomized has no CPU analog, kept as-is)
+# ---------------------------------------------------------------------------------
 
 function check_input(
         ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
@@ -294,78 +302,10 @@ function initialize_output(
     return (U, S, Vᴴ)
 end
 
-function _gpu_gesvd!(
-        A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix
-    )
-    throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
-end
-function _gpu_Xgesvdp!(
-        A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...
-    )
-    throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
-end
 function _gpu_Xgesvdr!(
         A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...
     )
     throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
-end
-function _gpu_gesvdj!(
-        A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...
-    )
-    throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
-end
-function _gpu_gesvd_maybe_transpose!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix)
-    m, n = size(A)
-    m ≥ n && return _gpu_gesvd!(A, S, U, Vᴴ)
-    # both CUSOLVER and ROCSOLVER require m ≥ n for gesvd (QR_Iteration)
-    # if this condition is not met, do the SVD via adjoint
-    minmn = min(m, n)
-    Aᴴ = min(m, n) > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
-    Uᴴ = similar(U')
-    V = similar(Vᴴ')
-    if size(U) == (m, m)
-        _gpu_gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
-    else
-        _gpu_gesvd!(Aᴴ, S, V, Uᴴ)
-    end
-    length(U) > 0 && adjoint!(U, Uᴴ)
-    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
-    return U, S, Vᴴ
-end
-
-# GPU SVD implementation
-function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
-    check_input(svd_full!, A, USVᴴ, alg)
-    U, S, Vᴴ = USVᴴ
-    fill!(S, zero(eltype(S)))
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        one!(U)
-        zero!(S)
-        one!(Vᴴ)
-        return USVᴴ
-    end
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_QRIteration
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
-        _gpu_gesvd_maybe_transpose!(A, view(S, 1:minmn, 1), U, Vᴴ)
-    elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, view(S, 1:minmn, 1), U, Vᴴ; alg_kwargs...)
-    elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, view(S, 1:minmn, 1), U, Vᴴ; alg_kwargs...)
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-    diagview(S) .= view(S, 1:minmn, 1)
-    view(S, 2:minmn, 1) .= zero(eltype(S))
-
-    do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
-
-    return USVᴴ
 end
 
 function svd_trunc_no_error!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
@@ -394,65 +334,6 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     return Utr, Str, Vᴴtr, ϵ
 end
 
-function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
-    check_input(svd_compact!, A, USVᴴ, alg)
-    U, S, Vᴴ = USVᴴ
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        one!(U)
-        zero!(S)
-        one!(Vᴴ)
-        return USVᴴ
-    end
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_QRIteration
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
-        _gpu_gesvd_maybe_transpose!(A, diagview(S), U, Vᴴ)
-    elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, diagview(S), U, Vᴴ; alg_kwargs...)
-    elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, diagview(S), U, Vᴴ; alg_kwargs...)
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-
-    do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
-
-    return USVᴴ
-end
-_argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
-_largest(x, y) = abs(x) < abs(y) ? y : x
-
-function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
-    check_input(svd_vals!, A, S, alg)
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        zero!(S)
-        return S
-    end
-    U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
-
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_QRIteration
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
-        _gpu_gesvd_maybe_transpose!(A, S, U, Vᴴ)
-    elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, S, U, Vᴴ; alg_kwargs...)
-    elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, S, U, Vᴴ; alg_kwargs...)
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-
-    return S
-end
-
 # Deprecations
 # ------------
 for algtype in (:SafeDivideAndConquer, :DivideAndConquer, :QRIteration, :Jacobi, :Bisection)
@@ -472,3 +353,40 @@ for algtype in (:SafeDivideAndConquer, :DivideAndConquer, :QRIteration, :Jacobi,
         )
     end
 end
+
+for (algtype, newtype, drivertype) in (
+        (:CUSOLVER_QRIteration, :QRIteration, :CUSOLVER),
+        (:CUSOLVER_Jacobi, :Jacobi, :CUSOLVER),
+        (:CUSOLVER_SVDPolar, :SVDPolar, :CUSOLVER),
+        (:ROCSOLVER_QRIteration, :QRIteration, :ROCSOLVER),
+        (:ROCSOLVER_Jacobi, :Jacobi, :ROCSOLVER),
+    )
+    @eval begin
+        Base.@deprecate(
+            svd_compact!(A, USVᴴ, alg::$algtype),
+            svd_compact!(A, USVᴴ, $newtype(; driver = $drivertype(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            svd_full!(A, USVᴴ, alg::$algtype),
+            svd_full!(A, USVᴴ, $newtype(; driver = $drivertype(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            svd_vals!(A, S, alg::$algtype),
+            svd_vals!(A, S, $newtype(; driver = $drivertype(), alg.kwargs...))
+        )
+    end
+end
+
+# GLA_QRIteration SVD deprecations (eigh methods remain in the GLA extension)
+Base.@deprecate(
+    svd_compact!(A, USVᴴ, alg::GLA_QRIteration),
+    svd_compact!(A, USVᴴ, QRIteration(; driver = GLA(), alg.kwargs...))
+)
+Base.@deprecate(
+    svd_full!(A, USVᴴ, alg::GLA_QRIteration),
+    svd_full!(A, USVᴴ, QRIteration(; driver = GLA(), alg.kwargs...))
+)
+Base.@deprecate(
+    svd_vals!(A, S, alg::GLA_QRIteration),
+    svd_vals!(A, S, QRIteration(; driver = GLA(), alg.kwargs...))
+)
