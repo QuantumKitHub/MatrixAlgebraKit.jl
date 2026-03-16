@@ -31,23 +31,14 @@ end
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     m, n = size(A)
     m >= n && return YArocSOLVER.gesvd!(A, S, U, Vᴴ)
-    # ROCSOLVER requires m ≥ n; compute SVD via adjoint when m < n
-    minmn = min(m, n)
-    Aᴴ = minmn > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
-    Uᴴ = similar(U')
-    V = similar(Vᴴ')
-    if size(U) == (m, m)
-        YArocSOLVER.gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
-    else
-        YArocSOLVER.gesvd!(Aᴴ, S, V, Uᴴ)
-    end
-    length(U) > 0 && adjoint!(U, Uᴴ)
-    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
-    return S, U, Vᴴ
+    return MatrixAlgebraKit.svd_via_adjoint!(gesvd!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
 end
 
-gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
-    YArocSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
+function gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
+    m, n = size(A)
+    m >= n && return YArocSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
+    return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
+end
 _gpu_heevj!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevj!(A, Dd, V; kwargs...)
 _gpu_heevd!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =

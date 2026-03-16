@@ -36,23 +36,14 @@ end
 function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
     m, n = size(A)
     m >= n && return YACUSOLVER.gesvd!(A, S, U, Vᴴ)
-    # CUSOLVER requires m ≥ n; compute SVD via adjoint when m < n
-    minmn = min(m, n)
-    Aᴴ = minmn > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
-    Uᴴ = similar(U')
-    V = similar(Vᴴ')
-    if size(U) == (m, m)
-        YACUSOLVER.gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
-    else
-        YACUSOLVER.gesvd!(Aᴴ, S, V, Uᴴ)
-    end
-    length(U) > 0 && adjoint!(U, Uᴴ)
-    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
-    return S, U, Vᴴ
+    return MatrixAlgebraKit.svd_via_adjoint!(gesvd!, CUSOLVER(), A, S, U, Vᴴ; kwargs...)
 end
 
-gesvdj!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
-    YACUSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
+function gesvdj!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
+    m, n = size(A)
+    m >= n && return YACUSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
+    return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, CUSOLVER(), A, S, U, Vᴴ; kwargs...)
+end
 
 gesvdp!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
     YACUSOLVER.gesvdp!(A, S, U, Vᴴ; kwargs...)

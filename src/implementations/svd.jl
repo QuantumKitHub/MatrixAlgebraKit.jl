@@ -117,9 +117,32 @@ for f! in (:gesdd!, :gesvd!, :gesvdj!, :gesvdp!, :gesvdx!, :gesvdr!, :gesdvd!)
     @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
 end
 
+"""
+    svd_via_adjoint!(f!, driver, A, S, U, Vᴴ; kwargs...)
+
+Compute the SVD of `A` (m × n, m < n) by computing the SVD of `adjoint(A)` using
+the provided function `f!(driver, A, S, U, Vᴴ; kwargs...)`. Use this as a building
+block for drivers whose SVD routines require m ≥ n.
+"""
+function svd_via_adjoint!(f!::F, driver::Driver, A, S, U, Vᴴ; kwargs...) where {F}
+    Aᴴ = adjoint!(similar(A'), A)
+    Uᴴ = similar(U')
+    V = similar(Vᴴ')
+    f!(driver, Aᴴ, S, V, Uᴴ; kwargs...)
+    length(U) > 0 && adjoint!(U, Uᴴ)
+    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
+    return S, U, Vᴴ
+end
+
 # LAPACK
-for f! in (:gesdd!, :gesvd!, :gesvdj!, :gesvdx!, :gesdvd!)
+for f! in (:gesdd!, :gesvd!, :gesvdx!, :gesdvd!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
+end
+
+function gesvdj!(::LAPACK, A, S, U, Vᴴ; kwargs...)
+    m, n = size(A)
+    m >= n && return YALAPACK.gesvdj!(A, S, U, Vᴴ)
+    return svd_via_adjoint!(gesvdj!, LAPACK(), A, S, U, Vᴴ; kwargs...)
 end
 
 for (f, f_lapack!, Alg) in (
