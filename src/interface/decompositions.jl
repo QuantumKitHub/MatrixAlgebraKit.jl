@@ -139,7 +139,7 @@ The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of 
 @algdef Bisection
 @algdef Jacobi
 
-for f in (:divide_and_conquer, :qr_iteration, :bisection, :jacobi)
+for f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi)
     default_f_driver = Symbol(:default_, f, :_driver)
     @eval begin
         $default_f_driver(A) = $default_f_driver(typeof(A))

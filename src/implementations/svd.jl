@@ -155,46 +155,40 @@ for (f, f_lapack!, Alg) in (
             $f_svd_vals!(driver, A, S; kwargs...)
         @inline $f_svd!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) =
             $f_svd!($(Symbol(:default_, f, :_driver))(A), A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_full!(::DefaultDriver, A, S; kwargs...) =
-            $f_svd_full!($(Symbol(:default_, f, :_driver)), A, S; kwargs...)
+        @inline $f_svd_full!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) =
+            $f_svd_full!($(Symbol(:default_, f, :_driver))(A), A, U, S, Vᴴ; kwargs...)
         @inline $f_svd_vals!(::DefaultDriver, A, S; kwargs...) =
-            $f_svd_vals!($(Symbol(:default_, f, :_driver)), A, S; kwargs...)
+            $f_svd_vals!($(Symbol(:default_, f, :_driver))(A), A, S; kwargs...)
     end
 
     # Implementation
     @eval begin
-        function $f_svd!(
-                driver::Driver, A::AbstractMatrix, U::AbstractMatrix, S::AbstractMatrix, Vᴴ::AbstractMatrix;
-                fixgauge::Bool = true, kwargs...
-            )
-            supports_svd(driver, $(QuoteNode(f))) || throw(ArgumentError(lazy"$driver does not provide $f"))
+        function $f_svd!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
+            supports_svd(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
-            $f_lapack!(driver, A, view(S, 1:minmn, 1), U, Vᴴ; kwargs...)
+            $f_lapack!(driver, A, diagview(S), U, Vᴴ; kwargs...)
             fixgauge && gaugefix!(svd_compact!, U, Vᴴ)
             return U, S, Vᴴ
         end
-        function $f_svd_full!(
-                driver::Driver, A::AbstractMatrix, U::AbstractMatrix, S::AbstractMatrix, Vᴴ::AbstractMatrix;
-                fixgauge::Bool = true, kwargs...
-            )
-            supports_svd_full(driver, $(QuoteNode(f))) || throw(ArgumentError(lazy"$driver does not provide $f"))
+        function $f_svd_full!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
+            supports_svd_full(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
             zero!(S)
             minmn = min(size(A)...)
             $f_lapack!(driver, A, view(S, 1:minmn, 1), U, Vᴴ; kwargs...)
             diagview(S) .= view(S, 1:minmn, 1)
-            view(S, 2:minmn, 1) .= zero(eltype(S))
+            zero!(view(S, 2:minmn, 1))
             fixgauge && gaugefix!(svd_full!, U, Vᴴ)
             return U, S, Vᴴ
         end
-        function $f_svd_vals!(
-                driver::Driver, A::AbstractMatrix, S::AbstractVector;
-                fixgauge::Bool = true, kwargs...
-            )
-            supports_svd(driver, $(QuoteNode(f))) || throw(ArgumentError(lazy"$driver does not provide $f"))
+        function $f_svd_vals!(driver::Driver, A, S; fixgauge::Bool = true, kwargs...)
+            supports_svd(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             isempty(A) && return zero!(S)
             U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
-            $f_lapack!(driver, A, view(S, 1:minmn, 1), U, Vᴴ; kwargs...)
+            $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             return S
         end
     end
@@ -461,19 +455,19 @@ end
 
 # Deprecations
 # ------------
-for algtype in (:DivideAndConquer, :QRIteration, :Jacobi, :Bisection)
-    algtype = Symbol(:LAPACK_, algtype)
+for algtype in (:SafeDivideAndConquer, :DivideAndConquer, :QRIteration, :Jacobi, :Bisection)
+    lapack_algtype = Symbol(:LAPACK_, algtype)
     @eval begin
         Base.@deprecate(
-            svd_compact!(A, USVᴴ, alg::$algtype),
+            svd_compact!(A, USVᴴ, alg::$lapack_algtype),
             svd_compact!(A, USVᴴ, $algtype(; driver = LAPACK(), alg.kwargs...))
         )
         Base.@deprecate(
-            svd_full!(A, USVᴴ, alg::$algtype),
+            svd_full!(A, USVᴴ, alg::$lapack_algtype),
             svd_full!(A, USVᴴ, $algtype(; driver = LAPACK(), alg.kwargs...))
         )
         Base.@deprecate(
-            svd_vals!(A, S, alg::$algtype),
+            svd_vals!(A, S, alg::$lapack_algtype),
             svd_vals!(A, S, $algtype(; driver = LAPACK(), alg.kwargs...))
         )
     end
