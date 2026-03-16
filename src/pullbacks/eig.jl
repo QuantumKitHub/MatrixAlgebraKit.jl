@@ -135,15 +135,12 @@ function eig_trunc_pullback!(
     (n, n) == size(ΔA) || throw(DimensionMismatch())
     G = V' * V
 
+    VᴴΔV = !iszerotangent(ΔV) ? V' * ΔV : zero(G)
+    ΔVperp = ΔV - V * inv(G) * VᴴΔV
     if !iszerotangent(ΔV)
         (n, p) == size(ΔV) || throw(DimensionMismatch())
-        VᴴΔV = V' * ΔV
         check_eig_cotangents(D, VᴴΔV; degeneracy_atol, gauge_atol)
-
-        ΔVperp = ΔV - V * inv(G) * VᴴΔV
         VᴴΔV .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
-    else
-        VᴴΔV = zero(G)
     end
 
     if !iszerotangent(ΔDmat)

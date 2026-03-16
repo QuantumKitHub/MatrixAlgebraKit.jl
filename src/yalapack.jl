@@ -2033,6 +2033,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             for i in 1:2  # first call returns lwork as work[1]
                 #! format: off
                 if eltype(A) <: Complex
+                    rwork_ = isnothing(rwork) ? Vector{$relty}(undef, 0) : rwork
                     ccall((@blasfunc($gesvd), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
@@ -2040,7 +2041,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                            Ptr{BlasInt}, Clong, Clong),
                           jobu, jobvt, m, n, A, lda,
                           S, U, ldu, Vᴴ, ldv,
-                          work, lwork, rwork,
+                          work, lwork, rwork_,
                           info, 1, 1)
                 else
                     ccall((@blasfunc($gesvd), libblastrampoline), Cvoid,
@@ -2135,6 +2136,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             for i in 1:2  # first call returns lwork as work[1]
                 #! format: off
                 if eltype(A) <: Complex
+                    rwork_ = isnothing(rwork) ? Vector{$relty}(undef, 0) : rwork
                     ccall((@blasfunc($gesdd), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
@@ -2142,7 +2144,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                            Ptr{BlasInt}, Clong),
                           job, m, n, A, lda,
                           S, U, ldu, Vᴴ, ldv,
-                          work, lwork, rwork, iwork,
+                          work, lwork, rwork_, iwork,
                           info, 1)
                 else
                     ccall((@blasfunc($gesdd), libblastrampoline), Cvoid,

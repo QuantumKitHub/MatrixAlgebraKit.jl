@@ -47,6 +47,8 @@ function svd_pullback!(
     Ur = view(U, :, 1:r)
     Vᴴr = view(Vᴴ, 1:r, :)
     Sr = view(S, 1:r)
+    indU = axes(U, 2)
+    indV = axes(Vᴴ, 1)
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ

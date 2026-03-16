@@ -141,6 +141,8 @@ function householder_qr!(
     (inplaceQ && (computeR || positive || blocksize > 1 || m < n)) &&
         throw(ArgumentError("inplace Q only supported if matrix is tall (`m >= n`), R is not required, and using the unblocked algorithm (`blocksize = 1`) with `positive = false`"))
 
+    jpvt = Vector{Int}(undef, 0)
+    τ = Vector{eltype(A)}(undef, 0)
     # Compute QR in packed form
     if blocksize > 1
         nb = min(minmn, blocksize)
