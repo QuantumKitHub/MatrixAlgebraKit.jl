@@ -104,6 +104,7 @@ default_householder_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A
 Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix using the divide-and-conquer algorithm.
 
+The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef DivideAndConquer
@@ -111,7 +112,7 @@ The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of 
 """
     SafeDivideAndConquer(; [driver], kwargs...)
 
-Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
+Algorithm type to for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix using the divide-and-conquer algorithm,
 with an additional fallback to the standard QR iteration algorithm in case the former fails to converge.
 
@@ -128,15 +129,35 @@ See also [`DivideAndConquer`](@ref) and [`QRIteration`](@ref).
 @algdef SafeDivideAndConquer
 
 """
-    QRIteration(; [driver], kwargs...)
+    QRIteration(; [driver], fixgauge = true)
 
-Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix via QR iteration.
 
+The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef QRIteration
+
+"""
+    Bisection(; [driver], fixgauge::Bool = true)
+
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix via the bisection algorithm.
+
+The optional `driver` symbol can be used to choose between different implementations of this algorithm.
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
+"""
 @algdef Bisection
+
+"""
+    Jacobi(; [driver], fixgauge = true)
+
+Algorithm type for computing the singular value decomposition of a general matrix using the Jacobi algorithm.
+
+The optional `driver` symbol can be used to choose between different implementations of this algorithm.
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
+"""
 @algdef Jacobi
 
 """
@@ -146,30 +167,30 @@ Algorithm type to denote the algorithm for computing the singular value decompos
 matrix via Halley's iterative algorithm for the polar decomposition followed by the Hermitian
 eigenvalue decomposition of the positive definite factor.
 
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular vectors,
-see also [`gaugefix!`](@ref).
+The optional `driver` symbol can be used to choose between different implementations of this algorithm.
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
 """
 @algdef SVDPolar
 
-for f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi)
+for f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi, :svd_polar)
     default_f_driver = Symbol(:default_, f, :_driver)
     @eval begin
         $default_f_driver(A) = $default_f_driver(typeof(A))
         $default_f_driver(::Type) = Native()
 
-        $default_f_driver(::Type{A}) where {A <: YALAPACK.MaybeBlasMat} = LAPACK()
-
-        # note: StridedVector fallback is needed for handling reshaped parent types
-        $default_f_driver(::Type{A}) where {A <: StridedVector{<:BlasFloat}} = LAPACK()
         $default_f_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = $default_f_driver(A)
         $default_f_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = $default_f_driver(A)
     end
-end
 
-default_svd_polar_driver(A) = default_svd_polar_driver(typeof(A))
-default_svd_polar_driver(::Type) = Native()
-default_svd_polar_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = default_svd_polar_driver(A)
-default_svd_polar_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = default_svd_polar_driver(A)
+    if f !== :svd_polar
+        @eval begin
+            $default_f_driver(::Type{A}) where {A <: YALAPACK.MaybeBlasMat} = LAPACK()
+            # note: StridedVector fallback is needed for handling reshaped parent types
+            $default_f_driver(::Type{A}) where {A <: StridedVector{<:BlasFloat}} = LAPACK()
+        end
+    end
+
+end
 
 # General Eigenvalue Decomposition
 # -------------------------------
