@@ -105,10 +105,6 @@ function initialize_output(::typeof(svd_vals!), A::Diagonal, ::DiagonalAlgorithm
     return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
-# Helper functions used by gauge.jl
-_argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
-_largest(x, y) = abs(x) < abs(y) ? y : x
-
 # ==========================
 #      IMPLEMENTATIONS
 # ==========================

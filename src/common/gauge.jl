@@ -8,6 +8,9 @@ This is achieved by ensuring that the entry with the largest magnitude in `V` or
 is real and positive.
 """ gaugefix!
 
+# Helper functions
+_argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
+_largest(x, y) = abs(x) < abs(y) ? y : x
 
 function gaugefix!(::Union{typeof(eig_full!), typeof(eigh_full!), typeof(gen_eig_full!)}, V::AbstractMatrix)
     for j in axes(V, 2)
