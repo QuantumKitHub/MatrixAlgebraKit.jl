@@ -99,7 +99,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
     #! format: on
     @eval begin
         # Flexible QR / LQ
-        function geqr!(A::AbstractMatrix{$elty})
+        #=function geqr!(A::AbstractMatrix{$elty})
             require_one_based_indexing(A)
             chkstride1(A)
             m, n = size(A)
@@ -162,7 +162,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
                 end
             end
             return A, t
-        end
+        end=#
 
         # Classic QR / LQ / QL / RQ
         function geqrf!(
@@ -231,7 +231,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             end
             return A, tau
         end
-        function geqlf!(
+        #=function geqlf!(
                 A::AbstractMatrix{$elty},
                 tau::AbstractVector{$elty} = similar(A, $elty, min(size(A)...))
             )
@@ -296,7 +296,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
                 end
             end
             return A, tau
-        end
+        end=#
 
         # QR and LQ with block reflectors
         #! format: off
@@ -441,7 +441,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
     #! format: on
     @eval begin
         # multiply with Q factor of flexible QR / LQ
-        function gemqr!(
+        #=function gemqr!(
                 side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
                 T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty}
             )
@@ -682,7 +682,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return A
-        end
+        end=#
 
         # multiply with Q factor of classic QR / LQ / QL / RQ
         function unmqr!(
@@ -781,7 +781,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return C
         end
-        function unmql!(
+        #=function unmql!(
                 side::AbstractChar, trans::AbstractChar,
                 A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
                 C::AbstractVecOrMat{$elty}
@@ -876,7 +876,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return C
-        end
+        end=#
 
         # Multiply with blocked Q factor from QR / LQ
         function gemqrt!(
@@ -1423,7 +1423,7 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
         (:zgees_, :zgeesx_, :zgeev_, :zgeevx_, :zggev_, :ComplexF64, :ComplexF64, :Float64),
     )
     @eval begin
-        function gees!(
+        #=function gees!(
                 A::AbstractMatrix{$elty},
                 V::AbstractMatrix{$elty} = similar(A),
                 vals::AbstractVector{$celty} = similar(A, $celty, size(A, 1))
@@ -1501,7 +1501,7 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
                 _reorder_realeigendecomposition!(vals, valsR, valsI, work, V, 'N')
             end
             return A, V, vals
-        end
+        end=#
         function geesx!(
                 A::AbstractMatrix{$elty},
                 V::AbstractMatrix{$elty} = similar(A),
@@ -2303,7 +2303,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             end
             return (S, U, Vᴴ)
         end
-        function gesvj!(
+        #=function gesvj!(
                 A::AbstractMatrix{$elty},
                 S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::AbstractMatrix{$elty} = similar(
@@ -2426,7 +2426,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 copyto!(U, A)
             end
             return (S, U, Vᴴ)
-        end
+        end=#
     end
 end
 
