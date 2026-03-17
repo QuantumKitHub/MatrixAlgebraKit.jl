@@ -161,7 +161,7 @@ The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of 
 @algdef Jacobi
 
 """
-    SVDPolar(; [driver], kwargs...)
+    SVDViaPolar(; [driver], kwargs...)
 
 Algorithm type to denote the algorithm for computing the singular value decomposition of a general
 matrix via Halley's iterative algorithm for the polar decomposition followed by the Hermitian
@@ -170,7 +170,7 @@ eigenvalue decomposition of the positive definite factor.
 The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
 """
-@algdef SVDPolar
+@algdef SVDViaPolar
 
 for f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi, :svd_polar)
     default_f_driver = Symbol(:default_, f, :_driver)

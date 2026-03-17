@@ -32,7 +32,7 @@ export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
 
 export Householder, Native_HouseholderQR, Native_HouseholderLQ
-export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDPolar
+export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
     LAPACK_DivideAndConquer, LAPACK_Jacobi, LAPACK_SafeDivideAndConquer

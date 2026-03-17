@@ -147,7 +147,7 @@ for (f, f_lapack!, Alg) in (
         (:qr_iteration, :gesvd!, :QRIteration),
         (:bisection, :gesvdx!, :Bisection),
         (:jacobi, :gesvdj!, :Jacobi),
-        (:svd_polar, :gesvdp!, :SVDPolar),
+        (:svd_polar, :gesvdp!, :SVDViaPolar),
     )
     f_svd! = Symbol(f, :_svd!)
     f_svd_full! = Symbol(f, :_svd_full!)
@@ -376,7 +376,7 @@ end
 for (algtype, newtype, drivertype) in (
         (:CUSOLVER_QRIteration, :QRIteration, :CUSOLVER),
         (:CUSOLVER_Jacobi, :Jacobi, :CUSOLVER),
-        (:CUSOLVER_SVDPolar, :SVDPolar, :CUSOLVER),
+        (:CUSOLVER_SVDPolar, :SVDViaPolar, :CUSOLVER),
         (:ROCSOLVER_QRIteration, :QRIteration, :ROCSOLVER),
         (:ROCSOLVER_Jacobi, :Jacobi, :ROCSOLVER),
     )
