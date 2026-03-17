@@ -62,9 +62,9 @@ These functions return the diagonal elements of `D` in a vector.
 Finally, it is also possible to compute a partial or truncated eigenvalue decomposition, using the [`eig_trunc`](@ref) and [`eigh_trunc`](@ref) functions.
 To control the behavior of the truncation, we refer to [Truncations](@ref) for more information.
 
-### Symmetric Eigenvalue Decomposition
+### Hermitian or Real Symmetric Eigenvalue Decomposition
 
-For symmetric matrices, we provide the following functions:
+For hermitian matrices, thus including real symmetric matrices, we provide the following functions:
 
 ```@docs; canonical=false
 eigh_full
@@ -77,7 +77,7 @@ eigh_vals
     By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
     See [Gauge choices](@ref sec_gaugefix) for more details.
 
-The following algorithms are available for the symmetric eigenvalue decomposition:
+The following algorithms are available for the hermitian eigenvalue decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
@@ -99,7 +99,7 @@ eig_vals
     By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
     See [Gauge choices](@ref sec_gaugefix) for more details.
 
-The following algorithms are available for the non-Hermitian eigenvalue decomposition:
+The following algorithms are available for the standard eigenvalue decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
