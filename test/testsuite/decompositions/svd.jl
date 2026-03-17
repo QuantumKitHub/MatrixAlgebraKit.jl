@@ -2,28 +2,28 @@ using TestExtras
 using GenericLinearAlgebra
 using LinearAlgebra: opnorm
 
-function test_svd(T::Type, sz; kwargs...)
+function test_svd(T::Type, sz; test_compact::Bool = true, test_full::Bool = true, test_trunc::Bool = true,  kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "svd $summary_str" begin
-        test_svd_compact(T, sz; kwargs...)
-        test_svd_full(T, sz; kwargs...)
-        test_svd_trunc(T, sz; kwargs...)
+        test_compact && test_svd_compact(T, sz; kwargs...)
+        test_full && test_svd_full(T, sz; kwargs...)
+        test_trunc && test_svd_trunc(T, sz; kwargs...)
     end
 end
 
-function test_svd_algs(T::Type, sz, algs; kwargs...)
+function test_svd_algs(T::Type, sz, algs; test_compact::Bool = true, test_full::Bool = true, test_trunc::Bool = true, kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "svd algorithms $summary_str" begin
-        test_svd_compact_algs(T, sz, algs; kwargs...)
-        test_svd_full_algs(T, sz, algs; kwargs...)
-        test_svd_trunc_algs(T, sz, algs; kwargs...)
+        test_compact && test_svd_compact_algs(T, sz, algs; kwargs...)
+        test_full && test_svd_full_algs(T, sz, algs; kwargs...)
+        test_trunc && test_svd_trunc_algs(T, sz, algs; kwargs...)
     end
 end
 
 function test_svd_compact(
         T::Type, sz;
         atol::Real = 0, rtol::Real = precision(eltype(T)),
-        kwargs...
+        test_vals::Bool = true, kwargs...
     )
     summary_str = testargs_summary(T, sz)
     return @testset "svd_compact! $summary_str" begin
@@ -47,15 +47,17 @@ function test_svd_compact(
         @test isisometric(V2ᴴ; side = :right)
         @test isposdef(S2)
 
-        Sd = @testinferred svd_vals(A)
-        @test S ≈ Diagonal(Sd)
+        if test_vals
+            Sd = @testinferred svd_vals(A)
+            @test S ≈ Diagonal(Sd)
+        end
     end
 end
 
 function test_svd_compact_algs(
         T::Type, sz, algs;
         atol::Real = 0, rtol::Real = precision(eltype(T)),
-        kwargs...
+        test_vals::Bool = true, kwargs...
     )
     summary_str = testargs_summary(T, sz)
     return @testset "svd_compact! algorithm $alg $summary_str" for alg in algs
@@ -78,8 +80,10 @@ function test_svd_compact_algs(
         @test isisometric(V2ᴴ; side = :right)
         @test isposdef(S2)
 
-        Sd = @testinferred svd_vals(A; alg)
-        @test S ≈ Diagonal(Sd)
+        if test_vals
+            Sd = @testinferred svd_vals(A; alg)
+            @test S ≈ Diagonal(Sd)
+        end
     end
 end
 
@@ -123,7 +127,6 @@ function test_svd_full_algs(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "svd_full! algorithm $alg $summary_str" for alg in algs
-        isa(alg, LAPACK_Jacobi) && continue
         A = instantiate_matrix(T, sz)
         Ac = deepcopy(A)
         m, n = size(A)
