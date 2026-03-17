@@ -1423,7 +1423,7 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
         (:zgees_, :zgeesx_, :zgeev_, :zgeevx_, :zggev_, :ComplexF64, :ComplexF64, :Float64),
     )
     @eval begin
-        #=function gees!(
+        function gees!(
                 A::AbstractMatrix{$elty},
                 V::AbstractMatrix{$elty} = similar(A),
                 vals::AbstractVector{$celty} = similar(A, $celty, size(A, 1))
@@ -1501,7 +1501,7 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
                 _reorder_realeigendecomposition!(vals, valsR, valsI, work, V, 'N')
             end
             return A, V, vals
-        end=#
+        end
         function geesx!(
                 A::AbstractMatrix{$elty},
                 V::AbstractMatrix{$elty} = similar(A),
