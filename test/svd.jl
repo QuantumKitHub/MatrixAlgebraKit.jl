@@ -1,10 +1,6 @@
 using MatrixAlgebraKit
-using Test
-using TestExtras
-using StableRNGs
 using LinearAlgebra: Diagonal
 using CUDA, AMDGPU
-using CUDA.CUSOLVER # pull in opnorm binding
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (BigFloat, Complex{BigFloat})
@@ -14,58 +10,89 @@ using .TestSuite
 
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
-for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
-    TestSuite.seed_rng!(123)
-    if T ∈ BLASFloats
-        if CUDA.functional()
-            TestSuite.test_svd(CuMatrix{T}, (m, n))
-            CUDA_SVD_ALGS = (
-                CUSOLVER_QRIteration(),
-                CUSOLVER_SVDPolar(),
-                CUSOLVER_Jacobi(),
-            )
-            TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
-            k = 5
-            p = min(m, n) - k - 2
-            min(m, n) > k + 2 && TestSuite.test_randomized_svd(CuMatrix{T}, (m, n), (MatrixAlgebraKit.TruncatedAlgorithm(CUSOLVER_Randomized(; k, p, niters = 20), truncrank(k)),))
-            if n == m
-                TestSuite.test_svd(Diagonal{T, CuVector{T}}, m)
-                TestSuite.test_svd_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
-            end
-        end
-        if AMDGPU.functional()
-            TestSuite.test_svd(ROCMatrix{T}, (m, n))
-            AMD_SVD_ALGS = (
-                ROCSOLVER_QRIteration(),
-                ROCSOLVER_Jacobi(),
-            )
-            TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
-            if n == m
-                TestSuite.test_svd(Diagonal{T, ROCVector{T}}, m)
-                TestSuite.test_svd_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),))
-            end
+# CPU tests
+# ---------
+if !is_buildkite
+    # LAPACK algorithms:
+    for T in BLASFloats, m in (0, 54), n in (0, 37, m, 63)
+        TestSuite.seed_rng!(123)
+        LAPACK_SVD_ALGS = (
+            LAPACK_QRIteration(),
+            LAPACK_DivideAndConquer(),
+            LAPACK_SafeDivideAndConquer(; fixgauge = true),
+        )
+        TestSuite.test_svd(T, (m, n))
+        TestSuite.test_svd_algs(T, (m, n), LAPACK_SVD_ALGS)
+        @static if VERSION > v"1.11-" # Jacobi broken on 1.10
+            m ≥ n && TestSuite.test_svd_algs(T, (m, n), (LAPACK_Jacobi(),); test_full = false, test_vals = false)
         end
     end
-    if !is_buildkite
-        if T ∈ BLASFloats
-            LAPACK_SVD_ALGS = (
-                LAPACK_QRIteration(),
-                LAPACK_DivideAndConquer(),
-                LAPACK_SafeDivideAndConquer(; fixgauge = true),
-            )
-            TestSuite.test_svd(T, (m, n))
-            TestSuite.test_svd_algs(T, (m, n), LAPACK_SVD_ALGS)
-            @static if VERSION > v"1.11-" # Jacobi broken on 1.10
-                m ≥ n && TestSuite.test_svd_algs(T, (m, n), (LAPACK_Jacobi(),); test_full = false, test_vals = false)
-            end
-        elseif T ∈ GenericFloats
-            TestSuite.test_svd(T, (m, n))
-            TestSuite.test_svd_algs(T, (m, n), (GLA_QRIteration(),))
-        end
-        if m == n
-            AT = Diagonal{T, Vector{T}}
-            TestSuite.test_svd(AT, m)
-            TestSuite.test_svd_algs(AT, m, (DiagonalAlgorithm(),))
-        end
+
+    # Generic floats:
+    for T in GenericFloats, m in (0, 54), n in (0, 37, m, 63)
+        TestSuite.seed_rng!(123)
+        TestSuite.test_svd(T, (m, n))
+        TestSuite.test_svd_algs(T, (m, n), (GLA_QRIteration(),))
+    end
+
+    # Diagonal:
+    for T in (BLASFloats..., GenericFloats...), m in (0, 54)
+        TestSuite.seed_rng!(123)
+        AT = Diagonal{T, Vector{T}}
+        TestSuite.test_svd(AT, m)
+        TestSuite.test_svd_algs(AT, m, (DiagonalAlgorithm(),))
+    end
+end
+
+# CUDA tests
+# ------------
+if CUDA.functional()
+    # LAPACK algorithms:
+    for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
+        TestSuite.seed_rng!(123)
+        TestSuite.test_svd(CuMatrix{T}, (m, n))
+        CUDA_SVD_ALGS = (
+            CUSOLVER_QRIteration(),
+            CUSOLVER_SVDPolar(),
+            CUSOLVER_Jacobi(),
+        )
+        TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
+    end
+
+    # Randomized SVD:
+    for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
+        TestSuite.seed_rng!(123)
+        k = 5
+        p = min(m, n) - k - 2
+        p > 0 || continue
+        TestSuite.test_randomized_svd(CuMatrix{T}, (m, n), (MatrixAlgebraKit.TruncatedAlgorithm(CUSOLVER_Randomized(; k, p, niters = 20), truncrank(k)),))
+    end
+
+    # Diagonal:
+    for T in BLASFloats, m in (0, 23)
+        TestSuite.seed_rng!(123)
+        AT = Diagonal{T, CuVector{T}}
+        TestSuite.test_svd(AT, m)
+        TestSuite.test_svd_algs(AT, m, (DiagonalAlgorithm(),))
+    end
+end
+
+# AMDGPU tests
+# ------------
+if AMDGPU.functional()
+    # LAPACK algorithms:
+    for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
+        TestSuite.seed_rng!(123)
+        TestSuite.test_svd(ROCMatrix{T}, (m, n))
+        AMD_SVD_ALGS = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
+        TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
+    end
+
+    # Diagonal:
+    for T in BLASFloats, m in (0, 23)
+        TestSuite.seed_rng!(123)
+        AT = Diagonal{T, ROCVector{T}}
+        TestSuite.test_svd(AT, m)
+        TestSuite.test_svd_algs(AT, m, (DiagonalAlgorithm(),))
     end
 end
