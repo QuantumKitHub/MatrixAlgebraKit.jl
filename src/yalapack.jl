@@ -580,7 +580,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return A
-        end
+        end=#
         function unglq!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
@@ -615,7 +615,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return A
         end
-        function ungql!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
+        #=function ungql!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
             m, n = size(A)
