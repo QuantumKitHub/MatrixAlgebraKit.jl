@@ -2,7 +2,7 @@ using TestExtras
 using GenericLinearAlgebra
 using LinearAlgebra: opnorm
 
-function test_svd(T::Type, sz; test_compact::Bool = true, test_full::Bool = true, test_trunc::Bool = true,  kwargs...)
+function test_svd(T::Type, sz; test_compact::Bool = true, test_full::Bool = true, test_trunc::Bool = true, kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "svd $summary_str" begin
         test_compact && test_svd_compact(T, sz; kwargs...)
