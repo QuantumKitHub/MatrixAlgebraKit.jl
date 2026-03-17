@@ -164,9 +164,7 @@ function gesvdp!(
         )
     end
     err = h_err_sigma[]
-    if err > tol
-        warn("gesvdp! did not attained requested tolerance: error = $err > tolerance = $tol")
-    end
+    err > tol && @warn "gesvdp! did not attain the requested tolerance: error = $err > tolerance = $tol"
 
     flag = @allowscalar dh.info[1]
     CUSOLVER.chklapackerror(BlasInt(flag))
