@@ -544,7 +544,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return C
-        end
+        end=#
 
         # Build Q factor of classic QR / LQ / QL / RQ in the space of `A`
         function ungqr!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
@@ -580,7 +580,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return A
-        end=#
+        end
         function unglq!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
