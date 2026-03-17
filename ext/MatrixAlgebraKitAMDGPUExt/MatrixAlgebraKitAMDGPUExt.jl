@@ -27,6 +27,9 @@ for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::ROCSOLVER, args...) = YArocSOLVER.$f(args...)
 end
 
+MatrixAlgebraKit.supports_svd(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
+MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
+
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     m, n = size(A)
     m >= n && return YArocSOLVER.gesvd!(A, S, U, Vᴴ)
@@ -38,6 +41,7 @@ function gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::Strid
     m >= n && return YArocSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
     return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
 end
+
 _gpu_heevj!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevj!(A, Dd, V; kwargs...)
 _gpu_heevd!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =

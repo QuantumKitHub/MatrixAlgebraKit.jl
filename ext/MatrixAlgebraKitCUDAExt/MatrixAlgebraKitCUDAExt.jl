@@ -27,9 +27,13 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return CUSOLVER_DivideAndConquer(; kwargs...)
 end
 
+
 for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::CUSOLVER, args...) = YACUSOLVER.$f(args...)
 end
+
+MatrixAlgebraKit.supports_svd(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
+MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
 
 function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
     m, n = size(A)
