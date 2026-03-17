@@ -40,11 +40,10 @@ lq_full
 lq_compact
 ```
 
-Alongside these functions, we provide a LAPACK-based implementation for dense arrays, as provided by the following algorithm:
+The following algorithm is available for QR and LQ decompositions:
 
 ```@docs; canonical=false
-LAPACK_HouseholderQR
-LAPACK_HouseholderLQ
+Householder
 ```
 
 ## Eigenvalue Decomposition
@@ -78,7 +77,7 @@ eigh_vals
     By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
     See [Gauge choices](@ref sec_gaugefix) for more details.
 
-Alongside these functions, we provide a LAPACK-based implementation for dense arrays, as provided by the following algorithms:
+The following algorithms are available for the symmetric eigenvalue decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
@@ -100,7 +99,7 @@ eig_vals
     By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
     See [Gauge choices](@ref sec_gaugefix) for more details.
 
-Alongside these functions, we provide a LAPACK-based implementation for dense arrays, as provided by the following algorithms:
+The following algorithms are available for the non-Hermitian eigenvalue decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
@@ -120,7 +119,7 @@ schur_full
 schur_vals
 ```
 
-The LAPACK-based implementation for dense arrays is provided by the following algorithms:
+The following algorithms are available for the Schur decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
@@ -153,11 +152,11 @@ svd_trunc
     By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
     See [Gauge choices](@ref sec_gaugefix) for more details.
 
-MatrixAlgebraKit again ships with LAPACK-based implementations for dense arrays:
+The following algorithms are available for the singular value decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_SVDAlgorithm
+Filter = t -> t isa Type && t <: MatrixAlgebraKit.SVDAlgorithms
 ```
 
 ## Polar Decomposition
@@ -386,6 +385,54 @@ norm(A * N1') < 1e-14 && norm(A * N2') < 1e-14 &&
 
 # output
 true
+```
+
+## [Driver Selection](@id sec_driverselection)
+
+!!! note "Expert use case"
+    Selecting a specific driver is an advanced feature intended for users who need to target a specific computational backend, such as a GPU. For most use cases, the default driver selection is sufficient.
+
+Each algorithm in MatrixAlgebraKit can optionally accept a `driver` keyword argument to explicitly select the computational backend.
+By default, the driver is set to `DefaultDriver()`, which automatically selects the most appropriate backend based on the input matrix type.
+The available drivers are:
+
+```@docs; canonical=false
+MatrixAlgebraKit.DefaultDriver
+MatrixAlgebraKit.LAPACK
+MatrixAlgebraKit.CUSOLVER
+MatrixAlgebraKit.ROCSOLVER
+MatrixAlgebraKit.GLA
+MatrixAlgebraKit.Native
+```
+
+For example, to force LAPACK for a generic matrix type, or to use a GPU backend:
+
+```julia
+using MatrixAlgebraKit
+using MatrixAlgebraKit: LAPACK, CUSOLVER  # driver types are not exported by default
+
+# Default: driver is selected automatically based on the input type
+U, S, Vᴴ = svd_compact(A)
+U, S, Vᴴ = svd_compact(A; alg = SafeDivideAndConquer())
+
+# Expert: explicitly select LAPACK
+U, S, Vᴴ = svd_compact(A; alg = SafeDivideAndConquer(; driver = LAPACK()))
+
+# Expert: use a GPU backend (requires loading the appropriate extension)
+U, S, Vᴴ = svd_compact(A; alg = QRIteration(; driver = CUSOLVER()))
+```
+
+Similarly, for QR decompositions:
+
+```julia
+using MatrixAlgebraKit: LAPACK  # driver types are not exported by default
+
+# Default: driver is selected automatically
+Q, R = qr_compact(A)
+Q, R = qr_compact(A; alg = Householder())
+
+# Expert: explicitly select a driver
+Q, R = qr_compact(A; alg = Householder(; driver = LAPACK()))
 ```
 
 ## [Gauge choices](@id sec_gaugefix)
