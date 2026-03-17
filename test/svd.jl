@@ -16,11 +16,7 @@ if !is_buildkite
     # LAPACK algorithms:
     for T in BLASFloats, m in (0, 54), n in (0, 37, m, 63)
         TestSuite.seed_rng!(123)
-        LAPACK_SVD_ALGS = (
-            LAPACK_QRIteration(),
-            LAPACK_DivideAndConquer(),
-            LAPACK_SafeDivideAndConquer(; fixgauge = true),
-        )
+        LAPACK_SVD_ALGS = (QRIteration(), DivideAndConquer(), SafeDivideAndConquer(; fixgauge = true))
         TestSuite.test_svd(T, (m, n))
         TestSuite.test_svd_algs(T, (m, n), LAPACK_SVD_ALGS)
         @static if VERSION > v"1.11-" # Jacobi broken on 1.10
@@ -51,11 +47,7 @@ if CUDA.functional()
     for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
         TestSuite.seed_rng!(123)
         TestSuite.test_svd(CuMatrix{T}, (m, n))
-        CUDA_SVD_ALGS = (
-            CUSOLVER_QRIteration(),
-            CUSOLVER_SVDPolar(),
-            CUSOLVER_Jacobi(),
-        )
+        CUDA_SVD_ALGS = (QRIteration(), SVDViaPolar(), Jacobi())
         TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
     end
 
@@ -84,7 +76,7 @@ if AMDGPU.functional()
     for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
         TestSuite.seed_rng!(123)
         TestSuite.test_svd(ROCMatrix{T}, (m, n))
-        AMD_SVD_ALGS = (ROCSOLVER_QRIteration(), ROCSOLVER_Jacobi())
+        AMD_SVD_ALGS = (QRIteration(), Jacobi())
         TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
     end
 
