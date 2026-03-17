@@ -17,10 +17,10 @@ include("yarocsolver.jl")
 MatrixAlgebraKit.default_householder_driver(::Type{A}) where {A <: StridedROCVecOrMat{<:BlasFloat}} = ROCSOLVER()
 MatrixAlgebraKit.default_qr_iteration_driver(::Type{<:StridedROCVecOrMat}) = ROCSOLVER()
 MatrixAlgebraKit.default_jacobi_driver(::Type{<:StridedROCVecOrMat}) = ROCSOLVER()
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat}
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return QRIteration(; kwargs...)
 end
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat}
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return ROCSOLVER_DivideAndConquer(; kwargs...)
 end
 
