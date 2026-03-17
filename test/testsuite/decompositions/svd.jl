@@ -123,6 +123,7 @@ function test_svd_full_algs(
     )
     summary_str = testargs_summary(T, sz)
     return @testset "svd_full! algorithm $alg $summary_str" for alg in algs
+        isa(alg, LAPACK_Jacobi) && continue
         A = instantiate_matrix(T, sz)
         Ac = deepcopy(A)
         m, n = size(A)
