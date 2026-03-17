@@ -171,18 +171,13 @@ for (f, f_lapack!, Alg) in (
 
     # driver
     @eval begin
-        @inline $f_svd!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_svd!(driver, A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_full!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_svd_full!(driver, A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_vals!(A, S; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_svd_vals!(driver, A, S; kwargs...)
-        @inline $f_svd!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) =
-            $f_svd!($(Symbol(:default_, f, :_driver))(A), A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_full!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) =
-            $f_svd_full!($(Symbol(:default_, f, :_driver))(A), A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_vals!(::DefaultDriver, A, S; kwargs...) =
-            $f_svd_vals!($(Symbol(:default_, f, :_driver))(A), A, S; kwargs...)
+        @inline $f_svd!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) = $f_svd!(driver, A, U, S, Vᴴ; kwargs...)
+        @inline $f_svd_full!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) = $f_svd_full!(driver, A, U, S, Vᴴ; kwargs...)
+        @inline $f_svd_vals!(A, S; driver::Driver = DefaultDriver(), kwargs...) = $f_svd_vals!(driver, A, S; kwargs...)
+
+        @inline $f_svd!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) = $f_svd!(default_driver($Alg, A), A, U, S, Vᴴ; kwargs...)
+        @inline $f_svd_full!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) = $f_svd_full!(default_driver($Alg, A), A, U, S, Vᴴ; kwargs...)
+        @inline $f_svd_vals!(::DefaultDriver, A, S; kwargs...) = $f_svd_vals!(default_driver($Alg, A), A, S; kwargs...)
     end
 
     # Implementation
