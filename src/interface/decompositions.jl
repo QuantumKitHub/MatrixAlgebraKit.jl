@@ -99,13 +99,13 @@ default_householder_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A
     default_householder_driver(A)
 
 """
-    DivideAndConquer(; [driver], kwargs...)
+    DivideAndConquer(; [driver], fixgauge=default_fixgauge())
 
 Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix using the divide-and-conquer algorithm.
 
 The optional `driver` symbol can be used to choose between different implementations of this algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`gaugefix!`](@ref).
+The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or singular vectors, see also [`default_fixgauge`](@ref) and [`gaugefix!`](@ref).
 """
 @algdef DivideAndConquer
 
