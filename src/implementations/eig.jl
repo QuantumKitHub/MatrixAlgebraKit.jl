@@ -87,43 +87,95 @@ for f! in (:eig_full!, :eig_vals!, :eig_trunc!, :eig_trunc_no_error!)
     end
 end
 
-# Implementation
-# --------------
-function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
-    check_input(eig_full!, A, DV, alg)
-    D, V = DV
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa LAPACK_Simple
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
-        YALAPACK.geev!(A, D.diag, V)
-    else # alg isa LAPACK_Expert
-        YALAPACK.geevx!(A, D.diag, V; alg_kwargs...)
-    end
-
-    do_gauge_fix && (V = gaugefix!(eig_full!, V))
-
-    return D, V
+# ==========================
+#      IMPLEMENTATIONS
+# ==========================
+for f! in (:geev!, :geevx!)
+    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
 end
 
-function eig_vals!(A::AbstractMatrix, D, alg::LAPACK_EigAlgorithm)
-    check_input(eig_vals!, A, D, alg)
-    V = similar(A, complex(eltype(A)), (size(A, 1), 0))
+# LAPACK implementations
+for f! in (:geev!, :geevx!)
+    @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
+end
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
+supports_eig(::Driver, ::Symbol) = false
+supports_eig(::LAPACK, f::Symbol) = f in (:simple, :expert)
+supports_eig(::CUSOLVER, f::Symbol) = f === :simple
+supports_eig(::GS, f::Symbol) = f === :simple
 
-    if alg isa LAPACK_Simple
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
-        YALAPACK.geev!(A, D, V)
-    else # alg isa LAPACK_Expert
-        YALAPACK.geevx!(A, D, V; alg_kwargs...)
+for (f, f_lapack!, Alg) in (
+        (:simple, :geev!, :Simple),
+        (:expert, :geevx!, :Expert),
+    )
+    f_eig_full! = Symbol(f, :_eig_full!)
+    f_eig_vals! = Symbol(f, :_eig_vals!)
+
+    # MatrixAlgebraKit wrappers
+    @eval begin
+        function eig_full!(A::AbstractMatrix, DV, alg::$Alg)
+            check_input(eig_full!, A, DV, alg)
+            D, V = DV
+            Dd, V = $f_eig_full!(A, D.diag, V; alg.kwargs...)
+            return D, V
+        end
+        function eig_vals!(A::AbstractMatrix, D, alg::$Alg)
+            check_input(eig_vals!, A, D, alg)
+            V = similar(A, complex(eltype(A)), (size(A, 1), 0))
+            $f_eig_vals!(A, D, V; alg.kwargs...)
+            return D
+        end
     end
 
-    return D
+    # driver dispatch
+    @eval begin
+        @inline $f_eig_full!(A, Dd, V; driver::Driver = DefaultDriver(), kwargs...) =
+            $f_eig_full!(driver, A, Dd, V; kwargs...)
+        @inline $f_eig_vals!(A, D, V; driver::Driver = DefaultDriver(), kwargs...) =
+            $f_eig_vals!(driver, A, D, V; kwargs...)
+
+        @inline $f_eig_full!(::DefaultDriver, A, Dd, V; kwargs...) =
+            $f_eig_full!(default_driver($Alg, A), A, Dd, V; kwargs...)
+        @inline $f_eig_vals!(::DefaultDriver, A, D, V; kwargs...) =
+            $f_eig_vals!(default_driver($Alg, A), A, D, V; kwargs...)
+    end
+
+    # Implementation
+    @eval begin
+        function $f_eig_full!(driver::Driver, A, Dd, V; fixgauge::Bool = default_fixgauge(), kwargs...)
+            supports_eig(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
+            $(
+                if f == :simple
+                    :(
+                        isempty(kwargs) ||
+                            throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " simple eig")))
+                    )
+                else
+                    :nothing
+                end
+            )
+            $f_lapack!(driver, A, Dd, V; kwargs...)
+            fixgauge && gaugefix!(eig_full!, V)
+            return Dd, V
+        end
+        function $f_eig_vals!(driver::Driver, A, D, V; fixgauge::Bool = default_fixgauge(), kwargs...)
+            supports_eig(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
+            $(
+                if f == :simple
+                    :(
+                        isempty(kwargs) ||
+                            throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " simple eig")))
+                    )
+                else
+                    :nothing
+                end
+            )
+            $f_lapack!(driver, A, D, V; kwargs...)
+            return D
+        end
+    end
 end
 
 function eig_trunc!(A, DV, alg::TruncatedAlgorithm)
@@ -166,37 +218,26 @@ function eig_vals!(A::Diagonal, D::AbstractVector, alg::DiagonalAlgorithm)
     return D
 end
 
-# GPU logic
-# ---------
-_gpu_geev!(A, D, V) = throw(MethodError(_gpu_geev!, (A, D, V)))
-
-function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
-    check_input(eig_full!, A, DV, alg)
-    D, V = DV
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_Simple
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_Simple"
-        _gpu_geev!(A, D.diag, V)
+# Deprecations
+# ------------
+for algtype in (:Simple, :Expert)
+    lapack_algtype = Symbol(:LAPACK_, algtype)
+    @eval begin
+        Base.@deprecate(
+            eig_full!(A, DV, alg::$lapack_algtype),
+            eig_full!(A, DV, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            eig_vals!(A, D, alg::$lapack_algtype),
+            eig_vals!(A, D, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
     end
-
-    do_gauge_fix && (V = gaugefix!(eig_full!, V))
-
-    return D, V
 end
-
-function eig_vals!(A::AbstractMatrix, D, alg::GPU_EigAlgorithm)
-    check_input(eig_vals!, A, D, alg)
-    V = similar(A, complex(eltype(A)), (size(A, 1), 0))
-
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_Simple
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_Simple"
-        _gpu_geev!(A, D, V)
-    end
-
-    return D
-end
+Base.@deprecate(
+    eig_full!(A, DV, alg::CUSOLVER_Simple),
+    eig_full!(A, DV, Simple(; driver = CUSOLVER(), alg.kwargs...))
+)
+Base.@deprecate(
+    eig_vals!(A, D, alg::CUSOLVER_Simple),
+    eig_vals!(A, D, Simple(; driver = CUSOLVER(), alg.kwargs...))
+)

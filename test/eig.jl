@@ -20,7 +20,7 @@ for T in (BLASFloats..., GenericFloats...)
     if T ∈ BLASFloats
         if CUDA.functional()
             TestSuite.test_eig(CuMatrix{T}, (m, m))
-            TestSuite.test_eig_algs(CuMatrix{T}, (m, m), (CUSOLVER_Simple(),))
+            TestSuite.test_eig_algs(CuMatrix{T}, (m, m), (Simple(),))
             TestSuite.test_eig(Diagonal{T, CuVector{T}}, m)
             TestSuite.test_eig_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
         end
@@ -35,10 +35,10 @@ for T in (BLASFloats..., GenericFloats...)
     if !is_buildkite
         TestSuite.test_eig(T, (m, m))
         if T ∈ BLASFloats
-            LAPACK_EIG_ALGS = (LAPACK_Simple(), LAPACK_Expert())
+            LAPACK_EIG_ALGS = (Simple(), Expert())
             TestSuite.test_eig_algs(T, (m, m), LAPACK_EIG_ALGS)
         elseif T ∈ GenericFloats
-            GS_EIG_ALGS = (GS_QRIteration(),)
+            GS_EIG_ALGS = (Simple(),)
             TestSuite.test_eig_algs(T, (m, m), GS_EIG_ALGS)
         end
         AT = Diagonal{T, Vector{T}}
