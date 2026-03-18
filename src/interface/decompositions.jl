@@ -160,26 +160,6 @@ The tolerance `tol` can optionally be used to emit a warning if the decompositio
 """
 @algdef SVDViaPolar
 
-for f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi, :svd_polar)
-    default_f_driver = Symbol(:default_, f, :_driver)
-    @eval begin
-        $default_f_driver(A) = $default_f_driver(typeof(A))
-        $default_f_driver(::Type) = Native()
-
-        $default_f_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = $default_f_driver(A)
-        $default_f_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = $default_f_driver(A)
-    end
-
-    if f !== :svd_polar
-        @eval begin
-            $default_f_driver(::Type{A}) where {A <: YALAPACK.MaybeBlasMat} = LAPACK()
-            # note: StridedVector fallback is needed for handling reshaped parent types
-            $default_f_driver(::Type{A}) where {A <: StridedVector{<:BlasFloat}} = LAPACK()
-        end
-    end
-
-end
-
 # General Eigenvalue Decomposition
 # -------------------------------
 """
