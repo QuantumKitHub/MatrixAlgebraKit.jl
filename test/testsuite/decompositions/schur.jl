@@ -9,6 +9,14 @@ function test_schur(T::Type, sz; kwargs...)
     end
 end
 
+function test_schur_algs(T::Type, sz, algs; kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "schur algorithms $summary_str" begin
+        test_schur_full_algs(T, sz, algs; kwargs...)
+        test_schur_vals_algs(T, sz, algs; kwargs...)
+    end
+end
+
 function test_schur_full(
         T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
@@ -34,6 +42,31 @@ function test_schur_full(
     end
 end
 
+function test_schur_full_algs(
+        T::Type, sz, algs;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "schur_full! algorithm $alg $summary_str" for alg in algs
+        A = instantiate_matrix(T, sz)
+        Ac = deepcopy(A)
+        Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
+
+        TA, Z, vals = @testinferred schur_full(A; alg)
+        @test eltype(TA) == eltype(Z) == eltype(T)
+        @test eltype(vals) == Tc
+        @test isisometric(Z)
+        @test A * Z ≈ Z * TA
+
+        TA2, Z2, vals2 = @testinferred schur_full!(Ac, (TA, Z, vals); alg)
+        @test TA2 === TA
+        @test Z2 === Z
+        @test vals2 === vals
+        @test A * Z ≈ Z * TA
+    end
+end
+
 function test_schur_vals(
         T::Type, sz;
         atol::Real = 0, rtol::Real = precision(T),
@@ -51,6 +84,28 @@ function test_schur_vals(
 
         valsc = similar(A, Tc, size(A, 1))
         valsc = @testinferred schur_vals!(Ac, valsc)
+        @test eltype(valsc) == Tc
+        @test valsc ≈ eig_vals(A)
+    end
+end
+
+function test_schur_vals_algs(
+        T::Type, sz, algs;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "schur_vals! algorithm $alg $summary_str" for alg in algs
+        A = instantiate_matrix(T, sz)
+        Ac = deepcopy(A)
+        Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
+
+        valsc = @testinferred schur_vals(A; alg)
+        @test eltype(valsc) == Tc
+        @test valsc ≈ eig_vals(A)
+
+        valsc = similar(A, Tc, size(A, 1))
+        valsc = @testinferred schur_vals!(Ac, valsc; alg)
         @test eltype(valsc) == Tc
         @test valsc ≈ eig_vals(A)
     end

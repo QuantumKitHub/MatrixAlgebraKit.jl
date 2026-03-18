@@ -55,6 +55,9 @@ for T in (BLASFloats..., GenericFloats...), m in (0, 54), n in (0, 37, m, 63)
             )
             TestSuite.test_svd(T, (m, n))
             TestSuite.test_svd_algs(T, (m, n), LAPACK_SVD_ALGS)
+            @static if VERSION > v"1.11-" # Jacobi broken on 1.10
+                m ≥ n && TestSuite.test_svd_algs(T, (m, n), (LAPACK_Jacobi(),); test_full = false, test_vals = false)
+            end
         elseif T ∈ GenericFloats
             TestSuite.test_svd(T, (m, n))
             TestSuite.test_svd_algs(T, (m, n), (GLA_QRIteration(),))

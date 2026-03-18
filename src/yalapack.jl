@@ -99,7 +99,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
     #! format: on
     @eval begin
         # Flexible QR / LQ
-        function geqr!(A::AbstractMatrix{$elty})
+        #=function geqr!(A::AbstractMatrix{$elty})
             require_one_based_indexing(A)
             chkstride1(A)
             m, n = size(A)
@@ -162,7 +162,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
                 end
             end
             return A, t
-        end
+        end=#
 
         # Classic QR / LQ / QL / RQ
         function geqrf!(
@@ -231,7 +231,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             end
             return A, tau
         end
-        function geqlf!(
+        #=function geqlf!(
                 A::AbstractMatrix{$elty},
                 tau::AbstractVector{$elty} = similar(A, $elty, min(size(A)...))
             )
@@ -296,7 +296,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
                 end
             end
             return A, tau
-        end
+        end=#
 
         # QR and LQ with block reflectors
         #! format: off
@@ -441,7 +441,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
     #! format: on
     @eval begin
         # multiply with Q factor of flexible QR / LQ
-        function gemqr!(
+        #=function gemqr!(
                 side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
                 T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty}
             )
@@ -544,7 +544,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return C
-        end
+        end=#
 
         # Build Q factor of classic QR / LQ / QL / RQ in the space of `A`
         function ungqr!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
@@ -615,7 +615,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return A
         end
-        function ungql!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
+        #=function ungql!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
             m, n = size(A)
@@ -682,7 +682,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return A
-        end
+        end=#
 
         # multiply with Q factor of classic QR / LQ / QL / RQ
         function unmqr!(
@@ -781,7 +781,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return C
         end
-        function unmql!(
+        #=function unmql!(
                 side::AbstractChar, trans::AbstractChar,
                 A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
                 C::AbstractVecOrMat{$elty}
@@ -876,7 +876,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return C
-        end
+        end=#
 
         # Multiply with blocked Q factor from QR / LQ
         function gemqrt!(
