@@ -1,25 +1,34 @@
 module MatrixAlgebraKitGenericSchurExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: check_input
+using MatrixAlgebraKit: check_input, GS
+import MatrixAlgebraKit: geev!
 using LinearAlgebra: Diagonal, sorteig!
 using GenericSchur
 
-function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}}}
-    return GS_QRIteration(; kwargs...)
+const GSFloat = Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}
+
+function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:GSFloat}}
+    return Simple(; kwargs...)
 end
 
-MatrixAlgebraKit.initialize_output(::typeof(eig_full!), A::AbstractMatrix, ::GS_QRIteration) = (nothing, nothing)
-MatrixAlgebraKit.initialize_output(::typeof(eig_vals!), A::AbstractMatrix, ::GS_QRIteration) = nothing
+MatrixAlgebraKit.default_driver(::Type{<:Simple}, ::Type{TA}) where {TA <: StridedMatrix{<:GSFloat}} = GS()
 
-function MatrixAlgebraKit.eig_full!(A::AbstractMatrix, DV, ::GS_QRIteration)
-    D, V = GenericSchur.eigen!(A)
-    return Diagonal(D), V
+function geev!(::GS, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)
+    D, Vmat = GenericSchur.eigen!(A)
+    copyto!(Dd, D)
+    length(V) > 0 && copyto!(V, Vmat)
+    return Dd, V
 end
 
-function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix, D, ::GS_QRIteration)
-    return GenericSchur.eigvals!(A)
-end
+Base.@deprecate(
+    MatrixAlgebraKit.eig_full!(A, DV, alg::GS_QRIteration),
+    MatrixAlgebraKit.eig_full!(A, DV, Simple(; driver = GS(), alg.kwargs...))
+)
+Base.@deprecate(
+    MatrixAlgebraKit.eig_vals!(A, D, alg::GS_QRIteration),
+    MatrixAlgebraKit.eig_vals!(A, D, Simple(; driver = GS(), alg.kwargs...))
+)
 
 function MatrixAlgebraKit.schur_full!(A::AbstractMatrix, TZv, alg::GS_QRIteration)
     check_input(schur_full!, A, TZv, alg)
