@@ -148,6 +148,17 @@ The optional `driver` keyword can be used to choose between different implementa
 @algdef Jacobi
 
 """
+    MultipleRelativelyRobustRepresentations(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix
+using the Multiple Relatively Robust Representations algorithm.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef MultipleRelativelyRobustRepresentations
+
+"""
     SVDViaPolar(; [driver], fixgauge = default_fixgauge(), [tol])
 
 Algorithm type to denote the algorithm for computing the singular value decomposition of a general
@@ -162,6 +173,30 @@ The optional `driver` keyword can be used to choose between different implementa
 
 # General Eigenvalue Decomposition
 # -------------------------------
+"""
+    Simple(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the eigenvalue decomposition of a general matrix
+using the simple driver algorithm.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef Simple
+
+"""
+    Expert(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the eigenvalue decomposition of a general matrix
+using the expert driver algorithm (with balancing).
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef Expert
+
+const EigAlgorithms = Union{Simple, Expert}
+
 """
     LAPACK_Simple(; fixgauge = default_fixgauge())
 
@@ -233,6 +268,14 @@ const LAPACK_EighAlgorithm = Union{
     LAPACK_Bisection,
     LAPACK_DivideAndConquer,
     LAPACK_MultipleRelativelyRobustRepresentations,
+}
+
+const EighAlgorithms = Union{
+    MultipleRelativelyRobustRepresentations,
+    DivideAndConquer,
+    QRIteration,
+    Bisection,
+    Jacobi,
 }
 
 """
