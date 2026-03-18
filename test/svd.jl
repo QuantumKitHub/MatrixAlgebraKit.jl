@@ -20,7 +20,7 @@ if !is_buildkite
         TestSuite.test_svd(T, (m, n))
         TestSuite.test_svd_algs(T, (m, n), LAPACK_SVD_ALGS)
         @static if VERSION > v"1.11-" # Jacobi broken on 1.10
-            m ≥ n && TestSuite.test_svd_algs(T, (m, n), (LAPACK_Jacobi(),); test_full = false, test_vals = false)
+            TestSuite.test_svd_algs(T, (m, n), (LAPACK_Jacobi(),); test_full = false, test_vals = false)
         end
     end
 
