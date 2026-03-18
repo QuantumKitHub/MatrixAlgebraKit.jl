@@ -67,7 +67,6 @@ of `R` are non-negative.
     Householder(; [driver], kwargs...)
 
 Algorithm type to denote the algorithm for computing QR, RQ, QL or LQ decompositions of a matrix using Householder reflectors.
-The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 
 ### Keyword arguments
 
@@ -76,6 +75,7 @@ The optional `driver` symbol can be used to choose between different implementat
 - `blocksize::Int` : Use a blocked version of the algorithm if `blocksize > 1`. Use the default if `blocksize ≤ 0`.
 
 Depending on the driver, various other keywords may be (un)available to customize the implementation.
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef Householder
 function Householder(;
@@ -91,8 +91,8 @@ end
 Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix using the divide-and-conquer algorithm.
 
-The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 $_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef DivideAndConquer
 
@@ -103,8 +103,8 @@ Algorithm type to for computing the eigenvalue decomposition of a Hermitian matr
 or the singular value decomposition of a general matrix using the divide-and-conquer algorithm,
 with an additional fallback to the standard QR iteration algorithm in case the former fails to converge.
 
-The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 $_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 
 !!! warning
     This approach requires a copy of the input matrix, and is thus the most memory intensive SVD strategy.
@@ -121,8 +121,8 @@ See also [`DivideAndConquer`](@ref) and [`QRIteration`](@ref).
 Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix via QR iteration.
 
-The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 $_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef QRIteration
 
@@ -132,8 +132,8 @@ $_fixgauge_docs
 Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix via the bisection algorithm.
 
-The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 $_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef Bisection
 
@@ -142,8 +142,8 @@ $_fixgauge_docs
 
 Algorithm type for computing the singular value decomposition of a general matrix using the Jacobi algorithm.
 
-The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 $_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef Jacobi
 
@@ -154,9 +154,9 @@ Algorithm type to denote the algorithm for computing the singular value decompos
 matrix via Halley's iterative algorithm for the polar decomposition followed by the Hermitian
 eigenvalue decomposition of the positive definite factor.
 
-The optional `driver` symbol can be used to choose between different implementations of this algorithm.
 $_fixgauge_docs
 The tolerance `tol` can optionally be used to emit a warning if the decomposition failed to converge beyond that given value.
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef SVDViaPolar
 
