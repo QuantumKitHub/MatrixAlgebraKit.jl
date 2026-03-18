@@ -212,6 +212,23 @@ Driver to select a native implementation in MatrixAlgebraKit as the implementati
 """
 struct Native <: Driver end
 
+# In order to avoid amibiguities, this method is implemented in a tiered way
+# default_driver(alg, A) -> default_driver(typeof(alg), typeof(A))
+# default_driver(Talg, TA) -> default_driver(TA)
+# This is to try and minimize ambiguity while allowing overloading at multiple levels
+@inline default_driver(alg::AbstractAlgorithm, A) = default_driver(typeof(alg), A isa Type ? A : typeof(A))
+@inline default_driver(::Type{Alg}, A) where {Alg <: AbstractAlgorithm} = default_driver(Alg, typeof(A))
+@inline default_driver(::Type{Alg}, ::Type{TA}) where {Alg <: AbstractAlgorithm, TA} = default_driver(TA)
+
+# defaults
+default_driver(::Type{TA}) where {TA <: AbstractArray} = Native() # default fallback
+default_driver(::Type{TA}) where {TA <: YALAPACK.MaybeBlasVecOrMat} = LAPACK()
+
+# wrapper types
+@inline default_driver(::Type{Alg}, ::Type{<:SubArray{T, N, A}}) where {Alg <: AbstractAlgorithm, T, N, A} = default_driver(Alg, A)
+@inline default_driver(::Type{Alg}, ::Type{<:Base.ReshapedArray{T, N, A}}) where {Alg <: AbstractAlgorithm, T, N, A} = default_driver(Alg, A)
+@inline default_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = default_driver(A)
+@inline default_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = default_driver(A)
 
 # Truncation strategy
 # -------------------

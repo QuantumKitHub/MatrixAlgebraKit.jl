@@ -13,8 +13,8 @@ using .TestSuite
 
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
-m = 54
-for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
+m = 23
+for T in (BLASFloats..., GenericFloats...), n in (17, m, 27)
     TestSuite.seed_rng!(123)
     if T ∈ BLASFloats
         if CUDA.functional()

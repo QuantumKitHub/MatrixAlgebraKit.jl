@@ -117,7 +117,7 @@ end
 @inline householder_qr!(A, Q, R; driver::Driver = DefaultDriver(), kwargs...) =
     householder_qr!(driver, A, Q, R; kwargs...)
 householder_qr!(::DefaultDriver, A, Q, R; kwargs...) =
-    householder_qr!(default_householder_driver(A), A, Q, R; kwargs...)
+    householder_qr!(default_driver(Householder, A), A, Q, R; kwargs...)
 function householder_qr!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false,
@@ -248,7 +248,7 @@ end
 @inline householder_qr_null!(A, N; driver::Driver = DefaultDriver(), kwargs...) =
     householder_qr_null!(driver, A, N; kwargs...)
 householder_qr_null!(::DefaultDriver, A, N; kwargs...) =
-    householder_qr_null!(default_householder_driver(A), A, N; kwargs...)
+    householder_qr_null!(default_driver(Householder, A), A, N; kwargs...)
 function householder_qr_null!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0

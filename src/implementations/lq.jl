@@ -115,7 +115,7 @@ end
 @inline householder_lq!(A, L, Q; driver::Driver = DefaultDriver(), kwargs...) =
     householder_lq!(driver, A, L, Q; kwargs...)
 householder_lq!(::DefaultDriver, A, L, Q; kwargs...) =
-    householder_lq!(default_householder_driver(A), A, L, Q; kwargs...)
+    householder_lq!(default_driver(Householder, A), A, L, Q; kwargs...)
 householder_lq!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, L, Q; kwargs...) =
     lq_via_qr!(A, L, Q, Householder(; driver, kwargs...))
 function householder_lq!(
@@ -221,7 +221,7 @@ end
 @inline householder_lq_null!(A, Nᴴ; driver::Driver = DefaultDriver(), kwargs...) =
     householder_lq_null!(driver, A, Nᴴ; kwargs...)
 householder_lq_null!(::DefaultDriver, A, Nᴴ; kwargs...) =
-    householder_lq_null!(default_householder_driver(A), A, Nᴴ; kwargs...)
+    householder_lq_null!(default_driver(Householder, A), A, Nᴴ; kwargs...)
 householder_lq_null!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, Nᴴ; kwargs...) =
     lq_null_via_qr!(A, Nᴴ, Householder(; driver, kwargs...))
 function householder_lq_null!(

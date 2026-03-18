@@ -105,132 +105,120 @@ function initialize_output(::typeof(svd_vals!), A::Diagonal, ::DiagonalAlgorithm
     return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
-# Implementation
-# --------------
-function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_full!, A, USVᴴ, alg)
-    U, S, Vᴴ = USVᴴ
-    fill!(S, zero(eltype(S)))
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        one!(U)
-        zero!(S)
-        one!(Vᴴ)
-        return USVᴴ
-    end
+# ==========================
+#      IMPLEMENTATIONS
+# ==========================
 
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa LAPACK_QRIteration
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
-        YALAPACK.gesvd!(A, view(S, 1:minmn, 1), U, Vᴴ)
-    elseif alg isa LAPACK_DivideAndConquer
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
-        YALAPACK.gesdd!(A, view(S, 1:minmn, 1), U, Vᴴ)
-    elseif alg isa LAPACK_SafeDivideAndConquer
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
-        YALAPACK.gesdvd!(A, view(S, 1:minmn, 1), U, Vᴴ)
-    elseif alg isa LAPACK_Bisection
-        throw(ArgumentError("LAPACK_Bisection is not supported for full SVD"))
-    elseif alg isa LAPACK_Jacobi
-        throw(ArgumentError("LAPACK_Jacobi is not supported for full SVD"))
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-
-    for i in 2:minmn
-        S[i, i] = S[i, 1]
-        S[i, 1] = zero(eltype(S))
-    end
-
-    do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
-
-    return USVᴴ
+for f! in (:gesdd!, :gesvd!, :gesvdj!, :gesvdp!, :gesvdx!, :gesvdr!, :gesdvd!)
+    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
 end
 
-function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_compact!, A, USVᴴ, alg)
-    U, S, Vᴴ = USVᴴ
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        one!(U)
-        zero!(S)
-        one!(Vᴴ)
-        return USVᴴ
-    end
+"""
+    svd_via_adjoint!(f!, driver, A, S, U, Vᴴ; kwargs...)
 
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa LAPACK_QRIteration
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
-        YALAPACK.gesvd!(A, diagview(S), U, Vᴴ)
-    elseif alg isa LAPACK_DivideAndConquer
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
-        YALAPACK.gesdd!(A, diagview(S), U, Vᴴ)
-    elseif alg isa LAPACK_SafeDivideAndConquer
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
-        YALAPACK.gesdvd!(A, diagview(S), U, Vᴴ)
-    elseif alg isa LAPACK_Bisection
-        YALAPACK.gesvdx!(A, diagview(S), U, Vᴴ; alg_kwargs...)
-    elseif alg isa LAPACK_Jacobi
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_Jacobi"))
-        YALAPACK.gesvj!(A, diagview(S), U, Vᴴ)
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-
-    do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
-
-    return USVᴴ
+Compute the SVD of `A` (m × n, m < n) by computing the SVD of `adjoint(A)` using
+the provided function `f!(driver, A, S, U, Vᴴ; kwargs...)`. Use this as a building
+block for drivers whose SVD routines require m ≥ n.
+"""
+function svd_via_adjoint!(f!::F, driver::Driver, A, S, U, Vᴴ; kwargs...) where {F}
+    Aᴴ = adjoint!(similar(A'), A)
+    Uᴴ = similar(U')
+    V = similar(Vᴴ')
+    f!(driver, Aᴴ, S, V, Uᴴ; kwargs...)
+    length(U) > 0 && adjoint!(U, Uᴴ)
+    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
+    return S, U, Vᴴ
 end
 
-function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
-    check_input(svd_vals!, A, S, alg)
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        zero!(S)
-        return S
-    end
-    U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
-
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa LAPACK_QRIteration
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_QRIteration"))
-        YALAPACK.gesvd!(A, S, U, Vᴴ)
-    elseif alg isa LAPACK_DivideAndConquer
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_DivideAndConquer"))
-        YALAPACK.gesdd!(A, S, U, Vᴴ)
-    elseif alg isa LAPACK_SafeDivideAndConquer
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_SafeDivideAndConquer"))
-        YALAPACK.gesdvd!(A, S, U, Vᴴ)
-    elseif alg isa LAPACK_Bisection
-        YALAPACK.gesvdx!(A, S, U, Vᴴ; alg_kwargs...)
-    elseif alg isa LAPACK_Jacobi
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_Jacobi"))
-        YALAPACK.gesvj!(A, S, U, Vᴴ)
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-
-    return S
+# LAPACK
+for f! in (:gesdd!, :gesvd!, :gesvdx!, :gesdvd!)
+    @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
 end
+
+function gesvdj!(::LAPACK, A, S, U, Vᴴ; kwargs...)
+    m, n = size(A)
+    m >= n && return YALAPACK.gesvdj!(A, S, U, Vᴴ)
+    return svd_via_adjoint!(gesvdj!, LAPACK(), A, S, U, Vᴴ; kwargs...)
+end
+
+for (f, f_lapack!, Alg) in (
+        (:safe_divide_and_conquer, :gesdvd!, :SafeDivideAndConquer),
+        (:divide_and_conquer, :gesdd!, :DivideAndConquer),
+        (:qr_iteration, :gesvd!, :QRIteration),
+        (:bisection, :gesvdx!, :Bisection),
+        (:jacobi, :gesvdj!, :Jacobi),
+        (:svd_polar, :gesvdp!, :SVDViaPolar),
+    )
+    f_svd! = Symbol(f, :_svd!)
+    f_svd_full! = Symbol(f, :_svd_full!)
+    f_svd_vals! = Symbol(f, :_svd_vals!)
+
+    # MatrixAlgebraKit wrappers
+    @eval begin
+        function svd_compact!(A, USVᴴ, alg::$Alg)
+            check_input(svd_compact!, A, USVᴴ, alg)
+            return $f_svd!(A, USVᴴ...; alg.kwargs...)
+        end
+        function svd_full!(A, USVᴴ, alg::$Alg)
+            check_input(svd_full!, A, USVᴴ, alg)
+            return $f_svd_full!(A, USVᴴ...; alg.kwargs...)
+        end
+        function svd_vals!(A, S, alg::$Alg)
+            check_input(svd_vals!, A, S, alg)
+            return $f_svd_vals!(A, S; alg.kwargs...)
+        end
+    end
+
+    # driver
+    @eval begin
+        @inline $f_svd!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) = $f_svd!(driver, A, U, S, Vᴴ; kwargs...)
+        @inline $f_svd_full!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) = $f_svd_full!(driver, A, U, S, Vᴴ; kwargs...)
+        @inline $f_svd_vals!(A, S; driver::Driver = DefaultDriver(), kwargs...) = $f_svd_vals!(driver, A, S; kwargs...)
+
+        @inline $f_svd!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) = $f_svd!(default_driver($Alg, A), A, U, S, Vᴴ; kwargs...)
+        @inline $f_svd_full!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) = $f_svd_full!(default_driver($Alg, A), A, U, S, Vᴴ; kwargs...)
+        @inline $f_svd_vals!(::DefaultDriver, A, S; kwargs...) = $f_svd_vals!(default_driver($Alg, A), A, S; kwargs...)
+    end
+
+    # Implementation
+    @eval begin
+        function $f_svd!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
+            supports_svd(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
+            isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
+            $f_lapack!(driver, A, diagview(S), U, Vᴴ; kwargs...)
+            fixgauge && gaugefix!(svd_compact!, U, Vᴴ)
+            return U, S, Vᴴ
+        end
+        function $f_svd_full!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
+            supports_svd_full(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
+            isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
+            zero!(S)
+            minmn = min(size(A)...)
+            $f_lapack!(driver, A, view(S, 1:minmn, 1), U, Vᴴ; kwargs...)
+            diagview(S) .= view(S, 1:minmn, 1)
+            zero!(view(S, 2:minmn, 1))
+            fixgauge && gaugefix!(svd_full!, U, Vᴴ)
+            return U, S, Vᴴ
+        end
+        function $f_svd_vals!(driver::Driver, A, S; fixgauge::Bool = true, kwargs...)
+            supports_svd(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
+            isempty(A) && return zero!(S)
+            U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
+            $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
+            return S
+        end
+    end
+end
+
+supports_svd(::Driver, ::Symbol) = false
+supports_svd(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi)
+supports_svd(::GLA, f::Symbol) = f === :qr_iteration
+supports_svd_full(::Driver, ::Symbol) = false
+supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration)
+supports_svd_full(::GLA, f::Symbol) = f === :qr_iteration
 
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
@@ -294,11 +282,8 @@ function svd_vals!(A::AbstractMatrix, S, alg::DiagonalAlgorithm)
     return S
 end
 
-# GPU logic
-# ---------
-# placed here to avoid code duplication since much of the logic is replicable across
-# CUDA and AMDGPU
-###
+# GPU logic (randomized SVD - CUSOLVER_Randomized has no CPU analog, kept as-is)
+# ---------------------------------------------------------------------------------
 
 function check_input(
         ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
@@ -327,78 +312,10 @@ function initialize_output(
     return (U, S, Vᴴ)
 end
 
-function _gpu_gesvd!(
-        A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix
-    )
-    throw(MethodError(_gpu_gesvd!, (A, S, U, Vᴴ)))
-end
-function _gpu_Xgesvdp!(
-        A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...
-    )
-    throw(MethodError(_gpu_Xgesvdp!, (A, S, U, Vᴴ)))
-end
 function _gpu_Xgesvdr!(
         A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...
     )
     throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
-end
-function _gpu_gesvdj!(
-        A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...
-    )
-    throw(MethodError(_gpu_gesvdj!, (A, S, U, Vᴴ)))
-end
-function _gpu_gesvd_maybe_transpose!(A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix)
-    m, n = size(A)
-    m ≥ n && return _gpu_gesvd!(A, S, U, Vᴴ)
-    # both CUSOLVER and ROCSOLVER require m ≥ n for gesvd (QR_Iteration)
-    # if this condition is not met, do the SVD via adjoint
-    minmn = min(m, n)
-    Aᴴ = min(m, n) > 0 ? adjoint!(similar(A'), A)::AbstractMatrix : similar(A')
-    Uᴴ = similar(U')
-    V = similar(Vᴴ')
-    if size(U) == (m, m)
-        _gpu_gesvd!(Aᴴ, view(S, 1:minmn, 1), V, Uᴴ)
-    else
-        _gpu_gesvd!(Aᴴ, S, V, Uᴴ)
-    end
-    length(U) > 0 && adjoint!(U, Uᴴ)
-    length(Vᴴ) > 0 && adjoint!(Vᴴ, V)
-    return U, S, Vᴴ
-end
-
-# GPU SVD implementation
-function svd_full!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
-    check_input(svd_full!, A, USVᴴ, alg)
-    U, S, Vᴴ = USVᴴ
-    fill!(S, zero(eltype(S)))
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        one!(U)
-        zero!(S)
-        one!(Vᴴ)
-        return USVᴴ
-    end
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_QRIteration
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
-        _gpu_gesvd_maybe_transpose!(A, view(S, 1:minmn, 1), U, Vᴴ)
-    elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, view(S, 1:minmn, 1), U, Vᴴ; alg_kwargs...)
-    elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, view(S, 1:minmn, 1), U, Vᴴ; alg_kwargs...)
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-    diagview(S) .= view(S, 1:minmn, 1)
-    view(S, 2:minmn, 1) .= zero(eltype(S))
-
-    do_gauge_fix && gaugefix!(svd_full!, U, Vᴴ)
-
-    return USVᴴ
 end
 
 function svd_trunc_no_error!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
@@ -427,61 +344,59 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Ran
     return Utr, Str, Vᴴtr, ϵ
 end
 
-function svd_compact!(A::AbstractMatrix, USVᴴ, alg::GPU_SVDAlgorithm)
-    check_input(svd_compact!, A, USVᴴ, alg)
-    U, S, Vᴴ = USVᴴ
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        one!(U)
-        zero!(S)
-        one!(Vᴴ)
-        return USVᴴ
+# Deprecations
+# ------------
+for algtype in (:SafeDivideAndConquer, :DivideAndConquer, :QRIteration, :Jacobi, :Bisection)
+    lapack_algtype = Symbol(:LAPACK_, algtype)
+    @eval begin
+        Base.@deprecate(
+            svd_compact!(A, USVᴴ, alg::$lapack_algtype),
+            svd_compact!(A, USVᴴ, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            svd_full!(A, USVᴴ, alg::$lapack_algtype),
+            svd_full!(A, USVᴴ, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            svd_vals!(A, S, alg::$lapack_algtype),
+            svd_vals!(A, S, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
     end
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_QRIteration
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
-        _gpu_gesvd_maybe_transpose!(A, diagview(S), U, Vᴴ)
-    elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, diagview(S), U, Vᴴ; alg_kwargs...)
-    elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, diagview(S), U, Vᴴ; alg_kwargs...)
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-
-    do_gauge_fix && gaugefix!(svd_compact!, U, Vᴴ)
-
-    return USVᴴ
 end
-_argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
-_largest(x, y) = abs(x) < abs(y) ? y : x
 
-function svd_vals!(A::AbstractMatrix, S, alg::GPU_SVDAlgorithm)
-    check_input(svd_vals!, A, S, alg)
-    m, n = size(A)
-    minmn = min(m, n)
-    if minmn == 0
-        zero!(S)
-        return S
+for (algtype, newtype, drivertype) in (
+        (:CUSOLVER_QRIteration, :QRIteration, :CUSOLVER),
+        (:CUSOLVER_Jacobi, :Jacobi, :CUSOLVER),
+        (:CUSOLVER_SVDPolar, :SVDViaPolar, :CUSOLVER),
+        (:ROCSOLVER_QRIteration, :QRIteration, :ROCSOLVER),
+        (:ROCSOLVER_Jacobi, :Jacobi, :ROCSOLVER),
+    )
+    @eval begin
+        Base.@deprecate(
+            svd_compact!(A, USVᴴ, alg::$algtype),
+            svd_compact!(A, USVᴴ, $newtype(; driver = $drivertype(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            svd_full!(A, USVᴴ, alg::$algtype),
+            svd_full!(A, USVᴴ, $newtype(; driver = $drivertype(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            svd_vals!(A, S, alg::$algtype),
+            svd_vals!(A, S, $newtype(; driver = $drivertype(), alg.kwargs...))
+        )
     end
-    U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
-
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_QRIteration
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_QRIteration"
-        _gpu_gesvd_maybe_transpose!(A, S, U, Vᴴ)
-    elseif alg isa GPU_SVDPolar
-        _gpu_Xgesvdp!(A, S, U, Vᴴ; alg_kwargs...)
-    elseif alg isa GPU_Jacobi
-        _gpu_gesvdj!(A, S, U, Vᴴ; alg_kwargs...)
-    else
-        throw(ArgumentError("Unsupported SVD algorithm"))
-    end
-
-    return S
 end
+
+# GLA_QRIteration SVD deprecations (eigh methods remain in the GLA extension)
+Base.@deprecate(
+    svd_compact!(A, USVᴴ, alg::GLA_QRIteration),
+    svd_compact!(A, USVᴴ, QRIteration(; driver = GLA(), alg.kwargs...))
+)
+Base.@deprecate(
+    svd_full!(A, USVᴴ, alg::GLA_QRIteration),
+    svd_full!(A, USVᴴ, QRIteration(; driver = GLA(), alg.kwargs...))
+)
+Base.@deprecate(
+    svd_vals!(A, S, alg::GLA_QRIteration),
+    svd_vals!(A, S, QRIteration(; driver = GLA(), alg.kwargs...))
+)
