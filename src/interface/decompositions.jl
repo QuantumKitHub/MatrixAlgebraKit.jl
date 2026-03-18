@@ -88,7 +88,7 @@ end
 """
     DivideAndConquer(; [driver], fixgauge = default_fixgauge())
 
-Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix using the divide-and-conquer algorithm.
 
 $_fixgauge_docs
@@ -129,8 +129,8 @@ The optional `driver` keyword can be used to choose between different implementa
 """
     Bisection(; [driver], fixgauge = default_fixgauge())
 
-Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
-or the singular value decomposition of a general matrix via the bisection algorithm.
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix
+via the bisection algorithm, or the singular value decomposition of a general matrix.
 
 $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
@@ -140,7 +140,8 @@ The optional `driver` keyword can be used to choose between different implementa
 """
     Jacobi(; [driver], fixgauge = default_fixgauge())
 
-Algorithm type for computing the singular value decomposition of a general matrix using the Jacobi algorithm.
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the Jacobi algorithm.
 
 $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
@@ -187,8 +188,7 @@ The optional `driver` keyword can be used to choose between different implementa
 """
     Expert(; [driver], fixgauge = default_fixgauge())
 
-Algorithm type for computing the eigenvalue decomposition of a general matrix
-using the expert driver algorithm (with balancing).
+Algorithm type for computing the eigenvalue decomposition of a general matrix using the expert driver algorithm (with balancing).
 
 $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
@@ -200,8 +200,8 @@ const EigAlgorithms = Union{Simple, Expert}
 """
     LAPACK_Simple(; fixgauge = default_fixgauge())
 
-Algorithm type to denote the simple LAPACK driver for computing the Schur or non-Hermitian
-eigenvalue decomposition of a matrix.
+Algorithm type to denote the simple LAPACK driver for computing the Schur or non-Hermitian eigenvalue decomposition of a matrix.
+
 $_fixgauge_docs
 """
 @algdef LAPACK_Simple
