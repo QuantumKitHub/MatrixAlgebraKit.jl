@@ -11,7 +11,6 @@ const GlaFloat = Union{BigFloat, Complex{BigFloat}}
 const GlaStridedVecOrMatrix{T <: GlaFloat} = Union{StridedVector{T}, StridedMatrix{T}}
 MatrixAlgebraKit.default_driver(::Type{<:QRIteration}, ::Type{TA}) where {TA <: GlaStridedVecOrMatrix} = GLA()
 
-MatrixAlgebraKit.supports_svd(::GLA, f::Symbol) = f === :qr_iteration
 MatrixAlgebraKit.supports_svd_full(::GLA, f::Symbol) = f === :qr_iteration
 
 function MatrixAlgebraKit.default_svd_algorithm(

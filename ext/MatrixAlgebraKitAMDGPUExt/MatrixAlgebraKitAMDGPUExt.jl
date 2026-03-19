@@ -28,7 +28,6 @@ for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::ROCSOLVER, args...) = YArocSOLVER.$f(args...)
 end
 
-MatrixAlgebraKit.supports_svd(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
 MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
 
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)

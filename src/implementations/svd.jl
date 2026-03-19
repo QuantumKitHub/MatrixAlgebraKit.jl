@@ -194,8 +194,6 @@ for (f, f_lapack!, Alg) in (
     # Implementation
     @eval begin
         function $f_svd!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
-            supports_svd(driver, $(QuoteNode(f))) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
             $f_lapack!(driver, A, diagview(S), U, Vᴴ; kwargs...)
             fixgauge && gaugefix!(svd_compact!, U, Vᴴ)
@@ -214,8 +212,6 @@ for (f, f_lapack!, Alg) in (
             return U, S, Vᴴ
         end
         function $f_svd_vals!(driver::Driver, A, S; fixgauge::Bool = true, kwargs...)
-            supports_svd(driver, $(QuoteNode(f))) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             isempty(A) && return zero!(S)
             U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
@@ -224,8 +220,6 @@ for (f, f_lapack!, Alg) in (
     end
 end
 
-supports_svd(::Driver, ::Symbol) = false
-supports_svd(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi)
 supports_svd_full(::Driver, ::Symbol) = false
 supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration)
 
