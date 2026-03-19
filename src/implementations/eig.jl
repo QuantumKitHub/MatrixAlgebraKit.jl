@@ -114,7 +114,7 @@ for (f, f_lapack!, Alg) in (
         function eig_full!(A::AbstractMatrix, DV, alg::$Alg)
             check_input(eig_full!, A, DV, alg)
             D, V = DV
-            Dd, V = $f_eig_full!(A, D.diag, V; alg.kwargs...)
+            Dd, V = $f_eig_full!(A, diagview(D), V; alg.kwargs...)
             return D, V
         end
         function eig_vals!(A::AbstractMatrix, D, alg::$Alg)
