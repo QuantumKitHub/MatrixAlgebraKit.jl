@@ -145,10 +145,7 @@ for (f, f_lapack!, Alg) in (
                 throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             $(
                 if f == :simple
-                    :(
-                        isempty(kwargs) ||
-                            throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " simple eig")))
-                    )
+                    :(isempty(kwargs) || throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " simple eig"))))
                 else
                     :nothing
                 end
@@ -162,10 +159,7 @@ for (f, f_lapack!, Alg) in (
                 throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             $(
                 if f == :simple
-                    :(
-                        isempty(kwargs) ||
-                            throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " simple eig")))
-                    )
+                    :(isempty(kwargs) || throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " simple eig"))))
                 else
                     :nothing
                 end
