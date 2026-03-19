@@ -2,7 +2,7 @@ module MatrixAlgebraKitGenericSchurExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: check_input, GS
-import MatrixAlgebraKit: geev!
+import MatrixAlgebraKit: geev!, gees!, eig_full!, eig_vals!, schur_full!, schur_vals!
 using LinearAlgebra: Diagonal, sorteig!
 using GenericSchur
 
@@ -14,6 +14,8 @@ end
 
 MatrixAlgebraKit.default_driver(::Type{<:Simple}, ::Type{TA}) where {TA <: StridedMatrix{<:GSFloat}} = GS()
 
+supports_schur(::GS, f::Symbol) = f === :simple
+
 function geev!(::GS, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)
     D, Vmat = GenericSchur.eigen!(A)
     copyto!(Dd, D)
@@ -21,30 +23,34 @@ function geev!(::GS, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; k
     return Dd, V
 end
 
-Base.@deprecate(
-    MatrixAlgebraKit.eig_full!(A, DV, alg::GS_QRIteration),
-    MatrixAlgebraKit.eig_full!(A, DV, Simple(; driver = GS(), alg.kwargs...))
-)
-Base.@deprecate(
-    MatrixAlgebraKit.eig_vals!(A, D, alg::GS_QRIteration),
-    MatrixAlgebraKit.eig_vals!(A, D, Simple(; driver = GS(), alg.kwargs...))
-)
-
-function MatrixAlgebraKit.schur_full!(A::AbstractMatrix, TZv, alg::GS_QRIteration)
-    check_input(schur_full!, A, TZv, alg)
-    T, Z, vals = TZv
+function gees!(::GS, A::AbstractMatrix, Z::AbstractMatrix, vals::AbstractVector)
     S = GenericSchur.gschur(A)
-    copyto!(T, S.T)
-    copyto!(Z, S.Z)
-    copyto!(vals, S.values)
-    return T, Z, vals
+    copyto!(A, S.T)
+    if length(Z) > 0
+        copyto!(Z, S.Z)
+        copyto!(vals, S.values)
+    else
+        copyto!(vals, sorteig!(S.values))
+    end
+    return A, Z, vals
 end
 
-function MatrixAlgebraKit.schur_vals!(A::AbstractMatrix, vals, alg::GS_QRIteration)
-    check_input(schur_vals!, A, vals, alg)
-    S = GenericSchur.gschur(A)
-    copyto!(vals, sorteig!(S.values))
-    return vals
-end
+Base.@deprecate(
+    eig_full!(A, DV, alg::GS_QRIteration),
+    eig_full!(A, DV, Simple(; driver = GS(), alg.kwargs...))
+)
+Base.@deprecate(
+    eig_vals!(A, D, alg::GS_QRIteration),
+    eig_vals!(A, D, Simple(; driver = GS(), alg.kwargs...))
+)
+
+Base.@deprecate(
+    schur_full!(A, TZv, alg::GS_QRIteration),
+    schur_full!(A, TZv, Simple(; driver = GS(), alg.kwargs...))
+)
+Base.@deprecate(
+    schur_vals!(A, vals, alg::GS_QRIteration),
+    schur_vals!(A, vals, Simple(; driver = GS(), alg.kwargs...))
+)
 
 end

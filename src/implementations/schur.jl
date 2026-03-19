@@ -49,35 +49,92 @@ for f! in (:schur_full!, :schur_vals!)
     end
 end
 
-# Implementation
-# --------------
-function schur_full!(A::AbstractMatrix, TZv, alg::LAPACK_EigAlgorithm)
-    check_input(schur_full!, A, TZv, alg)
-    T, Z, vals = TZv
-    if alg isa LAPACK_Simple
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple Schur (gees) does not accept any keyword arguments"))
-        YALAPACK.gees!(A, Z, vals)
-    else # alg isa LAPACK_Expert
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Expert Schur (geesx) does not accept any keyword arguments"))
-        YALAPACK.geesx!(A, Z, vals)
-    end
-    T === A || copy!(T, A)
-    return T, Z, vals
+# ==========================
+#      IMPLEMENTATIONS
+# ==========================
+
+for f! in (:gees!, :geesx!)
+    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
 end
 
-function schur_vals!(A::AbstractMatrix, vals, alg::LAPACK_EigAlgorithm)
-    check_input(schur_vals!, A, vals, alg)
-    Z = similar(A, eltype(A), (size(A, 1), 0))
-    if alg isa LAPACK_Simple
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple (gees) does not accept any keyword arguments"))
-        YALAPACK.gees!(A, Z, vals)
-    else # alg isa LAPACK_Expert
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Expert (geesx) does not accept any keyword arguments"))
-        YALAPACK.geesx!(A, Z, vals)
+# LAPACK implementations
+for f! in (:gees!, :geesx!)
+    @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
+end
+
+supports_schur(::Driver, ::Symbol) = false
+supports_schur(::LAPACK, f::Symbol) = f in (:simple, :expert)
+
+for (f, f_lapack!, Alg) in (
+        (:simple, :gees!, :Simple),
+        (:expert, :geesx!, :Expert),
+    )
+    f_schur_full! = Symbol(f, :_schur_full!)
+    f_schur_vals! = Symbol(f, :_schur_vals!)
+
+    # MatrixAlgebraKit wrappers
+    @eval begin
+        function schur_full!(A::AbstractMatrix, TZv, alg::$Alg)
+            check_input(schur_full!, A, TZv, alg)
+            T, Z, vals = TZv
+            $f_schur_full!(A, T, Z, vals; alg.kwargs...)
+            return T, Z, vals
+        end
+        function schur_vals!(A::AbstractMatrix, vals, alg::$Alg)
+            check_input(schur_vals!, A, vals, alg)
+            Z = similar(A, eltype(A), (size(A, 1), 0))
+            $f_schur_vals!(A, Z, vals; alg.kwargs...)
+            return vals
+        end
     end
-    return vals
+
+    # driver dispatch
+    @eval begin
+        @inline $f_schur_full!(A, T, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
+            $f_schur_full!(driver, A, T, Z, vals; kwargs...)
+        @inline $f_schur_vals!(A, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
+            $f_schur_vals!(driver, A, Z, vals; kwargs...)
+
+        @inline $f_schur_full!(::DefaultDriver, A, T, Z, vals; kwargs...) =
+            $f_schur_full!(default_driver($Alg, A), A, T, Z, vals; kwargs...)
+        @inline $f_schur_vals!(::DefaultDriver, A, Z, vals; kwargs...) =
+            $f_schur_vals!(default_driver($Alg, A), A, Z, vals; kwargs...)
+    end
+
+    # Implementation
+    @eval begin
+        function $f_schur_full!(driver::Driver, A, T, Z, vals; kwargs...)
+            supports_schur(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
+            isempty(kwargs) ||
+                throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " schur")))
+            $f_lapack!(driver, A, Z, vals)
+            T === A || copy!(T, A)
+            return T, Z, vals
+        end
+        function $f_schur_vals!(driver::Driver, A, Z, vals; kwargs...)
+            supports_schur(driver, $(QuoteNode(f))) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
+            isempty(kwargs) ||
+                throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " schur")))
+            $f_lapack!(driver, A, Z, vals)
+            return vals
+        end
+    end
+end
+
+# Deprecations
+# ------------
+for algtype in (:Simple, :Expert)
+    lapack_algtype = Symbol(:LAPACK_, algtype)
+    @eval begin
+        Base.@deprecate(
+            schur_full!(A, TZv, alg::$lapack_algtype),
+            schur_full!(A, TZv, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            schur_vals!(A, vals, alg::$lapack_algtype),
+            schur_vals!(A, vals, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
+    end
 end

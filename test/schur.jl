@@ -28,7 +28,7 @@ for T in (BLASFloats..., GenericFloats...)
     if !is_buildkite
         TestSuite.test_schur(T, (m, m))
         if T ∈ BLASFloats
-            LAPACK_SCHUR_ALGS = (LAPACK_Simple(), LAPACK_Expert())
+            LAPACK_SCHUR_ALGS = (Simple(), Expert())
             TestSuite.test_schur_algs(T, (m, m), LAPACK_SCHUR_ALGS)
         end
         #AT = Diagonal{T, Vector{T}}
