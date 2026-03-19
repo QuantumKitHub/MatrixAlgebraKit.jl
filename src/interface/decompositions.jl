@@ -305,6 +305,27 @@ until convergence up to tolerance `tol`.
 # Varia
 # =========================
 """
+    DefaultAlgorithm(; kwargs...)
+
+Algorithm sentinel that resolves to the algorithm selection procedure for a given function and input type at call time.
+This provides a unified approach for package developers to store both keyword argument and direct algorithm inputs.
+Any keyword arguments stored in the instance are forwarded at runtime to [`select_algorithm`](@ref).
+
+For example, the following calls are equivalent:
+
+```julia
+A = rand(3, 3)
+
+# specifying keyword arguments
+Q, R = qr_compact(A; positive = true)
+
+# wrapping keyword arguments in DefaultAlgorithm
+alg = DefaultAlgorithm(; positive = true)
+Q, R = qr_compact(A; alg)
+"""
+@algdef DefaultAlgorithm
+
+"""
     DiagonalAlgorithm(; kwargs...)
 
 Algorithm type to denote a native Julia implementation of the decompositions making use of

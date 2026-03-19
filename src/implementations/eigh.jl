@@ -84,6 +84,17 @@ function initialize_output(::typeof(eigh_vals!), A::Diagonal, ::DiagonalAlgorith
     return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
+# DefaultAlgorithm intercepts
+# ---------------------------
+for f! in (:eigh_full!, :eigh_vals!, :eigh_trunc!, :eigh_trunc_no_error!)
+    @eval function $f!(A, alg::DefaultAlgorithm)
+        return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+    @eval function $f!(A, out, alg::DefaultAlgorithm)
+        return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+end
+
 # Implementation
 # --------------
 function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)

@@ -105,6 +105,17 @@ function initialize_output(::typeof(svd_vals!), A::Diagonal, ::DiagonalAlgorithm
     return eltype(A) <: Real ? diagview(A) : similar(A, real(eltype(A)), size(A, 1))
 end
 
+# DefaultAlgorithm intercepts
+# ---------------------------
+for f! in (:svd_full!, :svd_compact!, :svd_vals!, :svd_trunc!, :svd_trunc_no_error!)
+    @eval function $f!(A, alg::DefaultAlgorithm)
+        return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+    @eval function $f!(A, out, alg::DefaultAlgorithm)
+        return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+end
+
 # ==========================
 #      IMPLEMENTATIONS
 # ==========================

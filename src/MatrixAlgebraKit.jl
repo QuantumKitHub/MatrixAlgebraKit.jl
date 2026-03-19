@@ -39,6 +39,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
 export GLA_HouseholderQR, GLA_QRIteration, GS_QRIteration
 export LQViaTransposedQR
 export PolarViaSVD, PolarNewton
+export DefaultAlgorithm
 export DiagonalAlgorithm
 export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
