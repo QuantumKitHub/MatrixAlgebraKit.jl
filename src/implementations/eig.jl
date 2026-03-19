@@ -101,8 +101,6 @@ end
 
 supports_eig(::Driver, ::Symbol) = false
 supports_eig(::LAPACK, f::Symbol) = f in (:simple, :expert)
-supports_eig(::CUSOLVER, f::Symbol) = f === :simple
-supports_eig(::GS, f::Symbol) = f === :simple
 
 for (f, f_lapack!, Alg) in (
         (:simple, :geev!, :Simple),

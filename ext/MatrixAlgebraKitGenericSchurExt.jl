@@ -14,7 +14,8 @@ end
 
 MatrixAlgebraKit.default_driver(::Type{<:Simple}, ::Type{TA}) where {TA <: StridedMatrix{<:GSFloat}} = GS()
 
-supports_schur(::GS, f::Symbol) = f === :simple
+MatrixAlgebraKit.supports_schur(::GS, f::Symbol) = f === :simple
+MatrixAlgebraKit.supports_eig(::GS, f::Symbol) = f === :simple
 
 function geev!(::GS, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)
     D, Vmat = GenericSchur.eigen!(A)

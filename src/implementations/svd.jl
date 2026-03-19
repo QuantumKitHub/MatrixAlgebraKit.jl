@@ -226,10 +226,8 @@ end
 
 supports_svd(::Driver, ::Symbol) = false
 supports_svd(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection, :jacobi)
-supports_svd(::GLA, f::Symbol) = f === :qr_iteration
 supports_svd_full(::Driver, ::Symbol) = false
 supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration)
-supports_svd_full(::GLA, f::Symbol) = f === :qr_iteration
 
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)

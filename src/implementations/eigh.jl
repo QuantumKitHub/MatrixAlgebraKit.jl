@@ -110,9 +110,6 @@ end
 
 supports_eigh(::Driver, ::Symbol) = false
 supports_eigh(::LAPACK, f::Symbol) = f in (:mrrr, :divide_and_conquer, :qr_iteration, :bisection)
-supports_eigh(::GLA, f::Symbol) = f === :qr_iteration
-supports_eigh(::CUSOLVER, f::Symbol) = f in (:jacobi, :divide_and_conquer)
-supports_eigh(::ROCSOLVER, f::Symbol) = f in (:jacobi, :divide_and_conquer, :qr_iteration, :bisection)
 
 for (f, f_lapack!, Alg) in (
         (:mrrr, :heevr!, :MultipleRelativelyRobustRepresentations),

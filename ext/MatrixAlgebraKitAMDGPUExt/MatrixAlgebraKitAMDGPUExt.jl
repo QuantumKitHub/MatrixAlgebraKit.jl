@@ -30,6 +30,7 @@ end
 
 MatrixAlgebraKit.supports_svd(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
 MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
+MatrixAlgebraKit.supports_eigh(::ROCSOLVER, f::Symbol) = f in (:jacobi, :divide_and_conquer, :qr_iteration, :bisection)
 
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     m, n = size(A)
