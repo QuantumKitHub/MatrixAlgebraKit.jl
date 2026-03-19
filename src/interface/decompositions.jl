@@ -305,6 +305,15 @@ until convergence up to tolerance `tol`.
 # Varia
 # =========================
 """
+    DefaultAlgorithm(; kwargs...)
+
+Algorithm sentinel that resolves to the default algorithm for a given function and input
+type at call time. Any keyword arguments stored in the instance are forwarded at runtime
+to [`select_algorithm`](@ref).
+"""
+@algdef DefaultAlgorithm
+
+"""
     DiagonalAlgorithm(; kwargs...)
 
 Algorithm type to denote a native Julia implementation of the decompositions making use of
