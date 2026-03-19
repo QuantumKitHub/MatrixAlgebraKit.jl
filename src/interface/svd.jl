@@ -184,6 +184,10 @@ for f in (:svd_trunc!, :svd_trunc_no_error!)
             isnothing(trunc) ||
                 throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
             return alg
+        elseif alg isa RandomizedSVD
+            isempty(kwargs) ||
+                throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
+            return TruncatedAlgorithm(alg, select_truncation(trunc))
         else
             alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
             return TruncatedAlgorithm(alg_svd, select_truncation(trunc))

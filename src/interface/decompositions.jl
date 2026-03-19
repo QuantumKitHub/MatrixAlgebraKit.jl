@@ -330,7 +330,24 @@ end
 # =========================
 # RANDOMIZED ALGORITHMS
 # =========================
+
+"""
+    RandomizedSVD(; oversampling=10, maxiter=1, [alg_qr])
+
+Algorithm type to denote the randomized algorithm for computing a truncated singular value
+decomposition of a general matrix. This algorithm is well-suited for low-rank approximations
+of large matrices.
+
+### Keyword arguments
+
+- `oversampling::Int = 10` : Number of additional columns in the random sketch beyond the target rank, used to improve accuracy.
+- `maxiter::Int = 1` : Number of power iterations to perform, improving accuracy at the cost of additional matrix-vector products.
+- `alg_qr` : Optional algorithm for the internal QR factorization. Defaults to the standard algorithm for the input type.
+"""
 @algdef RandomizedSVD
+function RandomizedSVD(; oversampling::Int = 10, maxiter::Int = 1, alg_qr = nothing)
+    return RandomizedSVD((; oversampling, maxiter, alg_qr))
+end
 
 # =========================
 # CUSOLVER ALGORITHMS

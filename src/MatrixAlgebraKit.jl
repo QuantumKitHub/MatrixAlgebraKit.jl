@@ -8,6 +8,7 @@ using LinearAlgebra: isposdef, issymmetric
 using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
+using Random: Random
 
 export isisometric, isunitary, ishermitian, isantihermitian
 export diagview, diagonal
@@ -33,6 +34,7 @@ export left_orth!, right_orth!, left_null!, right_null!
 
 export Householder, Native_HouseholderQR, Native_HouseholderLQ
 export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar
+export RandomizedSVD
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
     LAPACK_DivideAndConquer, LAPACK_Jacobi, LAPACK_SafeDivideAndConquer
@@ -104,6 +106,7 @@ include("implementations/truncation.jl")
 include("implementations/qr.jl")
 include("implementations/lq.jl")
 include("implementations/svd.jl")
+include("implementations/rsvd.jl")
 include("implementations/eig.jl")
 include("implementations/eigh.jl")
 include("implementations/gen_eig.jl")
