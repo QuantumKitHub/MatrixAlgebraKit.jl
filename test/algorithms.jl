@@ -10,11 +10,10 @@ using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
         @test @constinferred(default_algorithm(f, A)) == SafeDivideAndConquer()
     end
     for f in (eig_full!, eig_full, eig_vals!, eig_vals)
-        @test @constinferred(default_algorithm(f, A)) === LAPACK_Expert()
+        @test @constinferred(default_algorithm(f, A)) === QRIteration()
     end
     for f in (eigh_full!, eigh_full, eigh_vals!, eigh_vals)
-        @test @constinferred(default_algorithm(f, A)) ===
-            LAPACK_MultipleRelativelyRobustRepresentations()
+        @test @constinferred(default_algorithm(f, A)) === RobustRepresentations()
     end
     for f in (lq_full!, lq_full, lq_compact!, lq_compact, lq_null!, lq_null)
         @test @constinferred(default_algorithm(f, A)) == Householder()
@@ -27,7 +26,7 @@ using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
         @test @constinferred(default_algorithm(f, A)) == Householder()
     end
     for f in (schur_full!, schur_full, schur_vals!, schur_vals)
-        @test @constinferred(default_algorithm(f, A)) === LAPACK_Expert()
+        @test @constinferred(default_algorithm(f, A)) === QRIteration()
     end
 
     @test @constinferred(default_algorithm(qr_compact!, A; blocksize = 2)) ==
@@ -42,14 +41,14 @@ end
     end
     for f in (eig_trunc!, eig_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
-            TruncatedAlgorithm(LAPACK_Expert(), notrunc())
+            TruncatedAlgorithm(QRIteration(), notrunc())
     end
     for f in (eigh_trunc!, eigh_trunc)
         @test @constinferred(select_algorithm(f, A)) ===
-            TruncatedAlgorithm(LAPACK_MultipleRelativelyRobustRepresentations(), notrunc())
+            TruncatedAlgorithm(RobustRepresentations(), notrunc())
     end
 
-    alg = TruncatedAlgorithm(LAPACK_Simple(), trunctol(; atol = 0.1, keep_below = true))
+    alg = TruncatedAlgorithm(QRIteration(), trunctol(; atol = 0.1, keep_below = true))
     for f in (eig_trunc!, eigh_trunc!, svd_trunc!)
         @test @constinferred(select_algorithm(eig_trunc!, A, alg)) === alg
         @test_throws ArgumentError select_algorithm(eig_trunc!, A, alg; trunc = (; maxrank = 2))
@@ -57,7 +56,7 @@ end
 
     @test @constinferred(select_algorithm(svd_compact!, A)) == SafeDivideAndConquer()
     @test @constinferred(select_algorithm(svd_compact!, A, nothing)) == SafeDivideAndConquer()
-    for alg in (:LAPACK_QRIteration, LAPACK_QRIteration, LAPACK_QRIteration())
-        @test @constinferred(select_algorithm(svd_compact!, A, $alg)) === LAPACK_QRIteration()
+    for alg in (:QRIteration, QRIteration, QRIteration())
+        @test @constinferred(select_algorithm(svd_compact!, A, $alg)) === QRIteration()
     end
 end

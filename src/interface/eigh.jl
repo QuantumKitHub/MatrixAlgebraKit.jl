@@ -168,7 +168,7 @@ function default_eigh_algorithm(T::Type; kwargs...)
     throw(MethodError(default_eigh_algorithm, (T,)))
 end
 function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasVecOrMat}
-    return MultipleRelativelyRobustRepresentations(; kwargs...)
+    return RobustRepresentations(; kwargs...)
 end
 function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)

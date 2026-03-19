@@ -2,7 +2,7 @@ module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, one!, zero!, default_fixgauge
-using MatrixAlgebraKit: GLA
+using MatrixAlgebraKit: GLA, Driver
 import MatrixAlgebraKit: gesvd!, heev!
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
@@ -11,12 +11,14 @@ const GlaFloat = Union{BigFloat, Complex{BigFloat}}
 const GlaStridedVecOrMatrix{T <: GlaFloat} = Union{StridedVector{T}, StridedMatrix{T}}
 MatrixAlgebraKit.default_driver(::Type{<:QRIteration}, ::Type{TA}) where {TA <: GlaStridedVecOrMatrix} = GLA()
 
-MatrixAlgebraKit.supports_eigh(::GLA, f::Symbol) = f === :qr_iteration
 MatrixAlgebraKit.supports_svd(::GLA, f::Symbol) = f === :qr_iteration
 MatrixAlgebraKit.supports_svd_full(::GLA, f::Symbol) = f === :qr_iteration
 
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: GlaStridedVecOrMatrix}
-    return QRIteration(; kwargs...)
+function MatrixAlgebraKit.default_svd_algorithm(
+        ::Type{T};
+        driver::Driver = GLA(), kwargs...
+    ) where {T <: GlaStridedVecOrMatrix}
+    return QRIteration(; driver, kwargs...)
 end
 
 function gesvd!(::GLA, A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...)
@@ -36,8 +38,8 @@ function gesvd!(::GLA, A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, 
     return S, U, Vᴴ
 end
 
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: GlaStridedVecOrMatrix}
-    return QRIteration(; kwargs...)
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; driver::Driver = GLA(), kwargs...) where {T <: GlaStridedVecOrMatrix}
+    return QRIteration(; driver, kwargs...)
 end
 
 function heev!(::GLA, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)

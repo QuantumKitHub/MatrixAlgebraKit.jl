@@ -62,79 +62,53 @@ for f! in (:gees!, :geesx!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
 end
 
-supports_schur(::Driver, ::Symbol) = false
-supports_schur(::LAPACK, f::Symbol) = f in (:simple, :expert)
+# driver dispatch
+@inline qr_iteration_schur_full!(A, T, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_iteration_schur_full!(driver, A, T, Z, vals; kwargs...)
+@inline qr_iteration_schur_vals!(A, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_iteration_schur_vals!(driver, A, Z, vals; kwargs...)
 
-for (f, f_lapack!, Alg) in (
-        (:simple, :gees!, :Simple),
-        (:expert, :geesx!, :Expert),
-    )
-    f_schur_full! = Symbol(f, :_schur_full!)
-    f_schur_vals! = Symbol(f, :_schur_vals!)
+@inline qr_iteration_schur_full!(::DefaultDriver, A, T, Z, vals; kwargs...) =
+    qr_iteration_schur_full!(default_driver(QRIteration, A), A, T, Z, vals; kwargs...)
+@inline qr_iteration_schur_vals!(::DefaultDriver, A, Z, vals; kwargs...) =
+    qr_iteration_schur_vals!(default_driver(QRIteration, A), A, Z, vals; kwargs...)
 
-    # MatrixAlgebraKit wrappers
-    @eval begin
-        function schur_full!(A::AbstractMatrix, TZv, alg::$Alg)
-            check_input(schur_full!, A, TZv, alg)
-            T, Z, vals = TZv
-            $f_schur_full!(A, T, Z, vals; alg.kwargs...)
-            return T, Z, vals
-        end
-        function schur_vals!(A::AbstractMatrix, vals, alg::$Alg)
-            check_input(schur_vals!, A, vals, alg)
-            Z = similar(A, eltype(A), (size(A, 1), 0))
-            $f_schur_vals!(A, Z, vals; alg.kwargs...)
-            return vals
-        end
-    end
+# Implementation
+function qr_iteration_schur_full!(driver::Driver, A, T, Z, vals; balanced::Bool = false)
+    (balanced ? geesx! : gees!)(driver, A, Z, vals)
+    T === A || copy!(T, A)
+    return T, Z, vals
+end
+function qr_iteration_schur_vals!(driver::Driver, A, Z, vals; balanced::Bool = false)
+    (balanced ? geesx! : gees!)(driver, A, Z, vals)
+    return vals
+end
 
-    # driver dispatch
-    @eval begin
-        @inline $f_schur_full!(A, T, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_schur_full!(driver, A, T, Z, vals; kwargs...)
-        @inline $f_schur_vals!(A, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_schur_vals!(driver, A, Z, vals; kwargs...)
-
-        @inline $f_schur_full!(::DefaultDriver, A, T, Z, vals; kwargs...) =
-            $f_schur_full!(default_driver($Alg, A), A, T, Z, vals; kwargs...)
-        @inline $f_schur_vals!(::DefaultDriver, A, Z, vals; kwargs...) =
-            $f_schur_vals!(default_driver($Alg, A), A, Z, vals; kwargs...)
-    end
-
-    # Implementation
-    @eval begin
-        function $f_schur_full!(driver::Driver, A, T, Z, vals; kwargs...)
-            supports_schur(driver, $(QuoteNode(f))) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
-            isempty(kwargs) ||
-                throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " schur")))
-            $f_lapack!(driver, A, Z, vals)
-            T === A || copy!(T, A)
-            return T, Z, vals
-        end
-        function $f_schur_vals!(driver::Driver, A, Z, vals; kwargs...)
-            supports_schur(driver, $(QuoteNode(f))) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
-            isempty(kwargs) ||
-                throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " schur")))
-            $f_lapack!(driver, A, Z, vals)
-            return vals
-        end
-    end
+# Top-level QRIteration dispatch
+function schur_full!(A::AbstractMatrix, TZv, alg::QRIteration)
+    check_input(schur_full!, A, TZv, alg)
+    T, Z, vals = TZv
+    qr_iteration_schur_full!(A, T, Z, vals; alg.kwargs...)
+    return T, Z, vals
+end
+function schur_vals!(A::AbstractMatrix, vals, alg::QRIteration)
+    check_input(schur_vals!, A, vals, alg)
+    Z = similar(A, eltype(A), (size(A, 1), 0))
+    qr_iteration_schur_vals!(A, Z, vals; alg.kwargs...)
+    return vals
 end
 
 # Deprecations
 # ------------
-for algtype in (:Simple, :Expert)
-    lapack_algtype = Symbol(:LAPACK_, algtype)
+for (lapack_algtype, balanced_val) in ((:LAPACK_Simple, false), (:LAPACK_Expert, true))
     @eval begin
         Base.@deprecate(
             schur_full!(A, TZv, alg::$lapack_algtype),
-            schur_full!(A, TZv, $algtype(; driver = LAPACK(), alg.kwargs...))
+            schur_full!(A, TZv, QRIteration(; balanced = $balanced_val, alg.kwargs...))
         )
         Base.@deprecate(
             schur_vals!(A, vals, alg::$lapack_algtype),
-            schur_vals!(A, vals, $algtype(; driver = LAPACK(), alg.kwargs...))
+            schur_vals!(A, vals, QRIteration(; balanced = $balanced_val, alg.kwargs...))
         )
     end
 end

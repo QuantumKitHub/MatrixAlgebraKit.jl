@@ -108,11 +108,8 @@ for f! in (:heevr!, :heevd!, :heev!, :heevx!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
 end
 
-supports_eigh(::Driver, ::Symbol) = false
-supports_eigh(::LAPACK, f::Symbol) = f in (:mrrr, :divide_and_conquer, :qr_iteration, :bisection)
-
 for (f, f_lapack!, Alg) in (
-        (:mrrr, :heevr!, :MultipleRelativelyRobustRepresentations),
+        (:mrrr, :heevr!, :RobustRepresentations),
         (:divide_and_conquer, :heevd!, :DivideAndConquer),
         (:qr_iteration, :heev!, :QRIteration),
         (:bisection, :heevx!, :Bisection),
@@ -153,15 +150,11 @@ for (f, f_lapack!, Alg) in (
     # Implementation
     @eval begin
         function $f_eigh_full!(driver::Driver, A, Dd, V; fixgauge::Bool = default_fixgauge(), kwargs...)
-            supports_eigh(driver, $(QuoteNode(f))) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             $f_lapack!(driver, A, Dd, V; kwargs...)
             fixgauge && gaugefix!(eigh_full!, V)
             return Dd, V
         end
         function $f_eigh_vals!(driver::Driver, A, D, V; fixgauge::Bool = default_fixgauge(), kwargs...)
-            supports_eigh(driver, $(QuoteNode(f))) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             $f_lapack!(driver, A, D, V; kwargs...)
             return D
         end
@@ -213,7 +206,15 @@ end
 
 # Deprecations
 # ------------
-for algtype in (:MultipleRelativelyRobustRepresentations, :DivideAndConquer, :QRIteration, :Bisection)
+Base.@deprecate(
+    eigh_full!(A, DV, alg::LAPACK_MultipleRelativelyRobustRepresentations),
+    eigh_full!(A, DV, RobustRepresentations(; driver = LAPACK(), alg.kwargs...))
+)
+Base.@deprecate(
+    eigh_vals!(A, D, alg::LAPACK_MultipleRelativelyRobustRepresentations),
+    eigh_vals!(A, D, RobustRepresentations(; driver = LAPACK(), alg.kwargs...))
+)
+for algtype in (:DivideAndConquer, :QRIteration, :Bisection)
     lapack_algtype = Symbol(:LAPACK_, algtype)
     @eval begin
         Base.@deprecate(

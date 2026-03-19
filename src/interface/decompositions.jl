@@ -116,10 +116,17 @@ See also [`DivideAndConquer`](@ref) and [`QRIteration`](@ref).
 @algdef SafeDivideAndConquer
 
 """
-    QRIteration(; [driver], fixgauge = default_fixgauge())
+    QRIteration(; [driver], fixgauge = default_fixgauge(), balanced = false)
 
 Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
-or the singular value decomposition of a general matrix via QR iteration.
+the singular value decomposition of a general matrix, the non-Hermitian eigenvalue
+decomposition, or the Schur decomposition of a general matrix via QR iteration.
+
+For non-Hermitian eigenvalue decomposition and Schur decomposition, the `balanced`
+keyword argument can be used to enable balancing of the matrix before the QR iteration,
+which can improve numerical accuracy for badly scaled matrices:
+- `balanced = false` (default): use the simple driver (`geev!`/`gees!`)
+- `balanced = true`: use the expert balanced driver (`geevx!`/`geesx!`)
 
 $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
@@ -149,7 +156,7 @@ The optional `driver` keyword can be used to choose between different implementa
 @algdef Jacobi
 
 """
-    MultipleRelativelyRobustRepresentations(; [driver], fixgauge = default_fixgauge())
+    RobustRepresentations(; [driver], fixgauge = default_fixgauge())
 
 Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix
 using the Multiple Relatively Robust Representations algorithm.
@@ -157,7 +164,8 @@ using the Multiple Relatively Robust Representations algorithm.
 $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
-@algdef MultipleRelativelyRobustRepresentations
+@algdef RobustRepresentations
+Base.@deprecate_binding MultipleRelativelyRobustRepresentations RobustRepresentations false
 
 """
     SVDViaPolar(; [driver], fixgauge = default_fixgauge(), [tol])
@@ -171,31 +179,6 @@ The tolerance `tol` can optionally be used to emit a warning if the decompositio
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef SVDViaPolar
-
-# General Eigenvalue Decomposition
-# -------------------------------
-"""
-    Simple(; [driver], fixgauge = default_fixgauge())
-
-Algorithm type for computing the eigenvalue decomposition of a general matrix
-using the simple driver algorithm.
-
-$_fixgauge_docs
-The optional `driver` keyword can be used to choose between different implementations of this algorithm.
-"""
-@algdef Simple
-
-"""
-    Expert(; [driver], fixgauge = default_fixgauge())
-
-Algorithm type for computing the eigenvalue decomposition of a general matrix using the expert driver algorithm (with balancing).
-
-$_fixgauge_docs
-The optional `driver` keyword can be used to choose between different implementations of this algorithm.
-"""
-@algdef Expert
-
-const EigAlgorithms = Union{Simple, Expert}
 
 """
     LAPACK_Simple(; fixgauge = default_fixgauge())
@@ -271,7 +254,7 @@ const LAPACK_EighAlgorithm = Union{
 }
 
 const EighAlgorithms = Union{
-    MultipleRelativelyRobustRepresentations,
+    RobustRepresentations,
     DivideAndConquer,
     QRIteration,
     Bisection,

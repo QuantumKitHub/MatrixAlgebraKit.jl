@@ -90,84 +90,60 @@ end
 # ==========================
 #      IMPLEMENTATIONS
 # ==========================
-for f! in (:geev!, :geevx!)
-    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
+
+geev!(driver::Driver, args...; kwargs...) = throw(ArgumentError("$driver does not provide $f!"))
+function geevx!(driver::Driver, A, Dd, V; kwargs...)
+    @warn "$driver does not provide `geevx!`, falling back to `geev!`" maxlog = 1
+    return geev!(driver, A, Dd, V; kwargs...)
 end
+_has_geevx!(::Driver) = false
 
 # LAPACK implementations
 for f! in (:geev!, :geevx!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
 end
+_has_geevx!(::LAPACK) = true
 
-supports_eig(::Driver, ::Symbol) = false
-supports_eig(::LAPACK, f::Symbol) = f in (:simple, :expert)
+# driver dispatch
+@inline qr_iteration_eig_full!(A, Dd, V; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_iteration_eig_full!(driver, A, Dd, V; kwargs...)
+@inline qr_iteration_eig_vals!(A, D, V; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_iteration_eig_vals!(driver, A, D, V; kwargs...)
 
-for (f, f_lapack!, Alg) in (
-        (:simple, :geev!, :Simple),
-        (:expert, :geevx!, :Expert),
+@inline qr_iteration_eig_full!(::DefaultDriver, A, Dd, V; kwargs...) =
+    qr_iteration_eig_full!(default_driver(QRIteration, A), A, Dd, V; kwargs...)
+@inline qr_iteration_eig_vals!(::DefaultDriver, A, D, V; kwargs...) =
+    qr_iteration_eig_vals!(default_driver(QRIteration, A), A, D, V; kwargs...)
+
+# Implementation
+function qr_iteration_eig_full!(
+        driver::Driver, A, Dd, V;
+        fixgauge::Bool = default_fixgauge(), balanced::Bool = _has_geevx!(driver), kwargs...
     )
-    f_eig_full! = Symbol(f, :_eig_full!)
-    f_eig_vals! = Symbol(f, :_eig_vals!)
+    (balanced ? geevx! : geev!)(driver, A, Dd, V; kwargs...)
+    fixgauge && gaugefix!(eig_full!, V)
+    return Dd, V
+end
+function qr_iteration_eig_vals!(
+        driver::Driver, A, D, V;
+        fixgauge::Bool = default_fixgauge(), balanced::Bool = _has_geevx!(driver), kwargs...
+    )
+    (balanced ? geevx! : geev!)(driver, A, D, V; kwargs...)
+    return D
+end
 
-    # MatrixAlgebraKit wrappers
-    @eval begin
-        function eig_full!(A::AbstractMatrix, DV, alg::$Alg)
-            check_input(eig_full!, A, DV, alg)
-            D, V = DV
-            Dd, V = $f_eig_full!(A, diagview(D), V; alg.kwargs...)
-            return D, V
-        end
-        function eig_vals!(A::AbstractMatrix, D, alg::$Alg)
-            check_input(eig_vals!, A, D, alg)
-            V = similar(A, complex(eltype(A)), (size(A, 1), 0))
-            $f_eig_vals!(A, D, V; alg.kwargs...)
-            return D
-        end
-    end
-
-    # driver dispatch
-    @eval begin
-        @inline $f_eig_full!(A, Dd, V; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_eig_full!(driver, A, Dd, V; kwargs...)
-        @inline $f_eig_vals!(A, D, V; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_eig_vals!(driver, A, D, V; kwargs...)
-
-        @inline $f_eig_full!(::DefaultDriver, A, Dd, V; kwargs...) =
-            $f_eig_full!(default_driver($Alg, A), A, Dd, V; kwargs...)
-        @inline $f_eig_vals!(::DefaultDriver, A, D, V; kwargs...) =
-            $f_eig_vals!(default_driver($Alg, A), A, D, V; kwargs...)
-    end
-
-    # Implementation
-    @eval begin
-        function $f_eig_full!(driver::Driver, A, Dd, V; fixgauge::Bool = default_fixgauge(), kwargs...)
-            supports_eig(driver, $(QuoteNode(f))) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
-            $(
-                if f == :simple
-                    :(isempty(kwargs) || throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " simple eig"))))
-                else
-                    :nothing
-                end
-            )
-            $f_lapack!(driver, A, Dd, V; kwargs...)
-            fixgauge && gaugefix!(eig_full!, V)
-            return Dd, V
-        end
-        function $f_eig_vals!(driver::Driver, A, D, V; fixgauge::Bool = default_fixgauge(), kwargs...)
-            supports_eig(driver, $(QuoteNode(f))) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
-            $(
-                if f == :simple
-                    :(isempty(kwargs) || throw(ArgumentError(LazyString("invalid keyword arguments for ", driver, " simple eig"))))
-                else
-                    :nothing
-                end
-            )
-            $f_lapack!(driver, A, D, V; kwargs...)
-            return D
-        end
-    end
+# Top-level QRIteration dispatch
+function eig_full!(A::AbstractMatrix, DV, alg::QRIteration)
+    check_input(eig_full!, A, DV, alg)
+    D, V = DV
+    qr_iteration_eig_full!(A, diagview(D), V; alg.kwargs...)
+    return D, V
+end
+function eig_vals!(A::AbstractMatrix, D, alg::QRIteration)
+    check_input(eig_vals!, A, D, alg)
+    V = similar(A, complex(eltype(A)), (size(A, 1), 0))
+    qr_iteration_eig_vals!(A, D, V; alg.kwargs...)
+    return D
 end
 
 function eig_trunc!(A, DV, alg::TruncatedAlgorithm)
@@ -212,24 +188,23 @@ end
 
 # Deprecations
 # ------------
-for algtype in (:Simple, :Expert)
-    lapack_algtype = Symbol(:LAPACK_, algtype)
+for (lapack_algtype, balanced_val) in ((:LAPACK_Simple, false), (:LAPACK_Expert, true))
     @eval begin
         Base.@deprecate(
             eig_full!(A, DV, alg::$lapack_algtype),
-            eig_full!(A, DV, $algtype(; driver = LAPACK(), alg.kwargs...))
+            eig_full!(A, DV, QRIteration(; balanced = $balanced_val, alg.kwargs...))
         )
         Base.@deprecate(
             eig_vals!(A, D, alg::$lapack_algtype),
-            eig_vals!(A, D, $algtype(; driver = LAPACK(), alg.kwargs...))
+            eig_vals!(A, D, QRIteration(; balanced = $balanced_val, alg.kwargs...))
         )
     end
 end
 Base.@deprecate(
     eig_full!(A, DV, alg::CUSOLVER_Simple),
-    eig_full!(A, DV, Simple(; driver = CUSOLVER(), alg.kwargs...))
+    eig_full!(A, DV, QRIteration(; driver = CUSOLVER(), alg.kwargs...))
 )
 Base.@deprecate(
     eig_vals!(A, D, alg::CUSOLVER_Simple),
-    eig_vals!(A, D, Simple(; driver = CUSOLVER(), alg.kwargs...))
+    eig_vals!(A, D, QRIteration(; driver = CUSOLVER(), alg.kwargs...))
 )

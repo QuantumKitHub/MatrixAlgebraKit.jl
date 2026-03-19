@@ -45,7 +45,7 @@ for T in (BLASFloats..., GenericFloats...)
         TestSuite.test_eigh(T, (m, m))
         if T ∈ BLASFloats
             LAPACK_EIGH_ALGS = (
-                MultipleRelativelyRobustRepresentations(),
+                RobustRepresentations(),
                 DivideAndConquer(),
                 QRIteration(),
                 Bisection(),

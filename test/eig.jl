@@ -3,7 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: Diagonal
-using MatrixAlgebraKit: TruncatedAlgorithm, diagview, norm
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview, norm, GS
 using CUDA, AMDGPU
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
@@ -20,7 +20,7 @@ for T in (BLASFloats..., GenericFloats...)
     if T ∈ BLASFloats
         if CUDA.functional()
             TestSuite.test_eig(CuMatrix{T}, (m, m))
-            TestSuite.test_eig_algs(CuMatrix{T}, (m, m), (Simple(),))
+            TestSuite.test_eig_algs(CuMatrix{T}, (m, m), (QRIteration(),))
             TestSuite.test_eig(Diagonal{T, CuVector{T}}, m)
             TestSuite.test_eig_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
         end
@@ -35,10 +35,10 @@ for T in (BLASFloats..., GenericFloats...)
     if !is_buildkite
         TestSuite.test_eig(T, (m, m))
         if T ∈ BLASFloats
-            LAPACK_EIG_ALGS = (Simple(), Expert())
+            LAPACK_EIG_ALGS = (QRIteration(), QRIteration(balanced = true))
             TestSuite.test_eig_algs(T, (m, m), LAPACK_EIG_ALGS)
         elseif T ∈ GenericFloats
-            GS_EIG_ALGS = (Simple(),)
+            GS_EIG_ALGS = (QRIteration(; driver = GS()),)
             TestSuite.test_eig_algs(T, (m, m), GS_EIG_ALGS)
         end
         AT = Diagonal{T, Vector{T}}
