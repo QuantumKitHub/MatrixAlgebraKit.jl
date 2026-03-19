@@ -63,6 +63,17 @@ initialize_output(::typeof(right_null!), A, alg::RightNullViaLQ) =
     initialize_output(lq_null!, A, alg.alg)
 initialize_output(::typeof(right_null!), A, alg::RightNullViaSVD) = nothing
 
+# DefaultAlgorithm intercepts
+# ---------------------------
+for f! in (:left_orth!, :right_orth!, :left_null!, :right_null!)
+    @eval function $f!(A, alg::DefaultAlgorithm)
+        return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+    @eval function $f!(A, out, alg::DefaultAlgorithm)
+        return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+end
+
 # Implementation of orth functions
 # --------------------------------
 left_orth!(A, VC, alg::AbstractAlgorithm) = left_orth!(A, VC, left_orth_alg(alg))

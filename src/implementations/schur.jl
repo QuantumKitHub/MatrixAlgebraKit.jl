@@ -38,6 +38,17 @@ function initialize_output(::typeof(schur_vals!), A::AbstractMatrix, ::AbstractA
     return vals
 end
 
+# DefaultAlgorithm intercepts
+# ---------------------------
+for f! in (:schur_full!, :schur_vals!)
+    @eval function $f!(A, alg::DefaultAlgorithm)
+        return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+    @eval function $f!(A, out, alg::DefaultAlgorithm)
+        return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+end
+
 # Implementation
 # --------------
 function schur_full!(A::AbstractMatrix, TZv, alg::LAPACK_EigAlgorithm)

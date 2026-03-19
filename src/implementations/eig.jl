@@ -76,6 +76,17 @@ function initialize_output(::typeof(eig_vals!), A::Diagonal, ::DiagonalAlgorithm
     return T <: Complex ? diagview(A) : similar(A, complex(T), size(A, 1))
 end
 
+# DefaultAlgorithm intercepts
+# ---------------------------
+for f! in (:eig_full!, :eig_vals!, :eig_trunc!, :eig_trunc_no_error!)
+    @eval function $f!(A, alg::DefaultAlgorithm)
+        return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+    @eval function $f!(A, out, alg::DefaultAlgorithm)
+        return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+end
+
 # Implementation
 # --------------
 function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)

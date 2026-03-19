@@ -43,6 +43,17 @@ function initialize_output(::typeof(right_polar!), A::AbstractMatrix, ::Abstract
     return (P, Wᴴ)
 end
 
+# DefaultAlgorithm intercepts
+# ---------------------------
+for f! in (:left_polar!, :right_polar!)
+    @eval function $f!(A, alg::DefaultAlgorithm)
+        return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+    @eval function $f!(A, out, alg::DefaultAlgorithm)
+        return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+end
+
 # Implementation via SVD
 # -----------------------
 function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
