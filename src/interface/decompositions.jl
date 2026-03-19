@@ -118,9 +118,8 @@ See also [`DivideAndConquer`](@ref) and [`QRIteration`](@ref).
 """
     QRIteration(; [driver], fixgauge = default_fixgauge(), balanced = false)
 
-Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
-the singular value decomposition of a general matrix, the non-Hermitian eigenvalue
-decomposition, or the Schur decomposition of a general matrix via QR iteration.
+Algorithm type for computing the eigenvalue, Schur or singular value decomposition of a matrix via QR iteration.
+
 
 For non-Hermitian eigenvalue decomposition and Schur decomposition, the `balanced`
 keyword argument can be used to enable balancing of the matrix before the QR iteration,
@@ -129,6 +128,7 @@ which can improve numerical accuracy for badly scaled matrices:
 - `balanced = true`: use the expert balanced driver (`geevx!`/`geesx!`)
 
 $_fixgauge_docs
+
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef QRIteration
@@ -165,7 +165,6 @@ $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef RobustRepresentations
-Base.@deprecate_binding MultipleRelativelyRobustRepresentations RobustRepresentations false
 
 """
     SVDViaPolar(; [driver], fixgauge = default_fixgauge(), [tol])
@@ -197,8 +196,6 @@ eigenvalue decomposition of a matrix.
 $_fixgauge_docs
 """
 @algdef LAPACK_Expert
-
-const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
 
 """
     GS_QRIteration()
@@ -246,21 +243,6 @@ $_fixgauge_docs
 """
 @algdef LAPACK_MultipleRelativelyRobustRepresentations
 
-const LAPACK_EighAlgorithm = Union{
-    LAPACK_QRIteration,
-    LAPACK_Bisection,
-    LAPACK_DivideAndConquer,
-    LAPACK_MultipleRelativelyRobustRepresentations,
-}
-
-const EighAlgorithms = Union{
-    RobustRepresentations,
-    DivideAndConquer,
-    QRIteration,
-    Bisection,
-    Jacobi,
-}
-
 """
     GLA_QRIteration(; fixgauge = default_fixgauge())
 
@@ -296,14 +278,6 @@ a general matrix using the Jacobi algorithm.
 $_fixgauge_docs
 """
 @algdef LAPACK_Jacobi
-
-const LAPACK_SVDAlgorithm = Union{
-    LAPACK_QRIteration,
-    LAPACK_Bisection,
-    LAPACK_DivideAndConquer,
-    LAPACK_Jacobi,
-    LAPACK_SafeDivideAndConquer,
-}
 
 # =========================
 # Polar decompositions
@@ -441,8 +415,6 @@ $_fixgauge_docs
 """
 @algdef CUSOLVER_Simple
 
-const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
-
 """
     CUSOLVER_DivideAndConquer(; fixgauge = default_fixgauge())
 
@@ -453,9 +425,6 @@ $_fixgauge_docs
 """
 @algdef CUSOLVER_DivideAndConquer
 
-const CUSOLVER_SVDAlgorithm = Union{
-    CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
-}
 
 # =========================
 # ROCSOLVER ALGORITHMS
@@ -508,28 +477,64 @@ $_fixgauge_docs
 """
 @algdef ROCSOLVER_DivideAndConquer
 
-const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 
 # Various consts and unions
 # -------------------------
-
-const GPU_Simple = Union{CUSOLVER_Simple}
-const GPU_EigAlgorithm = Union{GPU_Simple}
 const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
 const GPU_Bisection = Union{ROCSOLVER_Bisection}
-const GPU_EighAlgorithm = Union{
-    GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
-}
-const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
-
+const GPU_Simple = Union{CUSOLVER_Simple}
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
+const LAPACK_SVDAlgorithm = Union{
+    LAPACK_QRIteration,
+    LAPACK_Bisection,
+    LAPACK_DivideAndConquer,
+    LAPACK_Jacobi,
+    LAPACK_SafeDivideAndConquer,
+}
+const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
+const CUSOLVER_SVDAlgorithm = Union{
+    CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
+}
+const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
+const SVDAlgorithms = Union{
+    SafeDivideAndConquer,
+    DivideAndConquer,
+    QRIteration,
+    Bisection,
+    Jacobi,
+    SVDViaPolar,
+}
+
+const LAPACK_EighAlgorithm = Union{
+    LAPACK_QRIteration,
+    LAPACK_Bisection,
+    LAPACK_DivideAndConquer,
+    LAPACK_MultipleRelativelyRobustRepresentations,
+}
+const GPU_EighAlgorithm = Union{
+    GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
+}
+const EighAlgorithms = Union{
+    RobustRepresentations,
+    DivideAndConquer,
+    QRIteration,
+    Bisection,
+    Jacobi,
+}
+
+const SchurAlgorithms = Union{QRIteration}
+
+const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
+const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
+const GPU_EigAlgorithm = Union{GPU_Simple}
+const EigAlgorithms = Union{QRIteration, RobustRepresentations}
+
 const QRAlgorithms = Union{Householder, LAPACK_HouseholderQR, Native_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
 const LQAlgorithms = Union{Householder, LAPACK_HouseholderLQ, Native_HouseholderLQ, LQViaTransposedQR}
-const SVDAlgorithms = Union{SafeDivideAndConquer, DivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar}
 const PolarAlgorithms = Union{PolarViaSVD, PolarNewton}
 
 # ================================
