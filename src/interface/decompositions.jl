@@ -116,20 +116,23 @@ See also [`DivideAndConquer`](@ref) and [`QRIteration`](@ref).
 @algdef SafeDivideAndConquer
 
 """
-    QRIteration(; [driver], fixgauge = default_fixgauge(), balanced = false)
+    QRIteration(; [driver], fixgauge = default_fixgauge(), kwargs...)
 
 Algorithm type for computing the eigenvalue, Schur or singular value decomposition of a matrix via QR iteration.
 
+## Keyword arguments
 
-For non-Hermitian eigenvalue decomposition and Schur decomposition, the `balanced`
-keyword argument can be used to enable balancing of the matrix before the QR iteration,
-which can improve numerical accuracy for badly scaled matrices:
-- `balanced = false` (default): use the simple driver (`geev!`/`gees!`)
-- `balanced = true`: use the expert balanced driver (`geevx!`/`geesx!`)
+Various customizations are available, depending on the type of decomposition this algorithm is used for.
 
+For Schur decompositions, `expert = false` can be used to switch between `gees` and `geesx`.
+
+For non-Hermitian eigenvalue decompositions there is `permute = true` and `scale = true` to control whether
+or not to balance the input matrix before starting the QR iterations.
+
+For SVD and eigenvalue decompositions, there is residual freedom in the outputs that can be resolved.
 $_fixgauge_docs
 
-The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+In all cases, the optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef QRIteration
 
