@@ -35,7 +35,10 @@ for T in (BLASFloats..., GenericFloats...)
     if !is_buildkite
         TestSuite.test_eig(T, (m, m))
         if T ∈ BLASFloats
-            LAPACK_EIG_ALGS = (QRIteration(), QRIteration(balanced = true))
+            LAPACK_EIG_ALGS = (
+                QRIteration(),
+                QRIteration(scale = false), # to trigger geevx!
+            )
             TestSuite.test_eig_algs(T, (m, m), LAPACK_EIG_ALGS)
         elseif T ∈ GenericFloats
             GS_EIG_ALGS = (QRIteration(; driver = GS()),)

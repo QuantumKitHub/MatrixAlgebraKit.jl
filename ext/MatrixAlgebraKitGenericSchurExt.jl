@@ -9,10 +9,9 @@ using GenericSchur
 const GSFloat = Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}
 
 function MatrixAlgebraKit.default_eig_algorithm(
-        ::Type{T};
-        balanced::Bool = false, driver::Driver = GS(), kwargs...
+        ::Type{T}; driver::Driver = GS(), kwargs...
     ) where {T <: StridedMatrix{<:GSFloat}}
-    return QRIteration(; driver, balanced, kwargs...)
+    return QRIteration(; driver, kwargs...)
 end
 
 function geev!(::GS, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)

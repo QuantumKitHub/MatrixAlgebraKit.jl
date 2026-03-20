@@ -91,18 +91,16 @@ end
 #      IMPLEMENTATIONS
 # ==========================
 
-geev!(driver::Driver, args...; kwargs...) = throw(ArgumentError("$driver does not provide $f!"))
+geev!(driver::Driver, args...; kwargs...) = throw(ArgumentError("$driver does not provide `geev!`"))
 function geevx!(driver::Driver, A, Dd, V; kwargs...)
     @warn "$driver does not provide `geevx!`, falling back to `geev!`" maxlog = 1
-    return geev!(driver, A, Dd, V; kwargs...)
+    return geev!(driver, A, Dd, V)
 end
-_has_geevx!(::Driver) = false
 
 # LAPACK implementations
 for f! in (:geev!, :geevx!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
 end
-_has_geevx!(::LAPACK) = true
 
 # driver dispatch
 @inline qr_iteration_eig_full!(A, Dd, V; driver::Driver = DefaultDriver(), kwargs...) =
@@ -118,17 +116,17 @@ _has_geevx!(::LAPACK) = true
 # Implementation
 function qr_iteration_eig_full!(
         driver::Driver, A, Dd, V;
-        fixgauge::Bool = default_fixgauge(), balanced::Bool = _has_geevx!(driver), kwargs...
+        fixgauge::Bool = default_fixgauge(), scale::Bool = true, permute::Bool = true
     )
-    (balanced ? geevx! : geev!)(driver, A, Dd, V; kwargs...)
+    (scale & permute) ? geev!(driver, A, Dd, V) : geevx!(driver, A, Dd, V; scale, permute)
     fixgauge && gaugefix!(eig_full!, V)
     return Dd, V
 end
 function qr_iteration_eig_vals!(
         driver::Driver, A, D, V;
-        fixgauge::Bool = default_fixgauge(), balanced::Bool = _has_geevx!(driver), kwargs...
+        fixgauge::Bool = default_fixgauge(), scale::Bool = true, permute::Bool = true
     )
-    (balanced ? geevx! : geev!)(driver, A, D, V; kwargs...)
+    (scale & permute) ? geev!(driver, A, D, V) : geevx!(driver, A, D, V; scale, permute)
     return D
 end
 
@@ -188,15 +186,15 @@ end
 
 # Deprecations
 # ------------
-for (lapack_algtype, balanced_val) in ((:LAPACK_Simple, false), (:LAPACK_Expert, true))
+for lapack_algtype in (:LAPACK_Simple, :LAPACK_Expert)
     @eval begin
         Base.@deprecate(
             eig_full!(A, DV, alg::$lapack_algtype),
-            eig_full!(A, DV, QRIteration(; balanced = $balanced_val, alg.kwargs...))
+            eig_full!(A, DV, QRIteration(; alg.kwargs...))
         )
         Base.@deprecate(
             eig_vals!(A, D, alg::$lapack_algtype),
-            eig_vals!(A, D, QRIteration(; balanced = $balanced_val, alg.kwargs...))
+            eig_vals!(A, D, QRIteration(; alg.kwargs...))
         )
     end
 end

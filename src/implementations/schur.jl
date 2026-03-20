@@ -53,8 +53,10 @@ end
 #      IMPLEMENTATIONS
 # ==========================
 
-for f! in (:gees!, :geesx!)
-    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
+gees!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide `gees!`"))
+function geesx!(driver::Driver, A, Dd, V; kwargs...)
+    @warn "$driver does not provide `geesx!`, falling back to `gees!`" maxlog = 1
+    return gees!(driver, A, Dd, V)
 end
 
 # LAPACK implementations
@@ -74,13 +76,13 @@ end
     qr_iteration_schur_vals!(default_driver(QRIteration, A), A, Z, vals; kwargs...)
 
 # Implementation
-function qr_iteration_schur_full!(driver::Driver, A, T, Z, vals; balanced::Bool = false)
-    (balanced ? geesx! : gees!)(driver, A, Z, vals)
+function qr_iteration_schur_full!(driver::Driver, A, T, Z, vals; expert::Bool = false)
+    expert ? geesx!(driver, A, Z, vals) : gees!(driver, A, Z, vals)
     T === A || copy!(T, A)
     return T, Z, vals
 end
-function qr_iteration_schur_vals!(driver::Driver, A, Z, vals; balanced::Bool = false)
-    (balanced ? geesx! : gees!)(driver, A, Z, vals)
+function qr_iteration_schur_vals!(driver::Driver, A, Z, vals; expert::Bool = false)
+    expert ? geesx!(driver, A, Z, vals) : gees!(driver, A, Z, vals)
     return vals
 end
 
@@ -100,15 +102,15 @@ end
 
 # Deprecations
 # ------------
-for (lapack_algtype, balanced_val) in ((:LAPACK_Simple, false), (:LAPACK_Expert, true))
+for (lapack_algtype, expert_val) in ((:LAPACK_Simple, false), (:LAPACK_Expert, true))
     @eval begin
         Base.@deprecate(
             schur_full!(A, TZv, alg::$lapack_algtype),
-            schur_full!(A, TZv, QRIteration(; balanced = $balanced_val, alg.kwargs...))
+            schur_full!(A, TZv, QRIteration(; expert = $expert_val, alg.kwargs...))
         )
         Base.@deprecate(
             schur_vals!(A, vals, alg::$lapack_algtype),
-            schur_vals!(A, vals, QRIteration(; balanced = $balanced_val, alg.kwargs...))
+            schur_vals!(A, vals, QRIteration(; expert = $expert_val, alg.kwargs...))
         )
     end
 end

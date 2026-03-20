@@ -22,7 +22,7 @@ function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <
     return QRIteration(; kwargs...)
 end
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
-    return QRIteration(; balanced = false, kwargs...)
+    return QRIteration(; kwargs...)
 end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
     return DivideAndConquer(; kwargs...)
