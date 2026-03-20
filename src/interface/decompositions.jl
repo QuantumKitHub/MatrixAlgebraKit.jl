@@ -129,7 +129,7 @@ For Schur decompositions, `expert = false` can be used to switch between `gees` 
 For non-Hermitian eigenvalue decompositions there is `permute = true` and `scale = true` to control whether
 or not to balance the input matrix before starting the QR iterations.
 
-For SVD and eigenvalue decompositions, there is residual freedom in the outputs that can be resolved.
+For the singular value and eigenvalue decompositions, there is residual freedom in the outputs that can be resolved.
 $_fixgauge_docs
 
 In all cases, the optional `driver` keyword can be used to choose between different implementations of this algorithm.
