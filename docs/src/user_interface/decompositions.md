@@ -81,7 +81,7 @@ The following algorithms are available for the hermitian eigenvalue decompositio
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_EighAlgorithm
+Filter = t -> t isa Type && t <: MatrixAlgebraKit.EighAlgorithms
 ```
 
 ### Eigenvalue Decomposition
@@ -103,7 +103,7 @@ The following algorithms are available for the standard eigenvalue decomposition
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_EigAlgorithm
+Filter = t -> t isa Type && t <: MatrixAlgebraKit.EigAlgorithms
 ```
 
 ## Schur Decomposition
@@ -123,7 +123,7 @@ The following algorithms are available for the Schur decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_EigAlgorithm
+Filter = t -> t isa Type && t <: MatrixAlgebraKit.SchurAlgorithms
 ```
 
 ## Singular Value Decomposition

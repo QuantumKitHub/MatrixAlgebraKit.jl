@@ -447,6 +447,13 @@ left_orth_alg(alg::DiagonalAlgorithm) = LeftOrthViaQR(alg)
 left_orth_alg(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = LeftOrthViaSVD(alg)
 left_orth_alg(alg::TruncatedAlgorithm{<:DiagonalAlgorithm}) = LeftOrthViaSVD(alg)
 
+# TODO: remove deprecated
+left_orth_alg(alg::Union{LAPACK_HouseholderQR, Native_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}) =
+    LeftOrthViaQR(alg)
+left_orth_alg(alg::Union{GPU_SVDAlgorithm, LAPACK_SVDAlgorithm}) = LeftOrthViaSVD(alg)
+left_orth_alg(alg::TruncatedAlgorithm{<:Union{GPU_SVDAlgorithm, LAPACK_SVDAlgorithm}}) =
+    LeftOrthViaSVD(alg)
+
 """
     right_orth_alg(alg::AbstractAlgorithm) -> RightOrthAlgorithm
 
@@ -483,6 +490,12 @@ right_orth_alg(alg::SVDAlgorithms) = RightOrthViaSVD(alg)
 right_orth_alg(alg::DiagonalAlgorithm) = RightOrthViaLQ(alg)
 right_orth_alg(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = RightOrthViaSVD(alg)
 right_orth_alg(alg::TruncatedAlgorithm{<:DiagonalAlgorithm}) = RightOrthViaSVD(alg)
+
+right_orth_alg(alg::Union{LAPACK_HouseholderLQ, Native_HouseholderLQ}) =
+    RightOrthViaLQ(alg)
+right_orth_alg(alg::Union{GPU_SVDAlgorithm, LAPACK_SVDAlgorithm}) = RightOrthViaSVD(alg)
+right_orth_alg(alg::TruncatedAlgorithm{<:Union{GPU_SVDAlgorithm, LAPACK_SVDAlgorithm}}) =
+    RightOrthViaSVD(alg)
 
 """
     left_null_alg(alg::AbstractAlgorithm) -> LeftNullAlgorithm

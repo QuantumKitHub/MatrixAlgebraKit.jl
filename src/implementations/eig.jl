@@ -87,42 +87,60 @@ for f! in (:eig_full!, :eig_vals!, :eig_trunc!, :eig_trunc_no_error!)
     end
 end
 
-# Implementation
-# --------------
-function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
-    check_input(eig_full!, A, DV, alg)
-    D, V = DV
+# ==========================
+#      IMPLEMENTATIONS
+# ==========================
 
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa LAPACK_Simple
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
-        YALAPACK.geev!(A, D.diag, V)
-    else # alg isa LAPACK_Expert
-        YALAPACK.geevx!(A, D.diag, V; alg_kwargs...)
-    end
-
-    do_gauge_fix && (V = gaugefix!(eig_full!, V))
-
-    return D, V
+geev!(driver::Driver, args...; kwargs...) = throw(ArgumentError("$driver does not provide `geev!`"))
+function geevx!(driver::Driver, A, Dd, V; kwargs...)
+    @warn "$driver does not provide `geevx!`, falling back to `geev!`" maxlog = 1
+    return geev!(driver, A, Dd, V)
 end
 
-function eig_vals!(A::AbstractMatrix, D, alg::LAPACK_EigAlgorithm)
+# LAPACK implementations
+for f! in (:geev!, :geevx!)
+    @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
+end
+
+# driver dispatch
+@inline qr_iteration_eig_full!(A, Dd, V; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_iteration_eig_full!(driver, A, Dd, V; kwargs...)
+@inline qr_iteration_eig_vals!(A, D, V; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_iteration_eig_vals!(driver, A, D, V; kwargs...)
+
+@inline qr_iteration_eig_full!(::DefaultDriver, A, Dd, V; kwargs...) =
+    qr_iteration_eig_full!(default_driver(QRIteration, A), A, Dd, V; kwargs...)
+@inline qr_iteration_eig_vals!(::DefaultDriver, A, D, V; kwargs...) =
+    qr_iteration_eig_vals!(default_driver(QRIteration, A), A, D, V; kwargs...)
+
+# Implementation
+function qr_iteration_eig_full!(
+        driver::Driver, A, Dd, V;
+        fixgauge::Bool = default_fixgauge(), scale::Bool = true, permute::Bool = true
+    )
+    (scale & permute) ? geev!(driver, A, Dd, V) : geevx!(driver, A, Dd, V; scale, permute)
+    fixgauge && gaugefix!(eig_full!, V)
+    return Dd, V
+end
+function qr_iteration_eig_vals!(
+        driver::Driver, A, D, V;
+        fixgauge::Bool = default_fixgauge(), scale::Bool = true, permute::Bool = true
+    )
+    (scale & permute) ? geev!(driver, A, D, V) : geevx!(driver, A, D, V; scale, permute)
+    return D
+end
+
+# Top-level QRIteration dispatch
+function eig_full!(A::AbstractMatrix, DV, alg::QRIteration)
+    check_input(eig_full!, A, DV, alg)
+    D, V = DV
+    qr_iteration_eig_full!(A, diagview(D), V; alg.kwargs...)
+    return D, V
+end
+function eig_vals!(A::AbstractMatrix, D, alg::QRIteration)
     check_input(eig_vals!, A, D, alg)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
-
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa LAPACK_Simple
-        isempty(alg_kwargs) ||
-            throw(ArgumentError("invalid keyword arguments for LAPACK_Simple"))
-        YALAPACK.geev!(A, D, V)
-    else # alg isa LAPACK_Expert
-        YALAPACK.geevx!(A, D, V; alg_kwargs...)
-    end
-
+    qr_iteration_eig_vals!(A, D, V; alg.kwargs...)
     return D
 end
 
@@ -166,37 +184,25 @@ function eig_vals!(A::Diagonal, D::AbstractVector, alg::DiagonalAlgorithm)
     return D
 end
 
-# GPU logic
-# ---------
-_gpu_geev!(A, D, V) = throw(MethodError(_gpu_geev!, (A, D, V)))
-
-function eig_full!(A::AbstractMatrix, DV, alg::GPU_EigAlgorithm)
-    check_input(eig_full!, A, DV, alg)
-    D, V = DV
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_Simple
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_Simple"
-        _gpu_geev!(A, D.diag, V)
+# Deprecations
+# ------------
+for lapack_algtype in (:LAPACK_Simple, :LAPACK_Expert)
+    @eval begin
+        Base.@deprecate(
+            eig_full!(A, DV, alg::$lapack_algtype),
+            eig_full!(A, DV, QRIteration(; alg.kwargs...))
+        )
+        Base.@deprecate(
+            eig_vals!(A, D, alg::$lapack_algtype),
+            eig_vals!(A, D, QRIteration(; alg.kwargs...))
+        )
     end
-
-    do_gauge_fix && (V = gaugefix!(eig_full!, V))
-
-    return D, V
 end
-
-function eig_vals!(A::AbstractMatrix, D, alg::GPU_EigAlgorithm)
-    check_input(eig_vals!, A, D, alg)
-    V = similar(A, complex(eltype(A)), (size(A, 1), 0))
-
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_Simple
-        isempty(alg_kwargs) || @warn "invalid keyword arguments for GPU_Simple"
-        _gpu_geev!(A, D, V)
-    end
-
-    return D
-end
+Base.@deprecate(
+    eig_full!(A, DV, alg::CUSOLVER_Simple),
+    eig_full!(A, DV, QRIteration(; driver = CUSOLVER(), alg.kwargs...))
+)
+Base.@deprecate(
+    eig_vals!(A, D, alg::CUSOLVER_Simple),
+    eig_vals!(A, D, QRIteration(; driver = CUSOLVER(), alg.kwargs...))
+)

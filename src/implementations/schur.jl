@@ -49,35 +49,68 @@ for f! in (:schur_full!, :schur_vals!)
     end
 end
 
+# ==========================
+#      IMPLEMENTATIONS
+# ==========================
+
+gees!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide `gees!`"))
+function geesx!(driver::Driver, A, Dd, V; kwargs...)
+    @warn "$driver does not provide `geesx!`, falling back to `gees!`" maxlog = 1
+    return gees!(driver, A, Dd, V)
+end
+
+# LAPACK implementations
+for f! in (:gees!, :geesx!)
+    @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
+end
+
+# driver dispatch
+@inline qr_iteration_schur_full!(A, T, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_iteration_schur_full!(driver, A, T, Z, vals; kwargs...)
+@inline qr_iteration_schur_vals!(A, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_iteration_schur_vals!(driver, A, Z, vals; kwargs...)
+
+@inline qr_iteration_schur_full!(::DefaultDriver, A, T, Z, vals; kwargs...) =
+    qr_iteration_schur_full!(default_driver(QRIteration, A), A, T, Z, vals; kwargs...)
+@inline qr_iteration_schur_vals!(::DefaultDriver, A, Z, vals; kwargs...) =
+    qr_iteration_schur_vals!(default_driver(QRIteration, A), A, Z, vals; kwargs...)
+
 # Implementation
-# --------------
-function schur_full!(A::AbstractMatrix, TZv, alg::LAPACK_EigAlgorithm)
-    check_input(schur_full!, A, TZv, alg)
-    T, Z, vals = TZv
-    if alg isa LAPACK_Simple
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple Schur (gees) does not accept any keyword arguments"))
-        YALAPACK.gees!(A, Z, vals)
-    else # alg isa LAPACK_Expert
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Expert Schur (geesx) does not accept any keyword arguments"))
-        YALAPACK.geesx!(A, Z, vals)
-    end
+function qr_iteration_schur_full!(driver::Driver, A, T, Z, vals; expert::Bool = false)
+    expert ? geesx!(driver, A, Z, vals) : gees!(driver, A, Z, vals)
     T === A || copy!(T, A)
     return T, Z, vals
 end
+function qr_iteration_schur_vals!(driver::Driver, A, Z, vals; expert::Bool = false)
+    expert ? geesx!(driver, A, Z, vals) : gees!(driver, A, Z, vals)
+    return vals
+end
 
-function schur_vals!(A::AbstractMatrix, vals, alg::LAPACK_EigAlgorithm)
+# Top-level QRIteration dispatch
+function schur_full!(A::AbstractMatrix, TZv, alg::QRIteration)
+    check_input(schur_full!, A, TZv, alg)
+    T, Z, vals = TZv
+    qr_iteration_schur_full!(A, T, Z, vals; alg.kwargs...)
+    return T, Z, vals
+end
+function schur_vals!(A::AbstractMatrix, vals, alg::QRIteration)
     check_input(schur_vals!, A, vals, alg)
     Z = similar(A, eltype(A), (size(A, 1), 0))
-    if alg isa LAPACK_Simple
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple (gees) does not accept any keyword arguments"))
-        YALAPACK.gees!(A, Z, vals)
-    else # alg isa LAPACK_Expert
-        isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Expert (geesx) does not accept any keyword arguments"))
-        YALAPACK.geesx!(A, Z, vals)
-    end
+    qr_iteration_schur_vals!(A, Z, vals; alg.kwargs...)
     return vals
+end
+
+# Deprecations
+# ------------
+for (lapack_algtype, expert_val) in ((:LAPACK_Simple, false), (:LAPACK_Expert, true))
+    @eval begin
+        Base.@deprecate(
+            schur_full!(A, TZv, alg::$lapack_algtype),
+            schur_full!(A, TZv, QRIteration(; expert = $expert_val, alg.kwargs...))
+        )
+        Base.@deprecate(
+            schur_vals!(A, vals, alg::$lapack_algtype),
+            schur_vals!(A, vals, QRIteration(; expert = $expert_val, alg.kwargs...))
+        )
+    end
 end

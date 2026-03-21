@@ -88,7 +88,7 @@ end
 """
     DivideAndConquer(; [driver], fixgauge = default_fixgauge())
 
-Algorithm type to denote the algorithm for computing the eigenvalue decomposition of a Hermitian matrix,
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
 or the singular value decomposition of a general matrix using the divide-and-conquer algorithm.
 
 $_fixgauge_docs
@@ -116,21 +116,31 @@ See also [`DivideAndConquer`](@ref) and [`QRIteration`](@ref).
 @algdef SafeDivideAndConquer
 
 """
-    QRIteration(; [driver], fixgauge = default_fixgauge())
+    QRIteration(; [driver], fixgauge = default_fixgauge(), kwargs...)
 
-Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
-or the singular value decomposition of a general matrix via QR iteration.
+Algorithm type for computing the eigenvalue, Schur or singular value decomposition of a matrix via QR iteration.
 
+## Keyword arguments
+
+Various customizations are available, depending on the type of decomposition this algorithm is used for.
+
+For Schur decompositions, `expert = false` can be used to switch between `gees` and `geesx`.
+
+For non-Hermitian eigenvalue decompositions there is `permute = true` and `scale = true` to control whether
+or not to balance the input matrix before starting the QR iterations.
+
+For the singular value and eigenvalue decompositions, there is residual freedom in the outputs that can be resolved.
 $_fixgauge_docs
-The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+
+In all cases, the optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef QRIteration
 
 """
     Bisection(; [driver], fixgauge = default_fixgauge())
 
-Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
-or the singular value decomposition of a general matrix via the bisection algorithm.
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix
+via the bisection algorithm, or the singular value decomposition of a general matrix.
 
 $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
@@ -140,12 +150,24 @@ The optional `driver` keyword can be used to choose between different implementa
 """
     Jacobi(; [driver], fixgauge = default_fixgauge())
 
-Algorithm type for computing the singular value decomposition of a general matrix using the Jacobi algorithm.
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the Jacobi algorithm.
 
 $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef Jacobi
+
+"""
+    RobustRepresentations(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix
+using the Multiple Relatively Robust Representations algorithm.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef RobustRepresentations
 
 """
     SVDViaPolar(; [driver], fixgauge = default_fixgauge(), [tol])
@@ -160,13 +182,11 @@ The optional `driver` keyword can be used to choose between different implementa
 """
 @algdef SVDViaPolar
 
-# General Eigenvalue Decomposition
-# -------------------------------
 """
     LAPACK_Simple(; fixgauge = default_fixgauge())
 
-Algorithm type to denote the simple LAPACK driver for computing the Schur or non-Hermitian
-eigenvalue decomposition of a matrix.
+Algorithm type to denote the simple LAPACK driver for computing the Schur or non-Hermitian eigenvalue decomposition of a matrix.
+
 $_fixgauge_docs
 """
 @algdef LAPACK_Simple
@@ -179,8 +199,6 @@ eigenvalue decomposition of a matrix.
 $_fixgauge_docs
 """
 @algdef LAPACK_Expert
-
-const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
 
 """
     GS_QRIteration()
@@ -228,13 +246,6 @@ $_fixgauge_docs
 """
 @algdef LAPACK_MultipleRelativelyRobustRepresentations
 
-const LAPACK_EighAlgorithm = Union{
-    LAPACK_QRIteration,
-    LAPACK_Bisection,
-    LAPACK_DivideAndConquer,
-    LAPACK_MultipleRelativelyRobustRepresentations,
-}
-
 """
     GLA_QRIteration(; fixgauge = default_fixgauge())
 
@@ -270,14 +281,6 @@ a general matrix using the Jacobi algorithm.
 $_fixgauge_docs
 """
 @algdef LAPACK_Jacobi
-
-const LAPACK_SVDAlgorithm = Union{
-    LAPACK_QRIteration,
-    LAPACK_Bisection,
-    LAPACK_DivideAndConquer,
-    LAPACK_Jacobi,
-    LAPACK_SafeDivideAndConquer,
-}
 
 # =========================
 # Polar decompositions
@@ -415,8 +418,6 @@ $_fixgauge_docs
 """
 @algdef CUSOLVER_Simple
 
-const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
-
 """
     CUSOLVER_DivideAndConquer(; fixgauge = default_fixgauge())
 
@@ -427,9 +428,6 @@ $_fixgauge_docs
 """
 @algdef CUSOLVER_DivideAndConquer
 
-const CUSOLVER_SVDAlgorithm = Union{
-    CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
-}
 
 # =========================
 # ROCSOLVER ALGORITHMS
@@ -482,28 +480,66 @@ $_fixgauge_docs
 """
 @algdef ROCSOLVER_DivideAndConquer
 
-const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 
 # Various consts and unions
 # -------------------------
-
-const GPU_Simple = Union{CUSOLVER_Simple}
-const GPU_EigAlgorithm = Union{GPU_Simple}
+# TODO: Deprecated constants, remove in next breaking release
 const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
 const GPU_Bisection = Union{ROCSOLVER_Bisection}
-const GPU_EighAlgorithm = Union{
-    GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
-}
-const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
-
+const GPU_Simple = Union{CUSOLVER_Simple}
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
-const QRAlgorithms = Union{Householder, LAPACK_HouseholderQR, Native_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
-const LQAlgorithms = Union{Householder, LAPACK_HouseholderLQ, Native_HouseholderLQ, LQViaTransposedQR}
-const SVDAlgorithms = Union{SafeDivideAndConquer, DivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar}
+const LAPACK_SVDAlgorithm = Union{
+    LAPACK_QRIteration,
+    LAPACK_Bisection,
+    LAPACK_DivideAndConquer,
+    LAPACK_Jacobi,
+    LAPACK_SafeDivideAndConquer,
+}
+const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
+const CUSOLVER_SVDAlgorithm = Union{
+    CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
+}
+const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
+
+const LAPACK_EighAlgorithm = Union{
+    LAPACK_QRIteration,
+    LAPACK_Bisection,
+    LAPACK_DivideAndConquer,
+    LAPACK_MultipleRelativelyRobustRepresentations,
+}
+const GPU_EighAlgorithm = Union{
+    GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
+}
+
+const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
+const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
+const GPU_EigAlgorithm = Union{GPU_Simple}
+
+
+# List of available algorithms - for docs and convenience purposes
+const SVDAlgorithms = Union{
+    SafeDivideAndConquer,
+    DivideAndConquer,
+    QRIteration,
+    Bisection,
+    Jacobi,
+    SVDViaPolar,
+}
+const EighAlgorithms = Union{
+    RobustRepresentations,
+    DivideAndConquer,
+    QRIteration,
+    Bisection,
+    Jacobi,
+}
+const SchurAlgorithms = Union{QRIteration}
+const EigAlgorithms = Union{QRIteration, RobustRepresentations}
+const QRAlgorithms = Union{Householder}
+const LQAlgorithms = Union{Householder, LQViaTransposedQR}
 const PolarAlgorithms = Union{PolarViaSVD, PolarNewton}
 
 # ================================

@@ -19,8 +19,8 @@ for T in (BLASFloats..., GenericFloats...)
     if T ∈ BLASFloats
         if CUDA.functional()
             CUSOLVER_EIGH_ALGS = (
-                CUSOLVER_Jacobi(),
-                CUSOLVER_DivideAndConquer(),
+                Jacobi(),
+                DivideAndConquer(),
             )
             TestSuite.test_eigh(CuMatrix{T}, (m, m))
             TestSuite.test_eigh_algs(CuMatrix{T}, (m, m), CUSOLVER_EIGH_ALGS)
@@ -29,10 +29,10 @@ for T in (BLASFloats..., GenericFloats...)
         end
         if AMDGPU.functional()
             ROCSOLVER_EIGH_ALGS = (
-                ROCSOLVER_Jacobi(),
-                ROCSOLVER_DivideAndConquer(),
-                ROCSOLVER_QRIteration(),
-                ROCSOLVER_Bisection(),
+                Jacobi(),
+                DivideAndConquer(),
+                QRIteration(),
+                Bisection(),
             )
             # see https://github.com/JuliaGPU/AMDGPU.jl/issues/837
             TestSuite.test_eigh(ROCMatrix{T}, (m, m); test_trunc = false)
@@ -45,14 +45,14 @@ for T in (BLASFloats..., GenericFloats...)
         TestSuite.test_eigh(T, (m, m))
         if T ∈ BLASFloats
             LAPACK_EIGH_ALGS = (
-                LAPACK_MultipleRelativelyRobustRepresentations(),
-                LAPACK_DivideAndConquer(),
-                LAPACK_QRIteration(),
-                LAPACK_Bisection(),
+                RobustRepresentations(),
+                DivideAndConquer(),
+                QRIteration(),
+                Bisection(),
             )
             TestSuite.test_eigh_algs(T, (m, m), LAPACK_EIGH_ALGS)
         elseif T ∈ GenericFloats
-            GLA_EIGH_ALGS = (GLA_QRIteration(),)
+            GLA_EIGH_ALGS = (QRIteration(),)
             TestSuite.test_eigh_algs(T, (m, m), GLA_EIGH_ALGS)
         end
         AT = Diagonal{T, Vector{T}}

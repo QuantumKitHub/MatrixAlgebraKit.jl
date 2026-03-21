@@ -212,6 +212,13 @@ Driver to select a native implementation in MatrixAlgebraKit as the implementati
 """
 struct Native <: Driver end
 
+"""
+    GS <: Driver
+
+Driver to select GenericSchur.jl as the implementation strategy.
+"""
+struct GS <: Driver end
+
 # In order to avoid amibiguities, this method is implemented in a tiered way
 # default_driver(alg, A) -> default_driver(typeof(alg), typeof(A))
 # default_driver(Talg, TA) -> default_driver(TA)

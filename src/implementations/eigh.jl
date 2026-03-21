@@ -95,48 +95,70 @@ for f! in (:eigh_full!, :eigh_vals!, :eigh_trunc!, :eigh_trunc_no_error!)
     end
 end
 
-# Implementation
-# --------------
-function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
-    check_input(eigh_full!, A, DV, alg)
-    D, V = DV
-    Dd = D.diag
+# ==========================
+#      IMPLEMENTATIONS
+# ==========================
 
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa LAPACK_MultipleRelativelyRobustRepresentations
-        YALAPACK.heevr!(A, Dd, V; alg_kwargs...)
-    elseif alg isa LAPACK_DivideAndConquer
-        YALAPACK.heevd!(A, Dd, V; alg_kwargs...)
-    elseif alg isa LAPACK_Simple
-        YALAPACK.heev!(A, Dd, V; alg_kwargs...)
-    else # alg isa LAPACK_Expert
-        YALAPACK.heevx!(A, Dd, V; alg_kwargs...)
-    end
-
-    do_gauge_fix && (V = gaugefix!(eigh_full!, V))
-
-    return D, V
+for f! in (:heevr!, :heevd!, :heev!, :heevx!, :heevj!)
+    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
 end
 
-function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
-    check_input(eigh_vals!, A, D, alg)
-    V = similar(A, (size(A, 1), 0))
+# LAPACK implementations
+for f! in (:heevr!, :heevd!, :heev!, :heevx!)
+    @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
+end
 
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
+for (f, f_lapack!, Alg) in (
+        (:mrrr, :heevr!, :RobustRepresentations),
+        (:divide_and_conquer, :heevd!, :DivideAndConquer),
+        (:qr_iteration, :heev!, :QRIteration),
+        (:bisection, :heevx!, :Bisection),
+        (:jacobi, :heevj!, :Jacobi),
+    )
+    f_eigh_full! = Symbol(f, :_eigh_full!)
+    f_eigh_vals! = Symbol(f, :_eigh_vals!)
 
-    if alg isa LAPACK_MultipleRelativelyRobustRepresentations
-        YALAPACK.heevr!(A, D, V; alg_kwargs...)
-    elseif alg isa LAPACK_DivideAndConquer
-        YALAPACK.heevd!(A, D, V; alg_kwargs...)
-    elseif alg isa LAPACK_QRIteration # == LAPACK_Simple
-        YALAPACK.heev!(A, D, V; alg_kwargs...)
-    else # alg isa LAPACK_Bisection == LAPACK_Expert
-        YALAPACK.heevx!(A, D, V; alg_kwargs...)
+    # MatrixAlgebraKit wrappers
+    @eval begin
+        function eigh_full!(A::AbstractMatrix, DV, alg::$Alg)
+            check_input(eigh_full!, A, DV, alg)
+            D, V = DV
+            Dd, V = $f_eigh_full!(A, D.diag, V; alg.kwargs...)
+            return D, V
+        end
+        function eigh_vals!(A::AbstractMatrix, D, alg::$Alg)
+            check_input(eigh_vals!, A, D, alg)
+            V = similar(A, (size(A, 1), 0))
+            $f_eigh_vals!(A, D, V; alg.kwargs...)
+            return D
+        end
     end
 
-    return D
+    # driver dispatch
+    @eval begin
+        @inline $f_eigh_full!(A, Dd, V; driver::Driver = DefaultDriver(), kwargs...) =
+            $f_eigh_full!(driver, A, Dd, V; kwargs...)
+        @inline $f_eigh_vals!(A, D, V; driver::Driver = DefaultDriver(), kwargs...) =
+            $f_eigh_vals!(driver, A, D, V; kwargs...)
+
+        @inline $f_eigh_full!(::DefaultDriver, A, Dd, V; kwargs...) =
+            $f_eigh_full!(default_driver($Alg, A), A, Dd, V; kwargs...)
+        @inline $f_eigh_vals!(::DefaultDriver, A, D, V; kwargs...) =
+            $f_eigh_vals!(default_driver($Alg, A), A, D, V; kwargs...)
+    end
+
+    # Implementation
+    @eval begin
+        function $f_eigh_full!(driver::Driver, A, Dd, V; fixgauge::Bool = default_fixgauge(), kwargs...)
+            $f_lapack!(driver, A, Dd, V; kwargs...)
+            fixgauge && gaugefix!(eigh_full!, V)
+            return Dd, V
+        end
+        function $f_eigh_vals!(driver::Driver, A, D, V; fixgauge::Bool = default_fixgauge(), kwargs...)
+            $f_lapack!(driver, A, D, V; kwargs...)
+            return D
+        end
+    end
 end
 
 function eigh_trunc!(A, DV, alg::TruncatedAlgorithm)
@@ -182,59 +204,53 @@ function eigh_vals!(A::Diagonal, D, alg::DiagonalAlgorithm)
     return D
 end
 
-# GPU logic
-# ---------
-_gpu_heevj!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) =
-    throw(MethodError(_gpu_heevj!, (A, Dd, V)))
-_gpu_heevd!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) =
-    throw(MethodError(_gpu_heevd!, (A, Dd, V)))
-_gpu_heev!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) =
-    throw(MethodError(_gpu_heev!, (A, Dd, V)))
-_gpu_heevx!(A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...) =
-    throw(MethodError(_gpu_heevx!, (A, Dd, V)))
-
-function eigh_full!(A::AbstractMatrix, DV, alg::GPU_EighAlgorithm)
-    check_input(eigh_full!, A, DV, alg)
-    D, V = DV
-    Dd = D.diag
-
-    do_gauge_fix = get(alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_Jacobi
-        _gpu_heevj!(A, Dd, V; alg_kwargs...)
-    elseif alg isa GPU_DivideAndConquer
-        _gpu_heevd!(A, Dd, V; alg_kwargs...)
-    elseif alg isa GPU_QRIteration # alg isa GPU_QRIteration == GPU_Simple
-        _gpu_heev!(A, Dd, V; alg_kwargs...)
-    elseif alg isa GPU_Bisection # alg isa GPU_Bisection == GPU_Expert
-        _gpu_heevx!(A, Dd, V; alg_kwargs...)
-    else
-        throw(ArgumentError("Unsupported eigh algorithm"))
+# Deprecations
+# ------------
+Base.@deprecate(
+    eigh_full!(A, DV, alg::LAPACK_MultipleRelativelyRobustRepresentations),
+    eigh_full!(A, DV, RobustRepresentations(; driver = LAPACK(), alg.kwargs...))
+)
+Base.@deprecate(
+    eigh_vals!(A, D, alg::LAPACK_MultipleRelativelyRobustRepresentations),
+    eigh_vals!(A, D, RobustRepresentations(; driver = LAPACK(), alg.kwargs...))
+)
+for algtype in (:DivideAndConquer, :QRIteration, :Bisection)
+    lapack_algtype = Symbol(:LAPACK_, algtype)
+    @eval begin
+        Base.@deprecate(
+            eigh_full!(A, DV, alg::$lapack_algtype),
+            eigh_full!(A, DV, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            eigh_vals!(A, D, alg::$lapack_algtype),
+            eigh_vals!(A, D, $algtype(; driver = LAPACK(), alg.kwargs...))
+        )
     end
-
-    do_gauge_fix && (V = gaugefix!(eigh_full!, V))
-
-    return D, V
 end
-
-function eigh_vals!(A::AbstractMatrix, D, alg::GPU_EighAlgorithm)
-    check_input(eigh_vals!, A, D, alg)
-    V = similar(A, (size(A, 1), 0))
-
-    alg_kwargs = Base.structdiff(alg.kwargs, NamedTuple{(:fixgauge,)})
-
-    if alg isa GPU_Jacobi
-        _gpu_heevj!(A, D, V; alg_kwargs...)
-    elseif alg isa GPU_DivideAndConquer
-        _gpu_heevd!(A, D, V; alg_kwargs...)
-    elseif alg isa GPU_QRIteration
-        _gpu_heev!(A, D, V; alg_kwargs...)
-    elseif alg isa GPU_Bisection
-        _gpu_heevx!(A, D, V; alg_kwargs...)
-    else
-        throw(ArgumentError("Unsupported eigh algorithm"))
+for (algtype, newtype, drivertype) in (
+        (:CUSOLVER_DivideAndConquer, :DivideAndConquer, :CUSOLVER),
+        (:CUSOLVER_Jacobi, :Jacobi, :CUSOLVER),
+        (:ROCSOLVER_DivideAndConquer, :DivideAndConquer, :ROCSOLVER),
+        (:ROCSOLVER_QRIteration, :QRIteration, :ROCSOLVER),
+        (:ROCSOLVER_Bisection, :Bisection, :ROCSOLVER),
+        (:ROCSOLVER_Jacobi, :Jacobi, :ROCSOLVER),
+    )
+    @eval begin
+        Base.@deprecate(
+            eigh_full!(A, DV, alg::$algtype),
+            eigh_full!(A, DV, $newtype(; driver = $drivertype(), alg.kwargs...))
+        )
+        Base.@deprecate(
+            eigh_vals!(A, D, alg::$algtype),
+            eigh_vals!(A, D, $newtype(; driver = $drivertype(), alg.kwargs...))
+        )
     end
-
-    return D
 end
+Base.@deprecate(
+    eigh_full!(A, DV, alg::GLA_QRIteration),
+    eigh_full!(A, DV, QRIteration(; driver = GLA(), alg.kwargs...))
+)
+Base.@deprecate(
+    eigh_vals!(A, D, alg::GLA_QRIteration),
+    eigh_vals!(A, D, QRIteration(; driver = GLA(), alg.kwargs...))
+)

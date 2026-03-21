@@ -2,8 +2,8 @@ module MatrixAlgebraKitGenericLinearAlgebraExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, one!, zero!, default_fixgauge
-using MatrixAlgebraKit: GLA
-import MatrixAlgebraKit: gesvd!
+using MatrixAlgebraKit: GLA, Driver
+import MatrixAlgebraKit: gesvd!, heev!
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
@@ -11,8 +11,13 @@ const GlaFloat = Union{BigFloat, Complex{BigFloat}}
 const GlaStridedVecOrMatrix{T <: GlaFloat} = Union{StridedVector{T}, StridedMatrix{T}}
 MatrixAlgebraKit.default_driver(::Type{<:QRIteration}, ::Type{TA}) where {TA <: GlaStridedVecOrMatrix} = GLA()
 
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: GlaStridedVecOrMatrix}
-    return QRIteration(; kwargs...)
+MatrixAlgebraKit.supports_svd_full(::GLA, f::Symbol) = f === :qr_iteration
+
+function MatrixAlgebraKit.default_svd_algorithm(
+        ::Type{T};
+        driver::Driver = GLA(), kwargs...
+    ) where {T <: GlaStridedVecOrMatrix}
+    return QRIteration(; driver, kwargs...)
 end
 
 function gesvd!(::GLA, A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...)
@@ -32,20 +37,20 @@ function gesvd!(::GLA, A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, 
     return S, U, Vᴴ
 end
 
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: GlaStridedVecOrMatrix}
-    return GLA_QRIteration(; kwargs...)
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; driver::Driver = GLA(), kwargs...) where {T <: GlaStridedVecOrMatrix}
+    return QRIteration(; driver, kwargs...)
 end
 
-MatrixAlgebraKit.initialize_output(::typeof(eigh_full!), A::AbstractMatrix, ::GLA_QRIteration) = (nothing, nothing)
-MatrixAlgebraKit.initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::GLA_QRIteration) = nothing
-
-function MatrixAlgebraKit.eigh_full!(A::AbstractMatrix, DV, ::GLA_QRIteration)
-    eigval, eigvec = eigen!(Hermitian(A); sortby = real)
-    return Diagonal(eigval::AbstractVector{real(eltype(A))}), eigvec::AbstractMatrix{eltype(A)}
-end
-
-function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix, D, ::GLA_QRIteration)
-    return eigvals!(Hermitian(A); sortby = real)
+function heev!(::GLA, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)
+    if length(V) > 0
+        eigval, eigvec = eigen!(Hermitian(A); sortby = real)
+        copyto!(Dd, eigval)
+        copyto!(V, eigvec)
+    else
+        eigval = eigvals!(Hermitian(A); sortby = real)
+        copyto!(Dd, eigval)
+    end
+    return Dd, V
 end
 
 function MatrixAlgebraKit.householder_qr!(
