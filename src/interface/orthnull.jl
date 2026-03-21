@@ -491,7 +491,7 @@ right_orth_alg(alg::DiagonalAlgorithm) = RightOrthViaLQ(alg)
 right_orth_alg(alg::TruncatedAlgorithm{<:SVDAlgorithms}) = RightOrthViaSVD(alg)
 right_orth_alg(alg::TruncatedAlgorithm{<:DiagonalAlgorithm}) = RightOrthViaSVD(alg)
 
-right_orth_alg(alg::Union{LAPACK_HouseholderLQ, Native_HouseholderLQ, LQViaTransposedQR}) =
+right_orth_alg(alg::Union{LAPACK_HouseholderLQ, Native_HouseholderLQ}) =
     RightOrthViaLQ(alg)
 right_orth_alg(alg::Union{GPU_SVDAlgorithm, LAPACK_SVDAlgorithm}) = RightOrthViaSVD(alg)
 right_orth_alg(alg::TruncatedAlgorithm{<:Union{GPU_SVDAlgorithm, LAPACK_SVDAlgorithm}}) =
