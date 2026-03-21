@@ -483,6 +483,7 @@ $_fixgauge_docs
 
 # Various consts and unions
 # -------------------------
+# TODO: Deprecated constants, remove in next breaking release
 const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
@@ -503,14 +504,6 @@ const CUSOLVER_SVDAlgorithm = Union{
     CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
 }
 const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
-const SVDAlgorithms = Union{
-    SafeDivideAndConquer,
-    DivideAndConquer,
-    QRIteration,
-    Bisection,
-    Jacobi,
-    SVDViaPolar,
-}
 
 const LAPACK_EighAlgorithm = Union{
     LAPACK_QRIteration,
@@ -521,6 +514,21 @@ const LAPACK_EighAlgorithm = Union{
 const GPU_EighAlgorithm = Union{
     GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
 }
+
+const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
+const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
+const GPU_EigAlgorithm = Union{GPU_Simple}
+
+
+# List of available algorithms - for docs and convenience purposes
+const SVDAlgorithms = Union{
+    SafeDivideAndConquer,
+    DivideAndConquer,
+    QRIteration,
+    Bisection,
+    Jacobi,
+    SVDViaPolar,
+}
 const EighAlgorithms = Union{
     RobustRepresentations,
     DivideAndConquer,
@@ -528,16 +536,10 @@ const EighAlgorithms = Union{
     Bisection,
     Jacobi,
 }
-
 const SchurAlgorithms = Union{QRIteration}
-
-const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
-const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
-const GPU_EigAlgorithm = Union{GPU_Simple}
 const EigAlgorithms = Union{QRIteration, RobustRepresentations}
-
-const QRAlgorithms = Union{Householder, LAPACK_HouseholderQR, Native_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
-const LQAlgorithms = Union{Householder, LAPACK_HouseholderLQ, Native_HouseholderLQ, LQViaTransposedQR}
+const QRAlgorithms = Union{Householder}
+const LQAlgorithms = Union{Householder, LQViaTransposedQR}
 const PolarAlgorithms = Union{PolarViaSVD, PolarNewton}
 
 # ================================
