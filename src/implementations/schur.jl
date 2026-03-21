@@ -65,23 +65,25 @@ for f! in (:gees!, :geesx!)
 end
 
 # driver dispatch
-@inline qr_iteration_schur_full!(A, T, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
-    qr_iteration_schur_full!(driver, A, T, Z, vals; kwargs...)
-@inline qr_iteration_schur_vals!(A, Z, vals; driver::Driver = DefaultDriver(), kwargs...) =
-    qr_iteration_schur_vals!(driver, A, Z, vals; kwargs...)
+@inline schur_full_qr_iteration!(A, TZv; driver::Driver = DefaultDriver(), kwargs...) =
+    schur_full_qr_iteration!(driver, A, TZv; kwargs...)
+@inline schur_vals_qr_iteration!(A, vals; driver::Driver = DefaultDriver(), kwargs...) =
+    schur_vals_qr_iteration!(driver, A, vals; kwargs...)
 
-@inline qr_iteration_schur_full!(::DefaultDriver, A, T, Z, vals; kwargs...) =
-    qr_iteration_schur_full!(default_driver(QRIteration, A), A, T, Z, vals; kwargs...)
-@inline qr_iteration_schur_vals!(::DefaultDriver, A, Z, vals; kwargs...) =
-    qr_iteration_schur_vals!(default_driver(QRIteration, A), A, Z, vals; kwargs...)
+@inline schur_full_qr_iteration!(::DefaultDriver, A, TZv; kwargs...) =
+    schur_full_qr_iteration!(default_driver(QRIteration, A), A, TZv; kwargs...)
+@inline schur_vals_qr_iteration!(::DefaultDriver, A, vals; kwargs...) =
+    schur_vals_qr_iteration!(default_driver(QRIteration, A), A, vals; kwargs...)
 
 # Implementation
-function qr_iteration_schur_full!(driver::Driver, A, T, Z, vals; expert::Bool = false)
+function schur_full_qr_iteration!(driver::Driver, A, TZv; expert::Bool = false)
+    T, Z, vals = TZv
     expert ? geesx!(driver, A, Z, vals) : gees!(driver, A, Z, vals)
     T === A || copy!(T, A)
-    return T, Z, vals
+    return TZv
 end
-function qr_iteration_schur_vals!(driver::Driver, A, Z, vals; expert::Bool = false)
+function schur_vals_qr_iteration!(driver::Driver, A, vals; expert::Bool = false)
+    Z = similar(A, eltype(A), (size(A, 1), 0))
     expert ? geesx!(driver, A, Z, vals) : gees!(driver, A, Z, vals)
     return vals
 end
@@ -89,14 +91,12 @@ end
 # Top-level QRIteration dispatch
 function schur_full!(A::AbstractMatrix, TZv, alg::QRIteration)
     check_input(schur_full!, A, TZv, alg)
-    T, Z, vals = TZv
-    qr_iteration_schur_full!(A, T, Z, vals; alg.kwargs...)
-    return T, Z, vals
+    schur_full_qr_iteration!(A, TZv; alg.kwargs...)
+    return TZv
 end
 function schur_vals!(A::AbstractMatrix, vals, alg::QRIteration)
     check_input(schur_vals!, A, vals, alg)
-    Z = similar(A, eltype(A), (size(A, 1), 0))
-    qr_iteration_schur_vals!(A, Z, vals; alg.kwargs...)
+    schur_vals_qr_iteration!(A, vals; alg.kwargs...)
     return vals
 end
 

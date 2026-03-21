@@ -105,15 +105,15 @@ end
 # -----------
 function qr_full!(A, QR, alg::Householder)
     check_input(qr_full!, A, QR, alg)
-    return householder_qr!(A, QR...; alg.kwargs...)
+    return qr_householder!(A, QR...; alg.kwargs...)
 end
 function qr_compact!(A, QR, alg::Householder)
     check_input(qr_compact!, A, QR, alg)
-    return householder_qr!(A, QR...; alg.kwargs...)
+    return qr_householder!(A, QR...; alg.kwargs...)
 end
 function qr_null!(A, N, alg::Householder)
     check_input(qr_null!, A, N, alg)
-    return householder_qr_null!(A, N; alg.kwargs...)
+    return qr_null_householder!(A, N; alg.kwargs...)
 end
 
 
@@ -125,11 +125,11 @@ for f in (:geqrt!, :gemqrt!, :geqp3!, :geqrf!, :ungqr!, :unmqr!)
     end
 end
 
-@inline householder_qr!(A, Q, R; driver::Driver = DefaultDriver(), kwargs...) =
-    householder_qr!(driver, A, Q, R; kwargs...)
-householder_qr!(::DefaultDriver, A, Q, R; kwargs...) =
-    householder_qr!(default_driver(Householder, A), A, Q, R; kwargs...)
-function householder_qr!(
+@inline qr_householder!(A, Q, R; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_householder!(driver, A, Q, R; kwargs...)
+qr_householder!(::DefaultDriver, A, Q, R; kwargs...) =
+    qr_householder!(default_driver(Householder, A), A, Q, R; kwargs...)
+function qr_householder!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false,
         blocksize::Int = 0
@@ -213,7 +213,7 @@ function householder_qr!(
     end
     return Q, R
 end
-function householder_qr!(
+function qr_householder!(
         driver::Native, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
@@ -256,11 +256,11 @@ function householder_qr!(
     return Q, R
 end
 
-@inline householder_qr_null!(A, N; driver::Driver = DefaultDriver(), kwargs...) =
-    householder_qr_null!(driver, A, N; kwargs...)
-householder_qr_null!(::DefaultDriver, A, N; kwargs...) =
-    householder_qr_null!(default_driver(Householder, A), A, N; kwargs...)
-function householder_qr_null!(
+@inline qr_null_householder!(A, N; driver::Driver = DefaultDriver(), kwargs...) =
+    qr_null_householder!(driver, A, N; kwargs...)
+qr_null_householder!(::DefaultDriver, A, N; kwargs...) =
+    qr_null_householder!(default_driver(Householder, A), A, N; kwargs...)
+function qr_null_householder!(
         driver::Union{LAPACK, CUSOLVER, ROCSOLVER}, A::AbstractMatrix, N::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
@@ -288,7 +288,7 @@ function householder_qr_null!(
     end
     return N
 end
-function householder_qr_null!(
+function qr_null_householder!(
         driver::Native, A::AbstractMatrix, N::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
