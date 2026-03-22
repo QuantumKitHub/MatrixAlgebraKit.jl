@@ -53,7 +53,7 @@ function heev!(::GLA, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; 
     return Dd, V
 end
 
-function MatrixAlgebraKit.householder_qr!(
+function MatrixAlgebraKit.qr_householder!(
         driver::MatrixAlgebraKit.GLA, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
@@ -97,7 +97,7 @@ function MatrixAlgebraKit.householder_qr!(
     return Q, R
 end
 
-function MatrixAlgebraKit.householder_qr_null!(
+function MatrixAlgebraKit.qr_null_householder!(
         driver::MatrixAlgebraKit.GLA, A::AbstractMatrix, N::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )

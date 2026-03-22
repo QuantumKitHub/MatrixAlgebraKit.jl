@@ -115,46 +115,47 @@ for (f, f_lapack!, Alg) in (
         (:bisection, :heevx!, :Bisection),
         (:jacobi, :heevj!, :Jacobi),
     )
-    f_eigh_full! = Symbol(f, :_eigh_full!)
-    f_eigh_vals! = Symbol(f, :_eigh_vals!)
+    eigh_full_f! = Symbol(:eigh_full_, f, :!)
+    eigh_vals_f! = Symbol(:eigh_vals_, f, :!)
 
     # MatrixAlgebraKit wrappers
     @eval begin
         function eigh_full!(A::AbstractMatrix, DV, alg::$Alg)
             check_input(eigh_full!, A, DV, alg)
-            D, V = DV
-            Dd, V = $f_eigh_full!(A, D.diag, V; alg.kwargs...)
-            return D, V
+            $eigh_full_f!(A, DV; alg.kwargs...)
+            return DV
         end
         function eigh_vals!(A::AbstractMatrix, D, alg::$Alg)
             check_input(eigh_vals!, A, D, alg)
-            V = similar(A, (size(A, 1), 0))
-            $f_eigh_vals!(A, D, V; alg.kwargs...)
+            $eigh_vals_f!(A, D; alg.kwargs...)
             return D
         end
     end
 
     # driver dispatch
     @eval begin
-        @inline $f_eigh_full!(A, Dd, V; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_eigh_full!(driver, A, Dd, V; kwargs...)
-        @inline $f_eigh_vals!(A, D, V; driver::Driver = DefaultDriver(), kwargs...) =
-            $f_eigh_vals!(driver, A, D, V; kwargs...)
+        @inline $eigh_full_f!(A, DV; driver::Driver = DefaultDriver(), kwargs...) =
+            $eigh_full_f!(driver, A, DV; kwargs...)
+        @inline $eigh_vals_f!(A, D; driver::Driver = DefaultDriver(), kwargs...) =
+            $eigh_vals_f!(driver, A, D; kwargs...)
 
-        @inline $f_eigh_full!(::DefaultDriver, A, Dd, V; kwargs...) =
-            $f_eigh_full!(default_driver($Alg, A), A, Dd, V; kwargs...)
-        @inline $f_eigh_vals!(::DefaultDriver, A, D, V; kwargs...) =
-            $f_eigh_vals!(default_driver($Alg, A), A, D, V; kwargs...)
+        @inline $eigh_full_f!(::DefaultDriver, A, DV; kwargs...) =
+            $eigh_full_f!(default_driver($Alg, A), A, DV; kwargs...)
+        @inline $eigh_vals_f!(::DefaultDriver, A, D; kwargs...) =
+            $eigh_vals_f!(default_driver($Alg, A), A, D; kwargs...)
     end
 
     # Implementation
     @eval begin
-        function $f_eigh_full!(driver::Driver, A, Dd, V; fixgauge::Bool = default_fixgauge(), kwargs...)
+        function $eigh_full_f!(driver::Driver, A, DV; fixgauge::Bool = default_fixgauge(), kwargs...)
+            D, V = DV
+            Dd = diagview(D)
             $f_lapack!(driver, A, Dd, V; kwargs...)
             fixgauge && gaugefix!(eigh_full!, V)
-            return Dd, V
+            return DV
         end
-        function $f_eigh_vals!(driver::Driver, A, D, V; fixgauge::Bool = default_fixgauge(), kwargs...)
+        function $eigh_vals_f!(driver::Driver, A, D; fixgauge::Bool = default_fixgauge(), kwargs...)
+            V = similar(A, (size(A, 1), 0))
             $f_lapack!(driver, A, D, V; kwargs...)
             return D
         end

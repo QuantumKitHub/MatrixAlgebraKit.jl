@@ -160,46 +160,46 @@ for (f, f_lapack!, Alg) in (
         (:jacobi, :gesvdj!, :Jacobi),
         (:svd_polar, :gesvdp!, :SVDViaPolar),
     )
-    f_svd! = Symbol(f, :_svd!)
-    f_svd_full! = Symbol(f, :_svd_full!)
-    f_svd_vals! = Symbol(f, :_svd_vals!)
+    svd_compact_f! = Symbol(:svd_compact_, f, :!)
+    svd_full_f! = Symbol(:svd_full_, f, :!)
+    svd_vals_f! = Symbol(:svd_vals_, f, :!)
 
     # MatrixAlgebraKit wrappers
     @eval begin
         function svd_compact!(A, USVᴴ, alg::$Alg)
             check_input(svd_compact!, A, USVᴴ, alg)
-            return $f_svd!(A, USVᴴ...; alg.kwargs...)
+            return $svd_compact_f!(A, USVᴴ...; alg.kwargs...)
         end
         function svd_full!(A, USVᴴ, alg::$Alg)
             check_input(svd_full!, A, USVᴴ, alg)
-            return $f_svd_full!(A, USVᴴ...; alg.kwargs...)
+            return $svd_full_f!(A, USVᴴ...; alg.kwargs...)
         end
         function svd_vals!(A, S, alg::$Alg)
             check_input(svd_vals!, A, S, alg)
-            return $f_svd_vals!(A, S; alg.kwargs...)
+            return $svd_vals_f!(A, S; alg.kwargs...)
         end
     end
 
     # driver
     @eval begin
-        @inline $f_svd!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) = $f_svd!(driver, A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_full!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) = $f_svd_full!(driver, A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_vals!(A, S; driver::Driver = DefaultDriver(), kwargs...) = $f_svd_vals!(driver, A, S; kwargs...)
+        @inline $svd_compact_f!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) = $svd_compact_f!(driver, A, U, S, Vᴴ; kwargs...)
+        @inline $svd_full_f!(A, U, S, Vᴴ; driver::Driver = DefaultDriver(), kwargs...) = $svd_full_f!(driver, A, U, S, Vᴴ; kwargs...)
+        @inline $svd_vals_f!(A, S; driver::Driver = DefaultDriver(), kwargs...) = $svd_vals_f!(driver, A, S; kwargs...)
 
-        @inline $f_svd!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) = $f_svd!(default_driver($Alg, A), A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_full!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) = $f_svd_full!(default_driver($Alg, A), A, U, S, Vᴴ; kwargs...)
-        @inline $f_svd_vals!(::DefaultDriver, A, S; kwargs...) = $f_svd_vals!(default_driver($Alg, A), A, S; kwargs...)
+        @inline $svd_compact_f!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) = $svd_compact_f!(default_driver($Alg, A), A, U, S, Vᴴ; kwargs...)
+        @inline $svd_full_f!(::DefaultDriver, A, U, S, Vᴴ; kwargs...) = $svd_full_f!(default_driver($Alg, A), A, U, S, Vᴴ; kwargs...)
+        @inline $svd_vals_f!(::DefaultDriver, A, S; kwargs...) = $svd_vals_f!(default_driver($Alg, A), A, S; kwargs...)
     end
 
     # Implementation
     @eval begin
-        function $f_svd!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
+        function $svd_compact_f!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
             isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
             $f_lapack!(driver, A, diagview(S), U, Vᴴ; kwargs...)
             fixgauge && gaugefix!(svd_compact!, U, Vᴴ)
             return U, S, Vᴴ
         end
-        function $f_svd_full!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
+        function $svd_full_f!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
             supports_svd_full(driver, $(QuoteNode(f))) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
             isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
@@ -211,7 +211,7 @@ for (f, f_lapack!, Alg) in (
             fixgauge && gaugefix!(svd_full!, U, Vᴴ)
             return U, S, Vᴴ
         end
-        function $f_svd_vals!(driver::Driver, A, S; fixgauge::Bool = true, kwargs...)
+        function $svd_vals_f!(driver::Driver, A, S; fixgauge::Bool = true, kwargs...)
             isempty(A) && return zero!(S)
             U, Vᴴ = similar(A, (0, 0)), similar(A, (0, 0))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)

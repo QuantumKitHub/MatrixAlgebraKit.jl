@@ -100,10 +100,10 @@ function left_polar!(A::AbstractMatrix, WP, alg::PolarNewton)
     check_input(left_polar!, A, WP, alg)
     W, P = WP
     if isempty(P)
-        W = _left_polarnewton!(A, W, P; alg.kwargs...)
+        W = left_polar_newton!(A, W, P; alg.kwargs...)
         return W, P
     else
-        W = _left_polarnewton!(copy(A), W, P; alg.kwargs...)
+        W = left_polar_newton!(copy(A), W, P; alg.kwargs...)
         # we still need `A` to compute `P`
         P = project_hermitian!(mul!(P, W', A))
         return W, P
@@ -114,10 +114,10 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarNewton)
     check_input(right_polar!, A, PWᴴ, alg)
     P, Wᴴ = PWᴴ
     if isempty(P)
-        Wᴴ = _right_polarnewton!(A, Wᴴ, P; alg.kwargs...)
+        Wᴴ = right_polar_newton!(A, Wᴴ, P; alg.kwargs...)
         return P, Wᴴ
     else
-        Wᴴ = _right_polarnewton!(copy(A), Wᴴ, P; alg.kwargs...)
+        Wᴴ = right_polar_newton!(copy(A), Wᴴ, P; alg.kwargs...)
         # we still need `A` to compute `P`
         P = project_hermitian!(mul!(P, A, Wᴴ'))
         return P, Wᴴ
@@ -125,7 +125,7 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarNewton)
 end
 
 # these methods only compute W and destroy A in the process
-function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = defaulttol(A), maxiter = 10)
+function left_polar_newton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = defaulttol(A), maxiter = 10)
     m, n = size(A) # we must have m >= n
     Rᴴinv = isempty(P) ? similar(P, (n, n)) : P # use P as workspace when available
     if m > n # initial QR
@@ -165,7 +165,7 @@ function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = 
     return W
 end
 
-function _right_polarnewton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); tol = defaulttol(A), maxiter = 10)
+function right_polar_newton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); tol = defaulttol(A), maxiter = 10)
     m, n = size(A) # we must have m <= n
     Lᴴinv = isempty(P) ? similar(P, (m, m)) : P # use P as workspace when available
     if m < n # initial QR

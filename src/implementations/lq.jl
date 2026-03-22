@@ -105,15 +105,15 @@ end
 # -----------
 function lq_full!(A, LQ, alg::Householder)
     check_input(lq_full!, A, LQ, alg)
-    return householder_lq!(A, LQ...; alg.kwargs...)
+    return lq_householder!(A, LQ...; alg.kwargs...)
 end
 function lq_compact!(A, LQ, alg::Householder)
     check_input(lq_compact!, A, LQ, alg)
-    return householder_lq!(A, LQ...; alg.kwargs...)
+    return lq_householder!(A, LQ...; alg.kwargs...)
 end
 function lq_null!(A, Nᴴ, alg::Householder)
     check_input(lq_null!, A, Nᴴ, alg)
-    return householder_lq_null!(A, Nᴴ; alg.kwargs...)
+    return lq_null_householder!(A, Nᴴ; alg.kwargs...)
 end
 
 # dispatch helpers
@@ -123,13 +123,13 @@ for f in (:gelqt!, :gemlqt!, :gelqf!, :unglq!, :unmlq!)
     end
 end
 
-@inline householder_lq!(A, L, Q; driver::Driver = DefaultDriver(), kwargs...) =
-    householder_lq!(driver, A, L, Q; kwargs...)
-householder_lq!(::DefaultDriver, A, L, Q; kwargs...) =
-    householder_lq!(default_driver(Householder, A), A, L, Q; kwargs...)
-householder_lq!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, L, Q; kwargs...) =
+@inline lq_householder!(A, L, Q; driver::Driver = DefaultDriver(), kwargs...) =
+    lq_householder!(driver, A, L, Q; kwargs...)
+lq_householder!(::DefaultDriver, A, L, Q; kwargs...) =
+    lq_householder!(default_driver(Householder, A), A, L, Q; kwargs...)
+lq_householder!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, L, Q; kwargs...) =
     lq_via_qr!(A, L, Q, Householder(; driver, kwargs...))
-function householder_lq!(
+function lq_householder!(
         driver::LAPACK, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
         positive = true, pivoted = false, blocksize::Int = 0
     )
@@ -186,7 +186,7 @@ function householder_lq!(
     end
     return L, Q
 end
-function householder_lq!(
+function lq_householder!(
         driver::Native, A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
@@ -229,13 +229,13 @@ function householder_lq!(
     return L, Q
 end
 
-@inline householder_lq_null!(A, Nᴴ; driver::Driver = DefaultDriver(), kwargs...) =
-    householder_lq_null!(driver, A, Nᴴ; kwargs...)
-householder_lq_null!(::DefaultDriver, A, Nᴴ; kwargs...) =
-    householder_lq_null!(default_driver(Householder, A), A, Nᴴ; kwargs...)
-householder_lq_null!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, Nᴴ; kwargs...) =
+@inline lq_null_householder!(A, Nᴴ; driver::Driver = DefaultDriver(), kwargs...) =
+    lq_null_householder!(driver, A, Nᴴ; kwargs...)
+lq_null_householder!(::DefaultDriver, A, Nᴴ; kwargs...) =
+    lq_null_householder!(default_driver(Householder, A), A, Nᴴ; kwargs...)
+lq_null_householder!(driver::Union{CUSOLVER, ROCSOLVER, GLA}, A, Nᴴ; kwargs...) =
     lq_null_via_qr!(A, Nᴴ, Householder(; driver, kwargs...))
-function householder_lq_null!(
+function lq_null_householder!(
         driver::LAPACK, A::AbstractMatrix, Nᴴ::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
@@ -260,7 +260,7 @@ function householder_lq_null!(
     end
     return Nᴴ
 end
-function householder_lq_null!(
+function lq_null_householder!(
         driver::Native, A::AbstractMatrix, Nᴴ::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
@@ -343,21 +343,21 @@ end
 function lq_full!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
     check_input(lq_full!, A, LQ, alg)
     L, Q = LQ
-    _diagonal_lq!(A, L, Q; alg.kwargs...)
+    lq_diagonal!(A, L, Q; alg.kwargs...)
     return L, Q
 end
 function lq_compact!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
     check_input(lq_compact!, A, LQ, alg)
     L, Q = LQ
-    _diagonal_lq!(A, L, Q; alg.kwargs...)
+    lq_diagonal!(A, L, Q; alg.kwargs...)
     return L, Q
 end
 function lq_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
     check_input(lq_null!, A, N, alg)
-    return _diagonal_lq_null!(A, N; alg.kwargs...)
+    return lq_null_diagonal!(A, N; alg.kwargs...)
 end
 
-function _diagonal_lq!(
+function lq_diagonal!(
         A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix; positive::Bool = true
     )
     # note: Ad and Qd might share memory here so order of operations is important
@@ -374,7 +374,7 @@ function _diagonal_lq!(
     return L, Q
 end
 
-_diagonal_lq_null!(A::AbstractMatrix, N; positive::Bool = true) = N
+lq_null_diagonal!(A::AbstractMatrix, N; positive::Bool = true) = N
 
 # Deprecations
 # ------------

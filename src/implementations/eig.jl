@@ -103,29 +103,32 @@ for f! in (:geev!, :geevx!)
 end
 
 # driver dispatch
-@inline qr_iteration_eig_full!(A, Dd, V; driver::Driver = DefaultDriver(), kwargs...) =
-    qr_iteration_eig_full!(driver, A, Dd, V; kwargs...)
-@inline qr_iteration_eig_vals!(A, D, V; driver::Driver = DefaultDriver(), kwargs...) =
-    qr_iteration_eig_vals!(driver, A, D, V; kwargs...)
+@inline eig_full_qr_iteration!(A, DV; driver::Driver = DefaultDriver(), kwargs...) =
+    eig_full_qr_iteration!(driver, A, DV; kwargs...)
+@inline eig_vals_qr_iteration!(A, D; driver::Driver = DefaultDriver(), kwargs...) =
+    eig_vals_qr_iteration!(driver, A, D; kwargs...)
 
-@inline qr_iteration_eig_full!(::DefaultDriver, A, Dd, V; kwargs...) =
-    qr_iteration_eig_full!(default_driver(QRIteration, A), A, Dd, V; kwargs...)
-@inline qr_iteration_eig_vals!(::DefaultDriver, A, D, V; kwargs...) =
-    qr_iteration_eig_vals!(default_driver(QRIteration, A), A, D, V; kwargs...)
+@inline eig_full_qr_iteration!(::DefaultDriver, A, DV; kwargs...) =
+    eig_full_qr_iteration!(default_driver(QRIteration, A), A, DV; kwargs...)
+@inline eig_vals_qr_iteration!(::DefaultDriver, A, D; kwargs...) =
+    eig_vals_qr_iteration!(default_driver(QRIteration, A), A, D; kwargs...)
 
 # Implementation
-function qr_iteration_eig_full!(
-        driver::Driver, A, Dd, V;
+function eig_full_qr_iteration!(
+        driver::Driver, A, DV;
         fixgauge::Bool = default_fixgauge(), scale::Bool = true, permute::Bool = true
     )
+    D, V = DV
+    Dd = diagview(D)
     (scale & permute) ? geev!(driver, A, Dd, V) : geevx!(driver, A, Dd, V; scale, permute)
     fixgauge && gaugefix!(eig_full!, V)
-    return Dd, V
+    return DV
 end
-function qr_iteration_eig_vals!(
-        driver::Driver, A, D, V;
+function eig_vals_qr_iteration!(
+        driver::Driver, A, D;
         fixgauge::Bool = default_fixgauge(), scale::Bool = true, permute::Bool = true
     )
+    V = similar(A, complex(eltype(A)), (size(A, 1), 0))
     (scale & permute) ? geev!(driver, A, D, V) : geevx!(driver, A, D, V; scale, permute)
     return D
 end
@@ -133,14 +136,12 @@ end
 # Top-level QRIteration dispatch
 function eig_full!(A::AbstractMatrix, DV, alg::QRIteration)
     check_input(eig_full!, A, DV, alg)
-    D, V = DV
-    qr_iteration_eig_full!(A, diagview(D), V; alg.kwargs...)
-    return D, V
+    eig_full_qr_iteration!(A, DV; alg.kwargs...)
+    return DV
 end
 function eig_vals!(A::AbstractMatrix, D, alg::QRIteration)
     check_input(eig_vals!, A, D, alg)
-    V = similar(A, complex(eltype(A)), (size(A, 1), 0))
-    qr_iteration_eig_vals!(A, D, V; alg.kwargs...)
+    eig_vals_qr_iteration!(A, D; alg.kwargs...)
     return D
 end
 
