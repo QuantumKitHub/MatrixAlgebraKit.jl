@@ -16,4 +16,7 @@ for T in (BLASFloats..., GenericFloats...)
     if !is_buildkite
         TestSuite.test_enzyme_eigh(T, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
     end
+    if CUDA.functional()
+        TestSuite.test_enzyme_eigh(CuMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+    end
 end

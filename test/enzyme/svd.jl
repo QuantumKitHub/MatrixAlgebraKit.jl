@@ -16,4 +16,7 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
     if !is_buildkite
         TestSuite.test_enzyme_svd(T, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
     end
+    if CUDA.functional()
+        TestSuite.test_enzyme_svd(CuMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+    end
 end
