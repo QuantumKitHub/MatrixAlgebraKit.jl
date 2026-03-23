@@ -18,4 +18,7 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
         AT = Diagonal{T, Vector{T}}
         m == n && TestSuite.test_enzyme_svd(AT, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
     end
+    if CUDA.functional()
+        TestSuite.test_enzyme_svd(CuMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+    end
 end

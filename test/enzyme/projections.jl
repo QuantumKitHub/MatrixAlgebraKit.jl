@@ -18,4 +18,8 @@ for T in (BLASFloats..., GenericFloats...)
         TestSuite.test_enzyme_projections(T, (m, m); atol, rtol)
         TestSuite.test_enzyme_projections(Diagonal{T, Vector{T}}, (m, m); atol, rtol)
     end
+    if CUDA.functional()
+        TestSuite.test_enzyme_projections(CuMatrix{T}, (m, n); atol, rtol)
+        TestSuite.test_enzyme_projections(Diagonal{T, CuVector{T}}, (m, m); atol, rtol)
+    end
 end

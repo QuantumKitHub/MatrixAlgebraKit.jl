@@ -18,4 +18,7 @@ for T in (BLASFloats..., GenericFloats...)
         AT = Diagonal{T, Vector{T}}
         TestSuite.test_enzyme_eig(AT, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
     end
+    if CUDA.functional()
+        TestSuite.test_enzyme_eig(CuMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+    end
 end
