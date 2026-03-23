@@ -77,7 +77,7 @@ default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
     DiagonalAlgorithm(; kwargs...)
 default_qr_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
     default_qr_algorithm(A)
-default_qr_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A} =
+default_qr_algorithm(::Type{<:SubArray{T, N, A}}) where {T, N, A} =
     default_qr_algorithm(A)
 
 for f in (:qr_full!, :qr_compact!, :qr_null!)

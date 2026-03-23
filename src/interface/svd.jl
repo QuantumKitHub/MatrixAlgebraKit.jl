@@ -168,7 +168,7 @@ end
 function default_svd_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A}
     return default_svd_algorithm(A)
 end
-function default_svd_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A}
+function default_svd_algorithm(::Type{<:SubArray{T, N, A}}) where {T, N, A}
     return default_svd_algorithm(A)
 end
 

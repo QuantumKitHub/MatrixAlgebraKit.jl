@@ -77,7 +77,7 @@ default_lq_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
     DiagonalAlgorithm(; kwargs...)
 default_lq_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} =
     default_lq_algorithm(A)
-default_lq_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A} =
+default_lq_algorithm(::Type{<:SubArray{T, N, A}}) where {T, N, A} =
     default_lq_algorithm(A)
 
 for f in (:lq_full!, :lq_compact!, :lq_null!)
