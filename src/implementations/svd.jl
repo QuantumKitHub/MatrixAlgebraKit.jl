@@ -108,10 +108,10 @@ end
 # DefaultAlgorithm intercepts
 # ---------------------------
 for f! in (:svd_full!, :svd_compact!, :svd_vals!, :svd_trunc!, :svd_trunc_no_error!)
-    @eval function $f!(A, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, alg::DefaultAlgorithm)
         return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
-    @eval function $f!(A, out, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, out, alg::DefaultAlgorithm)
         return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
 end

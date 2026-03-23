@@ -41,10 +41,10 @@ end
 # DefaultAlgorithm intercepts
 # ---------------------------
 for f! in (:schur_full!, :schur_vals!)
-    @eval function $f!(A, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, alg::DefaultAlgorithm)
         return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
-    @eval function $f!(A, out, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, out, alg::DefaultAlgorithm)
         return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
 end

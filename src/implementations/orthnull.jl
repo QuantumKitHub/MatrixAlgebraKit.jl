@@ -66,10 +66,10 @@ initialize_output(::typeof(right_null!), A, alg::RightNullViaSVD) = nothing
 # DefaultAlgorithm intercepts
 # ---------------------------
 for f! in (:left_orth!, :right_orth!, :left_null!, :right_null!)
-    @eval function $f!(A, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, alg::DefaultAlgorithm)
         return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
-    @eval function $f!(A, out, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, out, alg::DefaultAlgorithm)
         return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
 end
