@@ -103,15 +103,15 @@ end
 
 # Householder
 # -----------
-function qr_full!(A, QR, alg::Householder)
+function qr_full!(A::AbstractMatrix, QR, alg::Householder)
     check_input(qr_full!, A, QR, alg)
     return qr_householder!(A, QR...; alg.kwargs...)
 end
-function qr_compact!(A, QR, alg::Householder)
+function qr_compact!(A::AbstractMatrix, QR, alg::Householder)
     check_input(qr_compact!, A, QR, alg)
     return qr_householder!(A, QR...; alg.kwargs...)
 end
-function qr_null!(A, N, alg::Householder)
+function qr_null!(A::AbstractMatrix, N, alg::Householder)
     check_input(qr_null!, A, N, alg)
     return qr_null_householder!(A, N; alg.kwargs...)
 end
@@ -324,19 +324,19 @@ end
 
 # Diagonal
 # --------
-function qr_full!(A, QR, alg::DiagonalAlgorithm)
+function qr_full!(A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
     check_input(qr_full!, A, QR, alg)
     Q, R = QR
     _diagonal_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
-function qr_compact!(A, QR, alg::DiagonalAlgorithm)
+function qr_compact!(A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
     check_input(qr_compact!, A, QR, alg)
     Q, R = QR
     _diagonal_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
-function qr_null!(A, N, alg::DiagonalAlgorithm)
+function qr_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
     check_input(qr_null!, A, N, alg)
     _diagonal_qr_null!(A, N; alg.kwargs...)
     return N
@@ -367,15 +367,15 @@ for drivertype in (:LAPACK, :CUSOLVER, :ROCSOLVER, :Native, :GLA)
     algtype = Symbol(drivertype, :_HouseholderQR)
     @eval begin
         Base.@deprecate(
-            qr_full!(A, QR, alg::$algtype),
+            qr_full!(A::AbstractMatrix, QR, alg::$algtype),
             qr_full!(A, QR, Householder(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
-            qr_compact!(A, QR, alg::$algtype),
+            qr_compact!(A::AbstractMatrix, QR, alg::$algtype),
             qr_compact!(A, QR, Householder(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
-            qr_null!(A, N, alg::$algtype),
+            qr_null!(A::AbstractMatrix, N, alg::$algtype),
             qr_null!(A, N, Householder(; driver = $drivertype(), alg.kwargs...))
         )
     end

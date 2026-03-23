@@ -103,15 +103,15 @@ end
 
 # Householder
 # -----------
-function lq_full!(A, LQ, alg::Householder)
+function lq_full!(A::AbstractMatrix, LQ, alg::Householder)
     check_input(lq_full!, A, LQ, alg)
     return lq_householder!(A, LQ...; alg.kwargs...)
 end
-function lq_compact!(A, LQ, alg::Householder)
+function lq_compact!(A::AbstractMatrix, LQ, alg::Householder)
     check_input(lq_compact!, A, LQ, alg)
     return lq_householder!(A, LQ...; alg.kwargs...)
 end
-function lq_null!(A, Nᴴ, alg::Householder)
+function lq_null!(A::AbstractMatrix, Nᴴ, alg::Householder)
     check_input(lq_null!, A, Nᴴ, alg)
     return lq_null_householder!(A, Nᴴ; alg.kwargs...)
 end
@@ -382,15 +382,15 @@ for drivertype in (:LAPACK, :Native)
     algtype = Symbol(drivertype, :_HouseholderLQ)
     @eval begin
         Base.@deprecate(
-            lq_full!(A, LQ, alg::$algtype),
+            lq_full!(A::AbstractMatrix, LQ, alg::$algtype),
             lq_full!(A, LQ, Householder(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
-            lq_compact!(A, LQ, alg::$algtype),
+            lq_compact!(A::AbstractMatrix, LQ, alg::$algtype),
             lq_compact!(A, LQ, Householder(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
-            lq_null!(A, Nᴴ, alg::$algtype),
+            lq_null!(A::AbstractMatrix, Nᴴ, alg::$algtype),
             lq_null!(A, Nᴴ, Householder(; driver = $drivertype(), alg.kwargs...))
         )
     end

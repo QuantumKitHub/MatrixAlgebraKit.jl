@@ -166,15 +166,15 @@ for (f, f_lapack!, Alg) in (
 
     # MatrixAlgebraKit wrappers
     @eval begin
-        function svd_compact!(A, USVᴴ, alg::$Alg)
+        function svd_compact!(A::AbstractMatrix, USVᴴ, alg::$Alg)
             check_input(svd_compact!, A, USVᴴ, alg)
             return $svd_compact_f!(A, USVᴴ...; alg.kwargs...)
         end
-        function svd_full!(A, USVᴴ, alg::$Alg)
+        function svd_full!(A::AbstractMatrix, USVᴴ, alg::$Alg)
             check_input(svd_full!, A, USVᴴ, alg)
             return $svd_full_f!(A, USVᴴ...; alg.kwargs...)
         end
-        function svd_vals!(A, S, alg::$Alg)
+        function svd_vals!(A::AbstractMatrix, S, alg::$Alg)
             check_input(svd_vals!, A, S, alg)
             return $svd_vals_f!(A, S; alg.kwargs...)
         end
@@ -353,15 +353,15 @@ for algtype in (:SafeDivideAndConquer, :DivideAndConquer, :QRIteration, :Jacobi,
     lapack_algtype = Symbol(:LAPACK_, algtype)
     @eval begin
         Base.@deprecate(
-            svd_compact!(A, USVᴴ, alg::$lapack_algtype),
+            svd_compact!(A::AbstractMatrix, USVᴴ, alg::$lapack_algtype),
             svd_compact!(A, USVᴴ, $algtype(; driver = LAPACK(), alg.kwargs...))
         )
         Base.@deprecate(
-            svd_full!(A, USVᴴ, alg::$lapack_algtype),
+            svd_full!(A::AbstractMatrix, USVᴴ, alg::$lapack_algtype),
             svd_full!(A, USVᴴ, $algtype(; driver = LAPACK(), alg.kwargs...))
         )
         Base.@deprecate(
-            svd_vals!(A, S, alg::$lapack_algtype),
+            svd_vals!(A::AbstractMatrix, S, alg::$lapack_algtype),
             svd_vals!(A, S, $algtype(; driver = LAPACK(), alg.kwargs...))
         )
     end
@@ -376,15 +376,15 @@ for (algtype, newtype, drivertype) in (
     )
     @eval begin
         Base.@deprecate(
-            svd_compact!(A, USVᴴ, alg::$algtype),
+            svd_compact!(A::AbstractMatrix, USVᴴ, alg::$algtype),
             svd_compact!(A, USVᴴ, $newtype(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
-            svd_full!(A, USVᴴ, alg::$algtype),
+            svd_full!(A::AbstractMatrix, USVᴴ, alg::$algtype),
             svd_full!(A, USVᴴ, $newtype(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
-            svd_vals!(A, S, alg::$algtype),
+            svd_vals!(A::AbstractMatrix, S, alg::$algtype),
             svd_vals!(A, S, $newtype(; driver = $drivertype(), alg.kwargs...))
         )
     end
@@ -392,14 +392,14 @@ end
 
 # GLA_QRIteration SVD deprecations (eigh methods remain in the GLA extension)
 Base.@deprecate(
-    svd_compact!(A, USVᴴ, alg::GLA_QRIteration),
+    svd_compact!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration),
     svd_compact!(A, USVᴴ, QRIteration(; driver = GLA(), alg.kwargs...))
 )
 Base.@deprecate(
-    svd_full!(A, USVᴴ, alg::GLA_QRIteration),
+    svd_full!(A::AbstractMatrix, USVᴴ, alg::GLA_QRIteration),
     svd_full!(A, USVᴴ, QRIteration(; driver = GLA(), alg.kwargs...))
 )
 Base.@deprecate(
-    svd_vals!(A, S, alg::GLA_QRIteration),
+    svd_vals!(A::AbstractMatrix, S, alg::GLA_QRIteration),
     svd_vals!(A, S, QRIteration(; driver = GLA(), alg.kwargs...))
 )

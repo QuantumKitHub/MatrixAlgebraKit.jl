@@ -208,22 +208,22 @@ end
 # Deprecations
 # ------------
 Base.@deprecate(
-    eigh_full!(A, DV, alg::LAPACK_MultipleRelativelyRobustRepresentations),
+    eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_MultipleRelativelyRobustRepresentations),
     eigh_full!(A, DV, RobustRepresentations(; driver = LAPACK(), alg.kwargs...))
 )
 Base.@deprecate(
-    eigh_vals!(A, D, alg::LAPACK_MultipleRelativelyRobustRepresentations),
+    eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_MultipleRelativelyRobustRepresentations),
     eigh_vals!(A, D, RobustRepresentations(; driver = LAPACK(), alg.kwargs...))
 )
 for algtype in (:DivideAndConquer, :QRIteration, :Bisection)
     lapack_algtype = Symbol(:LAPACK_, algtype)
     @eval begin
         Base.@deprecate(
-            eigh_full!(A, DV, alg::$lapack_algtype),
+            eigh_full!(A::AbstractMatrix, DV, alg::$lapack_algtype),
             eigh_full!(A, DV, $algtype(; driver = LAPACK(), alg.kwargs...))
         )
         Base.@deprecate(
-            eigh_vals!(A, D, alg::$lapack_algtype),
+            eigh_vals!(A::AbstractMatrix, D, alg::$lapack_algtype),
             eigh_vals!(A, D, $algtype(; driver = LAPACK(), alg.kwargs...))
         )
     end
@@ -238,20 +238,20 @@ for (algtype, newtype, drivertype) in (
     )
     @eval begin
         Base.@deprecate(
-            eigh_full!(A, DV, alg::$algtype),
+            eigh_full!(A::AbstractMatrix, DV, alg::$algtype),
             eigh_full!(A, DV, $newtype(; driver = $drivertype(), alg.kwargs...))
         )
         Base.@deprecate(
-            eigh_vals!(A, D, alg::$algtype),
+            eigh_vals!(A::AbstractMatrix, D, alg::$algtype),
             eigh_vals!(A, D, $newtype(; driver = $drivertype(), alg.kwargs...))
         )
     end
 end
 Base.@deprecate(
-    eigh_full!(A, DV, alg::GLA_QRIteration),
+    eigh_full!(A::AbstractMatrix, DV, alg::GLA_QRIteration),
     eigh_full!(A, DV, QRIteration(; driver = GLA(), alg.kwargs...))
 )
 Base.@deprecate(
-    eigh_vals!(A, D, alg::GLA_QRIteration),
+    eigh_vals!(A::AbstractMatrix, D, alg::GLA_QRIteration),
     eigh_vals!(A, D, QRIteration(; driver = GLA(), alg.kwargs...))
 )

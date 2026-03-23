@@ -105,11 +105,11 @@ end
 for (lapack_algtype, expert_val) in ((:LAPACK_Simple, false), (:LAPACK_Expert, true))
     @eval begin
         Base.@deprecate(
-            schur_full!(A, TZv, alg::$lapack_algtype),
+            schur_full!(A::AbstractMatrix, TZv, alg::$lapack_algtype),
             schur_full!(A, TZv, QRIteration(; expert = $expert_val, alg.kwargs...))
         )
         Base.@deprecate(
-            schur_vals!(A, vals, alg::$lapack_algtype),
+            schur_vals!(A::AbstractMatrix, vals, alg::$lapack_algtype),
             schur_vals!(A, vals, QRIteration(; expert = $expert_val, alg.kwargs...))
         )
     end
