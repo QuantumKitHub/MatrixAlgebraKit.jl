@@ -71,7 +71,7 @@ See also [`lq_full(!)`](@ref lq_full) and [`lq_compact(!)`](@ref lq_compact).
 default_qr_algorithm(A; kwargs...) = default_qr_algorithm(typeof(A); kwargs...)
 
 default_qr_algorithm(T::Type; kwargs...) = throw(MethodError(default_qr_algorithm, (T,)))
-default_qr_algorithm(::Type{T}; kwargs...) where {T <: AbstractMatrix} =
+default_qr_algorithm(::Type{T}; kwargs...) where {T <: Union{AbstractVector, AbstractMatrix}} =
     Householder(; kwargs...)
 default_qr_algorithm(::Type{T}; kwargs...) where {T <: Diagonal} =
     DiagonalAlgorithm(; kwargs...)
