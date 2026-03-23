@@ -11,7 +11,8 @@ This page explains how to override that default, what algorithm types are availa
 
 ## The `alg` Keyword
 
-The `alg` keyword is interpreted by [`MatrixAlgebraKit.select_algorithm`](@ref), which accepts five forms, e.g.:
+The `alg` keyword is interpreted by [`MatrixAlgebraKit.select_algorithm`](@ref), which accepts five different forms for specifying an algorithm and its configuration.
+For example, for `qr_compact` these forms look like:
 
 ```julia
 # Form 1: No alg — algorithm selected automatically based on function and array type.
@@ -62,7 +63,7 @@ U, S, Vᴴ = svd_compact(A; alg = SafeDivideAndConquer(; fixgauge = false))
 
 ## The `DefaultAlgorithm` Sentinel
 
-Package developers who want to store algorithm configuration without committing to a specific algorithm can use `DefaultAlgorithm`.
+Package developers who want to store an algorithm configuration without committing to a specific algorithm can use `DefaultAlgorithm`.
 It defers algorithm selection to call time, forwarding its stored keyword arguments to [`MatrixAlgebraKit.select_algorithm`](@ref):
 
 ```julia
