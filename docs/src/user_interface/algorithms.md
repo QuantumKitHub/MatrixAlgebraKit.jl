@@ -6,7 +6,7 @@ CollapsedDocStrings = true
 # [Algorithm Selection](@id sec_algorithmselection)
 
 All factorization functions in MatrixAlgebraKit accept an optional `alg` keyword argument that controls which algorithm is used and how it is configured.
-By default, an appropriate algorithm is selected automatically based on the function and the array type.
+By default, an appropriate algorithm is selected automatically based on the function and the input types.
 This page explains how to override that default, what algorithm types are available, and how to configure them.
 
 ## The `alg` Keyword
@@ -15,7 +15,7 @@ The `alg` keyword is interpreted by [`MatrixAlgebraKit.select_algorithm`](@ref),
 For example, for `qr_compact` these forms look like:
 
 ```julia
-# Form 1: No alg — algorithm selected automatically based on function and array type.
+# Form 1: No alg — algorithm selected automatically based on function and input type.
 Q, R = qr_compact(A);
 
 # Form 2: Symbol — creates Algorithm{:Householder}(; positive=false).
@@ -41,7 +41,7 @@ MatrixAlgebraKit.select_algorithm
 
 ## Discovering the Default Algorithm
 
-To check which algorithm is used by default for a given function and array type, call [`MatrixAlgebraKit.default_algorithm`](@ref).
+To check which algorithm is used by default for a given function and input type, call [`MatrixAlgebraKit.default_algorithm`](@ref).
 The available keyword arguments depend on the algorithm type; refer to the docstrings listed in [Available Algorithm Types](@ref) below.
 
 ```@docs; canonical=false
