@@ -38,7 +38,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 - Add AD (ChainRules/Mooncake/Enzyme) pullback rules for (anti-)hermitian projection ([#174](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/174)).
 - Add `TruncationUnion` to support combining multiple truncation schemes by supplying minimal ranks ([#183](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/183)).
-- Add `SafeSVD` algorithm variant for more robust singular value decompositions ([#185](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/185)).
+- Add `SafeDivideAndConquer` algorithm variant for more robust singular value decompositions ([#185](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/185)).
 - Add `DefaultAlgorithm` type for explicit dispatch to the default algorithm ([#195](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/195)).
 
 ### Changed
