@@ -100,7 +100,7 @@ end
 # ==========================
 
 for f! in (:heevr!, :heevd!, :heev!, :heevx!, :heevj!)
-    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
+    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $($(f!))"))
 end
 
 # LAPACK implementations
