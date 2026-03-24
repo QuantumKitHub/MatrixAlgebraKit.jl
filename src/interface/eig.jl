@@ -170,7 +170,7 @@ end
 function default_eig_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A}
     return default_eig_algorithm(A)
 end
-function default_eig_algorithm(::Type{SubArray{T, N, A}}) where {T, N, A}
+function default_eig_algorithm(::Type{<:SubArray{T, N, A}}) where {T, N, A}
     return default_eig_algorithm(A)
 end
 

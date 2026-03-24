@@ -41,10 +41,10 @@ end
 # DefaultAlgorithm intercepts
 # ---------------------------
 for f! in (:schur_full!, :schur_vals!)
-    @eval function $f!(A, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, alg::DefaultAlgorithm)
         return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
-    @eval function $f!(A, out, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, out, alg::DefaultAlgorithm)
         return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
 end
@@ -105,11 +105,11 @@ end
 for (lapack_algtype, expert_val) in ((:LAPACK_Simple, false), (:LAPACK_Expert, true))
     @eval begin
         Base.@deprecate(
-            schur_full!(A, TZv, alg::$lapack_algtype),
+            schur_full!(A::AbstractMatrix, TZv, alg::$lapack_algtype),
             schur_full!(A, TZv, QRIteration(; expert = $expert_val, alg.kwargs...))
         )
         Base.@deprecate(
-            schur_vals!(A, vals, alg::$lapack_algtype),
+            schur_vals!(A::AbstractMatrix, vals, alg::$lapack_algtype),
             schur_vals!(A, vals, QRIteration(; expert = $expert_val, alg.kwargs...))
         )
     end

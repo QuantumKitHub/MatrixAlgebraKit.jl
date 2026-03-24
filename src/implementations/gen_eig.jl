@@ -49,10 +49,10 @@ end
 # DefaultAlgorithm intercepts
 # ---------------------------
 for f! in (:gen_eig_full!, :gen_eig_vals!)
-    @eval function $f!(A, B, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, B::AbstractMatrix, alg::DefaultAlgorithm)
         return $f!(A, B, select_algorithm($f!, (A, B), nothing; alg.kwargs...))
     end
-    @eval function $f!(A, B, out, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, B::AbstractMatrix, out, alg::DefaultAlgorithm)
         return $f!(A, B, out, select_algorithm($f!, (A, B), nothing; alg.kwargs...))
     end
 end

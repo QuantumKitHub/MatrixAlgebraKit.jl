@@ -79,10 +79,10 @@ end
 # DefaultAlgorithm intercepts
 # ---------------------------
 for f! in (:eig_full!, :eig_vals!, :eig_trunc!, :eig_trunc_no_error!)
-    @eval function $f!(A, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, alg::DefaultAlgorithm)
         return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
-    @eval function $f!(A, out, alg::DefaultAlgorithm)
+    @eval function $f!(A::AbstractMatrix, out, alg::DefaultAlgorithm)
         return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
     end
 end
@@ -190,20 +190,20 @@ end
 for lapack_algtype in (:LAPACK_Simple, :LAPACK_Expert)
     @eval begin
         Base.@deprecate(
-            eig_full!(A, DV, alg::$lapack_algtype),
+            eig_full!(A::AbstractMatrix, DV, alg::$lapack_algtype),
             eig_full!(A, DV, QRIteration(; alg.kwargs...))
         )
         Base.@deprecate(
-            eig_vals!(A, D, alg::$lapack_algtype),
+            eig_vals!(A::AbstractMatrix, D, alg::$lapack_algtype),
             eig_vals!(A, D, QRIteration(; alg.kwargs...))
         )
     end
 end
 Base.@deprecate(
-    eig_full!(A, DV, alg::CUSOLVER_Simple),
+    eig_full!(A::AbstractMatrix, DV, alg::CUSOLVER_Simple),
     eig_full!(A, DV, QRIteration(; driver = CUSOLVER(), alg.kwargs...))
 )
 Base.@deprecate(
-    eig_vals!(A, D, alg::CUSOLVER_Simple),
+    eig_vals!(A::AbstractMatrix, D, alg::CUSOLVER_Simple),
     eig_vals!(A, D, QRIteration(; driver = CUSOLVER(), alg.kwargs...))
 )
