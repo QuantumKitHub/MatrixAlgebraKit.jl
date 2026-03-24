@@ -18,18 +18,35 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.4...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.5...HEAD)
 
 ### Added
 
 ### Changed
 
-- The default behavior of SVD-based nullspaces now includes some small tolerance ([#172](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/170)).
-- The Mooncake rules for truncated decompositions with `TruncatedAlgorithm` now use the pullbacks that make use of the full decomposition. ([#171](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/171))
-
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Performance
+
+## [0.6.5](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.4...v0.6.5) - 2026-03-24
+
+### Added
+
+- Add AD (ChainRules/Mooncake/Enzyme) pullback rules for (anti-)hermitian projection ([#174](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/174)).
+- Add `TruncationUnion` to support combining multiple truncation schemes by supplying minimal ranks ([#183](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/183)).
+- Add `SafeDivideAndConquer` algorithm variant for more robust singular value decompositions ([#185](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/185)).
+- Add `DefaultAlgorithm` type for explicit dispatch to the default algorithm ([#195](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/195)).
+
+### Changed
+
+- The default behavior of SVD-based nullspaces now includes some small tolerance ([#172](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/170)).
+- The Mooncake rules for truncated decompositions with `TruncatedAlgorithm` now use the pullbacks that make use of the full decomposition. ([#171](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/171))
+- Default algorithms now defined for `SubArray` and `ReshapedArray` ([#182](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/182)).
+- Separated `Algorithm` and `Driver` concepts for QR/LQ, SVD, and Schur/Eig decompositions ([#178](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/178), [#189](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/189), [#194](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/194), [#196](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/196)).
 
 ### Fixed
 

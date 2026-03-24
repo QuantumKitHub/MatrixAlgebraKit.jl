@@ -121,7 +121,7 @@ end
 # ==========================
 
 for f! in (:gesdd!, :gesvd!, :gesvdj!, :gesvdp!, :gesvdx!, :gesvdr!, :gesdvd!)
-    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $f!"))
+    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $($(f!))"))
 end
 
 """
