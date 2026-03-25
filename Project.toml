@@ -52,7 +52,6 @@ CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 EnzymeTestUtils = "12d8515a-0907-448a-8884-5fe00fdf1c5a"
-JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 ParallelTestRunner = "d3525ed8-44d0-4b2c-a655-542cee43accc"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -63,4 +62,4 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "JET", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "Random", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur", "Mooncake", "Enzyme", "EnzymeTestUtils", "ParallelTestRunner"]
+test = ["Aqua", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "Random", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur", "Mooncake", "Enzyme", "EnzymeTestUtils", "ParallelTestRunner"]
