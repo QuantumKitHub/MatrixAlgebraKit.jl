@@ -70,7 +70,10 @@ for (f, pb) in (
             # if arg.val == ret, the annotation must be Duplicated or DuplicatedNoNeed
             # if arg isa Const, ret may still be modified further down the call graph so we should
             # copy it to protect ourselves
-            cache_arg = (arg.val !== ret && arg.val[1] !== A.val) || EnzymeRules.overwritten(config)[3] ? copy.(ret) : nothing
+            A_is_arg1 = !isa(A, Const) && A.val === arg.val[1]
+            A_is_arg2 = !isa(A, Const) && A.val === arg.val[2]
+            A_is_arg = A_is_arg1 || A_is_arg2
+            cache_arg = (arg.val !== ret && !A_is_arg) || EnzymeRules.overwritten(config)[3] ? copy.(ret) : nothing
             dret = if EnzymeRules.needs_shadow(config) && ((TA == Nothing && TB == Nothing) || isa(arg, Const))
                 make_zero.(ret)
             elseif EnzymeRules.needs_shadow(config)
@@ -96,7 +99,9 @@ for (f, pb) in (
             # use A (so that whoever does this is forced to handle caching A
             # appropriately here)
             Aval = nothing
-            A_is_arg = !isa(A, Const) && A.dval === arg.dval[1]
+            A_is_arg1 = !isa(A, Const) && A.dval === arg.dval[1]
+            A_is_arg2 = !isa(A, Const) && A.dval === arg.dval[2]
+            A_is_arg = A_is_arg1 || A_is_arg2 
             argval = something(cache_arg, arg.val)
             if !isa(A, Const)
                 if A_is_arg
@@ -110,8 +115,10 @@ for (f, pb) in (
             if !isa(arg, Const)
                 if !A_is_arg
                     make_zero!(arg.dval)
-                else
+                elseif A_is_arg1
                     make_zero!(arg.dval[2])
+                elseif A_is_arg2
+                    make_zero!(arg.dval[1])
                 end
             end
             return (nothing, nothing, nothing)
