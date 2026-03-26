@@ -448,10 +448,17 @@ function EnzymeRules.reverse(
     # appropriately here)
     Aval = nothing
     Sval = something(cache_S, S.val)
+    A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === S.dval
     if !isa(A, Const)
-        svd_vals_pullback!(A.dval, Aval, (U, Diagonal(Sval), Vᴴ), dS)
+        if A_is_arg
+            ΔA = make_zero(A.dval)
+            svd_vals_pullback!(ΔA, Aval, (U, Diagonal(Sval), Vᴴ), dS)
+            A.dval .= ΔA
+        else
+            svd_vals_pullback!(A.dval, Aval, (U, Diagonal(Sval), Vᴴ), dS)
+        end
     end
-    if !isa(S, Const) && !(TA <: Diagonal && (diagview(A.dval) === S.dval))
+    if !isa(S, Const) && !A_is_arg
         make_zero!(S.dval)
     end
     return (nothing, nothing, nothing)
