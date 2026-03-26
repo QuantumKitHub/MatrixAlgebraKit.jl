@@ -101,7 +101,7 @@ for (f, pb) in (
             Aval = nothing
             A_is_arg1 = !isa(A, Const) && A.dval === arg.dval[1]
             A_is_arg2 = !isa(A, Const) && A.dval === arg.dval[2]
-            A_is_arg = A_is_arg1 || A_is_arg2 
+            A_is_arg = A_is_arg1 || A_is_arg2
             argval = something(cache_arg, arg.val)
             if !isa(A, Const)
                 if A_is_arg
