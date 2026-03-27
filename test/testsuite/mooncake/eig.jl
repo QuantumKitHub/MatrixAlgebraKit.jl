@@ -31,6 +31,12 @@ function test_mooncake_eig_full(
             rng, eig_full, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol
         )
+        if T <: Diagonal{<:Complex}
+            Mooncake.TestUtils.test_rule(
+                rng, eig_full!, A, (A, DV[2]), alg;
+                mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            )
+        end
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, eig_full!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
@@ -57,6 +63,12 @@ function test_mooncake_eig_vals(
             rng, eig_vals, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol
         )
+        if T <: Diagonal{<:Complex}
+            Mooncake.TestUtils.test_rule(
+                rng, eig_vals!, A, A.diag, alg;
+                mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            )
+        end
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, eig_vals!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false

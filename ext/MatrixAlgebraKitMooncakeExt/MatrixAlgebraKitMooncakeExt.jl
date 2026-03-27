@@ -40,6 +40,7 @@ for (f!, f, pb, adj) in (
             arg2c = copy(arg2)
             $f!(A, args, Mooncake.primal(alg_dalg))
             function $adj(::NoRData)
+                copy!(A, Ac)
                 if !(A === arg1 || A === arg2)
                     $pb(dA, A, (arg1, arg2), (darg1, darg2))
                 else
@@ -59,7 +60,6 @@ for (f!, f, pb, adj) in (
                     copy!(arg2, arg2c)
                     copy!(arg1, arg1c)
                 end
-                copy!(A, Ac)
                 return NoRData(), NoRData(), NoRData(), NoRData()
             end
             return args_dargs, $adj
