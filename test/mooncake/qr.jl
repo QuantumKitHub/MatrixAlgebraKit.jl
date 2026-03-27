@@ -18,6 +18,6 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
         #=if m == n
             AT = Diagonal{T, Vector{T}}
             TestSuite.test_mooncake_qr(AT, m; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
-        end=# # broken with singular exception
+        end=#
     end
 end
