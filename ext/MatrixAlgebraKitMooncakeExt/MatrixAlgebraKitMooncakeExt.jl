@@ -40,7 +40,7 @@ for (f!, f, pb, adj) in (
             arg2c = copy(arg2)
             $f!(A, args, Mooncake.primal(alg_dalg))
             function $adj(::NoRData)
-                # DON'T copy Ac to A if A === one 
+                # DON'T copy Ac to A if A === one
                 # of the output args -- this can
                 # mess up the pullback because
                 # generally the args are used there
