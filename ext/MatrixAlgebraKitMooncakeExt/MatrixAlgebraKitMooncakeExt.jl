@@ -40,8 +40,12 @@ for (f!, f, pb, adj) in (
             arg2c = copy(arg2)
             $f!(A, args, Mooncake.primal(alg_dalg))
             function $adj(::NoRData)
-                copy!(A, Ac)
+                # DON'T copy Ac to A if A === one 
+                # of the output args -- this can
+                # mess up the pullback because
+                # generally the args are used there
                 if !(A === arg1 || A === arg2)
+                    copy!(A, Ac)
                     $pb(dA, A, (arg1, arg2), (darg1, darg2))
                 else
                     ΔA = zero(A)
@@ -49,9 +53,11 @@ for (f!, f, pb, adj) in (
                     dA .= ΔA
                 end
                 if A === arg1
+                    copy!(A, Ac)
                     zero!(darg2)
                     copy!(arg2, arg2c)
                 elseif A === arg2
+                    copy!(A, Ac)
                     zero!(darg1)
                     copy!(arg1, arg1c)
                 else
@@ -60,7 +66,7 @@ for (f!, f, pb, adj) in (
                     copy!(arg2, arg2c)
                     copy!(arg1, arg1c)
                 end
-                return NoRData(), NoRData(), NoRData(), NoRData()
+                return ntuple(Returns(NoRData()), 4)
             end
             return args_dargs, $adj
         end
