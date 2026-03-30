@@ -3,7 +3,7 @@ module MatrixAlgebraKitGenericLinearAlgebraExt
 using MatrixAlgebraKit
 using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, one!, zero!, default_fixgauge
 using MatrixAlgebraKit: GLA, Driver
-import MatrixAlgebraKit: gesvd!, heev!
+import MatrixAlgebraKit: qr_householder!, qr_null_householder!, gesvd!, heev!
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
@@ -53,7 +53,7 @@ function heev!(::GLA, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; 
     return Dd, V
 end
 
-function MatrixAlgebraKit.qr_householder!(
+function qr_householder!(
         driver::MatrixAlgebraKit.GLA, A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
@@ -68,36 +68,20 @@ function MatrixAlgebraKit.qr_householder!(
 
     # compute QR
     Q̃, R̃ = qr!(A)
-    lmul!(Q̃, MatrixAlgebraKit.one!(Q))
-
-    if positive
-        @inbounds for j in 1:minmn
-            s = sign_safe(R̃[j, j])
-            @simd for i in 1:m
-                Q[i, j] *= s
-            end
-        end
-    end
+    lmul!(Q̃, one!(Q))
 
     if computeR
-        if positive
-            @inbounds for j in n:-1:1
-                @simd for i in 1:min(minmn, j)
-                    R[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
-                end
-                @simd for i in (min(minmn, j) + 1):size(R, 1)
-                    R[i, j] = zero(eltype(R))
-                end
-            end
-        else
-            R[1:minmn, :] .= R̃
-            MatrixAlgebraKit.zero!(@view(R[(minmn + 1):end, :]))
-        end
+        copyto!(view(R, 1:minmn, :), R̃)
+        zero!(view(R, (minmn + 1):size(R, 1), :))
+        positive && gaugefix!(qr_householder!, Q, R, diagview(R̃))
+    elseif positive
+        gaugefix!(qr_householder!, Q, nothing, diagview(R̃))
     end
+
     return Q, R
 end
 
-function MatrixAlgebraKit.qr_null_householder!(
+function qr_null_householder!(
         driver::MatrixAlgebraKit.GLA, A::AbstractMatrix, N::AbstractMatrix;
         positive::Bool = true, pivoted::Bool = false, blocksize::Int = 0
     )
