@@ -174,43 +174,16 @@ function qr_householder!(
         end
     end
 
-    if positive # already fix Q even if we do not need R
-        if driver === LAPACK()
-            @inbounds for j in 1:minmn
-                s = sign_safe(A[j, j])
-                @simd for i in 1:m
-                    Q[i, j] *= s
-                end
-            end
-        else
-            # guaranteed τ exists and no longer needed
-            τ .= sign_safe.(diagview(A))
-            Qf = view(Q, 1:m, 1:minmn) # first minmn columns of Q
-            Qf .= Qf .* transpose(τ)
-        end
+    if computeR
+        # we need to first copy then gaugefix - avoiding aliasing between R and Rd for broadcast
+        Rd = diagview(A)
+        Rf = pivoted ? view(R, :, jpvt) : R
+        copyto!(Rf, uppertriangular!(view(A, axes(R)...)))
+        positive && gaugefix!(qr_householder!, Q, Rf, Rd)
+    elseif positive
+        gaugefix!(qr_householder!, Q, nothing, diagview(A))
     end
 
-    if computeR
-        R̃ = uppertriangular!(view(A, axes(R)...))
-        if positive
-            if driver === LAPACK()
-                @inbounds for j in n:-1:1
-                    @simd for i in 1:min(minmn, j)
-                        R̃[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
-                    end
-                end
-            else
-                R̃f = view(R̃, 1:minmn, 1:n) # first minmn rows of R
-                R̃f .= conj.(τ) .* R̃f
-            end
-        end
-        if !pivoted
-            copyto!(R, R̃)
-        else
-            # probably very inefficient in terms of memory access
-            copyto!(view(R, :, jpvt), R̃)
-        end
-    end
     return Q, R
 end
 function qr_householder!(

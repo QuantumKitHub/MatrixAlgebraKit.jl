@@ -163,27 +163,14 @@ function lq_householder!(
         end
     end
 
-    if positive # already fix Q even if we do not need L
-        @inbounds for j in 1:n
-            @simd for i in 1:minmn
-                s = sign_safe(A[i, i])
-                Q[i, j] *= s
-            end
-        end
-    end
-
     if computeL
         L̃ = lowertriangular!(view(A, axes(L)...))
-        if positive
-            @inbounds for j in 1:minmn
-                s = conj(sign_safe(L̃[j, j]))
-                @simd for i in j:m
-                    L̃[i, j] = L̃[i, j] * s
-                end
-            end
-        end
+        positive && gaugefix!(lq_householder!, L̃, Q, diagview(A))
         copyto!(L, L̃)
+    else
+        gaugefix!(lq_householder!, nothing, Q, diagview(A))
     end
+
     return L, Q
 end
 function lq_householder!(

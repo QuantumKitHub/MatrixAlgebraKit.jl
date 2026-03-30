@@ -99,8 +99,6 @@ include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
 
-include("common/gauge.jl") # needs to be defined after the functions are
-
 include("implementations/projections.jl")
 include("implementations/truncation.jl")
 include("implementations/qr.jl")
@@ -112,6 +110,8 @@ include("implementations/gen_eig.jl")
 include("implementations/schur.jl")
 include("implementations/polar.jl")
 include("implementations/orthnull.jl")
+
+include("common/gauge.jl") # needs to be defined after the functions are
 
 include("pullbacks/qr.jl")
 include("pullbacks/lq.jl")
