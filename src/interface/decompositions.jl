@@ -325,6 +325,7 @@ Q, R = qr_compact(A; positive = true)
 # wrapping keyword arguments in DefaultAlgorithm
 alg = DefaultAlgorithm(; positive = true)
 Q, R = qr_compact(A; alg)
+```
 """
 @algdef DefaultAlgorithm
 
