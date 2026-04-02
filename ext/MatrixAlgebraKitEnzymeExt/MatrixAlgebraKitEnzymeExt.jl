@@ -43,37 +43,6 @@ using LinearAlgebra
 # other provided input variable.
 #--------------------------------------------
 
-# this rule is necessary for now as without it,
-# a segfault occurs both on 1.10 and 1.12 -- likely
-# a deeper internal bug
-function EnzymeRules.augmented_primal(
-        config::EnzymeRules.RevConfigWidth{1},
-        func::Const{typeof(copy_input)},
-        ::Type{RT},
-        f::Annotation,
-        A::Annotation
-    ) where {RT}
-    ret = func.val(f.val, A.val)
-    primal = EnzymeRules.needs_primal(config) ? ret : nothing
-    shadow = EnzymeRules.needs_shadow(config) ? zero(A.dval) : nothing
-    return EnzymeRules.AugmentedReturn(primal, shadow, shadow)
-end
-
-function EnzymeRules.reverse(
-        config::EnzymeRules.RevConfigWidth{1},
-        func::Const{typeof(copy_input)},
-        ::Type{RT},
-        cache,
-        f::Annotation,
-        A::Annotation
-    ) where {RT}
-    copy_shadow = cache
-    if !isa(A, Const) && !isnothing(copy_shadow)
-        A.dval .+= copy_shadow
-    end
-    return (nothing, nothing)
-end
-
 # two-argument factorizations like LQ, QR, EIG
 for (f, pb) in (
         (qr_full!, qr_pullback!),
@@ -101,9 +70,14 @@ for (f, pb) in (
             # if arg.val == ret, the annotation must be Duplicated or DuplicatedNoNeed
             # if arg isa Const, ret may still be modified further down the call graph so we should
             # copy it to protect ourselves
-            cache_arg = (arg.val !== ret) || EnzymeRules.overwritten(config)[3] ? copy.(ret) : nothing
-            dret = if EnzymeRules.needs_shadow(config)
-                (TA == Nothing && TB == Nothing) || isa(arg, Const) ? zero.(ret) : arg.dval
+            A_is_arg1 = !isa(A, Const) && A.val === arg.val[1]
+            A_is_arg2 = !isa(A, Const) && A.val === arg.val[2]
+            A_is_arg = A_is_arg1 || A_is_arg2
+            cache_arg = (arg.val !== ret && !A_is_arg) || EnzymeRules.overwritten(config)[3] ? copy.(ret) : nothing
+            dret = if EnzymeRules.needs_shadow(config) && ((TA == Nothing && TB == Nothing) || isa(arg, Const))
+                make_zero.(ret)
+            elseif EnzymeRules.needs_shadow(config)
+                arg.dval
             else
                 nothing
             end
@@ -125,11 +99,19 @@ for (f, pb) in (
             # use A (so that whoever does this is forced to handle caching A
             # appropriately here)
             Aval = nothing
+            A_is_arg1 = !isa(A, Const) && A.dval === arg.dval[1]
+            A_is_arg2 = !isa(A, Const) && A.dval === arg.dval[2]
+            A_is_arg = A_is_arg1 || A_is_arg2
             argval = something(cache_arg, arg.val)
             if !isa(A, Const)
-                $pb(A.dval, Aval, argval, darg)
+                ΔA = A_is_arg ? make_zero(A.dval) : A.dval
+                $pb(ΔA, Aval, argval, darg)
+                A_is_arg && (A.dval .= ΔA)
             end
-            !isa(arg, Const) && make_zero!(arg.dval)
+            if !isa(arg, Const)
+                A_is_arg1 || make_zero!(arg.dval[1])
+                A_is_arg2 || make_zero!(arg.dval[2])
+            end
             return (nothing, nothing, nothing)
         end
     end
@@ -356,7 +338,13 @@ for (f, trunc_f, full_f, pb) in (
         if !isa(A, Const)
             $pb(A.dval, Aval, DVval, dDVtrunc, ind)
         end
-        !isa(DV, Const) && make_zero!(DV.dval)
+        if !isa(DV, Const)
+            if A.dval !== DV.dval[1]
+                make_zero!(DV.dval)
+            else
+                make_zero!(DV.dval[2])
+            end
+        end
         return (nothing, nothing, nothing)
     end
 end
@@ -392,10 +380,10 @@ for (f!, f_full!, pb!) in (
                 func::Const{typeof($f!)},
                 ::Type{RT},
                 cache,
-                A::Annotation,
+                A::Annotation{TA},
                 D::Annotation,
                 alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
-            ) where {RT}
+            ) where {RT, TA}
             cache_D, dD, V = cache
             Dval = something(cache_D, D.val)
             # A is  NOT used in the pullback, so we assign Aval = nothing
@@ -403,10 +391,13 @@ for (f!, f_full!, pb!) in (
             # use A (so that whoever does this is forced to handle caching A
             # appropriately here)
             Aval = nothing
+            A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === D.dval
             if !isa(A, Const)
-                $pb!(A.dval, Aval, (Diagonal(Dval), V), dD)
+                ΔA = A_is_arg ? make_zero(A.dval) : A.dval
+                $pb!(ΔA, Aval, (Diagonal(Dval), V), dD)
+                A_is_arg && (A.dval .= ΔA)
             end
-            !isa(D, Const) && make_zero!(D.dval)
+            !isa(D, Const) && !A_is_arg && make_zero!(D.dval)
             return (nothing, nothing, nothing)
         end
     end
@@ -438,10 +429,10 @@ function EnzymeRules.reverse(
         func::Const{typeof(svd_vals!)},
         ::Type{RT},
         cache,
-        A::Annotation,
+        A::Annotation{TA},
         S::Annotation,
         alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
-    ) where {RT}
+    ) where {RT, TA}
     cache_S, dS, U, Vᴴ = cache
     # A is  NOT used in the pullback, so we assign Aval = nothing
     # to trigger an error in case the pullback is modified to directly
@@ -449,10 +440,13 @@ function EnzymeRules.reverse(
     # appropriately here)
     Aval = nothing
     Sval = something(cache_S, S.val)
+    A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === S.dval
     if !isa(A, Const)
-        svd_vals_pullback!(A.dval, Aval, (U, Diagonal(Sval), Vᴴ), dS)
+        ΔA = A_is_arg ? make_zero(A.dval) : A.dval
+        svd_vals_pullback!(ΔA, Aval, (U, Diagonal(Sval), Vᴴ), dS)
+        A_is_arg && (A.dval .= ΔA)
     end
-    !isa(S, Const) && make_zero!(S.dval)
+    !isa(S, Const) && !A_is_arg && make_zero!(S.dval)
     return (nothing, nothing, nothing)
 end
 
