@@ -201,3 +201,25 @@ function eig_vals_pullback!(
     ΔDV = (diagonal(ΔD), nothing)
     return eig_pullback!(ΔA, A, DV, ΔDV, ind; degeneracy_atol)
 end
+
+"""
+    remove_eig_gauge_dependence!(ΔV, D, V; degeneracy_atol = ...)
+
+Remove the gauge-dependent part from the cotangent `ΔV` of the eigenvector matrix `V`. The
+eigenvectors are only determined up to a scalar factor (or an abitrary linear transformation
+across eigenvectors associated with degenerate eigenvalues), so the corresponding components of
+`ΔV` are projected out.
+"""
+function remove_eig_gauge_dependence!(
+        ΔV, D, V, ind = axes(ΔV, 2);
+        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
+    )
+    length(ind) == size(ΔV, 2) || throw(DimensionMismatch())
+    indV = axes(V, 2)[ind]
+    Vp = view(V, :, indV)
+    Ddiag = view(diagview(D), indV)
+    gaugepart = Vp' * ΔV
+    gaugepart[abs.(transpose(Ddiag) .- Ddiag) .>= degeneracy_atol] .= 0
+    mul!(ΔV, Vp / (Vp' * Vp), gaugepart, -1, 1)
+    return ΔV
+end

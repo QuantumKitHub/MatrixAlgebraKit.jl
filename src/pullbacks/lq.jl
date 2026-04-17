@@ -1,30 +1,45 @@
 lq_rank(L; kwargs...) = qr_rank(L; kwargs...)
 
-function check_lq_cotangents(
+function check_and_prepare_lq_cotangents(
         L, Q, ΔL, ΔQ, p::Int;
         gauge_atol::Real = default_pullback_gauge_atol(ΔQ)
     )
-    minmn = min(size(L, 1), size(Q, 2))
+    m, n = size(L, 1), size(Q, 2)
+    minmn = min(m, n)
     Δgauge = abs(zero(eltype(Q)))
+    Q₁ = view(Q, 1:p, :)
+    ΔQ₁ = zero!(similar(Q₁))
     if !iszerotangent(ΔQ)
-        ΔQ₂ = view(ΔQ, (p + 1):minmn, :)
-        ΔQ₃ = ΔQ[(minmn + 1):size(Q, 1), :]
-        Δgauge_Q = norm(ΔQ₂, Inf)
-        Q₁ = view(Q, 1:p, :)
-        ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
-        mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁, -1, 1)
-        Δgauge_Q = max(Δgauge_Q, norm(ΔQ₃, Inf))
+        size(ΔQ) == size(Q) || throw(DimensionMismatch("ΔQ must have the same size as Q"))
+        ΔQ₁ .= view(ΔQ, 1:p, 1:n)
+        if p == minmn # full rank case, ΔQ₃ contains gauge-invariant information along Q₁
+            Q₃ = view(Q, (minmn + 1):size(Q, 1), :)
+            ΔQ₃ = view(ΔQ, (minmn + 1):size(Q, 1), :)
+            ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
+            mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁, -1, 1)
+            Δgauge_Q = norm(ΔQ₃, Inf)
+            mul!(ΔQ₁, ΔQ₃Q₁ᴴ', Q₃, -1, 1)
+        else
+            ΔQ₂ = view(ΔQ, (p + 1):size(ΔQ, 1), :)
+            Δgauge_Q = norm(ΔQ₂, Inf)
+        end
         Δgauge = max(Δgauge, Δgauge_Q)
     end
     if !iszerotangent(ΔL)
-        ΔL22 = view(ΔL, (p + 1):size(ΔL, 1), (p + 1):minmn)
-        Δgauge_L = norm(view(ΔL22, lowertriangularind(ΔL22)), Inf)
-        Δgauge_L = max(Δgauge_L, norm(view(ΔL22, diagind(ΔL22)), Inf))
+        size(ΔL) == size(L) || throw(DimensionMismatch("ΔL must have the same size as L"))
+        ΔL₁₁ = LowerTriangular(view(ΔL, 1:p, 1:p))
+        ΔL₂₁ = view(ΔL, (p + 1):size(ΔL, 1), 1:p)
+        ΔL₂₂ = view(ΔL, (p + 1):size(ΔL, 1), (p + 1):minmn)
+        Δgauge_L = norm(view(ΔL₂₂, lowertriangularind(ΔL₂₂)), Inf)
+        Δgauge_L = max(Δgauge_L, norm(view(ΔL₂₂, diagind(ΔL₂₂)), Inf))
         Δgauge = max(Δgauge, Δgauge_L)
+    else
+        ΔL₁₁ = nothing
+        ΔL₂₁ = nothing
     end
     Δgauge ≤ gauge_atol ||
         @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    return nothing
+    return ΔL₁₁, ΔL₂₁, ΔQ₁
 end
 
 """
@@ -53,33 +68,21 @@ function lq_pullback!(
     L, Q = LQ
     m = size(L, 1)
     n = size(Q, 2)
-    minmn = min(m, n)
     p = lq_rank(L; rank_atol)
+    (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of L*Q ($m, $n)"))
 
-    ΔL, ΔQ = ΔLQ
-
-    Q₁ = view(Q, 1:p, :)
     L₁₁ = LowerTriangular(view(L, 1:p, 1:p))
+    L₂₁ = view(L, (p + 1):m, 1:p)
+    Q₁ = view(Q, 1:p, :)
+
     ΔA₁ = view(ΔA, 1:p, :)
     ΔA₂ = view(ΔA, (p + 1):m, :)
 
-    check_lq_cotangents(L, Q, ΔL, ΔQ, p; gauge_atol)
+    ΔL, ΔQ = ΔLQ
+    ΔL₁₁, ΔL₂₁, ΔQ₁ = check_and_prepare_lq_cotangents(L, Q, ΔL, ΔQ, p; gauge_atol)
 
-    ΔQ̃ = zero!(similar(Q, (p, n)))
-    if !iszerotangent(ΔQ)
-        ΔQ₁ = view(ΔQ, 1:p, :)
-        copy!(ΔQ̃, ΔQ₁)
-        if minmn < size(Q, 1)
-            ΔQ₃ = view(ΔQ, (minmn + 1):size(ΔQ, 1), :)
-            Q₃ = view(Q, (minmn + 1):size(Q, 1), :)
-            ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
-            ΔQ̃ = mul!(ΔQ̃, ΔQ₃Q₁ᴴ', Q₃, -1, 1)
-        end
-    end
     if !iszerotangent(ΔL) && m > p
-        L₂₁ = view(L, (p + 1):m, 1:p)
-        ΔL₂₁ = view(ΔL, (p + 1):m, 1:p)
-        ΔQ̃ = mul!(ΔQ̃, L₂₁' * ΔL₂₁, Q₁, -1, 1)
+        ΔQ₁ = mul!(ΔQ₁, L₂₁' * ΔL₂₁, Q₁, -1, 1)
         # Adding ΔA₂ contribution
         ΔA₂ = mul!(ΔA₂, ΔL₂₁, Q₁, 1, 1)
     end
@@ -87,19 +90,15 @@ function lq_pullback!(
     # construct M
     M = zero!(similar(L, (p, p)))
     if !iszerotangent(ΔL)
-        ΔL₁₁ = LowerTriangular(view(ΔL, 1:p, 1:p))
         M = mul!(M, L₁₁', ΔL₁₁, 1, 1)
     end
-    M = mul!(M, ΔQ̃, Q₁', -1, 1)
+    M = mul!(M, ΔQ₁, Q₁', -1, 1)
     view(M, uppertriangularind(M)) .= conj.(view(M, lowertriangularind(M)))
     if eltype(M) <: Complex
         Md = diagview(M)
         Md .= real.(Md)
     end
-    ldiv!(L₁₁', M)
-    ldiv!(L₁₁', ΔQ̃)
-    ΔA₁ = mul!(ΔA₁, M, Q₁, +1, 1)
-    ΔA₁ .+= ΔQ̃
+    ΔA₁ .+= ldiv!(L₁₁', mul!(ΔQ₁, M, Q₁, +1, 1))
     return ΔA
 end
 
@@ -134,3 +133,51 @@ function lq_null_pullback!(
     end
     return ΔA
 end
+
+
+"""
+    remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = ...)
+
+Remove the gauge-dependent part from the cotangents `ΔL` and `ΔQ` of the LQ factors `L` and
+`Q`. For the full LQ decomposition, the extra rows of `Q` beyond the rank `r` are not uniquely
+determined by `A`, so the corresponding part of `ΔQ` is projected to remove this ambiguity.
+Additionally, columns of `ΔL` beyond the rank are zeroed out.
+"""
+function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(L))
+    r = MatrixAlgebraKit.lq_rank(L; rank_atol)
+    minmn = min(size(A)...)
+    Q₁ = view(Q, 1:r, :)
+    ΔQ₂ = view(ΔQ, (r + 1):minmn, :)
+    ΔQ₂ .= 0
+    ΔQ₃ = view(ΔQ, (minmn + 1):size(ΔQ, 1), :) # extra rows in the case of lq_full
+    if r == minmn
+        ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
+        mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁)
+    else # rank-deficient case, no gauge-invariant information
+        ΔQ₃ .= 0
+    end
+    ΔL₂₂ = view(ΔL, (r + 1):size(ΔL, 1), (r + 1):minmn)
+    diagview(ΔL₂₂) .= 0
+    view(ΔL₂₂, lowertriangularind(ΔL₂₂)) .= 0
+    return ΔL, ΔQ
+end
+
+"""
+    remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+
+Remove the gauge-dependent part from the cotangent `ΔNᴴ` of the LQ null space `Nᴴ`. The null
+space is only determined up to a unitary rotation, so `ΔNᴴ` is projected onto the row span of
+the compact LQ factor `Q₁`.
+"""
+function remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+    return mul!(ΔNᴴ, ΔNᴴ * Nᴴ', Nᴴ, -1, 1)
+end
+
+"""
+    remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
+
+Remove the gauge-dependent part from the cotangent `ΔNᴴ` of the right null space `Nᴴ`. The
+null space basis is only determined up to a unitary rotation, so `ΔNᴴ` is projected onto the
+row span of the compact LQ factor `Q₁` of `A`.
+"""
+remove_right_null_gauge_dependence!(ΔNᴴ, A, Nᴴ) = remove_lq_null_gauge_dependence!(ΔNᴴ, A, Nᴴ)
