@@ -233,15 +233,6 @@ function svd_trunc_pullback!(
     # The contribtutions from the orthogonal complement need to be treated differently
     # ΔU and ΔVᴴ are already orthogonal to U and Vᴴ
     if !(iszerotangent(ΔU) && iszerotangent(ΔVᴴ))
-        US = U * Smat
-        APAᴴ = mul!(A * A', US, US', -1, 1)
-        SVᴴ = Smat * Vᴴ
-        AᴴPA = mul!(A' * A, SVᴴ', SVᴴ, -1, 1)
-
-        rhs = [iszerotangent(ΔU) ? zero(U) : ΔU; iszerotangent(ΔVᴴ) ? zero(Vᴴ') : ΔVᴴ']
-        AA = [zero(APAᴴ) (A - U * (U' * A)); (A' - Vᴴ' * (Vᴴ * A')) zero(AᴴPA)]
-        XY = _sylvester(AA, -Smat, rhs)
-
         Aperp = A - U * Smat * Vᴴ
         x₀ = iszerotangent(ΔU) ? zero(U) : rdiv!(ΔU, Diagonal(S))
         y₀ᴴ = iszerotangent(ΔVᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔVᴴ)
@@ -268,6 +259,79 @@ function svd_trunc_pullback!(
     end
     return ΔA
 end
+function svd_trunc_pullback2!(
+        ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
+        rank_atol::Real = 0,
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
+        maxiter::Int = 1000,
+    )
+
+    # Extract the SVD components
+    U, Smat, Vᴴ = USVᴴ
+    m, n = size(U, 1), size(Vᴴ, 2)
+    (m, n) == size(ΔA) || throw(DimensionMismatch())
+    p = size(U, 2)
+    p == size(Vᴴ, 1) || throw(DimensionMismatch())
+    S = diagview(Smat)
+    p == length(S) || throw(DimensionMismatch())
+
+    # Extract and check the cotangents
+    ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
+    ΔU, ΔS, ΔVᴴ, aUᴴΔU, aVᴴΔV = check_and_prepare_svd_cotangents(
+        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, p; degeneracy_atol, gauge_atol
+    )
+
+    # This part is the same as in `svd_pullback!`
+    UdΔAV = (aUᴴΔU .+ aVᴴΔV) .* inv_safe.(S' .- S, degeneracy_atol) .+
+        (aUᴴΔU .- aVᴴΔV) .* inv_safe.(S' .+ S, degeneracy_atol)
+    if !iszerotangent(ΔS)
+        diagview(UdΔAV) .+= real.(ΔS)
+    end
+    ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
+
+    # The contribtutions from the orthogonal complement need to be treated differently
+    # ΔU and ΔVᴴ are already orthogonal to U and Vᴴ
+    if !(iszerotangent(ΔU) && iszerotangent(ΔVᴴ))
+        X₀ = iszerotangent(ΔU) ? zero(U) : rdiv!(ΔU, Diagonal(S))
+        Y₀ᴴ = iszerotangent(ΔVᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔVᴴ)
+        AP = A - U * Smat * Vᴴ
+        AP ./= S[1]
+        S = S ./ S[1]
+        X₁ = X₀ + rdiv!(AP * Y₀ᴴ', Diagonal(S))
+        Y₁ᴴ = Y₀ᴴ + ldiv!(Diagonal(S), X₀' * AP)
+        Xₖ, Xₖ₊₁ = X₁, X₀
+        Yₖᴴ, Yₖ₊₁ᴴ = Y₁ᴴ, Y₀ᴴ
+        APAᴴₖ, AᴴPAₖ = AP * AP', AP' * AP
+        APAᴴₖ₊₁, AᴴPAₖ₊₁ = zero(APAᴴₖ), zero(AᴴPAₖ)
+        Sₖ, Sₖ₊₁ = S .^ 2, S
+        for k in 1:maxiter
+            Xₖ₊₁ = rdiv!(mul!(Xₖ₊₁, APAᴴₖ, Xₖ), Diagonal(Sₖ))
+            Yₖ₊₁ᴴ = ldiv!(Diagonal(Sₖ), mul!(Yₖ₊₁ᴴ, Yₖᴴ, AᴴPAₖ))
+            if norm(Xₖ₊₁, Inf) < degeneracy_atol && norm(Yₖ₊₁ᴴ, Inf) < degeneracy_atol
+                break
+            end
+            Xₖ₊₁ .+= Xₖ
+            Yₖ₊₁ᴴ .+= Yₖᴴ
+            if k == maxiter
+                @warn "Sylvester iteration did not converge after $k iterations, final norms: (X: $(norm(Xₖ₊₁, Inf)), Yᴴ: $(norm(Yₖ₊₁ᴴ, Inf)))"
+                break
+            end
+            Sₖ₊₁ .= Sₖ .^ 2
+            APAᴴₖ₊₁ = mul!(APAᴴₖ₊₁, APAᴴₖ, APAᴴₖ)
+            AᴴPAₖ₊₁ = mul!(AᴴPAₖ₊₁, AᴴPAₖ, AᴴPAₖ)
+            Xₖ, Xₖ₊₁ = Xₖ₊₁, Xₖ
+            Yₖᴴ, Yₖ₊₁ᴴ = Yₖ₊₁ᴴ, Yₖᴴ
+            APAᴴₖ, APAᴴₖ₊₁ = APAᴴₖ₊₁, APAᴴₖ
+            AᴴPAₖ, AᴴPAₖ₊₁ = AᴴPAₖ₊₁, AᴴPAₖ
+            Sₖ, Sₖ₊₁ = Sₖ₊₁, Sₖ
+        end
+        ΔA = mul!(ΔA, Xₖ, Vᴴ, 1, 1)
+        ΔA = mul!(ΔA, U, Yₖᴴ, 1, 1)
+    end
+    return ΔA
+end
+
 function svd_trunc_pullback!(
         ΔA::Diagonal, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = 0,
