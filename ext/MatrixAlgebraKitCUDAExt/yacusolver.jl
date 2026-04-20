@@ -6,10 +6,10 @@ using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdia
 
 using CUDA
 using CUDA: @allowscalar, i32
-using CUDA.CUSOLVER
+using CUDA.cuSOLVER
 
 # QR methods are implemented with full access to allocated arrays, so we do not need to redo this:
-using CUDA.CUSOLVER: geqrf!, ormqr!, orgqr!
+using CUDA.cuSOLVER: geqrf!, ormqr!, orgqr!
 const unmqr! = ormqr!
 const ungqr! = orgqr!
 
@@ -30,7 +30,7 @@ for (bname, fname, elty, relty) in
             )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
-            (m < n) && throw(ArgumentError(lazy"CUSOLVER's gesvd requires m ($m) ≥ n ($n)"))
+            (m < n) && throw(ArgumentError(lazy"cuSOLVER's gesvd requires m ($m) ≥ n ($n)"))
             minmn = min(m, n)
             if length(U) == 0
                 jobu = 'N'
@@ -73,15 +73,15 @@ for (bname, fname, elty, relty) in
             ldu = max(1, stride(U, 2))
             ldv = max(1, stride(Vᴴ, 2))
 
-            dh = CUSOLVER.dense_handle()
+            dh = cuSOLVER.dense_handle()
             function bufferSize()
                 out = Ref{Cint}(0)
-                CUSOLVER.$bname(dh, m, n, out)
+                cuSOLVER.$bname(dh, m, n, out)
                 return out[] * sizeof($elty)
             end
             rwork = CuArray{$relty}(undef, min(m, n) - 1)
             CUDA.with_workspace(dh.workspace_gpu, bufferSize) do buffer
-                return CUSOLVER.$fname(
+                return cuSOLVER.$fname(
                     dh, jobu, jobvt, m, n,
                     A, lda, S, U, ldu, Vᴴ, ldv,
                     buffer, sizeof(buffer) ÷ sizeof($elty), rwork,
@@ -91,7 +91,7 @@ for (bname, fname, elty, relty) in
             CUDA.unsafe_free!(rwork)
 
             info = @allowscalar dh.info[1]
-            CUSOLVER.chkargsok(BlasInt(info))
+            cuSOLVER.chkargsok(BlasInt(info))
 
             return (S, U, Vᴴ)
         end
@@ -137,13 +137,13 @@ function gesvdp!(
     ldu = max(1, stride(Ũ, 2))
     ldv = max(1, stride(Ṽ, 2))
     h_err_sigma = Ref{Cdouble}(0)
-    params = CUSOLVER.CuSolverParameters()
-    dh = CUSOLVER.dense_handle()
+    params = cuSOLVER.CuSolverParameters()
+    dh = cuSOLVER.dense_handle()
 
     function bufferSize()
         out_cpu = Ref{Csize_t}(0)
         out_gpu = Ref{Csize_t}(0)
-        CUSOLVER.cusolverDnXgesvdp_bufferSize(
+        cuSOLVER.cusolverDnXgesvdp_bufferSize(
             dh, params, jobz, econ, m, n,
             T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
             T, out_gpu, out_cpu
@@ -151,11 +151,11 @@ function gesvdp!(
 
         return out_gpu[], out_cpu[]
     end
-    CUSOLVER.with_workspaces(
+    cuSOLVER.with_workspaces(
         dh.workspace_gpu, dh.workspace_cpu,
         bufferSize()...
     ) do buffer_gpu, buffer_cpu
-        return CUSOLVER.cusolverDnXgesvdp(
+        return cuSOLVER.cusolverDnXgesvdp(
             dh, params, jobz, econ, m, n,
             T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
             T, buffer_gpu, sizeof(buffer_gpu),
@@ -167,7 +167,7 @@ function gesvdp!(
     err > tol && @warn "gesvdp! did not attain the requested tolerance: error = $err > tolerance = $tol"
 
     flag = @allowscalar dh.info[1]
-    CUSOLVER.chklapackerror(BlasInt(flag))
+    cuSOLVER.chklapackerror(BlasInt(flag))
     if Ũ !== U && length(U) > 0
         U .= view(Ũ, 1:m, 1:size(U, 2))
     end
@@ -230,23 +230,23 @@ for (bname, fname, elty, relty) in
             ldu = max(1, stride(Ũ, 2))
             ldv = max(1, stride(Ṽ, 2))
 
-            params = Ref{CUSOLVER.gesvdjInfo_t}(C_NULL)
-            CUSOLVER.cusolverDnCreateGesvdjInfo(params)
-            CUSOLVER.cusolverDnXgesvdjSetTolerance(params[], tol)
-            CUSOLVER.cusolverDnXgesvdjSetMaxSweeps(params[], max_sweeps)
-            dh = CUSOLVER.dense_handle()
+            params = Ref{cuSOLVER.gesvdjInfo_t}(C_NULL)
+            cuSOLVER.cusolverDnCreateGesvdjInfo(params)
+            cuSOLVER.cusolverDnXgesvdjSetTolerance(params[], tol)
+            cuSOLVER.cusolverDnXgesvdjSetMaxSweeps(params[], max_sweeps)
+            dh = cuSOLVER.dense_handle()
 
             function bufferSize()
                 out = Ref{Cint}(0)
-                CUSOLVER.$bname(
+                cuSOLVER.$bname(
                     dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
                     out, params[]
                 )
                 return out[] * sizeof($elty)
             end
 
-            CUSOLVER.with_workspace(dh.workspace_gpu, bufferSize) do buffer
-                return CUSOLVER.$fname(
+            cuSOLVER.with_workspace(dh.workspace_gpu, bufferSize) do buffer
+                return cuSOLVER.$fname(
                     dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
                     buffer, sizeof(buffer) ÷ sizeof($elty), dh.info,
                     params[]
@@ -254,9 +254,9 @@ for (bname, fname, elty, relty) in
             end
 
             info = @allowscalar dh.info[1]
-            CUSOLVER.chkargsok(BlasInt(info))
+            cuSOLVER.chkargsok(BlasInt(info))
 
-            CUSOLVER.cusolverDnDestroyGesvdjInfo(params[])
+            cuSOLVER.cusolverDnDestroyGesvdjInfo(params[])
 
             if jobz == 'V'
                 adjoint!(Vᴴ, Ṽ)
@@ -292,13 +292,13 @@ function gesvdr!(
     lda = max(1, stride(A, 2))
     ldu = max(1, stride(Ũ, 2))
     ldv = max(1, stride(Ṽ, 2))
-    params = CUSOLVER.CuSolverParameters()
-    dh = CUSOLVER.dense_handle()
+    params = cuSOLVER.CuSolverParameters()
+    dh = cuSOLVER.dense_handle()
 
     function bufferSize()
         out_cpu = Ref{Csize_t}(0)
         out_gpu = Ref{Csize_t}(0)
-        CUSOLVER.cusolverDnXgesvdr_bufferSize(
+        cuSOLVER.cusolverDnXgesvdr_bufferSize(
             dh, params, jobu, jobv, m, n, k, p, niters,
             T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
             T, out_gpu, out_cpu
@@ -306,11 +306,11 @@ function gesvdr!(
 
         return out_gpu[], out_cpu[]
     end
-    CUSOLVER.with_workspaces(
+    cuSOLVER.with_workspaces(
         dh.workspace_gpu, dh.workspace_cpu,
         bufferSize()...
     ) do buffer_gpu, buffer_cpu
-        return CUSOLVER.cusolverDnXgesvdr(
+        return cuSOLVER.cusolverDnXgesvdr(
             dh, params, jobu, jobv, m, n, k, p, niters,
             T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
             T, buffer_gpu, sizeof(buffer_gpu),
@@ -320,7 +320,7 @@ function gesvdr!(
     end
 
     flag = @allowscalar dh.info[1]
-    CUSOLVER.chklapackerror(BlasInt(flag))
+    cuSOLVER.chklapackerror(BlasInt(flag))
     if Ũ !== U && length(U) > 0
         U .= view(Ũ, 1:m, 1:size(U, 2))
     end
@@ -361,8 +361,8 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
             VL = similar(A, n, 0)
             lda = max(1, stride(A, 2))
             ldvl = max(1, stride(VL, 2))
-            params = CUSOLVER.CuSolverParameters()
-            dh = CUSOLVER.dense_handle()
+            params = cuSOLVER.CuSolverParameters()
+            dh = cuSOLVER.dense_handle()
 
             if $elty <: Real
                 D2 = reinterpret($elty, D)
@@ -377,7 +377,7 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
             function bufferSize()
                 out_cpu = Ref{Csize_t}(0)
                 out_gpu = Ref{Csize_t}(0)
-                CUSOLVER.cusolverDnXgeev_bufferSize(
+                cuSOLVER.cusolverDnXgeev_bufferSize(
                     dh, params, jobvl, jobvr, n, $elty, A,
                     lda, $elty, D2, $elty, VL, ldvl, $elty, VR, ldvr,
                     $elty, out_gpu, out_cpu
@@ -385,14 +385,14 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
                 return out_gpu[], out_cpu[]
             end
             CUDA.with_workspaces(dh.workspace_gpu, dh.workspace_cpu, bufferSize()...) do buffer_gpu, buffer_cpu
-                CUSOLVER.cusolverDnXgeev(
+                cuSOLVER.cusolverDnXgeev(
                     dh, params, jobvl, jobvr, n, $elty, A, lda, $elty,
                     D2, $elty, VL, ldvl, $elty, VR, ldvr, $elty, buffer_gpu,
                     sizeof(buffer_gpu), buffer_cpu, sizeof(buffer_cpu), dh.info
                 )
             end
             flag = @allowscalar dh.info[1]
-            CUSOLVER.chkargsok(BlasInt(flag))
+            cuSOLVER.chkargsok(BlasInt(flag))
             if eltype(A) <: Real
                 work = CuVector{$elty}(undef, n)
                 DR = view(D2, 1:n)
@@ -711,10 +711,10 @@ end
 # end
 
 for (bname, fname, elty, relty) in (
-        (:(CUSOLVER.cusolverDnSsyevj_bufferSize), :(CUSOLVER.cusolverDnSsyevj), :Float32, :Float32),
-        (:(CUSOLVER.cusolverDnDsyevj_bufferSize), :(CUSOLVER.cusolverDnDsyevj), :Float64, :Float64),
-        (:(CUSOLVER.cusolverDnCheevj_bufferSize), :(CUSOLVER.cusolverDnCheevj), :ComplexF32, :Float32),
-        (:(CUSOLVER.cusolverDnZheevj_bufferSize), :(CUSOLVER.cusolverDnZheevj), :ComplexF64, :Float64),
+        (:(cuSOLVER.cusolverDnSsyevj_bufferSize), :(cuSOLVER.cusolverDnSsyevj), :Float32, :Float32),
+        (:(cuSOLVER.cusolverDnDsyevj_bufferSize), :(cuSOLVER.cusolverDnDsyevj), :Float64, :Float64),
+        (:(cuSOLVER.cusolverDnCheevj_bufferSize), :(cuSOLVER.cusolverDnCheevj), :ComplexF32, :Float32),
+        (:(cuSOLVER.cusolverDnZheevj_bufferSize), :(cuSOLVER.cusolverDnZheevj), :ComplexF64, :Float64),
     )
     @eval begin
         function heevj!(
@@ -728,7 +728,7 @@ for (bname, fname, elty, relty) in (
             chkuplo(uplo)
             n = checksquare(A)
             lda = max(1, stride(A, 2))
-            dh = CUSOLVER.dense_handle()
+            dh = cuSOLVER.dense_handle()
             length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
             if length(V) == 0
                 jobz = 'N'
@@ -736,10 +736,10 @@ for (bname, fname, elty, relty) in (
                 size(V) == (n, n) || throw(DimensionMismatch("size mismatch between A and V"))
                 jobz = 'V'
             end
-            params = Ref{CUSOLVER.syevjInfo_t}(C_NULL)
-            CUSOLVER.cusolverDnCreateSyevjInfo(params)
-            CUSOLVER.cusolverDnXsyevjSetTolerance(params[], tol)
-            CUSOLVER.cusolverDnXsyevjSetMaxSweeps(params[], max_sweeps)
+            params = Ref{cuSOLVER.syevjInfo_t}(C_NULL)
+            cuSOLVER.cusolverDnCreateSyevjInfo(params)
+            cuSOLVER.cusolverDnXsyevjSetTolerance(params[], tol)
+            cuSOLVER.cusolverDnXsyevjSetMaxSweeps(params[], max_sweeps)
             function bufferSize()
                 out = Ref{Cint}(0)
                 $bname(dh, jobz, uplo, n, A, lda, W, out, params[])
@@ -772,7 +772,7 @@ function heevd!(
     chkuplo(uplo)
     n = checksquare(A)
     lda = max(1, stride(A, 2))
-    dh = CUSOLVER.dense_handle()
+    dh = cuSOLVER.dense_handle()
     length(W) == n || throw(DimensionMismatch("size mismatch between A and W"))
     if length(V) == 0
         jobz = 'N'
@@ -781,19 +781,19 @@ function heevd!(
         jobz = 'V'
     end
 
-    params = CUSOLVER.CuSolverParameters()
+    params = cuSOLVER.CuSolverParameters()
     function bufferSize()
         out_cpu = Ref{Csize_t}(0)
         out_gpu = Ref{Csize_t}(0)
-        CUSOLVER.cusolverDnXsyevd_bufferSize(dh, params, jobz, uplo, n, T, A, lda, Tr, W, T, out_gpu, out_cpu)
+        cuSOLVER.cusolverDnXsyevd_bufferSize(dh, params, jobz, uplo, n, T, A, lda, Tr, W, T, out_gpu, out_cpu)
         return out_gpu[], out_cpu[]
     end
 
-    CUSOLVER.with_workspaces(
+    cuSOLVER.with_workspaces(
         dh.workspace_gpu, dh.workspace_cpu,
         bufferSize()...
     ) do buffer_gpu, buffer_cpu
-        return CUSOLVER.cusolverDnXsyevd(
+        return cuSOLVER.cusolverDnXsyevd(
             dh, params, jobz, uplo, n, T, A, lda, Tr, W,
             T, buffer_gpu, sizeof(buffer_gpu), buffer_cpu,
             sizeof(buffer_cpu), dh.info
