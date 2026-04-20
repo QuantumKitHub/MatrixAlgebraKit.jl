@@ -235,7 +235,7 @@ function svd_trunc_pullback!(
     # The contributions from the orthogonal complement need to be treated differently
     # ΔU and ΔVᴴ are already orthogonal to U and Vᴴ
     if !(iszerotangent(ΔU) && iszerotangent(ΔVᴴ))
-        Aperp = A - U * Smat * Vᴴ
+        Aperp = mul!(copy(A), U, Smat * Vᴴ, -1, 1)
         x₀ = iszerotangent(ΔU) ? zero(U) : rdiv!(ΔU, Diagonal(S))
         y₀ᴴ = iszerotangent(ΔVᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔVᴴ)
         X = copy(x₀)
@@ -297,11 +297,13 @@ function svd_trunc_pullback2!(
     if !(iszerotangent(ΔU) && iszerotangent(ΔVᴴ))
         X₀ = iszerotangent(ΔU) ? zero(U) : rdiv!(ΔU, Diagonal(S))
         Y₀ᴴ = iszerotangent(ΔVᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔVᴴ)
-        AP = A - U * Smat * Vᴴ
+        AP = mul!(copy(A), U, Smat * Vᴴ, -1, 1)
         AP ./= S[1]
         S = S ./ S[1]
-        X₁ = X₀ + rdiv!(AP * Y₀ᴴ', Diagonal(S))
-        Y₁ᴴ = Y₀ᴴ + ldiv!(Diagonal(S), X₀' * AP)
+        X₁ = rdiv!(AP * Y₀ᴴ', Diagonal(S))
+        X₁ .+= X₀
+        Y₁ᴴ = ldiv!(Diagonal(S), X₀' * AP)
+        Y₁ᴴ .+= Y₀ᴴ
         Xₖ, Xₖ₊₁ = X₁, X₀
         Yₖᴴ, Yₖ₊₁ᴴ = Y₁ᴴ, Y₀ᴴ
         APAᴴₖ, AᴴPAₖ = AP * AP', AP' * AP
@@ -400,7 +402,7 @@ function remove_svd_gauge_dependence!(
     mul!(ΔU₁, U₁, gaugepart, -1, 1)
     if size(ΔU, 2) > r
         if r < length(Sdiag) # rank-deficient case, no stable information can be extracted from extra columns of U
-            ΔU[:, (r + 1):end] .= 0
+            zero!(ΔU[:, (r + 1):end])
         else # the component of ΔU₂ along U₁ contains gauge-invariant information
             p = size(ΔU, 2)
             ΔU₂ = view(ΔU, :, (r + 1):p)
@@ -410,7 +412,7 @@ function remove_svd_gauge_dependence!(
     end
     if size(ΔVᴴ, 1) > r
         if r < length(Sdiag) # rank-deficient case, no stable information can be extracted from extra rows of Vᴴ
-            ΔVᴴ[(r + 1):end, :] .= 0
+            zero!(ΔVᴴ[(r + 1):end, :])
         else # the component of ΔVᴴ₂ along Vᴴ₁ contains gauge-invariant information
             p = size(ΔVᴴ, 1)
             ΔVᴴ₂ = view(ΔVᴴ, (r + 1):p, :)
