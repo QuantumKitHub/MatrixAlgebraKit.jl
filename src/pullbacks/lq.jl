@@ -148,17 +148,17 @@ function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = MatrixAlgebr
     minmn = min(size(A)...)
     Q₁ = view(Q, 1:r, :)
     ΔQ₂ = view(ΔQ, (r + 1):minmn, :)
-    ΔQ₂ .= 0
+    zero!(ΔQ₂)
     ΔQ₃ = view(ΔQ, (minmn + 1):size(ΔQ, 1), :) # extra rows in the case of lq_full
     if r == minmn
         ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
         mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁)
     else # rank-deficient case, no gauge-invariant information
-        ΔQ₃ .= 0
+        zero!(ΔQ₃)
     end
     ΔL₂₂ = view(ΔL, (r + 1):size(ΔL, 1), (r + 1):minmn)
-    diagview(ΔL₂₂) .= 0
-    view(ΔL₂₂, lowertriangularind(ΔL₂₂)) .= 0
+    zero!(diagview(ΔL₂₂))
+    zero!(view(ΔL₂₂, lowertriangularind(ΔL₂₂)))
     return ΔL, ΔQ
 end
 

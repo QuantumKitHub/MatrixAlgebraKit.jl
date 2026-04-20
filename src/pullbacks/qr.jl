@@ -151,17 +151,17 @@ function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebr
     minmn = min(size(A)...)
     Q₁ = view(Q, :, 1:r)
     ΔQ₂ = view(ΔQ, :, (r + 1):minmn)
-    ΔQ₂ .= 0
+    zero!(ΔQ₂)
     ΔQ₃ = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
     if r == minmn # full rank case, ΔQ₃ contains gauge-invariant information along Q₁
         Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
         mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃)
     else # rank-deficient case, no gauge-invariant information
-        ΔQ₃ .= 0
+        zero!(ΔQ₃)
     end
     ΔR₂₂ = view(ΔR, (r + 1):minmn, (r + 1):size(R, 2))
-    diagview(ΔR₂₂) .= 0
-    view(ΔR₂₂, uppertriangularind(ΔR₂₂)) .= 0
+    zero!(diagview(ΔR₂₂))
+    zero!(view(ΔR₂₂, uppertriangularind(ΔR₂₂)))
     return ΔQ, ΔR
 end
 

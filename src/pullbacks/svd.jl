@@ -158,10 +158,12 @@ function svd_pullback!(
 
     # Add the remaining contributions
     if m > r && !iszerotangent(ΔU₁) # ΔU₁ is already orthogonal to U₁
-        ΔA = mul!(ΔA, ΔU₁ ./ S₁', V₁ᴴ, 1, 1)
+        ΔU₁ ./= S₁'
+        ΔA = mul!(ΔA, ΔU₁, V₁ᴴ, 1, 1)
     end
     if n > r && !iszerotangent(ΔV₁ᴴ) # ΔV₁ᴴ is already orthogonal to V₁ᴴ
-        ΔA = mul!(ΔA, U₁, S₁ .\ ΔV₁ᴴ, 1, 1)
+        ΔV₁ᴴ .= S₁ .\ ΔV₁ᴴ
+        ΔA = mul!(ΔA, U₁, ΔV₁ᴴ, 1, 1)
     end
     return ΔA
 end
@@ -230,7 +232,7 @@ function svd_trunc_pullback!(
     end
     ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
 
-    # The contribtutions from the orthogonal complement need to be treated differently
+    # The contributions from the orthogonal complement need to be treated differently
     # ΔU and ΔVᴴ are already orthogonal to U and Vᴴ
     if !(iszerotangent(ΔU) && iszerotangent(ΔVᴴ))
         Aperp = A - U * Smat * Vᴴ
