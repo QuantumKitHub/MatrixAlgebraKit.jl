@@ -539,3 +539,7 @@ macro check_size(x, sz, size = :size)
         end
     )
 end
+
+# Check equality of two `TruncationStrategy`s
+Base.:(==)(t1::T, t2::T) where {T <: TruncationStrategy} = all(getfield(t1, f) == getfield(t2, f) for f in fieldnames(T))
+Base.:(==)(t1::T1, t2::T2) where {T1 <: TruncationStrategy, T2 <: TruncationStrategy} = false
