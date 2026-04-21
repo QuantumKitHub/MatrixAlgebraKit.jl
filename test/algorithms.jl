@@ -62,17 +62,18 @@ end
 end
 
 @testset "Truncation equivalencies" begin
-    truncs = [notrunc(),
-    truncrank(4),
-    truncrank(5),
-    truncfilter(x -> x > 0),
-    truncfilter(x -> x > 1e-4),
-    trunctol(; atol = 0),
-    trunctol(; atol = 1e-4),
-    truncerror(; atol = 0),
-    truncerror(; atol = 1e-4),
-    truncrank(4) & truncfilter(x -> x > 0),
-    truncrank(4) & truncrank(5)    
+    truncs = [
+        notrunc(),
+        truncrank(4),
+        truncrank(5),
+        truncfilter(x -> x > 0),
+        truncfilter(x -> x > 1.0e-4),
+        trunctol(; atol = 0),
+        trunctol(; atol = 1.0e-4),
+        truncerror(; atol = 0),
+        truncerror(; atol = 1.0e-4),
+        truncrank(4) & truncfilter(x -> x > 0),
+        truncrank(4) & truncrank(5),
     ]
 
     for (i1, t1) in enumerate(truncs), (i2, t2) in enumerate(truncs)
