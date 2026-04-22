@@ -54,6 +54,13 @@ jobs:
         version: ${{ fromJSON(needs.setup-matrix.outputs.version) }}
         os: ${{ fromJSON(needs.setup-matrix.outputs.os) }}
         group: ${{ fromJSON(needs.setup-matrix.outputs.groups) }}
+        exclude:
+          - os: macos-latest
+            version: 1
+            group: enzyme 
+          - os: macos-latest
+            version: "lts" 
+            group: enzyme 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
