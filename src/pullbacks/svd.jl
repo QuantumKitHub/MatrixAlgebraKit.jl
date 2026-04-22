@@ -42,11 +42,11 @@ function check_and_prepare_svd_cotangents(
             end
         end
         UᴴΔU₁ = U₁' * ΔU₁
-        ΔU₁ = mul!(ΔU₁, U₁, UᴴΔU₁, -1, 1)
+        ΔU₊ = mul!(ΔU₁, U₁, UᴴΔU₁, -1, 1)
         aUᴴΔU₁ = project_antihermitian!(UᴴΔU₁)
         Δgauge = max(Δgauge, ΔgaugeU)
     else
-        ΔU₁ = nothing
+        ΔU₊ = nothing
         aUᴴΔU₁ = zero!(similar(U₁, (r, r)))
     end
     if !iszerotangent(ΔVᴴ)
@@ -74,11 +74,11 @@ function check_and_prepare_svd_cotangents(
             end
         end
         VᴴΔV₁ = V₁ᴴ * ΔV₁ᴴ'
-        ΔV₁ᴴ = mul!(ΔV₁ᴴ, VᴴΔV₁', V₁ᴴ, -1, 1)
+        ΔV₊ᴴ = mul!(ΔV₁ᴴ, VᴴΔV₁', V₁ᴴ, -1, 1)
         aVᴴΔV₁ = project_antihermitian!(VᴴΔV₁)
         Δgauge = max(Δgauge, ΔgaugeV)
     else
-        ΔV₁ᴴ = nothing
+        ΔV₊ᴴ = nothing
         aVᴴΔV₁ = zero!(similar(V₁ᴴ, (r, r)))
     end
     mask = abs.(S₁' .- S₁) .< degeneracy_atol
@@ -101,7 +101,14 @@ function check_and_prepare_svd_cotangents(
 
     Δgauge ≤ gauge_atol ||
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    return ΔU₁, ΔS₁, ΔV₁ᴴ, aUᴴΔU₁, aVᴴΔV₁
+
+    UdΔAV = (aUᴴΔU₁ .+ aVᴴΔV₁) .* inv_safe.(S₁' .- S₁, degeneracy_atol) .+
+        (aUᴴΔU₁ .- aVᴴΔV₁) .* inv_safe.(S₁' .+ S₁, degeneracy_atol)
+    if !iszerotangent(ΔS₁)
+        diagview(UdΔAV) .+= real.(ΔS₁)
+    end
+
+    return UdΔAV, ΔU₊, ΔV₊ᴴ
 end
 
 """
@@ -145,25 +152,19 @@ function svd_pullback!(
     S₁ = view(S, 1:r)
 
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    ΔU₁, ΔS₁, ΔV₁ᴴ, aUᴴΔU₁, aVᴴΔV₁ = check_and_prepare_svd_cotangents(
+    UdΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
         U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
     )
-
-    UdΔAV = (aUᴴΔU₁ .+ aVᴴΔV₁) .* inv_safe.(S₁' .- S₁, degeneracy_atol) .+
-        (aUᴴΔU₁ .- aVᴴΔV₁) .* inv_safe.(S₁' .+ S₁, degeneracy_atol)
-    if !iszerotangent(ΔS₁)
-        diagview(UdΔAV) .+= real.(ΔS₁)
-    end
     ΔA = mul!(ΔA, U₁, UdΔAV * V₁ᴴ, 1, 1) # add the contribution to ΔA
 
     # Add the remaining contributions
-    if m > r && !iszerotangent(ΔU₁) # ΔU₁ is already orthogonal to U₁
-        ΔU₁ ./= S₁'
-        ΔA = mul!(ΔA, ΔU₁, V₁ᴴ, 1, 1)
+    if m > r && !iszerotangent(ΔU₊) # ΔU₁ is already orthogonal to U₁
+        ΔU₊ ./= S₁'
+        ΔA = mul!(ΔA, ΔU₊, V₁ᴴ, 1, 1)
     end
-    if n > r && !iszerotangent(ΔV₁ᴴ) # ΔV₁ᴴ is already orthogonal to V₁ᴴ
-        ΔV₁ᴴ .= S₁ .\ ΔV₁ᴴ
-        ΔA = mul!(ΔA, U₁, ΔV₁ᴴ, 1, 1)
+    if n > r && !iszerotangent(ΔV₊ᴴ) # ΔV₁ᴴ is already orthogonal to V₁ᴴ
+        ΔV₊ᴴ .= S₁ .\ ΔV₊ᴴ
+        ΔA = mul!(ΔA, U₁, ΔV₊ᴴ, 1, 1)
     end
     return ΔA
 end
@@ -201,7 +202,7 @@ A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
 anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j` for
 which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
-function svd_trunc_pullback!(
+function svd_trunc_pullback2!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
@@ -220,24 +221,17 @@ function svd_trunc_pullback!(
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    ΔU, ΔS, ΔVᴴ, aUᴴΔU, aVᴴΔV = check_and_prepare_svd_cotangents(
-        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, p; degeneracy_atol, gauge_atol
+    UdΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
+        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
     )
-
-    # This part is the same as in `svd_pullback!`
-    UdΔAV = (aUᴴΔU .+ aVᴴΔV) .* inv_safe.(S' .- S, degeneracy_atol) .+
-        (aUᴴΔU .- aVᴴΔV) .* inv_safe.(S' .+ S, degeneracy_atol)
-    if !iszerotangent(ΔS)
-        diagview(UdΔAV) .+= real.(ΔS)
-    end
     ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
 
     # The contributions from the orthogonal complement need to be treated differently
     # ΔU and ΔVᴴ are already orthogonal to U and Vᴴ
-    if !(iszerotangent(ΔU) && iszerotangent(ΔVᴴ))
+    if !(iszerotangent(ΔU₊) && iszerotangent(ΔV₊ᴴ))
         Aperp = mul!(copy(A), U, Smat * Vᴴ, -1, 1)
-        x₀ = iszerotangent(ΔU) ? zero(U) : rdiv!(ΔU, Diagonal(S))
-        y₀ᴴ = iszerotangent(ΔVᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔVᴴ)
+        x₀ = iszerotangent(ΔU₊) ? zero(U) : rdiv!(ΔU₊, Diagonal(S))
+        y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
         X = copy(x₀)
         Yᴴ = copy(y₀ᴴ)
         xₖ, xₖ₊₁ = x₀, zero(x₀)
@@ -261,7 +255,7 @@ function svd_trunc_pullback!(
     end
     return ΔA
 end
-function svd_trunc_pullback2!(
+function svd_trunc_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
@@ -280,23 +274,16 @@ function svd_trunc_pullback2!(
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    ΔU, ΔS, ΔVᴴ, aUᴴΔU, aVᴴΔV = check_and_prepare_svd_cotangents(
-        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, p; degeneracy_atol, gauge_atol
+    UdΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
+        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
     )
-
-    # This part is the same as in `svd_pullback!`
-    UdΔAV = (aUᴴΔU .+ aVᴴΔV) .* inv_safe.(S' .- S, degeneracy_atol) .+
-        (aUᴴΔU .- aVᴴΔV) .* inv_safe.(S' .+ S, degeneracy_atol)
-    if !iszerotangent(ΔS)
-        diagview(UdΔAV) .+= real.(ΔS)
-    end
     ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
 
     # The contribtutions from the orthogonal complement need to be treated differently
     # ΔU and ΔVᴴ are already orthogonal to U and Vᴴ
-    if !(iszerotangent(ΔU) && iszerotangent(ΔVᴴ))
-        X₀ = iszerotangent(ΔU) ? zero(U) : rdiv!(ΔU, Diagonal(S))
-        Y₀ᴴ = iszerotangent(ΔVᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔVᴴ)
+    if !(iszerotangent(ΔU₊) && iszerotangent(ΔV₊ᴴ))
+        X₀ = iszerotangent(ΔU₊) ? zero(U) : rdiv!(ΔU₊, Diagonal(S))
+        Y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
         AP = mul!(copy(A), U, Smat * Vᴴ, -1, 1)
         AP ./= S[1]
         S = S ./ S[1]
