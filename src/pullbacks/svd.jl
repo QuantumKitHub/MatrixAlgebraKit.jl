@@ -222,7 +222,7 @@ function svd_trunc_pullback2!(
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
     UdΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
-        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
+        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, p; degeneracy_atol, gauge_atol
     )
     ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
 
@@ -275,7 +275,7 @@ function svd_trunc_pullback!(
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
     UdΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
-        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
+        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, p; degeneracy_atol, gauge_atol
     )
     ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
 
@@ -285,20 +285,20 @@ function svd_trunc_pullback!(
         X₀ = iszerotangent(ΔU₊) ? zero(U) : rdiv!(ΔU₊, Diagonal(S))
         Y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
         AP = mul!(copy(A), U, Smat * Vᴴ, -1, 1)
-        AP ./= S[1]
-        S = S ./ S[1]
-        X₁ = rdiv!(AP * Y₀ᴴ', Diagonal(S))
+        AP ./= S[end]
+        Sinv = S[end] ./ S
+        X₁ = rmul!(AP * Y₀ᴴ', Diagonal(Sinv))
         X₁ .+= X₀
-        Y₁ᴴ = ldiv!(Diagonal(S), X₀' * AP)
+        Y₁ᴴ = lmul!(Diagonal(Sinv), X₀' * AP)
         Y₁ᴴ .+= Y₀ᴴ
         Xₖ, Xₖ₊₁ = X₁, X₀
         Yₖᴴ, Yₖ₊₁ᴴ = Y₁ᴴ, Y₀ᴴ
         APAᴴₖ, AᴴPAₖ = AP * AP', AP' * AP
         APAᴴₖ₊₁, AᴴPAₖ₊₁ = zero(APAᴴₖ), zero(AᴴPAₖ)
-        Sₖ, Sₖ₊₁ = S .^ 2, S
+        Sinvₖ, Sinvₖ₊₁ = Sinv .^ 2, Sinv
         for k in 1:maxiter
-            Xₖ₊₁ = rdiv!(mul!(Xₖ₊₁, APAᴴₖ, Xₖ), Diagonal(Sₖ))
-            Yₖ₊₁ᴴ = ldiv!(Diagonal(Sₖ), mul!(Yₖ₊₁ᴴ, Yₖᴴ, AᴴPAₖ))
+            Xₖ₊₁ = rmul!(mul!(Xₖ₊₁, APAᴴₖ, Xₖ), Diagonal(Sinvₖ))
+            Yₖ₊₁ᴴ = lmul!(Diagonal(Sinvₖ), mul!(Yₖ₊₁ᴴ, Yₖᴴ, AᴴPAₖ))
             if norm(Xₖ₊₁, Inf) < degeneracy_atol && norm(Yₖ₊₁ᴴ, Inf) < degeneracy_atol
                 break
             end
@@ -308,14 +308,14 @@ function svd_trunc_pullback!(
                 @warn "Sylvester iteration did not converge after $k iterations, final norms: (X: $(norm(Xₖ₊₁, Inf)), Yᴴ: $(norm(Yₖ₊₁ᴴ, Inf)))"
                 break
             end
-            Sₖ₊₁ .= Sₖ .^ 2
+            Sinvₖ₊₁ .= Sinvₖ .^ 2
             APAᴴₖ₊₁ = mul!(APAᴴₖ₊₁, APAᴴₖ, APAᴴₖ)
             AᴴPAₖ₊₁ = mul!(AᴴPAₖ₊₁, AᴴPAₖ, AᴴPAₖ)
             Xₖ, Xₖ₊₁ = Xₖ₊₁, Xₖ
             Yₖᴴ, Yₖ₊₁ᴴ = Yₖ₊₁ᴴ, Yₖᴴ
             APAᴴₖ, APAᴴₖ₊₁ = APAᴴₖ₊₁, APAᴴₖ
             AᴴPAₖ, AᴴPAₖ₊₁ = AᴴPAₖ₊₁, AᴴPAₖ
-            Sₖ, Sₖ₊₁ = Sₖ₊₁, Sₖ
+            Sinvₖ, Sinvₖ₊₁ = Sinvₖ₊₁, Sinvₖ
         end
         ΔA = mul!(ΔA, Xₖ, Vᴴ, 1, 1)
         ΔA = mul!(ΔA, U, Yₖᴴ, 1, 1)
