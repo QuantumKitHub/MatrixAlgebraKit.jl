@@ -19,8 +19,8 @@ function check_and_prepare_svd_cotangents(
 
     if !iszerotangent(ΔU)
         ΔgaugeU = zero(eltype(S))
-        m == size(ΔU, 1) || throw(DimensionMismatch("first dimension of ΔU ($(size(ΔU, 1))) does not match first dimension of U ($m)"))
-        length(indU) == size(ΔU, 2) || throw(DimensionMismatch("length of selected U columns ($(length(indU))) does not match second dimension of ΔU ($(size(ΔU, 2)))"))
+        m == size(ΔU, 1) || throw(DimensionMismatch(lazy"first dimension of ΔU ($(size(ΔU, 1))) does not match first dimension of U ($m)"))
+        length(indU) == size(ΔU, 2) || throw(DimensionMismatch(lazy"length of selected U columns ($(length(indU))) does not match second dimension of ΔU ($(size(ΔU, 2)))"))
         if indU == 1:r
             ΔU₁ = copy(ΔU)
         else
@@ -51,8 +51,8 @@ function check_and_prepare_svd_cotangents(
     end
     if !iszerotangent(ΔVᴴ)
         ΔgaugeV = zero(eltype(S))
-        n == size(ΔVᴴ, 2) || throw(DimensionMismatch("second dimension of ΔVᴴ ($(size(ΔVᴴ, 2))) does not match second dimension of Vᴴ ($n)"))
-        length(indV) == size(ΔVᴴ, 1) || throw(DimensionMismatch("length of selected Vᴴ rows ($(length(indV))) does not match first dimension of ΔVᴴ ($(size(ΔVᴴ, 1)))"))
+        n == size(ΔVᴴ, 2) || throw(DimensionMismatch(lazy"second dimension of ΔVᴴ ($(size(ΔVᴴ, 2))) does not match second dimension of Vᴴ ($n)"))
+        length(indV) == size(ΔVᴴ, 1) || throw(DimensionMismatch(lazy"length of selected Vᴴ rows ($(length(indV))) does not match first dimension of ΔVᴴ ($(size(ΔVᴴ, 1)))"))
         if indV == 1:r
             ΔV₁ᴴ = copy(ΔVᴴ)
         else
@@ -88,7 +88,7 @@ function check_and_prepare_svd_cotangents(
 
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
-        length(indS) == length(ΔS) || throw(DimensionMismatch("length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
+        length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
         ΔS₁ = zero(S₁)
         for (j, i) in enumerate(indS)
             if i <= r
@@ -146,7 +146,7 @@ function svd_pullback!(
     U, Smat, Vᴴ = USVᴴ
     m, n = size(U, 1), size(Vᴴ, 2)
     minmn = min(m, n)
-    (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of U*S*Vᴴ ($m, $n)"))
+    (m, n) == size(ΔA) || throw(DimensionMismatch(lazy"size of ΔA ($(size(ΔA))) does not match size of USVᴴ ($m, $n)"))
     S = diagview(Smat)
     r = svd_rank(S; rank_atol)
 
@@ -265,15 +265,14 @@ function svd_trunc_pullback!(
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
         maxiter::Int = 1000,
     )
-
     # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ
     m, n = size(U, 1), size(Vᴴ, 2)
-    (m, n) == size(ΔA) || throw(DimensionMismatch())
-    p = size(U, 2)
-    p == size(Vᴴ, 1) || throw(DimensionMismatch())
+    (m, n) == size(ΔA) || throw(DimensionMismatch(lazy"size of ΔA ($(size(ΔA))) does not match size of USVᴴ ($m, $n)"))
     S = diagview(Smat)
-    p == length(S) || throw(DimensionMismatch())
+    p = length(S)
+    p == size(U, 2) || throw(DimensionMismatch(lazy"U has $p columns but S has $(length(S)) singular values"))
+    p == size(Vᴴ, 1) || throw(DimensionMismatch(lazy"Vᴴ has $p rows but  S has $(length(S)) singular values"))
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
