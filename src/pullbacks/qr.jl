@@ -1,31 +1,47 @@
 qr_rank(R; rank_atol = default_pullback_rank_atol(R)) =
     @something findlast(>=(rank_atol) ∘ abs, diagview(R)) 0
 
-function check_qr_cotangents(
+function check_and_prepare_qr_cotangents(
         Q, R, ΔQ, ΔR, p::Int;
         gauge_atol::Real = default_pullback_gauge_atol(ΔQ)
     )
-    minmn = min(size(Q, 1), size(R, 2))
+    m, n = size(Q, 1), size(R, 2)
+    minmn = min(m, n)
     Δgauge = abs(zero(eltype(Q)))
+    Q₁ = view(Q, :, 1:p)
+    ΔQ₁ = zero!(similar(Q₁))
     if !iszerotangent(ΔQ)
-        ΔQ₂ = view(ΔQ, :, (p + 1):minmn)
-        ΔQ₃ = ΔQ[:, (minmn + 1):size(Q, 2)] # extra columns in the case of qr_full
-        Δgauge_Q = norm(ΔQ₂, Inf)
-        Q₁ = view(Q, :, 1:p)
-        Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
-        mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃, -1, 1)
-        Δgauge_Q = max(Δgauge_Q, norm(ΔQ₃, Inf))
+        size(ΔQ) == size(Q) || throw(DimensionMismatch("ΔQ must have the same size as Q"))
+        ΔQ₁ .= view(ΔQ, 1:m, 1:p)
+        if p == minmn # full rank case, ΔQ₃ contains gauge-invariant information along Q₁
+            ΔQ₃ = ΔQ[:, (minmn + 1):size(Q, 2)] # extra columns in the case of qr_full
+            Q₁ = view(Q, :, 1:minmn)
+            Q₃ = view(Q, :, (minmn + 1):size(Q, 2))
+            Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
+            mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃, -1, 1)
+            Δgauge_Q = norm(ΔQ₃, Inf)
+            mul!(ΔQ₁, Q₃, Q₁ᴴΔQ₃', -1, 1)
+        else
+            ΔQ₂₃ = view(ΔQ, :, (p + 1):size(Q, 2))
+            Δgauge_Q = norm(ΔQ₂₃, Inf)
+        end
         Δgauge = max(Δgauge, Δgauge_Q)
     end
     if !iszerotangent(ΔR)
-        ΔR22 = view(ΔR, (p + 1):minmn, (p + 1):size(R, 2))
-        Δgauge_R = norm(view(ΔR22, uppertriangularind(ΔR22)), Inf)
-        Δgauge_R = max(Δgauge_R, norm(view(ΔR22, diagind(ΔR22)), Inf))
+        size(ΔR) == size(R) || throw(DimensionMismatch("ΔR must have the same size as R"))
+        ΔR₁₁ = UpperTriangular(view(ΔR, 1:p, 1:p))
+        ΔR₁₂ = view(ΔR, 1:p, (p + 1):n)
+        ΔR₂₂ = view(ΔR, (p + 1):minmn, (p + 1):n)
+        Δgauge_R = norm(view(ΔR₂₂, uppertriangularind(ΔR₂₂)), Inf)
+        Δgauge_R = max(Δgauge_R, norm(view(ΔR₂₂, diagind(ΔR₂₂)), Inf))
         Δgauge = max(Δgauge, Δgauge_R)
+    else
+        ΔR₁₁ = nothing
+        ΔR₁₂ = nothing
     end
     Δgauge ≤ gauge_atol ||
         @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    return nothing
+    return ΔQ₁, ΔR₁₁, ΔR₁₂
 end
 
 """
@@ -55,34 +71,22 @@ function qr_pullback!(
     Q, R = QR
     m = size(Q, 1)
     n = size(R, 2)
-    minmn = min(m, n)
-    Rd = diagview(R)
     p = qr_rank(R; rank_atol)
+    (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of Q*R ($m, $n)"))
 
-    ΔQ, ΔR = ΔQR
 
     Q₁ = view(Q, :, 1:p)
     R₁₁ = UpperTriangular(view(R, 1:p, 1:p))
+    R₁₂ = view(R, 1:p, (p + 1):n)
+
     ΔA₁ = view(ΔA, :, 1:p)
     ΔA₂ = view(ΔA, :, (p + 1):n)
 
-    check_qr_cotangents(Q, R, ΔQ, ΔR, p; gauge_atol)
+    ΔQ, ΔR = ΔQR
+    ΔQ₁, ΔR₁₁, ΔR₁₂ = check_and_prepare_qr_cotangents(Q, R, ΔQ, ΔR, p; gauge_atol)
 
-    ΔQ̃ = zero!(similar(Q, (m, p)))
-    if !iszerotangent(ΔQ)
-        ΔQ₁ = view(ΔQ, :, 1:p)
-        copy!(ΔQ̃, ΔQ₁)
-        if minmn < size(Q, 2)
-            ΔQ₃ = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
-            Q₃ = view(Q, :, (minmn + 1):size(Q, 2))
-            Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
-            ΔQ̃ = mul!(ΔQ̃, Q₃, Q₁ᴴΔQ₃', -1, 1)
-        end
-    end
     if !iszerotangent(ΔR) && n > p
-        R₁₂ = view(R, 1:p, (p + 1):n)
-        ΔR₁₂ = view(ΔR, 1:p, (p + 1):n)
-        ΔQ̃ = mul!(ΔQ̃, Q₁, ΔR₁₂ * R₁₂', -1, 1)
+        ΔQ₁ = mul!(ΔQ₁, Q₁, ΔR₁₂ * R₁₂', -1, 1)
         # Adding ΔA₂ contribution
         ΔA₂ = mul!(ΔA₂, Q₁, ΔR₁₂, 1, 1)
     end
@@ -90,19 +94,15 @@ function qr_pullback!(
     # construct M
     M = zero!(similar(R, (p, p)))
     if !iszerotangent(ΔR)
-        ΔR₁₁ = UpperTriangular(view(ΔR, 1:p, 1:p))
         M = mul!(M, ΔR₁₁, R₁₁', 1, 1)
     end
-    M = mul!(M, Q₁', ΔQ̃, -1, 1)
+    M = mul!(M, Q₁', ΔQ₁, -1, 1)
     view(M, lowertriangularind(M)) .= conj.(view(M, uppertriangularind(M)))
     if eltype(M) <: Complex
         Md = diagview(M)
         Md .= real.(Md)
     end
-    rdiv!(M, R₁₁') # R₁₁ is upper triangular
-    rdiv!(ΔQ̃, R₁₁')
-    ΔA₁ = mul!(ΔA₁, Q₁, M, +1, 1)
-    ΔA₁ .+= ΔQ̃
+    ΔA₁ .+= rdiv!(mul!(ΔQ₁, Q₁, M, +1, 1), R₁₁')
     return ΔA
 end
 
@@ -137,3 +137,50 @@ function qr_null_pullback!(
     end
     return ΔA
 end
+
+"""
+    remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = ...)
+
+Remove the gauge-dependent part from the cotangents `ΔQ` and `ΔR` of the QR factors `Q` and
+`R`. For the full QR decomposition, the extra columns of `Q` beyond the rank `r` are not
+uniquely determined by `A`, so the corresponding part of `ΔQ` is projected to remove this
+ambiguity. Additionally, rows of `ΔR` beyond the rank are zeroed out.
+"""
+function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(R))
+    r = MatrixAlgebraKit.qr_rank(R; rank_atol)
+    minmn = min(size(A)...)
+    Q₁ = view(Q, :, 1:r)
+    ΔQ₂ = view(ΔQ, :, (r + 1):minmn)
+    zero!(ΔQ₂)
+    ΔQ₃ = view(ΔQ, :, (minmn + 1):size(ΔQ, 2)) # extra columns in the case of qr_full
+    if r == minmn # full rank case, ΔQ₃ contains gauge-invariant information along Q₁
+        Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
+        mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃)
+    else # rank-deficient case, no gauge-invariant information
+        zero!(ΔQ₃)
+    end
+    ΔR₂₂ = view(ΔR, (r + 1):minmn, (r + 1):size(R, 2))
+    zero!(diagview(ΔR₂₂))
+    zero!(view(ΔR₂₂, uppertriangularind(ΔR₂₂)))
+    return ΔQ, ΔR
+end
+
+"""
+    remove_qr_null_gauge_dependence!(ΔN, A, N)
+
+Remove the gauge-dependent part from the cotangent `ΔN` of the QR null space `N`. The null
+space is only determined up to a unitary rotation, so `ΔN` is projected onto the column span
+of the compact QR factor `Q₁`.
+"""
+function remove_qr_null_gauge_dependence!(ΔN, A, N)
+    return mul!(ΔN, N, N' * ΔN, -1, 1)
+end
+
+"""
+    remove_left_null_gauge_dependence!(ΔN, A, N)
+
+Remove the gauge-dependent part from the cotangent `ΔN` of the left null space `N`. The null
+space basis is only determined up to a unitary rotation, so `ΔN` is projected onto the column
+span of the compact QR factor `Q₁` of `A`.
+"""
+remove_left_null_gauge_dependence!(ΔN, A, N) = remove_qr_null_gauge_dependence!(ΔN, A, N)

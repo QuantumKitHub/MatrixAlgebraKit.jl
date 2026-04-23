@@ -191,3 +191,25 @@ function eigh_vals_pullback!(
     ΔDV = (diagonal(ΔD), nothing)
     return eigh_pullback!(ΔA, A, DV, ΔDV, ind; degeneracy_atol)
 end
+
+"""
+    remove_eigh_gauge_dependence!(ΔV, D, V; degeneracy_atol = ...)
+
+Remove the gauge-dependent part from the cotangent `ΔV` of the Hermitian eigenvector matrix
+`V`. The eigenvectors are only determined up to a complex phase (or a unitary transformation
+across eigenvectors associated with degenerate eigenvalues), so the corresponding anti-Hermitian
+components of `V' * ΔV` are projected out.
+"""
+function remove_eigh_gauge_dependence!(
+        ΔV, D, V, ind = axes(ΔV, 2);
+        degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
+    )
+    length(ind) == size(ΔV, 2) || throw(DimensionMismatch())
+    indV = axes(V, 2)[ind]
+    Vp = view(V, :, indV)
+    Ddiag = view(diagview(D), indV)
+    gaugepart = project_antihermitian!(Vp' * ΔV)
+    gaugepart[abs.(transpose(Ddiag) .- Ddiag) .>= degeneracy_atol] .= 0
+    mul!(ΔV, Vp, gaugepart, -1, 1)
+    return ΔV
+end

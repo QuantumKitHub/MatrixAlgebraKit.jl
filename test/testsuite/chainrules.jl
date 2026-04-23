@@ -8,7 +8,7 @@ for f in
         :qr_compact, :qr_full, :qr_null, :lq_compact, :lq_full, :lq_null,
         :eig_full, :eig_trunc, :eig_vals, :eigh_full, :eigh_trunc, :eigh_vals,
         :eig_trunc_no_error, :eigh_trunc_no_error,
-        :svd_compact, :svd_trunc, :svd_trunc_no_error, :svd_vals,
+        :svd_compact, :svd_full, :svd_trunc, :svd_trunc_no_error, :svd_vals,
         :left_polar, :right_polar,
     )
     copy_f = Symbol(:cr_copy_, f)
@@ -414,6 +414,18 @@ function test_chainrules_svd(
             )
             test_rrule(
                 config, svd_compact, A, alg ⊢ NoTangent();
+                output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol,
+                rrule_f = rrule_via_ad, check_inferred = false
+            )
+        end
+        @testset "svd_full" begin
+            USV, ΔUSVᴴ = ad_svd_full_setup(A)
+            test_rrule(
+                cr_copy_svd_full, A, alg ⊢ NoTangent();
+                output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol
+            )
+            test_rrule(
+                config, svd_full, A, alg ⊢ NoTangent();
                 output_tangent = ΔUSVᴴ, atol = atol, rtol = rtol,
                 rrule_f = rrule_via_ad, check_inferred = false
             )

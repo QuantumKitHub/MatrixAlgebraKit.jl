@@ -418,28 +418,17 @@ for (f!, f) in (
         @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Tuple{<:Any, <:Any, <:Any}, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
-            Ac = copy(A)
             USVᴴ = Mooncake.primal(USVᴴ_dUSVᴴ)
             dUSVᴴ = Mooncake.tangent(USVᴴ_dUSVᴴ)
             U, dU = arrayify(USVᴴ[1], dUSVᴴ[1])
             S, dS = arrayify(USVᴴ[2], dUSVᴴ[2])
             Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
+            Ac = copy(A)
             USVᴴc = copy.(USVᴴ)
             output = $f!(A, USVᴴ, Mooncake.primal(alg_dalg))
             function svd_adjoint(::NoRData)
                 copy!(A, Ac)
-                if $(f! == svd_compact!)
-                    svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
-                else # full
-                    minmn = min(size(A)...)
-                    vU = view(U, :, 1:minmn)
-                    vS = Diagonal(diagview(S)[1:minmn])
-                    vVᴴ = view(Vᴴ, 1:minmn, :)
-                    vdU = view(dU, :, 1:minmn)
-                    vdS = Diagonal(diagview(dS)[1:minmn])
-                    vdVᴴ = view(dVᴴ, 1:minmn, :)
-                    svd_pullback!(dA, A, (vU, vS, vVᴴ), (vdU, vdS, vdVᴴ))
-                end
+                svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
                 copy!(U, USVᴴc[1])
                 copy!(S, USVᴴc[2])
                 copy!(Vᴴ, USVᴴc[3])
@@ -448,7 +437,7 @@ for (f!, f) in (
                 zero!(dVᴴ)
                 return NoRData(), NoRData(), NoRData(), NoRData()
             end
-            return CoDual(output, dUSVᴴ), svd_adjoint
+            return USVᴴ_dUSVᴴ, svd_adjoint
         end
         @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
@@ -465,18 +454,7 @@ for (f!, f) in (
                 U, dU = arrayify(U, dU_)
                 S, dS = arrayify(S, dS_)
                 Vᴴ, dVᴴ = arrayify(Vᴴ, dVᴴ_)
-                if $(f == svd_compact)
-                    svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
-                else # full
-                    minmn = min(size(A)...)
-                    vU = view(U, :, 1:minmn)
-                    vS = Diagonal(view(diagview(S), 1:minmn))
-                    vVᴴ = view(Vᴴ, 1:minmn, :)
-                    vdU = view(dU, :, 1:minmn)
-                    vdS = Diagonal(view(diagview(dS), 1:minmn))
-                    vdVᴴ = view(dVᴴ, 1:minmn, :)
-                    svd_pullback!(dA, A, (vU, vS, vVᴴ), (vdU, vdS, vdVᴴ))
-                end
+                svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
                 zero!(dU)
                 zero!(dS)
                 zero!(dVᴴ)

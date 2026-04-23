@@ -240,19 +240,7 @@ for f in (:svd_compact!, :svd_full!)
             USVᴴval = something(cache_USVᴴ, USVᴴ.val)
             if !isa(A, Const)
                 minmn = min(size(A.val)...)
-                if $(f == svd_compact!) # compact
-                    svd_pullback!(A.dval, Aval, USVᴴval, dUSVᴴ)
-                else # full
-                    # TODO: revisit this once `svd_pullback` supports `svd_full` output and adjoints
-                    U, S, Vᴴ = USVᴴval
-                    vU = view(U, :, 1:minmn)
-                    vS = Diagonal(view(diagview(S), 1:minmn))
-                    vVᴴ = view(Vᴴ, 1:minmn, :)
-                    vdU = view(dUSVᴴ[1], :, 1:minmn)
-                    vdS = Diagonal(view(diagview(dUSVᴴ[2]), 1:minmn))
-                    vdVᴴ = view(dUSVᴴ[3], 1:minmn, :)
-                    svd_pullback!(A.dval, Aval, (vU, vS, vVᴴ), (vdU, vdS, vdVᴴ))
-                end
+                svd_pullback!(A.dval, Aval, USVᴴval, dUSVᴴ)
             end
             !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
             return (nothing, nothing, nothing)

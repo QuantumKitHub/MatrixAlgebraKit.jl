@@ -72,6 +72,15 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
             :svd_pullback!, :svd_trunc_pullback!, :svd_vals_pullback!
         )
     )
+    eval(
+        Expr(
+            :public, :remove_svd_gauge_dependence!,
+            :remove_eig_gauge_dependence!, :remove_eigh_gauge_dependence!,
+            :remove_qr_gauge_dependence!, :remove_qr_null_gauge_dependence!,
+            :remove_lq_gauge_dependence!, :remove_lq_null_gauge_dependence!,
+            :remove_left_null_gauge_dependence!, :remove_right_null_gauge_dependence!,
+        )
+    )
     eval(Expr(:public, :is_left_isometric, :is_right_isometric))
 end
 
