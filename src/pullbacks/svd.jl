@@ -235,19 +235,19 @@ function svd_trunc_pullback!(
         Y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
         AP = mul!(copy(A), U, Smat * Vᴴ, -1, 1)
         AP ./= S[end]
-        Sinv = S[end] ./ S
-        X₁ = rmul!(AP * Y₀ᴴ', Diagonal(Sinv))
+        S⁻¹ = S[end] ./ S
+        X₁ = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
         X₁ .+= X₀
-        Y₁ᴴ = lmul!(Diagonal(Sinv), X₀' * AP)
+        Y₁ᴴ = lmul!(Diagonal(S⁻¹), X₀' * AP)
         Y₁ᴴ .+= Y₀ᴴ
         Xₖ, Xₖ₊₁ = X₁, X₀
         Yₖᴴ, Yₖ₊₁ᴴ = Y₁ᴴ, Y₀ᴴ
         APAᴴₖ, AᴴPAₖ = AP * AP', AP' * AP
         APAᴴₖ₊₁, AᴴPAₖ₊₁ = zero(APAᴴₖ), zero(AᴴPAₖ)
-        Sinvₖ, Sinvₖ₊₁ = Sinv .^ 2, Sinv
+        S⁻¹ₖ, S⁻¹ₖ₊₁ = S⁻¹ .^ 2, S⁻¹
         for k in 1:maxiter
-            Xₖ₊₁ = rmul!(mul!(Xₖ₊₁, APAᴴₖ, Xₖ), Diagonal(Sinvₖ))
-            Yₖ₊₁ᴴ = lmul!(Diagonal(Sinvₖ), mul!(Yₖ₊₁ᴴ, Yₖᴴ, AᴴPAₖ))
+            Xₖ₊₁ = rmul!(mul!(Xₖ₊₁, APAᴴₖ, Xₖ), Diagonal(S⁻¹ₖ))
+            Yₖ₊₁ᴴ = lmul!(Diagonal(S⁻¹ₖ), mul!(Yₖ₊₁ᴴ, Yₖᴴ, AᴴPAₖ))
             if norm(Xₖ₊₁, Inf) < degeneracy_atol && norm(Yₖ₊₁ᴴ, Inf) < degeneracy_atol
                 break
             end
@@ -257,14 +257,14 @@ function svd_trunc_pullback!(
                 @warn "Sylvester iteration did not converge after $k iterations, final norms: (X: $(norm(Xₖ₊₁, Inf)), Yᴴ: $(norm(Yₖ₊₁ᴴ, Inf)))"
                 break
             end
-            Sinvₖ₊₁ .= Sinvₖ .^ 2
+            S⁻¹ₖ₊₁ .= S⁻¹ₖ .^ 2
             APAᴴₖ₊₁ = mul!(APAᴴₖ₊₁, APAᴴₖ, APAᴴₖ)
             AᴴPAₖ₊₁ = mul!(AᴴPAₖ₊₁, AᴴPAₖ, AᴴPAₖ)
             Xₖ, Xₖ₊₁ = Xₖ₊₁, Xₖ
             Yₖᴴ, Yₖ₊₁ᴴ = Yₖ₊₁ᴴ, Yₖᴴ
             APAᴴₖ, APAᴴₖ₊₁ = APAᴴₖ₊₁, APAᴴₖ
             AᴴPAₖ, AᴴPAₖ₊₁ = AᴴPAₖ₊₁, AᴴPAₖ
-            Sinvₖ, Sinvₖ₊₁ = Sinvₖ₊₁, Sinvₖ
+            S⁻¹ₖ, S⁻¹ₖ₊₁ = S⁻¹ₖ₊₁, S⁻¹ₖ
         end
         ΔA = mul!(ΔA, Xₖ, Vᴴ, 1, 1)
         ΔA = mul!(ΔA, U, Yₖᴴ, 1, 1)
