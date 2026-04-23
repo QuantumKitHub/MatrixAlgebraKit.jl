@@ -9,7 +9,7 @@ using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
 import MatrixAlgebraKit: heevj!, heevd!, geev!
 import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank
-using CUDA, CUDA.CUBLAS
+using CUDA, CUDA.cuBLAS
 using CUDA: i32
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
