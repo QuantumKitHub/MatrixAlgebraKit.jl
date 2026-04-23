@@ -127,9 +127,10 @@ Adds the pullback from the SVD of `A` to `ΔA` given the output `USVᴴ` of `svd
 In particular, it is assumed that `A ≈ U * S * Vᴴ`, or thus, that no singular values with
 magnitude less than `rank_atol` are missing from `S`.  For the cotangents, an arbitrary
 number of singular vectors or singular values can be missing, i.e. for a matrix `A` with
-size `(m, n)`, `ΔU` and `ΔVᴴ` can have sizes `(m, p)` and `(p, n)` respectively, whereas
-`diagview(ΔS)` can have length `p`. In those cases, an additional list `ind` of length `p`
-is required to specify which singular vectors and values are present in `ΔU`, `ΔS` and `ΔVᴴ`.
+size `(m, n)`, `ΔU`, `ΔS` and `ΔVᴴ` can have sizes `(m, p)`, `(p, p)` and `(p, n)` respectively
+and the argument `ind` is a list of length `p` indicating that these are cotangents corresponding to `U[:, ind]`, `S[ind, ind]` and `Vᴴ[ind, :]`,
+whereas cotangents with respect to the other rows and columns are zero.
+If `ind` is not present, `ΔU`, `ΔS` and `ΔVᴴ` are assumed to have the same size as `U`, `S` and `Vᴴ` respectively.
 
 A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
 anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j` for
