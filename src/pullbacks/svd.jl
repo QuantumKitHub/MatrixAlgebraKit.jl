@@ -81,8 +81,8 @@ function check_and_prepare_svd_cotangents(
         ΔV₊ᴴ = nothing
         aVᴴΔV₁ = zero!(similar(V₁ᴴ, (r, r)))
     end
-    bc = Base.broadcasted(S₁', S₁, aUᴴΔU₁, aVᴴΔV₁) do s1, s2, u, v
-        return abs(s1 - s2) < degeneracy_atol ? zero(u) + zero(v) : u + v
+    bc = Base.broadcasted(S₁', S₁, aUᴴΔU₁, aVᴴΔV₁) do s₁, s₂, u, v
+        return abs(s₁ - s₂) < degeneracy_atol ? zero(u) + zero(v) : u + v
     end
     Δgauge = max(Δgauge, norm(bc, Inf))
 
