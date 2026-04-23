@@ -205,59 +205,6 @@ A warning will be printed if the cotangents are not gauge-invariant, i.e. if the
 anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and columns `j` for
 which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 """
-function svd_trunc_pullback2!(
-        ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
-        rank_atol::Real = 0,
-        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
-        maxiter::Int = 1000,
-    )
-
-    # Extract the SVD components
-    U, Smat, Vᴴ = USVᴴ
-    m, n = size(U, 1), size(Vᴴ, 2)
-    (m, n) == size(ΔA) || throw(DimensionMismatch())
-    p = size(U, 2)
-    p == size(Vᴴ, 1) || throw(DimensionMismatch())
-    S = diagview(Smat)
-    p == length(S) || throw(DimensionMismatch())
-
-    # Extract and check the cotangents
-    ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    UdΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
-        U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, p; degeneracy_atol, gauge_atol
-    )
-    ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
-
-    # The contributions from the orthogonal complement need to be treated differently
-    # ΔU and ΔVᴴ are already orthogonal to U and Vᴴ
-    if !(iszerotangent(ΔU₊) && iszerotangent(ΔV₊ᴴ))
-        Aperp = mul!(copy(A), U, Smat * Vᴴ, -1, 1)
-        x₀ = iszerotangent(ΔU₊) ? zero(U) : rdiv!(ΔU₊, Diagonal(S))
-        y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
-        X = copy(x₀)
-        Yᴴ = copy(y₀ᴴ)
-        xₖ, xₖ₊₁ = x₀, zero(x₀)
-        yₖᴴ, yₖ₊₁ᴴ = y₀ᴴ, zero(y₀ᴴ)
-        for k in 1:maxiter
-            xₖ₊₁ = rdiv!(mul!(xₖ₊₁, Aperp, yₖᴴ'), Diagonal(S))
-            yₖ₊₁ᴴ = ldiv!(Diagonal(S), mul!(yₖ₊₁ᴴ, xₖ', Aperp))
-            X .+= xₖ₊₁
-            Yᴴ .+= yₖ₊₁ᴴ
-            if norm(xₖ₊₁, Inf) < degeneracy_atol && norm(yₖ₊₁ᴴ, Inf) < degeneracy_atol
-                break
-            end
-            xₖ, xₖ₊₁ = xₖ₊₁, xₖ
-            yₖᴴ, yₖ₊₁ᴴ = yₖ₊₁ᴴ, yₖᴴ
-            if k == maxiter
-                @warn "Sylvester iteration did not converge after $k iterations, final norms: (x: $(norm(xₖ₊₁, Inf)), y: $(norm(yₖ₊₁ᴴ, Inf)))"
-            end
-        end
-        ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
-        ΔA = mul!(ΔA, U, Yᴴ, 1, 1)
-    end
-    return ΔA
-end
 function svd_trunc_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = 0,
