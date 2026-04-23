@@ -1,4 +1,4 @@
-function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ; rank_atol = default_pullback_rank_atol(A), kwargs...)
+function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = default_pullback_rank_atol(A), kwargs...)
     U, Smat, Vᴴ = USVᴴ
     m, n = size(U, 1), size(Vᴴ, 2)
     (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of U*S*Vᴴ ($m, $n)"))
@@ -7,9 +7,7 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ; rank_atol = default_pullback
     ΔU, ΔS, ΔVᴴ = ΔUSVᴴ
     r = searchsortedlast(S, rank_atol; rev = true) # rank
 
-    vΔU = view(ΔU, :, 1:r)
     vΔS = view(ΔS, 1:r, 1:r)
-    vΔVᴴ = view(ΔVᴴ, 1:r, :)
 
     vU = view(U, :, 1:r)
     vS = view(S, 1:r)
@@ -72,11 +70,26 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ; rank_atol = default_pullback
         ∂U += view(superLN, 1:size(upper, 1), :)
         ∂V += view(superLN, (size(upper, 1) + 1):(size(upper, 1) + size(lower, 1)), :)
     end
-    copyto!(vΔU, ∂U)
-    adjoint!(vΔVᴴ, ∂V)
+    if !iszerotangent(ΔU)
+        vΔU = view(ΔU, :, 1:r)
+        copyto!(vΔU, ∂U)
+    end
+    if !iszerotangent(ΔVᴴ)
+        vΔVᴴ = view(ΔVᴴ, 1:r, :)
+        adjoint!(vΔVᴴ, ∂V)
+    end
     return (ΔU, ΔS, ΔVᴴ)
 end
 
 function svd_trunc_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind; rank_atol = default_pullback_rank_atol(A), kwargs...)
     # TODO
+end
+
+function svd_vals_pushforward!(
+        ΔA, A, USVᴴ, ΔS, ind = Colon();
+        rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2])
+    )
+    ΔUSVᴴ = (nothing, diagonal(ΔS), nothing)
+    return svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind; rank_atol, degeneracy_atol)
 end

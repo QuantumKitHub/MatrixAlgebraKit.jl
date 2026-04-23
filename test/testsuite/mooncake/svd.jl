@@ -16,7 +16,7 @@ end
 """
     test_mooncake_svd_compact(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `svd_compact` and its in-place variant.
+Test the Mooncake AD rule for `svd_compact` and its in-place variant.
 """
 function test_mooncake_svd_compact(
         T, sz;
@@ -30,11 +30,11 @@ function test_mooncake_svd_compact(
 
         Mooncake.TestUtils.test_rule(
             rng, svd_compact, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, svd_compact!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
@@ -42,7 +42,7 @@ end
 """
     test_mooncake_svd_full(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `svd_full` and its in-place variant. The
+Test the Mooncake AD rule for `svd_full` and its in-place variant. The
 gauge-dependent extra columns of `U` and rows of `Vᴴ` are zeroed out in the cotangent.
 """
 function test_mooncake_svd_full(
@@ -57,11 +57,11 @@ function test_mooncake_svd_full(
 
         Mooncake.TestUtils.test_rule(
             rng, svd_full, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, svd_full!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
@@ -69,7 +69,7 @@ end
 """
     test_mooncake_svd_vals(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `svd_vals` and its in-place variant.
+Test the Mooncake AD rule for `svd_vals` and its in-place variant.
 """
 function test_mooncake_svd_vals(
         T, sz;
@@ -83,11 +83,11 @@ function test_mooncake_svd_vals(
 
         Mooncake.TestUtils.test_rule(
             rng, svd_vals, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, svd_vals!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
@@ -95,7 +95,7 @@ end
 """
     test_mooncake_svd_trunc(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rules for `svd_trunc`, `svd_trunc_no_error`, and their
+Test the Mooncake AD rules for `svd_trunc`, `svd_trunc_no_error`, and their
 in-place variants, over a range of truncation ranks and a tolerance-based truncation.
 """
 function test_mooncake_svd_trunc(
@@ -117,12 +117,12 @@ function test_mooncake_svd_trunc(
             ΔUSVᴴtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(USVᴴtrunc), ΔUSVᴴtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(
-                rng, svd_trunc_no_error, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴtrunc, atol, rtol
+                rng, svd_trunc_no_error, A, alg_trunc; mode = Mooncake.ReverseMode,
+                output_tangent = ΔUSVᴴtrunc, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, svd_trunc_no_error!, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴtrunc, atol, rtol, is_primitive = false
+                rng, call_and_zero!, svd_trunc_no_error!, A, alg_trunc; mode = Mooncake.ReverseMode,
+                output_tangent = ΔUSVᴴtrunc, atol, rtol, is_primitive = false
             )
 
             USVᴴϵ = svd_trunc(A, alg_trunc)
@@ -130,12 +130,12 @@ function test_mooncake_svd_trunc(
             ΔUSVᴴϵtrunc = (ΔUSVᴴtrunc..., Δϵ)
 
             Mooncake.TestUtils.test_rule(
-                rng, svd_trunc, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴϵtrunc, atol, rtol
+                rng, svd_trunc, A, alg_trunc; mode = Mooncake.ReverseMode,
+                output_tangent = ΔUSVᴴϵtrunc, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, svd_trunc!, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴϵtrunc, atol, rtol, is_primitive = false
+                rng, call_and_zero!, svd_trunc!, A, alg_trunc; mode = Mooncake.ReverseMode,
+                output_tangent = ΔUSVᴴϵtrunc, atol, rtol, is_primitive = false
             )
         end
 
@@ -148,12 +148,12 @@ function test_mooncake_svd_trunc(
             ΔUSVᴴtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(USVᴴtrunc), ΔUSVᴴtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(
-                rng, svd_trunc_no_error, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴtrunc, atol, rtol
+                rng, svd_trunc_no_error, A, alg_trunc; mode = Mooncake.ReverseMode,
+                output_tangent = ΔUSVᴴtrunc, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, svd_trunc_no_error!, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴtrunc, atol, rtol, is_primitive = false
+                rng, call_and_zero!, svd_trunc_no_error!, A, alg_trunc; mode = Mooncake.ReverseMode,
+                output_tangent = ΔUSVᴴtrunc, atol, rtol, is_primitive = false
             )
 
             USVᴴϵ = svd_trunc(A, alg_trunc)
@@ -161,12 +161,12 @@ function test_mooncake_svd_trunc(
             ΔUSVᴴϵtrunc = (ΔUSVᴴtrunc..., Δϵ)
 
             Mooncake.TestUtils.test_rule(
-                rng, svd_trunc, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴϵtrunc, atol, rtol
+                rng, svd_trunc, A, alg_trunc; mode = Mooncake.ReverseMode,
+                output_tangent = ΔUSVᴴϵtrunc, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, svd_trunc!, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴϵtrunc, atol, rtol, is_primitive = false
+                rng, call_and_zero!, svd_trunc!, A, alg_trunc; mode = Mooncake.ReverseMode,
+                output_tangent = ΔUSVᴴϵtrunc, atol, rtol, is_primitive = false
             )
         end
     end

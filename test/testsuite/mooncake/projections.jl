@@ -15,7 +15,7 @@ end
 """
     test_mooncake_project_hermitian(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `project_hermitian` and its in-place variant.
+Test the Mooncake AD rule for `project_hermitian` and its in-place variant.
 """
 function test_mooncake_project_hermitian(
         T, sz;
@@ -27,15 +27,15 @@ function test_mooncake_project_hermitian(
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
         Mooncake.TestUtils.test_rule(
             rng, project_hermitian, A, alg;
-            mode = Mooncake.ReverseMode, atol, rtol
+            atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, project_hermitian!, A, A, alg;
-            mode = Mooncake.ReverseMode, atol, rtol
+            atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, project_hermitian!, A, B, alg;
-            mode = Mooncake.ReverseMode, atol, rtol
+            atol, rtol
         )
     end
 end
@@ -43,7 +43,7 @@ end
 """
     test_mooncake_project_antihermitian(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `project_antihermitian` and its in-place variant.
+Test the Mooncake AD rule for `project_antihermitian` and its in-place variant.
 """
 function test_mooncake_project_antihermitian(
         T, sz;
@@ -55,15 +55,15 @@ function test_mooncake_project_antihermitian(
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
         Mooncake.TestUtils.test_rule(
             rng, project_antihermitian, A, alg;
-            mode = Mooncake.ReverseMode, atol, rtol
+            atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, project_antihermitian!, A, A, alg;
-            mode = Mooncake.ReverseMode, atol, rtol
+            atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, project_antihermitian!, A, B, alg;
-            mode = Mooncake.ReverseMode, atol, rtol
+            atol, rtol
         )
     end
 end

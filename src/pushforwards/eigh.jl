@@ -1,4 +1,4 @@
-function eigh_pushforward!(dA, A, DV, dDV; kwargs...)
+function eigh_pushforward!(dA, A, DV, dDV, ind = Colon(); kwargs...)
     D, V = DV
     dD, dV = dDV
     tmpV = V \ dA

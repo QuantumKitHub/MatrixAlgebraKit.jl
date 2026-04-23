@@ -15,7 +15,7 @@ end
 """
     test_mooncake_lq_compact(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `lq_compact` and its in-place variant.
+Test the Mooncake AD rule for `lq_compact` and its in-place variant.
 """
 function test_mooncake_lq_compact(
         T, sz;
@@ -29,11 +29,11 @@ function test_mooncake_lq_compact(
 
         Mooncake.TestUtils.test_rule(
             rng, lq_compact, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, lq_compact!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
 
         A = instantiate_rank_deficient_matrix(T, sz)
@@ -43,11 +43,11 @@ function test_mooncake_lq_compact(
 
         Mooncake.TestUtils.test_rule(
             rng, lq_compact, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, lq_compact!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
@@ -55,7 +55,7 @@ end
 """
     test_mooncake_lq_full(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `lq_full` and its in-place variant.
+Test the Mooncake AD rule for `lq_full` and its in-place variant.
 """
 function test_mooncake_lq_full(
         T, sz;
@@ -69,11 +69,11 @@ function test_mooncake_lq_full(
 
         Mooncake.TestUtils.test_rule(
             rng, lq_full, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, lq_full!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
@@ -81,7 +81,7 @@ end
 """
     test_mooncake_lq_null(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `lq_null` and its in-place variant.
+Test the Mooncake AD rule for `lq_null` and its in-place variant.
 """
 function test_mooncake_lq_null(
         T, sz;
@@ -95,11 +95,11 @@ function test_mooncake_lq_null(
 
         Mooncake.TestUtils.test_rule(
             rng, lq_null, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, lq_null!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end

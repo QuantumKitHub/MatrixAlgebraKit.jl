@@ -15,5 +15,5 @@ end
 function eig_trunc_pushforward!(ΔA, A, DV, ΔDV; kwargs...) end
 
 function eig_vals_pushforward!(ΔA, A, DV, ΔD; kwargs...)
-    return eig_pushforward!(ΔA, A, DV, ΔD; kwargs...)
+    return eig_pushforward!(ΔA, A, DV, (Diagonal(ΔD), nothing); kwargs...)
 end
