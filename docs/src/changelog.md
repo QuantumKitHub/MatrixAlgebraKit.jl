@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.5...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.6...HEAD)
 
 ### Added
 
@@ -31,6 +31,19 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 ### Performance
+
+## [0.6.6](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.5...v0.6.6) - 2026-04-24
+
+### Added
+
+- Add equality comparison (`==`) for `TruncationStrategy` types ([#211](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/211)).
+
+### Changed
+
+- Reorganized pullback implementations and fixed pullback correctness for rank-degenerate SVD cases ([#208](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/208)).
+- Centralized QR/LQ gauge-fixing logic ([#203](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/203)).
+- Bumped CUDA compat to v6, dropping support for older versions ([#209](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/209)).
+- Replaced `CompatHelper` with `dependabot` for dependency updates ([#212](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/212)).
 
 ## [0.6.5](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.4...v0.6.5) - 2026-03-24
 
