@@ -40,7 +40,7 @@ jobs:
             echo 'version=["1"]' >> "$GITHUB_OUTPUT"
             echo 'os=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
           else
-            echo 'version=["lts","1"]' >> "$GITHUB_OUTPUT"
+            echo 'version=["min","1"]' >> "$GITHUB_OUTPUT"
             echo 'os=["ubuntu-latest","macOS-latest","windows-latest"]' >> "$GITHUB_OUTPUT"
           fi
 
@@ -58,7 +58,7 @@ jobs:
             version: 1
             group: enzyme 
           - os: macos-latest
-            version: "lts" 
+            version: "min" 
             group: enzyme 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
