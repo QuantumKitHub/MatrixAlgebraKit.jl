@@ -35,7 +35,7 @@ The main goals of this package are:
 
 ## Contributors
 
-MatrixAlgebraKit.jl is developed and maintained by the [QuantumKit](https://github.com/QuantumKitHub) community.
+MatrixAlgebraKit.jl is developed and maintained by the [QuantumKitHub](https://github.com/QuantumKitHub) community.
 We gratefully acknowledge the contributions of:
 
 - **[Jutho Haegeman](https://github.com/Jutho)**
