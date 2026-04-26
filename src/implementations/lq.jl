@@ -164,9 +164,10 @@ function lq_householder!(
     end
 
     if computeL
-        L̃ = lowertriangular!(view(A, axes(L)...))
-        positive && gaugefix!(lq_householder!, L̃, Q, diagview(A))
-        copyto!(L, L̃)
+        # we need to first copy then gaugefix - avoiding aliasing between L and Ld for broadcast
+        Ld = diagview(A)
+        copyto!(L, lowertriangular!(view(A, axes(L)...)))
+        positive && gaugefix!(lq_householder!, L, Q, Ld)
     else
         gaugefix!(lq_householder!, nothing, Q, diagview(A))
     end
