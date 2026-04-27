@@ -7,7 +7,7 @@ using LinearAlgebra: I, Diagonal
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (BigFloat, Complex{BigFloat})
 
-@isdefined(TestSuite) || include("testsuite/TestSuite.jl")
+@isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
 using .TestSuite
 
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
