@@ -5,6 +5,7 @@ authors = ["Jutho Haegeman <jutho.haegeman@ugent.be>, Lukas Devos, Katharine Hya
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 
 [weakdeps]
 AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
@@ -35,6 +36,7 @@ EnzymeTestUtils = "0.2.5"
 GenericLinearAlgebra = "0.3.19, 0.4"
 GenericSchur = "0.5.6"
 LinearAlgebra = "1"
+PrecompileTools = "1"
 Mooncake = "0.5.27"
 ParallelTestRunner = "2"
 Random = "1"
