@@ -25,7 +25,7 @@ function test_enzyme_left_orth(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "left_orth reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "left_orth: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         m, n = size(A)
 
@@ -35,6 +35,9 @@ function test_enzyme_left_orth(
             VC, ΔVC = ad_left_orth_setup(A)
             test_reverse(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
             test_reverse(call_and_zero!, RT, (left_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
+            A = instantiate_matrix(T, sz)
+            test_forward(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (left_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
         end
 
         if m >= n && !(T <: Diagonal)
@@ -44,6 +47,9 @@ function test_enzyme_left_orth(
                 VC, ΔVC = ad_left_orth_setup(A)
                 test_reverse(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
                 test_reverse(call_and_zero!, RT, (left_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
+                A = instantiate_matrix(T, sz)
+                test_forward(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+                test_forward(call_and_zero!, RT, (left_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
             end
         end
     end
@@ -69,6 +75,9 @@ function test_enzyme_right_orth(
             CVᴴ, ΔCVᴴ = ad_right_orth_setup(A)
             test_reverse(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
             test_reverse(call_and_zero!, RT, (right_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
+            A = instantiate_matrix(T, sz)
+            test_forward(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (right_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
         end
 
         if m <= n && !(T <: Diagonal)
@@ -78,6 +87,9 @@ function test_enzyme_right_orth(
                 CVᴴ, ΔCVᴴ = ad_right_orth_setup(A)
                 test_reverse(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
                 test_reverse(call_and_zero!, RT, (right_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
+                A = instantiate_matrix(T, sz)
+                test_forward(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+                test_forward(call_and_zero!, RT, (right_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
             end
         end
     end
@@ -101,6 +113,9 @@ function test_enzyme_left_null(
             N, ΔN = ad_left_null_setup(A)
             test_reverse(left_null, RT, (A, TA), (alg, Const); output_tangent = ΔN, atol, rtol)
             test_reverse(call_and_zero!, RT, (left_null!, Const), (A, TA), (alg, Const); output_tangent = ΔN, atol, rtol)
+            A = instantiate_matrix(T, sz)
+            test_forward(left_null, RT, (A, TA), (alg, Const); atol, rtol)
+            test_forward(call_and_zero!, RT, (left_null!, Const), (A, TA), (alg, Const); atol, rtol)
         end
     end
 end
@@ -123,6 +138,9 @@ function test_enzyme_right_null(
             Nᴴ, ΔNᴴ = ad_right_null_setup(A)
             test_reverse(right_null, RT, (A, TA), (alg, Const); output_tangent = ΔNᴴ, atol, rtol)
             test_reverse(call_and_zero!, RT, (right_null!, Const), (A, TA), (alg, Const); output_tangent = ΔNᴴ, atol, rtol)
+            A = instantiate_matrix(T, sz)
+            test_forward(right_null, RT, (A, TA), (alg, Const); atol, rtol)
+            test_forward(call_and_zero!, RT, (right_null!, Const), (A, TA), (alg, Const); atol, rtol)
         end
     end
 end

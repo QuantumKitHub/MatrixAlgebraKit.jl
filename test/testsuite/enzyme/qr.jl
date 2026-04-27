@@ -18,12 +18,15 @@ function test_enzyme_qr_compact(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "qr_compact reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "qr_compact: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(qr_compact, A)
         QR, ΔQR = ad_qr_compact_setup(A)
-        test_reverse(qr_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
-        test_reverse(call_and_zero!, RT, (qr_compact!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
+        test_reverse(qr_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm, testset_name = "qr_compact reverse $T")
+        test_reverse(call_and_zero!, RT, (qr_compact!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm, testset_name = "qr_compact! reverse $T")
+        A = instantiate_matrix(T, sz)
+        test_forward(qr_compact, RT, (A, TA), (alg, Const); atol, rtol, fdm, testset_name = "qr_compact forward $T")
+        test_forward(call_and_zero!, RT, (qr_compact!, Const), (A, TA), (alg, Const); atol, rtol, fdm, testset_name = "qr_compact! forward $T")
     end
 end
 
@@ -32,15 +35,18 @@ function test_enzyme_qr_compact_rank_deficient(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "qr_compact rank deficient A reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "qr_compact rank deficient A: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         m, n = size(A)
         r = min(m, n) - 5
         A = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
         alg = MatrixAlgebraKit.select_algorithm(qr_compact, A)
         QR, ΔQR = ad_qr_compact_setup(A)
-        test_reverse(qr_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
-        test_reverse(call_and_zero!, RT, (qr_compact!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
+        test_reverse(qr_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm, testset_name = "qr_compact rank deficient reverse $T")
+        test_reverse(call_and_zero!, RT, (qr_compact!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm, testset_name = "qr_compact! rank deficient reverse $T")
+        A = instantiate_matrix(T, (m, r)) * instantiate_matrix(T, (r, n))
+        test_forward(qr_compact, RT, (A, TA), (alg, Const); atol, rtol, fdm, testset_name = "qr_compact rank deficient forward $T")
+        test_forward(call_and_zero!, RT, (qr_compact!, Const), (A, TA), (alg, Const); atol, rtol, fdm, testset_name = "qr_compact! rank deficient forward $T")
     end
 end
 
@@ -49,12 +55,15 @@ function test_enzyme_qr_full(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "qr_full reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "qr_full: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(qr_full, A)
         QR, ΔQR = ad_qr_full_setup(A)
-        test_reverse(qr_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
-        test_reverse(call_and_zero!, RT, (qr_full!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm)
+        test_reverse(qr_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm, testset_name = "qr_full reverse $T")
+        test_reverse(call_and_zero!, RT, (qr_full!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔQR, fdm, testset_name = "qr_full! reverse $T")
+        A = instantiate_matrix(T, sz)
+        test_forward(qr_full, RT, (A, TA), (alg, Const); atol, rtol, fdm, testset_name = "qr_full forward $T")
+        test_forward(call_and_zero!, RT, (qr_full!, Const), (A, TA), (alg, Const); atol, rtol, fdm, testset_name = "qr_full! forward $T")
     end
 end
 
@@ -63,11 +72,14 @@ function test_enzyme_qr_null(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "qr_null reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "qr_null: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(qr_null, A)
         N, ΔN = ad_qr_null_setup(A)
-        test_reverse(qr_null, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔN)
-        test_reverse(call_and_zero!, RT, (qr_null!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔN)
+        test_reverse(qr_null, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔN, testset_name = "qr_null reverse $T")
+        test_reverse(call_and_zero!, RT, (qr_null!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔN, testset_name = "qr_null! reverse $T")
+        A = instantiate_matrix(T, sz)
+        test_forward(qr_null, RT, (A, TA), (alg, Const); atol, rtol, testset_name = "qr_null forward $T")
+        test_forward(call_and_zero!, RT, (qr_null!, Const), (A, TA), (alg, Const); atol, rtol, testset_name = "qr_null! forward $T")
     end
 end

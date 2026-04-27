@@ -3,11 +3,14 @@ module MatrixAlgebraKitEnzymeExt
 using MatrixAlgebraKit
 using MatrixAlgebraKit: copy_input, initialize_output, zero!
 using MatrixAlgebraKit: diagview, inv_safe, truncate
-using MatrixAlgebraKit: qr_pullback!, lq_pullback!
-using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
+using MatrixAlgebraKit: qr_pullback!, lq_pullback!, qr_pushforward!, lq_pushforward!
+using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!, qr_null_pushforward!, lq_null_pushforward!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!, eigh_vals_pullback!
+using MatrixAlgebraKit: eig_pushforward!, eigh_pushforward!, eig_vals_pushforward!, eigh_vals_pushforward!
 using MatrixAlgebraKit: svd_pullback!, svd_vals_pullback!
+using MatrixAlgebraKit: svd_pushforward!, svd_vals_pushforward!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
+using MatrixAlgebraKit: left_polar_pushforward!, right_polar_pushforward!
 using Enzyme
 using Enzyme.EnzymeCore
 using Enzyme.EnzymeCore: EnzymeRules
@@ -44,15 +47,15 @@ using LinearAlgebra
 #--------------------------------------------
 
 # two-argument factorizations like LQ, QR, EIG
-for (f, pb) in (
-        (qr_full!, qr_pullback!),
-        (lq_full!, lq_pullback!),
-        (qr_compact!, qr_pullback!),
-        (lq_compact!, lq_pullback!),
-        (eig_full!, eig_pullback!),
-        (eigh_full!, eigh_pullback!),
-        (left_polar!, left_polar_pullback!),
-        (right_polar!, right_polar_pullback!),
+for (f, pb, pf) in (
+        (qr_full!, qr_pullback!, qr_pushforward!),
+        (lq_full!, lq_pullback!, lq_pushforward!),
+        (qr_compact!, qr_pullback!, qr_pushforward!),
+        (lq_compact!, lq_pullback!, lq_pushforward!),
+        (eig_full!, eig_pullback!, eig_pushforward!),
+        (eigh_full!, eigh_pullback!, eigh_pushforward!),
+        (left_polar!, left_polar_pullback!, left_polar_pushforward!),
+        (right_polar!, right_polar_pullback!, right_polar_pushforward!),
     )
     @eval begin
         function EnzymeRules.augmented_primal(
@@ -114,12 +117,35 @@ for (f, pb) in (
             end
             return (nothing, nothing, nothing)
         end
+        function EnzymeRules.forward(
+                config::EnzymeRules.FwdConfigWidth{1},
+                func::Const{typeof($f)},
+                ::Type{RT},
+                A::Annotation,
+                arg::Annotation{Tuple{TA, TB}},
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT, TA, TB}
+            func.val(A.val, arg.val, alg.val)
+            if !isa(arg, Const)
+                $pf(A.dval, A.val, arg.val, arg.dval)
+            end
+            !isa(A, Const) && make_zero!(A.dval)
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return arg
+            elseif EnzymeRules.needs_primal(config)
+                return arg.val
+            elseif EnzymeRules.needs_shadow(config)
+                return arg.dval
+            else
+                return nothing
+            end
+        end
     end
 end
 
-for (f, pb) in (
-        (qr_null!, qr_null_pullback!),
-        (lq_null!, lq_null_pullback!),
+for (f, pb, pf) in (
+        (qr_null!, qr_null_pullback!, qr_null_pushforward!),
+        (lq_null!, lq_null_pullback!, lq_null_pushforward!),
     )
     @eval begin
         function EnzymeRules.augmented_primal(
@@ -167,6 +193,28 @@ for (f, pb) in (
             end
             !isa(arg, Const) && make_zero!(arg.dval)
             return (nothing, nothing, nothing)
+        end
+        function EnzymeRules.forward(
+                config::EnzymeRules.FwdConfigWidth{1},
+                func::Const{typeof($f)},
+                ::Type{RT},
+                A::Annotation,
+                arg::Annotation,
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT}
+            if !isa(arg, Const)
+                $pf(A.dval, A.val, arg.val, arg.dval)
+            end
+            !isa(A, Const) && make_zero!(A.dval)
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return arg
+            elseif EnzymeRules.needs_primal(config)
+                return arg.val
+            elseif EnzymeRules.needs_shadow(config)
+                return arg.dval
+            else
+                return nothing
+            end
         end
     end
 end
@@ -226,6 +274,42 @@ for f in (:svd_compact!, :svd_full!)
             !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
             return (nothing, nothing, nothing)
         end
+        function EnzymeRules.forward(
+                config::EnzymeRules.FwdConfigWidth{1},
+                func::Const{typeof($f)},
+                ::Type{RT},
+                A::Annotation,
+                USVᴴ::Annotation,
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT}
+            func.val(A.val, USVᴴ.val, alg.val)
+            if !isa(USVᴴ, Const)
+                minmn = min(size(A.val)...)
+                if $(f == svd_compact!) # compact
+                    svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
+                else # full
+                    # TODO: revisit this once `svd_pullback` supports `svd_full` output and adjoints
+                    U, S, Vᴴ = USVᴴ.val
+                    vU = view(U, :, 1:minmn)
+                    vS = Diagonal(view(diagview(S), 1:minmn))
+                    vVᴴ = view(Vᴴ, 1:minmn, :)
+                    vdU = view(USVᴴ.dval[1], :, 1:minmn)
+                    vdS = Diagonal(view(diagview(USVᴴ.dval[2]), 1:minmn))
+                    vdVᴴ = view(USVᴴ.dval[3], 1:minmn, :)
+                    svd_pushforward!(A.dval, A.val, (vU, vS, vVᴴ), (vdU, vdS, vdVᴴ))
+                end
+            end
+            #!isa(A, Const) && make_zero!(A.dval)
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return USVᴴ
+            elseif EnzymeRules.needs_primal(config)
+                return USVᴴ.val
+            elseif EnzymeRules.needs_shadow(config)
+                return USVᴴ.dval
+            else
+                return nothing
+            end
+        end
     end
 end
 
@@ -278,6 +362,30 @@ function EnzymeRules.reverse(
     end
     !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
     return (nothing, nothing, nothing)
+end
+
+function EnzymeRules.forward(
+        config::EnzymeRules.FwdConfigWidth{1},
+        func::Const{typeof(svd_trunc_no_error!)},
+        ::Type{RT},
+        A::Annotation,
+        USVᴴ::Annotation,
+        alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+    ) where {RT}
+    ret = svd_compact!(A.val, USVᴴ.val, alg.val.alg)
+    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, ret, alg.val.trunc)
+    dUSVᴴ′ = Enzyme.make_zero(USVᴴ′)
+    svd_pushforward!(A.dval, Aval, USVᴴ.val, dUSVᴴ′, ind)
+    !isa(A, Const) && make_zero!(A.dval)
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return Duplicated(USVᴴ′, dUSVᴴ′)
+    elseif EnzymeRules.needs_primal(config)
+        return USVᴴ′
+    elseif EnzymeRules.needs_shadow(config)
+        return dUSVᴴ′
+    else
+        return nothing
+    end
 end
 
 for (f, trunc_f, full_f, pb) in (
@@ -336,9 +444,9 @@ for (f, trunc_f, full_f, pb) in (
     end
 end
 
-for (f!, f_full!, pb!) in (
-        (eig_vals!, eig_full!, eig_vals_pullback!),
-        (eigh_vals!, eigh_full!, eigh_vals_pullback!),
+for (f!, f_full!, pb!, pf!) in (
+        (eig_vals!, eig_full!, eig_vals_pullback!, eig_vals_pushforward!),
+        (eigh_vals!, eigh_full!, eigh_vals_pullback!, eigh_vals_pushforward!),
     )
     @eval begin
         function EnzymeRules.augmented_primal(
@@ -386,6 +494,30 @@ for (f!, f_full!, pb!) in (
             end
             !isa(D, Const) && !A_is_arg && make_zero!(D.dval)
             return (nothing, nothing, nothing)
+        end
+        function EnzymeRules.forward(
+                config::EnzymeRules.FwdConfigWidth{1},
+                func::Const{typeof($f!)},
+                ::Type{RT},
+                A::Annotation,
+                D::Annotation,
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT}
+            nD, V = $f_full!(A.val, alg.val)
+            copyto!(D.val, diagview(nD))
+            if !isa(D, Const)
+                $pf!(A.dval, A.val, (Diagonal(D.val), V), D.dval)
+            end
+            !isa(A, Const) && make_zero!(A.dval)
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return D
+            elseif EnzymeRules.needs_primal(config)
+                return D.val
+            elseif EnzymeRules.needs_shadow(config)
+                return D.dval
+            else
+                return nothing
+            end
         end
     end
 end
@@ -435,6 +567,30 @@ function EnzymeRules.reverse(
     end
     !isa(S, Const) && !A_is_arg && make_zero!(S.dval)
     return (nothing, nothing, nothing)
+end
+function EnzymeRules.forward(
+        config::EnzymeRules.FwdConfigWidth{1},
+        func::Const{typeof(svd_vals!)},
+        ::Type{RT},
+        A::Annotation,
+        S::Annotation,
+        alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+    ) where {RT}
+    U, nS, Vᴴ = svd_compact!(A.val, alg.val)
+    copyto!(S.val, diagview(nS))
+    if !isa(S, Const)
+        svd_vals_pushforward!(A.dval, A.val, (U, Diagonal(S.val), Vᴴ), S.dval)
+    end
+    !isa(A, Const) && make_zero!(A.dval)
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return S
+    elseif EnzymeRules.needs_primal(config)
+        return S.val
+    elseif EnzymeRules.needs_shadow(config)
+        return S.dval
+    else
+        return nothing
+    end
 end
 
 end

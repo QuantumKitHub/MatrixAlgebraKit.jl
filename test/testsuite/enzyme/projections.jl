@@ -22,13 +22,16 @@ function test_enzyme_project_hermitian(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "project_hermitian reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "project_hermitian: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         B = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
         test_reverse(project_hermitian, RT, (A, TA), (alg, Const); atol, rtol, fdm)
         test_reverse(project_hermitian!, RT, (A, TA), (B, TA), (alg, Const); atol, rtol, fdm)
         test_reverse(project_hermitian_inplace!, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(project_hermitian, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(project_hermitian!, RT, (A, TA), (B, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(project_hermitian_inplace!, RT, (A, TA), (alg, Const); atol, rtol, fdm)
     end
 end
 
@@ -42,12 +45,15 @@ function test_enzyme_project_antihermitian(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "project_antihermitian reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "project_antihermitian: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         B = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(project_hermitian, A)
         test_reverse(project_antihermitian, RT, (A, TA), (alg, Const); atol, rtol, fdm)
         test_reverse(project_antihermitian!, RT, (A, TA), (B, TA), (alg, Const); atol, rtol, fdm)
         test_reverse(project_antihermitian_inplace!, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(project_antihermitian, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(project_antihermitian!, RT, (A, TA), (B, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(project_antihermitian_inplace!, RT, (A, TA), (alg, Const); atol, rtol, fdm)
     end
 end
