@@ -239,7 +239,6 @@ for f in (:svd_compact!, :svd_full!)
             Aval = nothing
             USVᴴval = something(cache_USVᴴ, USVᴴ.val)
             if !isa(A, Const)
-                minmn = min(size(A.val)...)
                 svd_pullback!(A.dval, Aval, USVᴴval, dUSVᴴ)
             end
             !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
