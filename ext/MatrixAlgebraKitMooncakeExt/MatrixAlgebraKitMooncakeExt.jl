@@ -1,7 +1,7 @@
 module MatrixAlgebraKitMooncakeExt
 
 using Mooncake
-using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
+using Mooncake: CoDual, Dual, NoRData, rrule!!, frule!!, arrayify
 using MatrixAlgebraKit
 using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output, zero!
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
@@ -12,6 +12,45 @@ using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!, svd_vals_pullback!
 using MatrixAlgebraKit: TruncatedAlgorithm
 using LinearAlgebra
+
+# Utility
+# -------
+
+"""
+    @mark_primitive f(::A, ::B, ::C, ::D...)
+
+Helper macro to mark a function as primitive, i.e. transforms the expression into:
+
+    Mooncake.@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode, Tuple{typeof(f), A, B, C, Vararg{D}}
+"""
+macro mark_primitive(ex)
+    @assert Meta.isexpr(ex, :call)
+    args = []
+    # function name
+    push!(args, :(typeof($(ex.args[1]))))
+
+    # arguments
+    for i in 2:(length(ex.args) - 1)
+        argex = ex.args[i]
+        @assert Meta.isexpr(argex, Symbol("::"))
+        push!(args, last(argex.args))
+    end
+
+    # (possible) vararg
+    if length(ex.args) > 1
+        argex = last(ex.args)
+        if Meta.isexpr(argex, Symbol("..."))
+            argex2 = only(argex.args)
+            @assert Meta.isexpr(argex2, Symbol("::"))
+            push!(args, :(Vararg{$(last(argex2.args))}))
+        else
+            @assert Meta.isexpr(argex, Symbol("::"))
+            push!(args, last(argex.args))
+        end
+    end
+
+    return :(Mooncake.@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{$(args...)})
+end
 
 Mooncake.tangent_type(::Type{<:MatrixAlgebraKit.AbstractAlgorithm}) = Mooncake.NoTangent
 
@@ -28,7 +67,7 @@ for (f!, f, pb, adj) in (
     )
 
     @eval begin
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Tuple{<:Any, <:Any}, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f!(::Any, ::Tuple{<:Any, <:Any}, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, args_dargs::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             args = Mooncake.primal(args_dargs)
@@ -66,7 +105,7 @@ for (f!, f, pb, adj) in (
             end
             return args_dargs, $adj
         end
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
@@ -95,7 +134,7 @@ for (f!, f, pb, adj) in (
         (:lq_null!, :lq_null, :lq_null_pullback!, :lq_null_adjoint),
     )
     @eval begin
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f!(::Any, ::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(f_df::CoDual{typeof($f!)}, A_dA::CoDual, arg_darg::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             Ac = copy(A)
@@ -111,7 +150,7 @@ for (f!, f, pb, adj) in (
             end
             return arg_darg, $adj
         end
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
@@ -132,7 +171,7 @@ for (f!, f, f_full, pb, adj) in (
         (:eigh_vals!, :eigh_vals, :eigh_full, :eigh_vals_pullback!, :eigh_vals_adjoint),
     )
     @eval begin
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f!(::Any, ::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -160,7 +199,7 @@ for (f!, f, f_full, pb, adj) in (
             end
             return D_dD, $adj
         end
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -195,8 +234,8 @@ for f in (:eig, :eigh)
     f_trunc_no_error! = Symbol(f_trunc_no_error, :!)
 
     @eval begin
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f_trunc!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f_trunc), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f_trunc!(::Any, ::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
+        @mark_primitive $f_trunc(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(::CoDual{typeof($f_trunc!)}, A_dA::CoDual, DV_dDV::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -333,8 +372,8 @@ for f in (:eig, :eigh)
 
             return DVtrunc_dDVtrunc, $f_adjoint!
         end
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f_trunc_no_error!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f_trunc_no_error), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f_trunc_no_error!(::Any, ::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
+        @mark_primitive $f_trunc_no_error(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(::CoDual{typeof($f_trunc_no_error!)}, A_dA::CoDual, DV_dDV::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -461,7 +500,7 @@ for (f!, f) in (
         (:svd_compact!, :svd_compact),
     )
     @eval begin
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Tuple{<:Any, <:Any, <:Any}, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f!(::Any, ::Tuple{<:Any, <:Any, <:Any}, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
             USVᴴ = Mooncake.primal(USVᴴ_dUSVᴴ)
@@ -485,7 +524,7 @@ for (f!, f) in (
             end
             return USVᴴ_dUSVᴴ, svd_adjoint
         end
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
             USVᴴ = $f(A, Mooncake.primal(alg_dalg))
@@ -511,7 +550,7 @@ for (f!, f) in (
     end
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_vals!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+@mark_primitive svd_vals!(::Any, ::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
 function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -528,7 +567,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDua
     return S_dS, svd_vals_adjoint
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_vals), Any, MatrixAlgebraKit.AbstractAlgorithm}
+@mark_primitive svd_vals(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
 function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -548,7 +587,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::Co
     return S_codual, svd_vals_adjoint
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+@mark_primitive svd_trunc!(::Any, ::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -628,7 +667,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc), Any, MatrixAlgebraKit.AbstractAlgorithm}
+@mark_primitive svd_trunc(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -679,7 +718,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+@mark_primitive svd_trunc_no_error!(::Any, ::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -754,7 +793,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
     return USVᴴtrunc_dUSVᴴtrunc, svd_trunc_adjoint
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error), Any, MatrixAlgebraKit.AbstractAlgorithm}
+@mark_primitive svd_trunc_no_error(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -808,7 +847,7 @@ for (f!, f, adj) in (
         (:project_antihermitian!, :project_antihermitian, :project_antihermitian_adjoint),
     )
     @eval begin
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f!(::Any, ::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(f_df::CoDual{typeof($f!)}, A_dA::CoDual, arg_darg::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             arg, darg = A_dA === arg_darg ? (A, dA) : arrayify(arg_darg)
@@ -830,7 +869,7 @@ for (f!, f, adj) in (
             return arg_darg, $adj
         end
 
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @mark_primitive $f(::Any, ::MatrixAlgebraKit.AbstractAlgorithm)
         function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
