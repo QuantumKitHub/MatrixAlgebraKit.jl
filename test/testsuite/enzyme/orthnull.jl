@@ -37,7 +37,7 @@ function test_enzyme_left_orth(
             test_reverse(call_and_zero!, RT, (left_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
         end
 
-        if m >= n
+        if m >= n && !(T <: Diagonal)
             @testset "polar" begin
                 A = instantiate_matrix(T, sz)
                 alg = MatrixAlgebraKit.select_algorithm(left_orth!, A, :polar)
@@ -71,7 +71,7 @@ function test_enzyme_right_orth(
             test_reverse(call_and_zero!, RT, (right_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
         end
 
-        if m <= n
+        if m <= n && !(T <: Diagonal)
             @testset "polar" begin
                 A = instantiate_matrix(T, sz)
                 alg = MatrixAlgebraKit.select_algorithm(right_orth!, A, :polar)

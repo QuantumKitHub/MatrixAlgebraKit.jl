@@ -15,5 +15,7 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
     TestSuite.seed_rng!(1234)
     if !is_buildkite
         TestSuite.test_enzyme_qr(T, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        AT = Diagonal{T, Vector{T}}
+        m == n && TestSuite.test_enzyme_qr(AT, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
     end
 end

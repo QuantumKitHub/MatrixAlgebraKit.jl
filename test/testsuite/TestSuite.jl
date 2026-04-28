@@ -96,6 +96,12 @@ function instantiate_rank_deficient_matrix(T, sz; trunc = truncrank(div(min(sz..
     return mul!(A, V, C)
 end
 
+function instantiate_rank_deficient_matrix(::Type{T}, sz; trunc = truncrank(div(min(sz...), 2))) where {T <: Diagonal}
+    A = instantiate_matrix(eltype(T), sz)
+    V, C = left_orth!(A; trunc)
+    return Diagonal(diag(mul!(A, V, C)))
+end
+
 include("ad_utils.jl")
 
 include("projections.jl")
