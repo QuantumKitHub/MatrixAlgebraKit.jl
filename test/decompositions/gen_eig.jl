@@ -4,7 +4,13 @@ using TestExtras
 using StableRNGs
 using LinearAlgebra: Diagonal
 
-@testset "gen_eig_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+if @isdefined(fast_tests) && fast_tests
+    BLASFloats = (Float64, ComplexF64)
+else
+    BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+end
+
+@testset "gen_eig_full! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_Simple(), :LAPACK_Simple, LAPACK_Simple)
