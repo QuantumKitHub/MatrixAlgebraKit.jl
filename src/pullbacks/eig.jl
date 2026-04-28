@@ -211,11 +211,11 @@ across eigenvectors associated with degenerate eigenvalues), so the correspondin
 `ΔV` are projected out.
 """
 function remove_eig_gauge_dependence!(
-        ΔV, D, V, ind = axes(ΔV, 2);
+        ΔV, D, V, ind = Colon();
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
     )
-    length(ind) == size(ΔV, 2) || throw(DimensionMismatch())
     indV = axes(V, 2)[ind]
+    length(indV) == size(ΔV, 2) || throw(DimensionMismatch("Incompatible size of selected `ind` and `ΔV`"))
     Vp = view(V, :, indV)
     Ddiag = view(diagview(D), indV)
     gaugepart = Vp' * ΔV
