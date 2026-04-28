@@ -1,4 +1,4 @@
-name: Tests
+name: CI
 
 on:
   push:
@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   tests:
+    name: "Tests"
     uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/TestGroups.yml@main"
     with:
       fast: "${{ github.event.pull_request.draft == true }}"
