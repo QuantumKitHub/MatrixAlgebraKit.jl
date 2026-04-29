@@ -52,7 +52,14 @@ macro mark_primitive(ex)
     return :(Mooncake.@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{$(args...)})
 end
 
+# No derivatives
+# --------------
 Mooncake.tangent_type(::Type{<:MatrixAlgebraKit.AbstractAlgorithm}) = Mooncake.NoTangent
+
+MC.@zero_derivative MC.DefaultCtx Tuple{typeof(MAK.select_algorithm), Any, Any, Any}
+MC.@zero_derivative MC.DefaultCtx Tuple{typeof(Core.kwcall), NamedTuple, typeof(MAK.select_algorithm), Any, Any, Any}
+MC.@zero_derivative MC.DefaultCtx Tuple{typeof(MAK.initialize_output), Any, Any, Any}
+MC.@zero_derivative MC.DefaultCtx Tuple{typeof(MAK.check_input), Any, Any, Any, Any}
 
 # two-argument in-place factorizations like LQ, QR, EIG
 for (f!, f, pb, adj) in (
