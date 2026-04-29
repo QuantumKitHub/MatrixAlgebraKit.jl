@@ -22,5 +22,6 @@ jobs:
     with:
       fast: "${{ github.event.pull_request.draft == true }}"
       exclude: '["testsuite"]'
+      timeout-minutes: 120
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
