@@ -1,3 +1,53 @@
+function check_and_prepare_eigh_cotangents(
+        D, V, ΔDmat, ΔV, ind = Colon();
+        degeneracy_atol::Real = default_pullback_rank_atol(S),
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDmat, ΔV)
+    )
+
+    n, p = size(V)
+    indD = axes(D, 1)[ind]
+    indV = axes(V, 2)[ind]
+    if !iszerotangent(ΔV)
+        n == size(ΔV, 1) || throw(DimensionMismatch())
+        length(indV) == size(ΔV, 2) || throw(DimensionMismatch())
+        if indV == 1:p
+            ΔV₁ = copy(ΔV)
+        else
+            ΔV₁ = zero(V)
+            for (j, i) in enumerate(indV)
+                ΔV₁[:, i] .= view(ΔV, :, j)
+            end
+        end
+        VᴴΔV₁ = V' * ΔV₁
+        ΔV₊ = mul!(ΔV₁, V, VᴴΔV₁, -1, 1)
+        aVᴴΔV₁ = project_antihermitian!(VᴴΔV₁)
+    else
+        ΔV₊ = nothing
+        aVᴴΔV₁ = zero!(similar(V, (p, p)))
+    end
+    bc = Base.broadcasted(D', D, aVᴴΔV₁) do d₁, d₂, v
+        return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
+    end
+    Δgauge = norm(bc, Inf)
+
+    Δgauge ≤ gauge_atol ||
+        @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+
+    aVᴴΔV₁ .*= inv_safe.(D' .- D, degeneracy_atol)
+    VᴴAΔV = aVᴴΔV₁
+
+    if !iszerotangent(ΔDmat)
+        ΔD = diagview(ΔDmat)
+        length(indD) == length(ΔD) || throw(DimensionMismatch())
+        view(diagview(VᴴAΔV), indD) .+= real.(ΔD)
+    else
+        ΔD = nothing
+    end
+
+    return VᴴAΔV, ΔV₊
+end
+
+
 function check_eigh_cotangents(
         D, aVᴴΔV;
         degeneracy_atol::Real = default_pullback_rank_atol(D),
@@ -39,42 +89,17 @@ function eigh_pullback!(
 
     # Basic size checks and determination
     Dmat, V = DV
-    D = diagview(Dmat)
-    ΔDmat, ΔV = ΔDV
     n = LinearAlgebra.checksquare(V)
+    D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    D = diagview(Dmat)
 
-    if !iszerotangent(ΔV)
-        n == size(ΔV, 1) || throw(DimensionMismatch())
-        pV = size(ΔV, 2)
-        VᴴΔV = fill!(similar(V), 0)
-        indV = axes(V, 2)[ind]
-        length(indV) == pV || throw(DimensionMismatch())
-        mul!(view(VᴴΔV, :, indV), V', ΔV)
-        aVᴴΔV = project_antihermitian(VᴴΔV) # can't use in-place or recycling doesn't work
-
-        check_eigh_cotangents(D, aVᴴΔV; degeneracy_atol, gauge_atol)
-
-        aVᴴΔV .*= inv_safe.(D' .- D, degeneracy_atol)
-
-        if !iszerotangent(ΔDmat)
-            ΔDvec = diagview(ΔDmat)
-            pD = length(ΔDvec)
-            indD = axes(D, 1)[ind]
-            length(indD) == pD || throw(DimensionMismatch())
-            view(diagview(aVᴴΔV), indD) .+= real.(ΔDvec)
-        end
-        # recycle VdΔV space
-        ΔA = mul!(ΔA, mul!(VᴴΔV, V, aVᴴΔV), V', 1, 1)
-    elseif !iszerotangent(ΔDmat)
-        ΔDvec = diagview(ΔDmat)
-        pD = length(ΔDvec)
-        indD = axes(D, 1)[ind]
-        length(indD) == pD || throw(DimensionMismatch())
-        Vp = view(V, :, indD)
-        ΔA = mul!(ΔA, Vp * Diagonal(real(ΔDvec)), Vp', 1, 1)
-    end
+    ΔDmat, ΔV = ΔDV
+    VᴴΔAV, = check_and_prepare_eigh_cotangents(
+        D, V, ΔDmat, ΔV, ind; degeneracy_atol, gauge_atol
+    )
+    ΔA = mul!(ΔA, V, VᴴΔAV * V', 1, 1)
     return ΔA
 end
 function eigh_pullback!(
@@ -113,47 +138,53 @@ not small compared to `gauge_atol`.
 function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
+        maxiter::Int = 100
     )
 
     # Basic size checks and determination
     Dmat, V = DV
-    D = diagview(Dmat)
-    ΔDmat, ΔV = ΔDV
     (n, p) = size(V)
-    p == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    D = diagview(Dmat)
+    p == length(D) || throw(DimensionMismatch())
 
-    if !iszerotangent(ΔV)
-        (n, p) == size(ΔV) || throw(DimensionMismatch())
-        VᴴΔV = V' * ΔV
-        aVᴴΔV = project_antihermitian!(VᴴΔV)
+    ΔDmat, ΔV = ΔDV
+    VᴴΔAV, ΔV₊ = check_and_prepare_eigh_cotangents(
+        D, V, ΔDmat, ΔV; degeneracy_atol, gauge_atol
+    )
+    ΔAV = V * VᴴΔAV
+    ΔA = mul!(ΔA, ΔAV, V', 1, 1)
 
-        check_eigh_cotangents(D, aVᴴΔV; degeneracy_atol, gauge_atol)
-
-        aVᴴΔV .*= inv_safe.(D' .- D, degeneracy_atol)
-
-        if !iszerotangent(ΔDmat)
-            ΔDvec = diagview(ΔDmat)
-            p == length(ΔDvec) || throw(DimensionMismatch())
-            diagview(aVᴴΔV) .+= real.(ΔDvec)
+    if !iszerotangent(ΔV₊)
+        X₀ = rdiv!(ΔV₊, Diagonal(D))
+        VD = mul!(ΔAV, V, Dmat) # recycle ΔAV
+        AP = mul!(copy(A), VD, V', -1, 1)
+        dabsmax = maximum(abs, D)
+        AP ./= dabsmax
+        D⁻¹ = dabsmax ./ D
+        X₁ = rmul!(AP * X₀, Diagonal(D⁻¹))
+        X₁ .+= X₀
+        Xₖ, Xₖ₊₁ = X₁, X₀
+        APₖ, APₖ₊₁ = AP * AP, AP
+        D⁻¹ₖ, D⁻¹ₖ₊₁ = D⁻¹ .^ 2, D⁻¹
+        for k in 1:maxiter
+            Xₖ₊₁ = rmul!(mul!(Xₖ₊₁, APₖ, Xₖ), Diagonal(D⁻¹ₖ))
+            if norm(Xₖ₊₁, Inf) < degeneracy_atol
+                break
+            end
+            Xₖ₊₁ .+= Xₖ
+            if k == maxiter
+                @warn "Sylvester iteration did not converge after $k iterations, final norm of X: $(norm(Xₖ₊₁, Inf)))"
+                break
+            end
+            D⁻¹ₖ₊₁ .= D⁻¹ₖ .^ 2
+            APₖ₊₁ = mul!(APₖ₊₁, APₖ, APₖ)
+            Xₖ, Xₖ₊₁ = Xₖ₊₁, Xₖ
+            APₖ, APₖ₊₁ = APₖ₊₁, APₖ
+            D⁻¹ₖ, D⁻¹ₖ₊₁ = D⁻¹ₖ₊₁, D⁻¹ₖ
         end
-
-        Z = V * aVᴴΔV
-
-        # add contribution from orthogonal complement
-        W = qr_null(V)
-        WᴴΔV = W' * ΔV
-        X = _sylvester(W' * A * W, -Dmat, WᴴΔV)
-        Z = mul!(Z, W, X, 1, 1)
-
-        # put everything together: symmetrize for hermitian case
-        ΔA = mul!(ΔA, Z, V', 1 // 2, 1)
-        ΔA = mul!(ΔA, V, Z', 1 // 2, 1)
-    elseif !iszerotangent(ΔDmat)
-        ΔDvec = diagview(ΔDmat)
-        p == length(ΔDvec) || throw(DimensionMismatch())
-        ΔA = mul!(ΔA, V * Diagonal(real(ΔDvec)), V', 1, 1)
+        ΔA = project_hermitian!(mul!(ΔA, Xₖ, V', 1, 1))
     end
     return ΔA
 end
@@ -201,15 +232,12 @@ across eigenvectors associated with degenerate eigenvalues), so the correspondin
 components of `V' * ΔV` are projected out.
 """
 function remove_eigh_gauge_dependence!(
-        ΔV, D, V, ind = Colon();
+        ΔV, D, V;
         degeneracy_atol = MatrixAlgebraKit.default_pullback_gauge_atol(D)
     )
-    indV = axes(V, 2)[ind]
-    length(indV) == size(ΔV, 2) || throw(DimensionMismatch("Incompatible size of selected `ind` and `ΔV`"))
-    Vp = view(V, :, indV)
-    Ddiag = view(diagview(D), indV)
-    gaugepart = project_antihermitian!(Vp' * ΔV)
+    Ddiag = diagview(D)
+    gaugepart = project_antihermitian!(V' * ΔV)
     gaugepart[abs.(transpose(Ddiag) .- Ddiag) .>= degeneracy_atol] .= 0
-    mul!(ΔV, Vp, gaugepart, -1, 1)
+    mul!(ΔV, V, gaugepart, -1, 1)
     return ΔV
 end

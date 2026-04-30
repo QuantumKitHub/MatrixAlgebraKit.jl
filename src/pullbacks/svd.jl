@@ -82,7 +82,7 @@ function check_and_prepare_svd_cotangents(
         aVᴴΔV₁ = zero!(similar(V₁ᴴ, (r, r)))
     end
     bc = Base.broadcasted(S₁', S₁, aUᴴΔU₁, aVᴴΔV₁) do s₁, s₂, u, v
-        return abs(s₁ - s₂) < degeneracy_atol ? zero(u) + zero(v) : u + v
+        return abs(s₁ - s₂) < degeneracy_atol ? u + v : zero(u) + zero(v)
     end
     Δgauge = max(Δgauge, norm(bc, Inf))
 
@@ -104,13 +104,13 @@ function check_and_prepare_svd_cotangents(
     Δgauge ≤ gauge_atol ||
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-    UdΔAV = (aUᴴΔU₁ .+ aVᴴΔV₁) .* inv_safe.(S₁' .- S₁, degeneracy_atol) .+
+    UᴴΔAV = (aUᴴΔU₁ .+ aVᴴΔV₁) .* inv_safe.(S₁' .- S₁, degeneracy_atol) .+
         (aUᴴΔU₁ .- aVᴴΔV₁) .* inv_safe.(S₁' .+ S₁, degeneracy_atol)
     if !iszerotangent(ΔS₁)
-        diagview(UdΔAV) .+= real.(ΔS₁)
+        diagview(UᴴΔAV) .+= real.(ΔS₁)
     end
 
-    return UdΔAV, ΔU₊, ΔV₊ᴴ
+    return UᴴΔAV, ΔU₊, ΔV₊ᴴ
 end
 
 """
@@ -155,10 +155,10 @@ function svd_pullback!(
     S₁ = view(S, 1:r)
 
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    UdΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
+    UᴴΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
         U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
     )
-    ΔA = mul!(ΔA, U₁, UdΔAV * V₁ᴴ, 1, 1) # add the contribution to ΔA
+    ΔA = mul!(ΔA, U₁, UᴴΔAV * V₁ᴴ, 1, 1) # add the contribution to ΔA
 
     # Add the remaining contributions
     if m > r && !iszerotangent(ΔU₊) # ΔU₁ is already orthogonal to U₁
@@ -210,7 +210,7 @@ function svd_trunc_pullback!(
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
-        maxiter::Int = 1000,
+        maxiter::Int = 100,
     )
     # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ
@@ -223,17 +223,19 @@ function svd_trunc_pullback!(
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    UdΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
+    UᴴΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
         U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, p; degeneracy_atol, gauge_atol
     )
-    ΔA = mul!(ΔA, U, UdΔAV * Vᴴ, 1, 1) # add the contribution to ΔA
+    ΔAV = U * UᴴΔAV
+    ΔA = mul!(ΔA, ΔAV, Vᴴ, 1, 1) # add the contribution to ΔA
 
     # The contribtutions from the orthogonal complement need to be treated differently
     # ΔU and ΔVᴴ are already orthogonal to U and Vᴴ
     if !(iszerotangent(ΔU₊) && iszerotangent(ΔV₊ᴴ))
         X₀ = iszerotangent(ΔU₊) ? zero(U) : rdiv!(ΔU₊, Diagonal(S))
         Y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
-        AP = mul!(copy(A), U, Smat * Vᴴ, -1, 1)
+        US = mul!(ΔAV, U, Smat) # recycle ΔAV
+        AP = mul!(copy(A), US, Vᴴ, -1, 1)
         AP ./= S[end]
         S⁻¹ = S[end] ./ S
         X₁ = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
@@ -254,7 +256,7 @@ function svd_trunc_pullback!(
             Xₖ₊₁ .+= Xₖ
             Yₖ₊₁ᴴ .+= Yₖᴴ
             if k == maxiter
-                @warn "Sylvester iteration did not converge after $k iterations, final norms: (X: $(norm(Xₖ₊₁, Inf)), Yᴴ: $(norm(Yₖ₊₁ᴴ, Inf)))"
+                @warn "Sylvester iteration did not converge after $k iterations, final norms of X: $(norm(Xₖ₊₁, Inf)), Yᴴ: $(norm(Yₖ₊₁ᴴ, Inf)))"
                 break
             end
             S⁻¹ₖ₊₁ .= S⁻¹ₖ .^ 2
