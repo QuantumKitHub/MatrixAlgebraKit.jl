@@ -12,7 +12,10 @@ delete!(testsuite, "utilities")
 delete!(testsuite, "linearmap")
 
 # Parse arguments
-args = parse_args(ARGS)
+args = parse_args(ARGS; custom = ["fast"])
+
+fast = !isnothing(args.custom["fast"])
+fast && @info "Selected fast tests"
 
 if filter_tests!(testsuite, args)
     # don't run all tests on GPU, only the GPU specific ones
@@ -25,13 +28,13 @@ if filter_tests!(testsuite, args)
         delete!(testsuite, "codequality")
     else
         is_apple_ci = Sys.isapple() && get(ENV, "CI", "false") == "true"
-        is_windows_ci = Sys.isapple() && get(ENV, "CI", "false") == "true"
+        is_windows_ci = Sys.iswindows() && get(ENV, "CI", "false") == "true"
         if is_apple_ci
             filter!(p -> !startswith(first(p), "mooncake/"), testsuite)
-            delete!(testsuite, "chainrules")
+            filter!(p -> !startswith(first(p), "chainrules/"), testsuite)
         end
         (is_windows_ci || is_apple_ci) && filter!(p -> !startswith(first(p), "enzyme/"), testsuite)
     end
 end
 
-runtests(MatrixAlgebraKit, args; testsuite)
+runtests(MatrixAlgebraKit, args; testsuite, init_code = :(const fast_tests = $fast))

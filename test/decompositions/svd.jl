@@ -2,8 +2,13 @@ using MatrixAlgebraKit
 using LinearAlgebra: Diagonal
 using CUDA, AMDGPU
 
-BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
-GenericFloats = (BigFloat, Complex{BigFloat})
+if @isdefined(fast_tests) && fast_tests
+    BLASFloats = (Float64, ComplexF64)
+    GenericFloats = (BigFloat, Complex{BigFloat})
+else
+    BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+    GenericFloats = (BigFloat, Complex{BigFloat})
+end
 
 @isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
 using .TestSuite

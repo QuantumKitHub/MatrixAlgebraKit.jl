@@ -5,8 +5,13 @@ using StableRNGs
 using LinearAlgebra: diag, I, Diagonal
 using CUDA, AMDGPU, GenericLinearAlgebra
 
-BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
-GenericFloats = (Float16, BigFloat, Complex{BigFloat})
+if @isdefined(fast_tests) && fast_tests
+    BLASFloats = (Float64, ComplexF64)
+    GenericFloats = (Float16, Complex{BigFloat})
+else
+    BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+    GenericFloats = (Float16, BigFloat, Complex{BigFloat})
+end
 
 @isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
 using .TestSuite
