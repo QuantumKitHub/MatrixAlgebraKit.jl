@@ -210,7 +210,7 @@ function svd_trunc_pullback!(
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
-        maxiter::Int = 100,
+        maxiter::Int = 100 # TODO: better default, depending on expected number of steps using quadratic convergence?
     )
     # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ

@@ -19,13 +19,17 @@ function check_and_prepare_eigh_cotangents(
             end
         end
         VᴴΔV₁ = V' * ΔV₁
-        ΔV₊ = mul!(ΔV₁, V, VᴴΔV₁, -1, 1)
+        if p == n
+            ΔV₊ = zero!(ΔV₁)
+        else
+            ΔV₊ = mul!(ΔV₁, V, VᴴΔV₁, -1, 1)
+        end
         aVᴴΔV₁ = project_antihermitian!(VᴴΔV₁)
     else
         ΔV₊ = nothing
         aVᴴΔV₁ = zero!(similar(V, (p, p)))
     end
-    bc = Base.broadcasted(D', D, aVᴴΔV₁) do d₁, d₂, v
+    bc = Base.broadcasted(transpose(D), D, aVᴴΔV₁) do d₁, d₂, v
         return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
     Δgauge = norm(bc, Inf)
@@ -45,19 +49,6 @@ function check_and_prepare_eigh_cotangents(
     end
 
     return VᴴAΔV, ΔV₊
-end
-
-
-function check_eigh_cotangents(
-        D, aVᴴΔV;
-        degeneracy_atol::Real = default_pullback_rank_atol(D),
-        gauge_atol::Real = default_pullback_gauge_atol(aVᴴΔV)
-    )
-    mask = abs.(D' .- D) .< degeneracy_atol
-    Δgauge = norm(view(aVᴴΔV, mask))
-    Δgauge ≤ gauge_atol ||
-        @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    return
 end
 
 """
@@ -93,13 +84,13 @@ function eigh_pullback!(
     D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
-    D = diagview(Dmat)
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, = check_and_prepare_eigh_cotangents(
         D, V, ΔDmat, ΔV, ind; degeneracy_atol, gauge_atol
     )
-    ΔA = mul!(ΔA, V, VᴴΔAV * V', 1, 1)
+
+    ΔA = mul!(ΔA, V * VᴴΔAV, V', 1, 1)
     return ΔA
 end
 function eigh_pullback!(
@@ -139,27 +130,24 @@ function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
-        maxiter::Int = 100
+        maxiter::Int = 100 # TODO: better default, depending on expected number of steps using quadratic convergence?
     )
 
     # Basic size checks and determination
     Dmat, V = DV
     (n, p) = size(V)
-    (n, n) == size(ΔA) || throw(DimensionMismatch())
     D = diagview(Dmat)
     p == length(D) || throw(DimensionMismatch())
+    (n, n) == size(ΔA) || throw(DimensionMismatch())
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, ΔV₊ = check_and_prepare_eigh_cotangents(
         D, V, ΔDmat, ΔV; degeneracy_atol, gauge_atol
     )
-    ΔAV = V * VᴴΔAV
-    ΔA = mul!(ΔA, ΔAV, V', 1, 1)
-
+    Z = V * VᴴΔAV
     if !iszerotangent(ΔV₊)
         X₀ = rdiv!(ΔV₊, Diagonal(D))
-        VD = mul!(ΔAV, V, Dmat) # recycle ΔAV
-        AP = mul!(copy(A), VD, V', -1, 1)
+        AP = mul!(copy(A), V * Dmat, V', -1, 1)
         dabsmax = maximum(abs, D)
         AP ./= dabsmax
         D⁻¹ = dabsmax ./ D
@@ -184,7 +172,15 @@ function eigh_trunc_pullback!(
             APₖ, APₖ₊₁ = APₖ₊₁, APₖ
             D⁻¹ₖ, D⁻¹ₖ₊₁ = D⁻¹ₖ₊₁, D⁻¹ₖ
         end
-        ΔA = project_hermitian!(mul!(ΔA, Xₖ, V', 1, 1))
+        Z .+= Xₖ
+        # we cannot directly multiply Z * V' into ΔA, because we have to
+        # take the Hermitian part, and cannot apply project_hermitian! to
+        # the current contents of ΔA
+        ΔA′ = project_hermitian!(mul!(AP, Z, V', 1, 1)) # recycle AP
+        ΔA .+= ΔA′
+    else
+        # in this case, Z * V' is automatically Hermitian, so we can directly add it to ΔA
+        ΔA = mul!(ΔA, Z, V', 1, 1)
     end
     return ΔA
 end
