@@ -10,9 +10,8 @@ function check_and_prepare_eigh_cotangents(
     if !iszerotangent(ΔV)
         n == size(ΔV, 1) || throw(DimensionMismatch())
         length(indV) == size(ΔV, 2) || throw(DimensionMismatch())
-        ΔV₁ = similar(V)
+        ΔV₁ = zero(V)
         ΔV₁[:, indV] = ΔV
-        zero!(view(ΔV₁, :, (length(indV) + 1):p))
         VᴴΔV₁ = V' * ΔV₁
         if p == n
             ΔV₊ = zero!(ΔV₁)
