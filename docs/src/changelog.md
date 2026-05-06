@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.6...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.7...HEAD)
 
 ### Added
 
@@ -31,6 +31,22 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 ### Performance
+
+## [0.6.7](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.6...v0.6.7) - 2026-05-06
+
+### Changed
+
+- Test infrastructure: use a test setup matrix like TensorKit ([#215](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/215)).
+
+### Fixed
+
+- Improved consistency of gauge fixing in eigenvalue pullback functions ([#221](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/221)).
+- Ensure no sharing of data in LQ decomposition output ([#219](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/219)).
+- Mooncake and Enzyme AD rules for `Diagonal` inputs ([#179](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/179)).
+
+### Performance
+
+- Added a rudimentary precompile workload to reduce time-to-first-execution ([#217](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/217)).
 
 ## [0.6.6](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.5...v0.6.6) - 2026-04-24
 
