@@ -10,8 +10,12 @@ function check_and_prepare_eig_cotangents(
     if !iszerotangent(ΔV)
         n == size(ΔV, 1) || throw(DimensionMismatch())
         length(indV) == size(ΔV, 2) || throw(DimensionMismatch())
-        ΔV₁ = zero(V)
-        ΔV₁[:, indV] = ΔV
+        if indV == 1:p
+            ΔV₁ = copy(ΔV)
+        else
+            ΔV₁ = zero(V)
+            ΔV₁[:, indV] = ΔV
+        end
         VᴴΔV₁ = V' * ΔV₁
         if p == n
             ΔV₊ = zero!(ΔV₁)
