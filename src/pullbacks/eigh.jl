@@ -10,14 +10,9 @@ function check_and_prepare_eigh_cotangents(
     if !iszerotangent(ΔV)
         n == size(ΔV, 1) || throw(DimensionMismatch())
         length(indV) == size(ΔV, 2) || throw(DimensionMismatch())
-        if indV == 1:p
-            ΔV₁ = copy(ΔV)
-        else
-            ΔV₁ = zero(V)
-            for (j, i) in enumerate(indV)
-                ΔV₁[:, i] .= view(ΔV, :, j)
-            end
-        end
+        ΔV₁ = similar(V)
+        ΔV₁[:, indV] = ΔV
+        zero!(view(ΔV₁, :, (length(indV) + 1):p))
         VᴴΔV₁ = V' * ΔV₁
         if p == n
             ΔV₊ = zero!(ΔV₁)
@@ -176,6 +171,7 @@ function eigh_trunc_pullback!(
         # we cannot directly multiply Z * V' into ΔA, because we have to
         # take the Hermitian part, and cannot apply project_hermitian! to
         # the current contents of ΔA
+        # TODO: add an `add_project_hermitian!`
         ΔA′ = project_hermitian!(mul!(AP, Z, V', 1, 1)) # recycle AP
         ΔA .+= ΔA′
     else
