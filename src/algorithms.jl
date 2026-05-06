@@ -242,11 +242,20 @@ default_driver(::Type{TA}) where {TA <: YALAPACK.MaybeBlasVecOrMat} = LAPACK()
 """
     abstract type TruncationStrategy end
 
-Supertype to denote different strategies for truncated decompositions that are implemented via post-truncation.
+Supertype to denote different strategies for truncated decompositions.
 
 See also [`truncate`](@ref)
 """
 abstract type TruncationStrategy end
+
+"""
+    abstract type SketchingStrategy <: AbstractAlgorithm end
+
+Supertype to denote different sketching strategies, used both as standalone algorithms for
+[`left_sketch!`](@ref) and [`right_sketch!`](@ref) and as the `sketch` field of a
+[`SketchedAlgorithm`](@ref) for self-truncating SVD.
+"""
+abstract type SketchingStrategy <: AbstractAlgorithm end
 
 @doc """
     MatrixAlgebraKit.select_truncation(trunc)
@@ -317,7 +326,7 @@ See also [`findtruncated`](@ref) and [`findtruncated_svd`](@ref) for determining
 function truncate end
 
 """
-    TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationAlgorithm)
+    TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationStrategy)
 
 Generic wrapper type for algorithms that consist of first using `alg`, followed by a
 truncation through `trunc`.
@@ -327,7 +336,27 @@ struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
     trunc::T
 end
 
+"""
+    SketchedAlgorithm(alg::AbstractAlgorithm, sketch::SketchingStrategy, trunc::TruncationStrategy)
+
+Generic wrapper type for self-truncating algorithms that produce an approximate low-rank
+factorization by first applying a sketching operation specified by `sketch`, then computing
+a small dense decomposition of the projected matrix using `alg`. The `driver` selects the
+backend (e.g. `DefaultDriver()`, `CUSOLVER()`).
+"""
+struct SketchedAlgorithm{A <: AbstractAlgorithm, S <: SketchingStrategy, T <: TruncationStrategy} <: AbstractAlgorithm
+    alg::A
+    sketch::S
+    trunc::T
+end
+
 does_truncate(::TruncatedAlgorithm) = true
+does_truncate(::SketchedAlgorithm) = true
+
+truncated_algorithm(alg::AbstractAlgorithm, trunc::TruncationStrategy) =
+    TruncatedAlgorithm(alg, trunc)
+truncated_algorithm(alg::AbstractAlgorithm, sketch::SketchingStrategy) =
+    SketchedAlgorithm(sketch, alg, DefaultDriver())
 
 # Utility macros
 # --------------
@@ -535,7 +564,7 @@ macro check_size(x, sz, size = :size)
             szx = $size($x)
             $err = $msgstart * string(szx) * " instead of expected value " *
                 string($sz)
-            szx == $sz || throw(DimensionMismatch($err))
+            (szx == $sz)::Bool || throw(DimensionMismatch($err))
         end
     )
 end

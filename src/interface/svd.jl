@@ -184,9 +184,18 @@ for f in (:svd_trunc!, :svd_trunc_no_error!)
             isnothing(trunc) ||
                 throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
             return alg
+        elseif alg isa SketchedAlgorithm
+            isnothing(trunc) ||
+                throw(ArgumentError("`trunc` can't be specified when `alg` is a `SketchedAlgorithm`"))
+            return alg
         else
             alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
-            return TruncatedAlgorithm(alg_svd, select_truncation(trunc))
+            trunc = select_truncation(trunc)
+            if trunc isa TruncationStrategy
+                return truncated_algorithm(alg_svd, trunc)
+            else
+                throw(ArgumentError("invalid truncation $trunc"))
+            end
         end
     end
 end

@@ -9,6 +9,8 @@ using LinearAlgebra: Diagonal, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
+using Random: Random
+
 export isisometric, isunitary, ishermitian, isantihermitian
 export diagview, diagonal
 
@@ -30,6 +32,8 @@ export left_polar, right_polar
 export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
+export left_sketch, right_sketch
+export left_sketch!, right_sketch!
 
 export Householder, Native_HouseholderQR, Native_HouseholderLQ
 export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar
@@ -49,6 +53,8 @@ export ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi,
     ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection
 
 export notrunc, truncrank, trunctol, truncerror, truncfilter
+
+export SketchedAlgorithm, SketchingStrategy, GaussianSketching
 
 @static if VERSION >= v"1.11.0-DEV.469"
     eval(
@@ -101,6 +107,7 @@ include("interface/truncation.jl")
 include("interface/qr.jl")
 include("interface/lq.jl")
 include("interface/svd.jl")
+include("interface/sketching.jl")
 include("interface/eig.jl")
 include("interface/eigh.jl")
 include("interface/gen_eig.jl")
@@ -113,6 +120,7 @@ include("implementations/truncation.jl")
 include("implementations/qr.jl")
 include("implementations/lq.jl")
 include("implementations/svd.jl")
+include("implementations/sketching.jl")
 include("implementations/eig.jl")
 include("implementations/eigh.jl")
 include("implementations/gen_eig.jl")
