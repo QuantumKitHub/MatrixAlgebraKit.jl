@@ -285,66 +285,56 @@ function svd_vals!(A::AbstractMatrix, S, alg::DiagonalAlgorithm)
     return S
 end
 
-# GPU logic (randomized SVD - CUSOLVER_Randomized has no CPU analog, kept as-is)
-# ---------------------------------------------------------------------------------
+# Sketched Logic
+# --------------
+function initialize_output(::typeof(svd_trunc_no_error!), A::AbstractMatrix, alg::SketchedAlgorithm)
+    U, Vᴴ = initialize_output(left_sketch!, A, alg.sketch)
+    S = Diagonal(similar(U, real(eltype(U)), (size(U, 2),)))
+    return U, S, Vᴴ
+end
+initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::SketchedAlgorithm) =
+    initialize_output(svd_trunc_no_error!, A, alg)
 
-function check_input(
-        ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
-    )
-    m, n = size(A)
-    minmn = min(m, n)
-    U, S, Vᴴ = USVᴴ
+function check_input(::typeof(svd_trunc_no_error!), A::AbstractMatrix, (U, S, Vᴴ), alg::SketchedAlgorithm)
+    check_input(left_sketch!, A, (U, Vᴴ), alg.sketch)
     @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
-    @check_size(U, (m, m))
-    @check_scalar(U, A)
-    @check_size(S, (minmn, minmn))
-    @check_scalar(S, A, real)
-    @check_size(Vᴴ, (n, n))
-    @check_scalar(Vᴴ, A)
+    k = size(U, 2)
+    @check_size(S, (k, k))
+    @check_scalar(S, U, real)
     return nothing
 end
+check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::SketchedAlgorithm) =
+    check_input(svd_trunc_no_error!, A, USVᴴ, alg)
 
-function initialize_output(
-        ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
-    )
+function svd_trunc_no_error!(A::AbstractMatrix, (U, S, Vᴴ), alg::SketchedAlgorithm)
+    check_input(svd_trunc_no_error!, A, (U, S, Vᴴ), alg)
     m, n = size(A)
-    minmn = min(m, n)
-    U = similar(A, (m, m))
-    S = Diagonal(similar(A, real(eltype(A)), (minmn,)))
-    Vᴴ = similar(A, (n, n))
-    return (U, S, Vᴴ)
+    if m ≥ n
+        Q, B = left_sketch!(A, (U, Vᴴ), alg.sketch)
+        k = size(B, 1)
+        U′ = similar(B, (k, k))
+        Vᴴ′ = similar(B)
+        USVᴴ_inner = svd_compact!(B, (U′, S, Vᴴ′), alg.alg)
+        (Uout′, Sout, Vᴴout), _ = truncate(svd_trunc!, USVᴴ_inner, alg.trunc)
+        Uout = Q * Uout′
+    else
+        B, Pᴴ = right_sketch!(A, (U, Vᴴ), alg.sketch)
+        k = size(B, 2)
+        U′ = similar(B)
+        Vᴴ′ = similar(B, (k, k))
+        USVᴴ_inner = svd_compact!(B, (U′, S, Vᴴ′), alg.alg)
+        (Uout, Sout, Vᴴout′), _ = truncate(svd_trunc!, USVᴴ_inner, alg.trunc)
+        Vᴴout = Vᴴout′ * Pᴴ
+    end
+    get(alg.alg.kwargs, :fixgauge, true) && gaugefix!(svd_trunc!, Uout, Vᴴout)
+    return Uout, Sout, Vᴴout
 end
 
-function _gpu_Xgesvdr!(
-        A::AbstractMatrix, S::AbstractVector, U::AbstractMatrix, Vᴴ::AbstractMatrix; kwargs...
-    )
-    throw(MethodError(_gpu_Xgesvdr!, (A, S, U, Vᴴ)))
-end
-
-function svd_trunc_no_error!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
-    U, S, Vᴴ = USVᴴ
-    check_input(svd_trunc_no_error!, A, (U, S, Vᴴ), alg.alg)
-    _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
-
-    # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
-    (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
-
-    do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    # the output matrices here are the same size as for svd_full!
-    do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
-
-    return Utr, Str, Vᴴtr
-end
-
-function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
-    Utr, Str, Vᴴtr = svd_trunc_no_error!(A, USVᴴ, alg)
-    # normal `truncation_error!` does not work here since `S` is not the full singular value spectrum
-    normS = norm(diagview(Str))
-    normA = norm(A)
-    # equivalent to sqrt(normA^2 - normS^2)
-    # but may be more accurate
-    ϵ = sqrt((normA + normS) * abs(normA - normS))
-    return Utr, Str, Vᴴtr, ϵ
+function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::SketchedAlgorithm)
+    U, S, Vᴴ = svd_trunc_no_error!(A, USVᴴ, alg)
+    Na = norm(A)
+    Ns = norm(S)
+    return U, S, Vᴴ, sqrt(max(zero(Na), (Na + Ns) * (Na - Ns)))
 end
 
 # Deprecations

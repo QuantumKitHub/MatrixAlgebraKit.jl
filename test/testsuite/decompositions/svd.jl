@@ -363,15 +363,27 @@ function test_svd_trunc_algs(
     end
 end
 
-function test_randomized_svd(T::Type, sz, algs; kwargs...)
+function test_sketched_svd(
+        T::Type, sz, algs;
+        atol::Real = 0, rtol::Real = precision(eltype(T)), kwargs...
+    )
     summary_str = testargs_summary(T, sz)
-    return @testset "randomized svd_trunc! algorithm $alg $summary_str" for alg in algs
-        A = instantiate_matrix(T, sz)
+    return @testset "sketched svd_trunc! algorithm $alg $summary_str" for alg in algs
+        @assert alg isa SketchedAlgorithm "Invalid sketched algorithm type: $(typeof(alg))"
+
+        A = instantiate_rank_deficient_matrix(T, sz; alg.trunc)
+        A += max(atol, rtol * norm(A)) * instantiate_matrix(T, sz)
         Ac = deepcopy(A)
-        m, n = size(A)
-        minmn = min(m, n)
-        S₀ = collect(svd_vals(A))
-        U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; alg)
-        @test collect(diagview(S1))[1:alg.alg.k] ≈ S₀[1:alg.alg.k]
+
+        alg2 = MatrixAlgebraKit.TruncatedAlgorithm(alg)
+
+        U, S, Vᴴ, ϵ = @testinferred svd_trunc(A, alg)
+        @test Ac == A
+
+        U′, S′, Vᴴ′, ϵ′ = svd_trunc(A, alg2)
+        @test U ≈ U′ atol = atol rtol = rtol
+        @test S ≈ S′ atol = atol rtol = rtol
+        @test Vᴴ ≈ Vᴴ′ atol = atol rtol = rtol
+        @test ϵ ≈ ϵ′ atol = atol rtol = rtol
     end
 end

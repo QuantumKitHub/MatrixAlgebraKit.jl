@@ -350,6 +350,9 @@ struct SketchedAlgorithm{A <: AbstractAlgorithm, S <: SketchingStrategy, T <: Tr
     trunc::T
 end
 
+# utility conversion constructor
+TruncatedAlgorithm(alg::SketchedAlgorithm) = TruncatedAlgorithm(alg.alg, alg.trunc)
+
 does_truncate(::TruncatedAlgorithm) = true
 does_truncate(::SketchedAlgorithm) = true
 
