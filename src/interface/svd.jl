@@ -179,23 +179,18 @@ for f in (:svd_full!, :svd_compact!, :svd_vals!)
 end
 
 for f in (:svd_trunc!, :svd_trunc_no_error!)
-    @eval function select_algorithm(::typeof($f), A, alg; trunc = nothing, kwargs...)
-        if alg isa TruncatedAlgorithm
+    @eval function select_algorithm(::typeof($f), A, alg; trunc = nothing, sketch = nothing, kwargs...)
+        if alg isa TruncatedAlgorithm || alg isa SketchedAlgorithm
             isnothing(trunc) ||
-                throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
-            return alg
-        elseif alg isa SketchedAlgorithm
-            isnothing(trunc) ||
-                throw(ArgumentError("`trunc` can't be specified when `alg` is a `SketchedAlgorithm`"))
+                throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm` or `SketchedAlgorithm`"))
+            isnothing(sketch) ||
+                throw(ArgumentError("`sketch` can't be specified when `alg` is a `TruncatedAlgorithm` or `SketchedAlgorithm`"))
             return alg
         else
             alg_svd = select_algorithm(svd_compact!, A, alg; kwargs...)
             trunc = select_truncation(trunc)
-            if trunc isa TruncationStrategy
-                return truncated_algorithm(alg_svd, trunc)
-            else
-                throw(ArgumentError("invalid truncation $trunc"))
-            end
+            sketch = select_sketching(A, sketch)
+            return truncated_algorithm(alg_svd, trunc, sketch)
         end
     end
 end

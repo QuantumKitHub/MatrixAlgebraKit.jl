@@ -292,7 +292,26 @@ function select_null_truncation(trunc)
     elseif trunc isa TruncationStrategy
         return trunc
     else
-        return throw(ArgumentError("Unknown truncation strategy: $trunc"))
+        throw(ArgumentError("Unknown truncation strategy: $trunc"))
+    end
+end
+
+@doc """
+    MatrixAlgebraKit.select_sketching(A, sketch)
+
+Construct a [`SketchingStrategy`](@ref) for `A` from the given `NamedTuple` of keywords or input strategy `sketch`.
+""" select_sketching
+
+@inline select_sketching(A, sketch) = select_sketching(typeof(A), sketch)
+@inline function select_sketching(::Type{A}, sketch) where {A}
+    if isnothing(sketch)
+        return nothing
+    elseif sketch isa SketchingStrategy
+        return sketch
+    elseif sketch isa NamedTuple
+        return select_algorithm(left_sketch!, A; sketch...)
+    else
+        throw(ArgumentError("Unknown sketching strategy: $sketch"))
     end
 end
 
@@ -331,7 +350,7 @@ function truncate end
 Generic wrapper type for algorithms that consist of first using `alg`, followed by a
 truncation through `trunc`.
 """
-struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
+struct TruncatedAlgorithm{A <: AbstractAlgorithm, T <: TruncationStrategy} <: AbstractAlgorithm
     alg::A
     trunc::T
 end
@@ -356,10 +375,9 @@ TruncatedAlgorithm(alg::SketchedAlgorithm) = TruncatedAlgorithm(alg.alg, alg.tru
 does_truncate(::TruncatedAlgorithm) = true
 does_truncate(::SketchedAlgorithm) = true
 
-truncated_algorithm(alg::AbstractAlgorithm, trunc::TruncationStrategy) =
-    TruncatedAlgorithm(alg, trunc)
-truncated_algorithm(alg::AbstractAlgorithm, sketch::SketchingStrategy) =
-    SketchedAlgorithm(sketch, alg, DefaultDriver())
+truncated_algorithm(alg::AbstractAlgorithm, trunc::TruncationStrategy, sketch = nothing) =
+    isnothing(sketch) ? TruncatedAlgorithm(alg, trunc) : SketchedAlgorithm(; alg, sketch, trunc)
+
 
 # Utility macros
 # --------------

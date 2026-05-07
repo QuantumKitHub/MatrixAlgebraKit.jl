@@ -116,8 +116,8 @@ function right_null!(A, Nᴴ, alg::RightNullViaSVD{<:TruncatedAlgorithm})
     return Nᴴ
 end
 
-# randomized algorithms don't currently work for smallest values:
-left_null!(A, N, alg::LeftNullViaSVD{<:TruncatedAlgorithm{<:GPU_Randomized}}) =
+# randomized (sketched) algorithms don't currently work for smallest values:
+left_null!(A, N, alg::LeftNullViaSVD{<:SketchedAlgorithm}) =
     throw(ArgumentError("Randomized SVD ($alg) cannot be used for null spaces yet"))
-right_null!(A, Nᴴ, alg::RightNullViaSVD{<:TruncatedAlgorithm{<:GPU_Randomized}}) =
+right_null!(A, Nᴴ, alg::RightNullViaSVD{<:SketchedAlgorithm}) =
     throw(ArgumentError("Randomized SVD ($alg) cannot be used for null spaces yet"))
