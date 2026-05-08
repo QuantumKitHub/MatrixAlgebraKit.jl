@@ -43,7 +43,7 @@ if !is_buildkite
     for T in GenericFloats, m in (0, 54), n in (0, 37, m, 63)
         TestSuite.seed_rng!(123)
         TestSuite.test_svd(T, (m, n))
-        TestSuite.test_svd_algs(T, (m, n), (GLA_QRIteration(),))
+        TestSuite.test_svd_algs(T, (m, n), (QRIteration(; driver = MatrixAlgebraKit.GLA()),))
     end
 
     # Diagonal:

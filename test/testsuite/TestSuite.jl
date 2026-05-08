@@ -101,7 +101,10 @@ function instantiate_rank_deficient_matrix(::Type{T}, sz; trunc = truncrank(div(
     return Diagonal(diag(mul!(A, V, C)))
 end
 
-function instantiate_almost_rank_deficient_matrix(T, sz; trunc = truncrank(div(min(sz...), 2)), atol::Real = 0, rtol::Real = precision(T))
+function instantiate_almost_rank_deficient_matrix(
+        T, sz;
+        trunc = truncrank(div(min(sz...), 2)), atol::Real = 0, rtol::Real = precision(T)
+    )
     A = instantiate_rank_deficient_matrix(T, sz; trunc)
     noise = normalize(instantiate_matrix(T, sz))
     A .+= max(atol, rtol * norm(A)) * noise

@@ -371,19 +371,23 @@ function test_sketched_svd(
     return @testset "sketched svd_trunc! algorithm $alg $summary_str" for alg in algs
         @assert alg isa SketchedAlgorithm "Invalid sketched algorithm type: $(typeof(alg))"
 
-        A = instantiate_rank_deficient_matrix(T, sz; alg.trunc)
-        A += max(atol, rtol * norm(A)) * instantiate_matrix(T, sz)
+        A = instantiate_almost_rank_deficient_matrix(T, sz; alg.trunc, atol, rtol)
         Ac = deepcopy(A)
 
         alg2 = MatrixAlgebraKit.TruncatedAlgorithm(alg)
 
         U, S, Vᴴ, ϵ = @testinferred svd_trunc(A, alg)
         @test Ac == A
+        ϵ′ = norm(A - U * S * Vᴴ)
+        @test ϵ′ ≈ ϵ atol = sqrt(rtol) * max(one(ϵ′), ϵ′) # comparison to 0 is hard, very imprecise calculation
 
-        U′, S′, Vᴴ′, ϵ′ = svd_trunc(A, alg2)
+        U′, S′, Vᴴ′ = svd_trunc_no_error(A, alg2)
+
+        # Need gauge fixing for comparison
+        U, Vᴴ = MatrixAlgebraKit.gaugefix!(svd_trunc!, U, Vᴴ)
+        U′, Vᴴ′ = MatrixAlgebraKit.gaugefix!(svd_trunc!, U′, Vᴴ′)
         @test U ≈ U′ atol = atol rtol = rtol
         @test S ≈ S′ atol = atol rtol = rtol
         @test Vᴴ ≈ Vᴴ′ atol = atol rtol = rtol
-        @test ϵ ≈ ϵ′ atol = atol rtol = rtol
     end
 end
