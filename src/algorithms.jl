@@ -242,7 +242,7 @@ default_driver(::Type{TA}) where {TA <: YALAPACK.MaybeBlasVecOrMat} = LAPACK()
 """
     abstract type TruncationStrategy end
 
-Supertype to denote different strategies for truncated decompositions.
+Supertype to denote different strategies for truncated decompositions that are implemented via post-truncation.
 
 See also [`truncate`](@ref)
 """
@@ -593,7 +593,7 @@ macro check_size(x, sz, size = :size)
             szx = $size($x)
             $err = $msgstart * string(szx) * " instead of expected value " *
                 string($sz)
-            (szx == $sz)::Bool || throw(DimensionMismatch($err))
+            (szx == $sz) || throw(DimensionMismatch($err))
         end
     )
 end
