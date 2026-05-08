@@ -33,7 +33,7 @@ if !is_buildkite
         m, n = 54, 63
         rtol = sqrt(TestSuite.precision(T)) # extra square root
         algs = [
-            SketchedAlgorithm(DefaultAlgorithm(), GaussianSketching(m ÷ 2, numiter = 4), truncrank(m ÷ 4)),
+            SketchedAlgorithm(; sketch = GaussianSketching(m ÷ 2, numiter = 4), trunc = truncrank(m ÷ 4)),
         ]
         TestSuite.test_sketched_svd(T, (m, n), algs; rtol)
         TestSuite.test_sketched_svd(T, (n, m), algs)

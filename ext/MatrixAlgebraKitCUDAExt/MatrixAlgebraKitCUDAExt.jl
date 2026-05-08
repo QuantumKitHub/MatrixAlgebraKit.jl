@@ -4,11 +4,12 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
-using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
+using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, TruncationByOrder, AbstractAlgorithm
+using MatrixAlgebraKit: GaussianSketching, SketchingStrategy, SketchedAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
 import MatrixAlgebraKit: heevj!, heevd!, geev!
-import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank
+import MatrixAlgebraKit: _sylvester, svd_rank
 using CUDA, CUDA.cuBLAS
 using CUDA: i32
 using LinearAlgebra
@@ -17,6 +18,7 @@ using LinearAlgebra: BlasFloat
 include("yacusolver.jl")
 
 MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedCuVecOrMat{<:BlasFloat}} = CUSOLVER()
+MatrixAlgebraKit.default_driver(::Type{<:SketchedAlgorithm}, ::Type{TA}) where {TA <: StridedCuVecOrMat{<:BlasFloat}} = CUSOLVER()
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
     return QRIteration(; kwargs...)
@@ -50,8 +52,31 @@ end
 gesvdp!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
     YACUSOLVER.gesvdp!(A, S, U, Vᴴ; kwargs...)
 
-_gpu_Xgesvdr!(A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
-    YACUSOLVER.gesvdr!(A, S, U, Vᴴ; kwargs...)
+# Sketched SVD via cuSOLVER's gesvdr kernel
+function gesvdr!(
+        ::CUSOLVER, A::StridedCuMatrix, S, U::StridedCuMatrix, Vᴴ::StridedCuMatrix;
+        sketch::GaussianSketching, trunc::TruncationByOrder, alg::AbstractAlgorithm = DefaultAlgorithm()
+    )
+    isempty(A) && return U, S, Vᴴ
+    m, n = size(A); minmn = min(m, n)
+    k = trunc.howmany
+    1 ≤ k ≤ minmn ||
+        throw(ArgumentError("trunc.howmany=$k must satisfy 1 ≤ k ≤ min(size(A))=$minmn"))
+    p = sketch.howmany - k
+    p ≥ 0 || throw(
+        ArgumentError(
+            "sketch.howmany=$(sketch.howmany) must be ≥ trunc.howmany=$k"
+        )
+    )
+    p = min(p, minmn - k - 1)
+    niters = sketch.numiter - 1
+
+    Uk = view(U, :, 1:k)
+    Vᴴk = view(Vᴴ, 1:k, :)
+    Sk = view(diagview(S), 1:k)
+    YACUSOLVER.gesvdr!(A, Sk, Uk, Vᴴk; k, p, niters)
+    return Uk, S, Vᴴk
+end
 
 geev!(::CUSOLVER, A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix) =
     YACUSOLVER.Xgeev!(A, Dd, V)

@@ -308,26 +308,7 @@ check_input(::typeof(svd_trunc!), A::AbstractMatrix, USVᴴ, alg::SketchedAlgori
 
 function svd_trunc_no_error!(A::AbstractMatrix, (U, S, Vᴴ), alg::SketchedAlgorithm)
     check_input(svd_trunc_no_error!, A, (U, S, Vᴴ), alg)
-    m, n = size(A)
-    if m ≥ n
-        Q, B = left_sketch!(A, (U, Vᴴ), alg.sketch)
-        k = size(B, 1)
-        U′ = similar(B, (k, k))
-        Vᴴ′ = similar(B)
-        USVᴴ_inner = svd_compact!(B, (U′, S, Vᴴ′), alg.alg)
-        (Uout′, Sout, Vᴴout), _ = truncate(svd_trunc!, USVᴴ_inner, alg.trunc)
-        Uout = Q * Uout′
-    else
-        B, Pᴴ = right_sketch!(A, (U, Vᴴ), alg.sketch)
-        k = size(B, 2)
-        U′ = similar(B)
-        Vᴴ′ = similar(B, (k, k))
-        USVᴴ_inner = svd_compact!(B, (U′, S, Vᴴ′), alg.alg)
-        (Uout, Sout, Vᴴout′), _ = truncate(svd_trunc!, USVᴴ_inner, alg.trunc)
-        Vᴴout = Vᴴout′ * Pᴴ
-    end
-    get(alg.alg.kwargs, :fixgauge, true) && gaugefix!(svd_trunc!, Uout, Vᴴout)
-    return Uout, Sout, Vᴴout
+    return gesvdr!(alg.driver, A, S, U, Vᴴ; alg.sketch, alg.alg, alg.trunc)
 end
 
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::SketchedAlgorithm)
@@ -335,6 +316,37 @@ function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::SketchedAlgorithm)
     Na = norm(A)
     Ns = norm(S)
     return U, S, Vᴴ, sqrt(max(zero(Na), (Na + Ns) * (Na - Ns)))
+end
+
+# gesvdr! drivers
+# ---------------
+default_driver(::Type{<:SketchedAlgorithm}, ::Type{<:AbstractArray}) = Native()
+
+gesvdr!(::DefaultDriver, A, S, U, Vᴴ; kwargs...) =
+    gesvdr!(default_driver(SketchedAlgorithm, A), A, S, U, Vᴴ; kwargs...)
+
+function gesvdr!(
+        ::Native, A::AbstractMatrix, S, U, Vᴴ;
+        sketch::SketchingStrategy, alg::AbstractAlgorithm,
+        trunc::TruncationStrategy
+    )
+    m, n = size(A)
+    if m ≥ n
+        Q, B = left_sketch!(A, (U, Vᴴ), sketch)
+        k = size(B, 1)
+        U′ = similar(B, (k, k))
+        Vᴴ′ = similar(B)
+        Uout′, Sout, Vᴴout, _ = svd_trunc!(B, (U′, S, Vᴴ′), TruncatedAlgorithm(alg, trunc))
+        Uout = Q * Uout′
+    else
+        B, Pᴴ = right_sketch!(A, (U, Vᴴ), sketch)
+        k = size(B, 2)
+        U′ = similar(B)
+        Vᴴ′ = similar(B, (k, k))
+        Uout, Sout, Vᴴout′, _ = svd_trunc!(B, (U′, S, Vᴴ′), TruncatedAlgorithm(alg, trunc))
+        Vᴴout = Vᴴout′ * Pᴴ
+    end
+    return Uout, Sout, Vᴴout
 end
 
 # Deprecations
@@ -378,6 +390,40 @@ for (algtype, newtype, drivertype) in (
             svd_vals!(A, S, $newtype(; driver = $drivertype(), alg.kwargs...))
         )
     end
+end
+
+# CUSOLVER_Randomized → SketchedAlgorithm with driver = CUSOLVER()
+function _cusolver_randomized_to_sketched(alg::CUSOLVER_Randomized)
+    k = alg.kwargs.k
+    p = alg.kwargs.p
+    niters = alg.kwargs.niters
+    return SketchedAlgorithm(
+        QRIteration(),
+        GaussianSketching(k + p; numiter = niters + 1),
+        truncrank(k);
+        driver = CUSOLVER(),
+    )
+end
+
+for f! in (:svd_trunc!, :svd_trunc_no_error!)
+    @eval Base.@deprecate(
+        $f!(A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized),
+        $f!(A, USVᴴ, _cusolver_randomized_to_sketched(alg))
+    )
+end
+
+@inline function select_algorithm(::typeof(svd_trunc!), A, alg::CUSOLVER_Randomized; kwargs...)
+    Base.depwarn(
+        "`CUSOLVER_Randomized` is deprecated; use \
+         `SketchedAlgorithm(QRIteration(), GaussianSketching(k+p; numiter=niters+1), truncrank(k); driver=CUSOLVER())` instead.",
+        :select_algorithm,
+    )
+    isempty(kwargs) ||
+        throw(ArgumentError("Additional keyword arguments are not allowed when algorithm parameters are specified."))
+    return _cusolver_randomized_to_sketched(alg)
+end
+@inline function select_algorithm(::typeof(svd_trunc_no_error!), A, alg::CUSOLVER_Randomized; kwargs...)
+    return select_algorithm(svd_trunc!, A, alg; kwargs...)
 end
 
 # GLA_QRIteration SVD deprecations (eigh methods remain in the GLA extension)

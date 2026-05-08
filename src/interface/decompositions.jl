@@ -408,8 +408,6 @@ for more information.
 """
 @algdef CUSOLVER_Randomized
 
-does_truncate(::TruncatedAlgorithm{<:CUSOLVER_Randomized}) = true
-
 """
     CUSOLVER_Simple(; fixgauge = default_fixgauge())
 

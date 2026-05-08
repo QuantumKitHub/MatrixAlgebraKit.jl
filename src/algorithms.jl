@@ -356,17 +356,25 @@ struct TruncatedAlgorithm{A <: AbstractAlgorithm, T <: TruncationStrategy} <: Ab
 end
 
 """
-    SketchedAlgorithm(alg::AbstractAlgorithm, sketch::SketchingStrategy, trunc::TruncationStrategy)
+    SketchedAlgorithm(;
+        alg::AbstractAlgorithm, sketch::SketchingStrategy,
+        trunc::TruncationStrategy, driver::Driver = DefaultDriver()
+    )
 
 Generic wrapper type for self-truncating algorithms that produce an approximate low-rank
 factorization by first applying a sketching operation specified by `sketch`, then computing
 a small dense decomposition of the projected matrix using `alg`. The `driver` selects the
-backend (e.g. `DefaultDriver()`, `CUSOLVER()`).
+backend implementing the sketched factorization (e.g. `Native()` for the generic
+sketch-then-decompose pipeline, `CUSOLVER()` for the fused `gesvdr` kernel).
 """
-struct SketchedAlgorithm{A <: AbstractAlgorithm, S <: SketchingStrategy, T <: TruncationStrategy} <: AbstractAlgorithm
-    alg::A
+@kwdef struct SketchedAlgorithm{
+        A <: AbstractAlgorithm, S <: SketchingStrategy,
+        T <: TruncationStrategy, D <: Driver,
+    } <: AbstractAlgorithm
+    alg::A = DefaultAlgorithm()
     sketch::S
-    trunc::T
+    trunc::T = notrunc()
+    driver::D = DefaultDriver()
 end
 
 # utility conversion constructor
