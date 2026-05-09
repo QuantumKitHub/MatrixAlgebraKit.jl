@@ -266,32 +266,44 @@ for (bname, fname, elty, relty) in
     end
 end
 
-# Wrapper for randomized SVD
+# Wrapper for randomized SVD.
+# Caller must supply full-size buffers: U is (m, m) and Vᴴ is (n, n); both are reused
+# directly as cuSOLVER's workspace, and Vᴴ is converted in place from V to Vᴴ on the
+# leading k rows after cuSOLVER returns.
+# !!! Warning: this function takes in/returns V instead of Vᴴ
 function gesvdr!(
         A::StridedCuMatrix{T},
         S::StridedCuVector = similar(A, real(T), min(size(A)...)),
-        U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
-        Vᴴ::StridedCuMatrix{T} = similar(A, T, min(size(A)...), size(A, 2));
+        U::StridedCuMatrix{T} = similar(A, T, size(A, 1), size(A, 1)),
+        V::StridedCuMatrix{T} = similar(A, T, size(A, 2), size(A, 2));
         k::Int = length(S),
         p::Int = min(size(A)...) - k - 1,
-        niters::Int = 1
+        numiter::Int = 1,
     ) where {T <: BlasFloat}
-    chkstride1(A, U, S, Vᴴ)
+    chkstride1(A, U, S, V)
     m, n = size(A)
     minmn = min(m, n)
-    jobu = length(U) == 0 ? 'N' : 'S'
-    jobv = length(Vᴴ) == 0 ? 'N' : 'S'
     R = eltype(S)
-    k < minmn || throw(DimensionMismatch("length of S ($k) must be less than the smaller dimension of A ($minmn)"))
-    k + p < minmn || throw(DimensionMismatch("length of S ($k) plus oversampling ($p) must be less than the smaller dimension of A ($minmn)"))
     R == real(T) ||
         throw(ArgumentError("S does not have the matching real `eltype` of A"))
+    length(S) == minmn ||
+        throw(DimensionMismatch("length of S ($(length(S))) must equal min(size(A)) = $minmn"))
+    size(U) == (m, m) ||
+        throw(DimensionMismatch("U must have shape (m, m) = ($m, $m); got $(size(U))"))
+    size(V) == (n, n) ||
+        throw(DimensionMismatch("V must have shape (n, n) = ($n, $n); got $(size(V))"))
+    k < minmn ||
+        throw(DimensionMismatch("rank k ($k) must be less than min(size(A)) = $minmn"))
+    k + p < minmn ||
+        throw(DimensionMismatch("k + p ($(k + p)) must be less than min(size(A)) = $minmn"))
 
-    Ṽ = similar(Vᴴ, (n, n))
-    Ũ = (size(U) == (m, m)) ? U : similar(U, (m, m))
+    isempty(A) && return S, U, V
+
+    jobu = 'S'
+    jobv = 'S'
     lda = max(1, stride(A, 2))
-    ldu = max(1, stride(Ũ, 2))
-    ldv = max(1, stride(Ṽ, 2))
+    ldu = max(1, stride(U, 2))
+    ldv = max(1, stride(V, 2))
     params = cuSOLVER.CuSolverParameters()
     dh = cuSOLVER.dense_handle()
 
@@ -299,8 +311,8 @@ function gesvdr!(
         out_cpu = Ref{Csize_t}(0)
         out_gpu = Ref{Csize_t}(0)
         cuSOLVER.cusolverDnXgesvdr_bufferSize(
-            dh, params, jobu, jobv, m, n, k, p, niters,
-            T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+            dh, params, jobu, jobv, m, n, k, p, numiter,
+            T, A, lda, R, S, T, U, ldu, T, V, ldv,
             T, out_gpu, out_cpu
         )
 
@@ -311,8 +323,8 @@ function gesvdr!(
         bufferSize()...
     ) do buffer_gpu, buffer_cpu
         return cuSOLVER.cusolverDnXgesvdr(
-            dh, params, jobu, jobv, m, n, k, p, niters,
-            T, A, lda, R, S, T, Ũ, ldu, T, Ṽ, ldv,
+            dh, params, jobu, jobv, m, n, k, p, numiter,
+            T, A, lda, R, S, T, U, ldu, T, V, ldv,
             T, buffer_gpu, sizeof(buffer_gpu),
             buffer_cpu, sizeof(buffer_cpu),
             dh.info
@@ -321,16 +333,8 @@ function gesvdr!(
 
     flag = @allowscalar dh.info[1]
     cuSOLVER.chklapackerror(BlasInt(flag))
-    if Ũ !== U && length(U) > 0
-        U .= view(Ũ, 1:m, 1:size(U, 2))
-    end
-    if length(Vᴴ) > 0
-        Vᴴ .= view(Ṽ', 1:size(Vᴴ, 1), 1:n)
-    end
-    Ũ !== U && CUDA.unsafe_free!(Ũ)
-    CUDA.unsafe_free!(Ṽ)
 
-    return S, U, Vᴴ
+    return S, U, V
 end
 
 # Wrapper for general eigensolver

@@ -311,6 +311,36 @@ function svd_trunc_no_error!(A::AbstractMatrix, (U, S, Vᴴ), alg::SketchedAlgor
     return gesvdr!(alg.driver, A, S, U, Vᴴ; alg.sketch, alg.alg, alg.trunc)
 end
 
+# CUSOLVER's gesvdr kernel requires full U and Vᴴ
+function initialize_output(
+        ::typeof(svd_trunc_no_error!), A::AbstractMatrix,
+        alg::SketchedAlgorithm{<:AbstractAlgorithm, <:SketchingStrategy, <:TruncationStrategy, CUSOLVER},
+    )
+    m, n = size(A)
+    minmn = min(m, n)
+    T = float(eltype(A))
+    U = similar(A, T, (m, m))
+    S = Diagonal(similar(A, real(T), (minmn,)))
+    Vᴴ = similar(A, T, (n, n))
+    return (U, S, Vᴴ)
+end
+
+function check_input(
+        ::typeof(svd_trunc_no_error!), A::AbstractMatrix, (U, S, Vᴴ),
+        alg::SketchedAlgorithm{<:AbstractAlgorithm, <:SketchingStrategy, <:TruncationStrategy, CUSOLVER},
+    )
+    m, n = size(A)
+    minmn = min(m, n)
+    @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
+    @check_size(U, (m, m))
+    @check_scalar(U, A)
+    @check_size(S, (minmn, minmn))
+    @check_scalar(S, A, real)
+    @check_size(Vᴴ, (n, n))
+    @check_scalar(Vᴴ, A)
+    return nothing
+end
+
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::SketchedAlgorithm)
     U, S, Vᴴ = svd_trunc_no_error!(A, USVᴴ, alg)
     Na = norm(A)
@@ -399,7 +429,7 @@ function _cusolver_randomized_to_sketched(alg::CUSOLVER_Randomized)
     niters = alg.kwargs.niters
     return SketchedAlgorithm(
         QRIteration(),
-        GaussianSketching(k + p; numiter = niters + 1),
+        GaussianSketching(k + p; numiter = niters),
         truncrank(k);
         driver = CUSOLVER(),
     )
@@ -415,7 +445,7 @@ end
 @inline function select_algorithm(::typeof(svd_trunc!), A, alg::CUSOLVER_Randomized; kwargs...)
     Base.depwarn(
         "`CUSOLVER_Randomized` is deprecated; use \
-         `SketchedAlgorithm(QRIteration(), GaussianSketching(k+p; numiter=niters+1), truncrank(k); driver=CUSOLVER())` instead.",
+         `SketchedAlgorithm(QRIteration(), GaussianSketching(k+p; numiter=niters), truncrank(k); driver=CUSOLVER())` instead.",
         :select_algorithm,
     )
     isempty(kwargs) ||

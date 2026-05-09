@@ -52,30 +52,27 @@ end
 gesvdp!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
     YACUSOLVER.gesvdp!(A, S, U, Vᴴ; kwargs...)
 
-# Sketched SVD via cuSOLVER's gesvdr kernel
+# Sketched SVD via cuSOLVER's gesvdr kernel.
+# The full m×m / n×n shapes of U / Vᴴ allow YACUSOLVER.gesvdr! to reuse them as cuSOLVER workspace.
+# `alg` is accepted but unused: cuSOLVER's gesvdr fuses the inner SVD itself.
 function gesvdr!(
         ::CUSOLVER, A::StridedCuMatrix, S, U::StridedCuMatrix, Vᴴ::StridedCuMatrix;
         sketch::GaussianSketching, trunc::TruncationByOrder, alg::AbstractAlgorithm = DefaultAlgorithm()
     )
     isempty(A) && return U, S, Vᴴ
-    m, n = size(A); minmn = min(m, n)
-    k = trunc.howmany
-    1 ≤ k ≤ minmn ||
-        throw(ArgumentError("trunc.howmany=$k must satisfy 1 ≤ k ≤ min(size(A))=$minmn"))
-    p = sketch.howmany - k
-    p ≥ 0 || throw(
-        ArgumentError(
-            "sketch.howmany=$(sketch.howmany) must be ≥ trunc.howmany=$k"
-        )
-    )
-    p = min(p, minmn - k - 1)
-    niters = sketch.numiter - 1
+    m, n = size(A)
+    sketch_amount = min(sketch.howmany, m, n)
+    k = min(trunc.howmany, m, n)
+    p = max(sketch_amount - k, 0)
+    numiter = sketch.numiter
 
-    Uk = view(U, :, 1:k)
-    Vᴴk = view(Vᴴ, 1:k, :)
-    Sk = view(diagview(S), 1:k)
-    YACUSOLVER.gesvdr!(A, Sk, Uk, Vᴴk; k, p, niters)
-    return Uk, S, Vᴴk
+    V = Vᴴ # gesvdr returns V, but this has to be the same size so we will use this as workspace
+
+    YACUSOLVER.gesvdr!(A, diagview(S), U, V; k, p, numiter)
+
+    # Truncate requires Vᴴ, so we adjoint here
+    USVᴴtrunc, _ = MatrixAlgebraKit.truncate(MatrixAlgebraKit.svd_trunc!, (U, S, V'), trunc)
+    return USVᴴtrunc
 end
 
 geev!(::CUSOLVER, A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix) =

@@ -36,7 +36,7 @@ if !is_buildkite
             SketchedAlgorithm(; sketch = GaussianSketching(m ÷ 2, numiter = 4), trunc = truncrank(m ÷ 4)),
         ]
         TestSuite.test_sketched_svd(T, (m, n), algs; rtol)
-        TestSuite.test_sketched_svd(T, (n, m), algs)
+        TestSuite.test_sketched_svd(T, (n, m), algs; rtol)
     end
 
     # Generic floats:
@@ -57,7 +57,7 @@ end
 
 # CUDA tests
 # ------------
-if false # CUDA.functional()
+if CUDA.functional()
     # LAPACK algorithms:
     for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
         TestSuite.seed_rng!(123)
@@ -66,18 +66,19 @@ if false # CUDA.functional()
         TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
     end
 
-    # Randomized SVD:
+    # Sketched SVD:
     for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
         TestSuite.seed_rng!(123)
         k = 5
         p = min(m, n) - k - 2
         p > 0 || continue
-        cusolver_sketch = SketchedAlgorithm(
-            GaussianSketching(k; oversampling = p, niters = 20),
-            DefaultAlgorithm(),
-            MatrixAlgebraKit.CUSOLVER(),
+        rtol = sqrt(TestSuite.precision(T)) # extra square root
+        cusolver_sketch = SketchedAlgorithm(;
+            sketch = GaussianSketching(k + p; numiter = 20),
+            trunc = truncrank(k),
+            driver = MatrixAlgebraKit.CUSOLVER(),
         )
-        TestSuite.test_randomized_svd(CuMatrix{T}, (m, n), (cusolver_sketch,))
+        TestSuite.test_sketched_svd(CuMatrix{T}, (m, n), (cusolver_sketch,); rtol)
     end
 
     # Diagonal:
