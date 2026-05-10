@@ -15,7 +15,6 @@ function check_and_prepare_qr_cotangents(
         ΔQ₁ .= view(ΔQ, 1:m, 1:p)
         if p == minmn # full rank case, ΔQ₃ contains gauge-invariant information along Q₁
             ΔQ₃ = ΔQ[:, (minmn + 1):size(Q, 2)] # extra columns in the case of qr_full
-            Q₁ = view(Q, :, 1:minmn)
             Q₃ = view(Q, :, (minmn + 1):size(Q, 2))
             Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
             mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃, -1, 1)
