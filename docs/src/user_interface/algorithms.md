@@ -98,6 +98,23 @@ They all accept an optional `driver` keyword to select the computational backend
 
 For full docstring details on each algorithm type, see the corresponding section in [Decompositions](@ref).
 
+### Algorithm Wrappers
+
+In addition to the terminal algorithms above, MatrixAlgebraKit provides algorithm *wrappers* that compose a terminal algorithm with additional behaviour rather than computing a factorization themselves.
+Their `alg` field is one of the algorithms in the table above; the wrapper adds either a post-truncation step or a sketching step (or both).
+
+| Wrapper | Applicable decompositions | Key keyword arguments |
+|:--------|:--------------------------|:----------------------|
+| [`TruncatedAlgorithm`](@ref) | `svd_trunc`, `eigh_trunc`, `eig_trunc` | `alg`, `trunc` |
+| [`SketchedAlgorithm`](@ref) | `svd_trunc` | `sketch`, `trunc`, `alg`, `driver` |
+
+```@docs; canonical=false
+MatrixAlgebraKit.TruncatedAlgorithm
+MatrixAlgebraKit.SketchedAlgorithm
+```
+
+The corresponding truncated-decomposition functions ([`svd_trunc`](@ref), [`eigh_trunc`](@ref), [`eig_trunc`](@ref)) also accept `trunc =` and (for SVD) `sketch =` keyword arguments that construct the appropriate wrapper automatically; see [Truncations](@ref) and [Sketching](@ref) for the full interface.
+
 ## [Driver Selection](@id sec_driverselection)
 
 !!! note "Expert use case"

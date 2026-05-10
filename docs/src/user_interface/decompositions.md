@@ -140,6 +140,8 @@ It is also possible to compute the singular values only, using the [`svd_vals`](
 This then returns a vector of the values on the diagonal of `Σ`.
 
 Finally, we also support computing a partial or truncated SVD, using the [`svd_trunc`](@ref) function.
+To control the behavior of the truncation, we refer to [Truncations](@ref) for more information.
+Furthermore, for large matrices with rapidly-decaying spectra, the truncated SVD can additionally be computed via randomized sketching; see [Sketching](@ref).
 
 ```@docs; canonical=false
 svd_full
