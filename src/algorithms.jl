@@ -220,22 +220,36 @@ Driver to select GenericSchur.jl as the implementation strategy.
 struct GS <: Driver end
 
 # In order to avoid amibiguities, this method is implemented in a tiered way
-# default_driver(alg, A) -> default_driver(typeof(alg), typeof(A))
-# default_driver(Talg, TA) -> default_driver(TA)
+# default_driver(alg, A)   -> default_driver(typeof(alg), typeof(A))
+# default_driver(Talg, A)  -> default_driver(Talg, typeof(A))
+# default_driver(Talg, TA) -> default_driver(Talg, _unwrapped_array_type(TA)) | default_driver(TA)
+# default_driver(TA)       -> driver
 # This is to try and minimize ambiguity while allowing overloading at multiple levels
 @inline default_driver(alg::AbstractAlgorithm, A) = default_driver(typeof(alg), A isa Type ? A : typeof(A))
 @inline default_driver(::Type{Alg}, A) where {Alg <: AbstractAlgorithm} = default_driver(Alg, typeof(A))
-@inline default_driver(::Type{Alg}, ::Type{TA}) where {Alg <: AbstractAlgorithm, TA} = default_driver(TA)
+
+# Generic 2-arg fallback: if `TA` is a supported wrapper type, recurse on the
+# unwrapped storage type (so algorithm-specialized methods on the parent array
+# type still apply). Otherwise drop the algorithm and fall through to the
+# array-only dispatch.
+@inline function default_driver(::Type{Alg}, ::Type{TA}) where {Alg <: AbstractAlgorithm, TA <: AbstractArray}
+    UA = _unwrapped_array_type(TA)
+    return UA === TA ? default_driver(TA) : default_driver(Alg, UA)
+end
 
 # defaults
 default_driver(::Type{TA}) where {TA <: AbstractArray} = Native() # default fallback
 default_driver(::Type{TA}) where {TA <: YALAPACK.MaybeBlasVecOrMat} = LAPACK()
 
-# wrapper types
-@inline default_driver(::Type{Alg}, ::Type{<:SubArray{T, N, A}}) where {Alg <: AbstractAlgorithm, T, N, A} = default_driver(Alg, A)
-@inline default_driver(::Type{Alg}, ::Type{<:Base.ReshapedArray{T, N, A}}) where {Alg <: AbstractAlgorithm, T, N, A} = default_driver(Alg, A)
+# wrapper types (1-arg form, reached via the generic 2-arg fallback)
 @inline default_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = default_driver(A)
 @inline default_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = default_driver(A)
+
+# Internal helper: strip supported wrapper types to the underlying storage
+# array type. Add a new method here when introducing additional wrappers.
+@inline _unwrapped_array_type(::Type{TA}) where {TA <: AbstractArray} = TA
+@inline _unwrapped_array_type(::Type{<:SubArray{T, N, A}}) where {T, N, A} = _unwrapped_array_type(A)
+@inline _unwrapped_array_type(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = _unwrapped_array_type(A)
 
 # Truncation strategy
 # -------------------
