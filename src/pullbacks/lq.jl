@@ -13,7 +13,7 @@ function check_and_prepare_lq_cotangents(
         size(ΔQ) == size(Q) || throw(DimensionMismatch("ΔQ must have the same size as Q"))
         ΔQ₁ .= view(ΔQ, 1:p, 1:n)
         if p == minmn # full rank case, ΔQ₃ contains gauge-invariant information along Q₁
-            ΔQ₃ = ΔQ[(minmn + 1):size(Q, 1), :] # extra columns in the case of qr_full
+            ΔQ₃ = copy(view(ΔQ, (minmn + 1):size(Q, 1), :)) # extra columns in the case of qr_full
             Q₃ = view(Q, (minmn + 1):size(Q, 1), :)
             ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
             mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁, -1, 1)
