@@ -1,0 +1,82 @@
+using MatrixAlgebraKit
+using Test
+using TestExtras
+using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
+    default_algorithm, select_algorithm, Householder, DefaultDriver
+
+@testset "default_algorithm" begin
+    A = randn(3, 3)
+    for f in (svd_compact!, svd_compact, svd_full!, svd_full)
+        @test @constinferred(default_algorithm(f, A)) == SafeDivideAndConquer()
+    end
+    for f in (eig_full!, eig_full, eig_vals!, eig_vals)
+        @test @constinferred(default_algorithm(f, A)) === QRIteration()
+    end
+    for f in (eigh_full!, eigh_full, eigh_vals!, eigh_vals)
+        @test @constinferred(default_algorithm(f, A)) === RobustRepresentations()
+    end
+    for f in (lq_full!, lq_full, lq_compact!, lq_compact, lq_null!, lq_null)
+        @test @constinferred(default_algorithm(f, A)) == Householder()
+    end
+    for f in (left_polar!, left_polar, right_polar!, right_polar)
+        @test @constinferred(default_algorithm(f, A)) ==
+            PolarViaSVD(SafeDivideAndConquer())
+    end
+    for f in (qr_full!, qr_full, qr_compact!, qr_compact, qr_null!, qr_null)
+        @test @constinferred(default_algorithm(f, A)) == Householder()
+    end
+    for f in (schur_full!, schur_full, schur_vals!, schur_vals)
+        @test @constinferred(default_algorithm(f, A)) === QRIteration()
+    end
+
+    @test @constinferred(default_algorithm(qr_compact!, A; blocksize = 2)) ==
+        Householder(; blocksize = 2)
+end
+
+@testset "select_algorithm" begin
+    A = randn(3, 3)
+    for f in (svd_trunc!, svd_trunc)
+        @test @constinferred(select_algorithm(f, A)) ==
+            TruncatedAlgorithm(SafeDivideAndConquer(), notrunc())
+    end
+    for f in (eig_trunc!, eig_trunc)
+        @test @constinferred(select_algorithm(f, A)) ===
+            TruncatedAlgorithm(QRIteration(), notrunc())
+    end
+    for f in (eigh_trunc!, eigh_trunc)
+        @test @constinferred(select_algorithm(f, A)) ===
+            TruncatedAlgorithm(RobustRepresentations(), notrunc())
+    end
+
+    alg = TruncatedAlgorithm(QRIteration(), trunctol(; atol = 0.1, keep_below = true))
+    for f in (eig_trunc!, eigh_trunc!, svd_trunc!)
+        @test @constinferred(select_algorithm(eig_trunc!, A, alg)) === alg
+        @test_throws ArgumentError select_algorithm(eig_trunc!, A, alg; trunc = (; maxrank = 2))
+    end
+
+    @test @constinferred(select_algorithm(svd_compact!, A)) == SafeDivideAndConquer()
+    @test @constinferred(select_algorithm(svd_compact!, A, nothing)) == SafeDivideAndConquer()
+    for alg in (:QRIteration, QRIteration, QRIteration())
+        @test @constinferred(select_algorithm(svd_compact!, A, $alg)) === QRIteration()
+    end
+end
+
+@testset "Truncation equivalencies" begin
+    truncs = [
+        notrunc(),
+        truncrank(4),
+        truncrank(5),
+        truncfilter(x -> x > 0),
+        truncfilter(x -> x > 1.0e-4),
+        trunctol(; atol = 0),
+        trunctol(; atol = 1.0e-4),
+        truncerror(; atol = 0),
+        truncerror(; atol = 1.0e-4),
+        truncrank(4) & truncfilter(x -> x > 0),
+        truncrank(4) & truncrank(5),
+    ]
+
+    for (i1, t1) in enumerate(truncs), (i2, t2) in enumerate(truncs)
+        @test (i1 == i2) ? t1 == t2 : t1 != t2
+    end
+end

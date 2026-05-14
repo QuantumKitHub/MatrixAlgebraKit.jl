@@ -1,0 +1,70 @@
+using MatrixAlgebraKit
+using MatrixAlgebraKit: Native, GLA
+using Test
+using StableRNGs
+using LinearAlgebra: diag, I, Diagonal
+using MatrixAlgebraKit: LQViaTransposedQR, LAPACK_HouseholderLQ
+using CUDA, AMDGPU, GenericLinearAlgebra
+
+if @isdefined(fast_tests) && fast_tests
+    BLASFloats = (Float64, ComplexF64)
+    GenericFloats = (Float16, Complex{BigFloat})
+else
+    BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
+    GenericFloats = (Float16, BigFloat, Complex{BigFloat})
+end
+
+@isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
+using .TestSuite
+
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
+
+m = 54
+for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
+    TestSuite.seed_rng!(123)
+    if T ∈ BLASFloats
+        if CUDA.functional()
+            CUDA_LQ_ALGS = LQViaTransposedQR.((Householder(; positive = false), Householder(; positive = true)))
+            TestSuite.test_lq(CuMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
+            TestSuite.test_lq_algs(CuMatrix{T}, (m, n), CUDA_LQ_ALGS)
+            if n == m
+                TestSuite.test_lq(Diagonal{T, CuVector{T}}, m; test_pivoted = false, test_blocksize = false)
+                TestSuite.test_lq_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
+            end
+        end
+        if AMDGPU.functional()
+            ROC_LQ_ALGS = LQViaTransposedQR.((Householder(; positive = false), Householder(; positive = true)))
+            TestSuite.test_lq(ROCMatrix{T}, (m, n); test_pivoted = false, test_blocksize = false)
+            TestSuite.test_lq_algs(ROCMatrix{T}, (m, n), ROC_LQ_ALGS)
+            if n == m
+                TestSuite.test_lq(Diagonal{T, ROCVector{T}}, m; test_pivoted = false, test_blocksize = false)
+                TestSuite.test_lq_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),))
+            end
+        end
+    end
+    if !is_buildkite
+        if T ∈ BLASFloats
+            TestSuite.test_lq(T, (m, n))
+            LAPACK_LQ_ALGS = (
+                Householder(; positive = false, pivoted = false, blocksize = 1),
+                Householder(; positive = false, pivoted = false, blocksize = 8),
+                Householder(; positive = false, pivoted = true, blocksize = 1),
+                #LAPACK_HouseholderLQ(; positive=false, pivoted=true, blocksize=8), # not supported
+                Householder(; positive = true, pivoted = false, blocksize = 1),
+                Householder(; positive = true, pivoted = false, blocksize = 8),
+                Householder(; positive = true, pivoted = true, blocksize = 1),
+                #LAPACK_HouseholderLQ(; positive=true, pivoted=true, blocksize=8), # not supported
+            )
+            TestSuite.test_lq_algs(T, (m, n), LAPACK_LQ_ALGS)
+        elseif T ∈ GenericFloats
+            TestSuite.test_lq(T, (m, n); test_pivoted = false, test_blocksize = false)
+            GENERIC_LQ_ALGS = (Householder(; driver = Native()), LQViaTransposedQR(Householder(; driver = GLA())))
+            TestSuite.test_lq_algs(T, (m, n), GENERIC_LQ_ALGS)
+        end
+        if m == n
+            AT = Diagonal{T, Vector{T}}
+            TestSuite.test_lq(AT, m; test_pivoted = false, test_blocksize = false)
+            TestSuite.test_lq_algs(AT, m, (DiagonalAlgorithm(),))
+        end
+    end
+end

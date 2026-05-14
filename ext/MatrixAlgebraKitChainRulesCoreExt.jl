@@ -95,6 +95,9 @@ for eig in (:eig, :eigh)
     eig_t! = Symbol(eig, "_trunc!")
     eig_t_pb = Symbol(eig, "_trunc_pullback")
     _make_eig_t_pb = Symbol("_make_", eig_t_pb)
+    eig_t_ne! = Symbol(eig, "_trunc_no_error!")
+    eig_t_ne_pb = Symbol(eig, "_trunc_no_error_pullback")
+    _make_eig_t_ne_pb = Symbol("_make_", eig_t_ne_pb)
     eig_v = Symbol(eig, "_vals")
     eig_v! = Symbol(eig_v, "!")
     eig_v_pb = Symbol(eig_v, "_pullback")
@@ -135,6 +138,24 @@ for eig in (:eig, :eigh)
                 return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
             end
             return $eig_t_pb
+        end
+        function ChainRulesCore.rrule(::typeof($eig_t_ne!), A, DV, alg::TruncatedAlgorithm)
+            Ac = copy_input($eig_f, A)
+            DV = $(eig_f!)(Ac, DV, alg.alg)
+            DV′, ind = MatrixAlgebraKit.truncate($eig_t!, DV, alg.trunc)
+            return DV′, $(_make_eig_t_ne_pb)(A, DV, ind)
+        end
+        function $(_make_eig_t_ne_pb)(A, DV, ind)
+            function $eig_t_ne_pb(ΔDV)
+                ΔA = zero(A)
+                ΔD, ΔV = ΔDV
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, unthunk.((ΔD, ΔV)), ind)
+                return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+            end
+            function $eig_t_ne_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
+                return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+            end
+            return $eig_t_ne_pb
         end
         function ChainRulesCore.rrule(::typeof($eig_v!), A, D, alg)
             DV = $eig_f(A, alg)
@@ -193,6 +214,25 @@ function _make_svd_trunc_pullback(A, USVᴴ, ind)
     return svd_trunc_pullback
 end
 
+function ChainRulesCore.rrule(::typeof(svd_trunc_no_error!), A, USVᴴ, alg::TruncatedAlgorithm)
+    Ac = copy_input(svd_compact, A)
+    USVᴴ = svd_compact!(Ac, USVᴴ, alg.alg)
+    USVᴴ′, ind = MatrixAlgebraKit.truncate(svd_trunc!, USVᴴ, alg.trunc)
+    return USVᴴ′, _make_svd_trunc_no_error_pullback(A, USVᴴ, ind)
+end
+function _make_svd_trunc_no_error_pullback(A, USVᴴ, ind)
+    function svd_trunc_pullback(ΔUSVᴴ)
+        ΔA = zero(A)
+        ΔU, ΔS, ΔVᴴ = ΔUSVᴴ
+        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, unthunk.((ΔU, ΔS, ΔVᴴ)), ind)
+        return NoTangent(), ΔA, ZeroTangent(), NoTangent()
+    end
+    function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
+        return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+    end
+    return svd_trunc_pullback
+end
+
 function ChainRulesCore.rrule(::typeof(svd_vals!), A, S, alg)
     USVᴴ = svd_compact(A, alg)
     function svd_vals_pullback(ΔS)
@@ -232,6 +272,24 @@ function ChainRulesCore.rrule(::typeof(right_polar!), A, PWᴴ, alg)
         return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
     end
     return PWᴴ, right_polar_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(project_hermitian), A, alg)
+    Aₕ = project_hermitian(A, alg)
+    function project_hermitian_pullback(ΔAₕ)
+        ΔA = project_hermitian(unthunk(ΔAₕ))
+        return NoTangent(), ΔA, NoTangent()
+    end
+    return Aₕ, project_hermitian_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(project_antihermitian), A, alg)
+    Aₐ = project_antihermitian(A, alg)
+    function project_antihermitian_pullback(ΔAₐ)
+        ΔA = project_antihermitian(unthunk(ΔAₐ))
+        return NoTangent(), ΔA, NoTangent()
+    end
+    return Aₐ, project_antihermitian_pullback
 end
 
 end

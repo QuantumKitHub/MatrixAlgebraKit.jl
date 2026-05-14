@@ -34,6 +34,7 @@ default_pullback_degeneracy_atol(A) = eps(norm(A, Inf))^(3 / 4)
 Default tolerance for deciding what values should be considered equal to 0.
 """
 default_pullback_rank_atol(A) = eps(norm(A, Inf))^(3 / 4)
+default_pullback_rank_atol(A::Diagonal) = default_pullback_rank_atol(diagview(A))
 
 """
     default_hermitian_tol(A)
@@ -58,3 +59,5 @@ function default_fixgauge(new_value::Bool)
     DEFAULT_FIXGAUGE[] = new_value
     return previous_value
 end
+
+const _fixgauge_docs = "The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the output, see also [`default_fixgauge`](@ref) for a global toggle and [`gaugefix!`](@ref) for implementation details."

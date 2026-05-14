@@ -4,48 +4,51 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
-using MatrixAlgebraKit: LQViaTransposedQR, TruncationStrategy, NoTruncation, TruncationByValue, AbstractAlgorithm
+using MatrixAlgebraKit: ROCSOLVER, LQViaTransposedQR, TruncationStrategy, NoTruncation, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eigh_algorithm
-import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_gesvdj!
-import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!, _gpu_heev!, _gpu_heevx!
+import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdj!
+import MatrixAlgebraKit: heevj!, heevd!, heev!, heevx!
+import MatrixAlgebraKit: _sylvester, svd_rank
 using AMDGPU
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
 
 include("yarocsolver.jl")
 
-function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
-    return ROCSOLVER_HouseholderQR(; kwargs...)
+MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedROCVecOrMat{<:BlasFloat}} = ROCSOLVER()
+
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
+    return QRIteration(; kwargs...)
 end
-function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
-    qr_alg = ROCSOLVER_HouseholderQR(; kwargs...)
-    return LQViaTransposedQR(qr_alg)
-end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
-    return ROCSOLVER_QRIteration(; kwargs...)
-end
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix}
-    return ROCSOLVER_DivideAndConquer(; kwargs...)
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
+    return DivideAndConquer(; kwargs...)
 end
 
-_gpu_geqrf!(A::StridedROCMatrix) = YArocSOLVER.geqrf!(A)
-_gpu_ungqr!(A::StridedROCMatrix, τ::StridedROCVector) = YArocSOLVER.ungqr!(A, τ)
-_gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::StridedROCMatrix, τ::StridedROCVector, C::StridedROCVecOrMat) =
-    YArocSOLVER.unmqr!(side, trans, A, τ, C)
-_gpu_gesvd!(A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix) =
-    YArocSOLVER.gesvd!(A, S, U, Vᴴ)
-# not yet supported
-# _gpu_Xgesvdp!(A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
-#     YArocSOLVER.Xgesvdp!(A, S, U, Vᴴ; kwargs...)
-_gpu_gesvdj!(A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
-    YArocSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
-_gpu_heevj!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
+for f in (:geqrf!, :ungqr!, :unmqr!)
+    @eval $f(::ROCSOLVER, args...) = YArocSOLVER.$f(args...)
+end
+
+MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
+
+function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
+    m, n = size(A)
+    m >= n && return YArocSOLVER.gesvd!(A, S, U, Vᴴ)
+    return MatrixAlgebraKit.svd_via_adjoint!(gesvd!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
+end
+
+function gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
+    m, n = size(A)
+    m >= n && return YArocSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
+    return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
+end
+
+heevj!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevj!(A, Dd, V; kwargs...)
-_gpu_heevd!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
+heevd!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevd!(A, Dd, V; kwargs...)
-_gpu_heev!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
+heev!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heev!(A, Dd, V; kwargs...)
-_gpu_heevx!(A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
+heevx!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevx!(A, Dd, V; kwargs...)
 
 function MatrixAlgebraKit.findtruncated_svd(values::StridedROCVector, strategy::TruncationByValue)
@@ -159,43 +162,29 @@ function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
     return A, B
 end
 
-function MatrixAlgebraKit.truncate(
-        ::typeof(left_null!), US::Tuple{TU, TS}, strategy::TruncationStrategy
-    ) where {TU <: ROCMatrix, TS}
-    # TODO: avoid allocation?
-    U, S = US
-    extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 1) - size(S, 2))))
-    ind = MatrixAlgebraKit.findtruncated(extended_S, strategy)
-    trunc_cols = collect(1:size(U, 2))[ind]
-    Utrunc = U[:, trunc_cols]
-    return Utrunc, ind
-end
-function MatrixAlgebraKit.truncate(
-        ::typeof(right_null!), SVᴴ::Tuple{TS, TVᴴ}, strategy::TruncationStrategy
-    ) where {TS, TVᴴ <: ROCMatrix}
-    # TODO: avoid allocation?
-    S, Vᴴ = SVᴴ
-    extended_S = vcat(diagview(S), zeros(eltype(S), max(0, size(S, 2) - size(S, 1))))
-    ind = MatrixAlgebraKit.findtruncated(extended_S, strategy)
-    trunc_rows = collect(1:size(Vᴴ, 1))[ind]
-    Vᴴtrunc = Vᴴ[trunc_rows, :]
-    return Vᴴtrunc, ind
+# avoids calling the BlasMat specialization that assumes syrk! or herk! is called
+# TODO: remove once syrk! or herk! is defined
+function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix{T}) where {T <: BlasFloat}
+    mul!(C, A, A')
+    project_hermitian!(C)
+    return C
 end
 
-# disambiguate:
-function MatrixAlgebraKit.truncate(
-        ::typeof(left_null!), (U, S)::Tuple{TU, TS}, ::NoTruncation
-    ) where {TU <: ROCMatrix, TS}
-    m, n = size(S)
-    ind = (n + 1):m
-    return U[:, ind], ind
+# TODO: intersect/union don't work on GPU
+MatrixAlgebraKit._ind_intersect(A::ROCVector{Int}, B::ROCVector{Int}) =
+    MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
+MatrixAlgebraKit._ind_union(A::AbstractVector{<:Integer}, B::ROCVector{Int}) =
+    MatrixAlgebraKit._ind_union(A, collect(B))
+MatrixAlgebraKit._ind_union(A::ROCVector{Int}, B::AbstractVector{<:Integer}) =
+    MatrixAlgebraKit._ind_union(collect(A), B)
+MatrixAlgebraKit._ind_union(A::ROCVector{Int}, B::ROCVector{Int}) =
+    MatrixAlgebraKit._ind_union(collect(A), collect(B))
+
+function _sylvester(A::AnyROCMatrix, B::AnyROCMatrix, C::AnyROCMatrix)
+    hX = sylvester(collect(A), collect(B), collect(C))
+    return ROCArray(hX)
 end
-function MatrixAlgebraKit.truncate(
-        ::typeof(right_null!), (S, Vᴴ)::Tuple{TS, TVᴴ}, ::NoTruncation
-    ) where {TS, TVᴴ <: ROCMatrix}
-    m, n = size(S)
-    ind = (m + 1):n
-    return Vᴴ[ind, :], ind
-end
+
+svd_rank(S::AnyROCVector, rank_atol) = findlast(s -> s ≥ rank_atol, S)
 
 end

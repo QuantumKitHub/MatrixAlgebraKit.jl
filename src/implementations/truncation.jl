@@ -49,7 +49,7 @@ findtruncated(values::AbstractVector, ::NoTruncation) = Colon()
 
 function findtruncated(values::AbstractVector, strategy::TruncationByOrder)
     howmany = min(strategy.howmany, length(values))
-    return partialsortperm(values, 1:howmany; strategy.by, strategy.rev)
+    return sortperm(values; strategy.by, strategy.rev)[1:howmany]
 end
 function findtruncated_svd(values::AbstractVector, strategy::TruncationByOrder)
     strategy.by === abs || return findtruncated(values, strategy)
@@ -96,14 +96,8 @@ function _truncerr_impl(values::AbstractVector, I; atol::Real = 0, rtol::Real = 
     # fast path to avoid checking all values
     ϵᵖ ≥ Nᵖ && return Base.OneTo(0)
 
-    truncerrᵖ = zero(real(eltype(values)))
-    rank = length(values)
-    for i in reverse(I)
-        truncerrᵖ += by(values[i])
-        truncerrᵖ ≥ ϵᵖ && break
-        rank -= 1
-    end
-
+    truncerrᵖ_array = cumsum(map(by, view(values, reverse(I))))
+    rank = length(values) - (findfirst(≥(ϵᵖ), truncerrᵖ_array) - 1)
     return Base.OneTo(rank)
 end
 
@@ -126,13 +120,48 @@ end
 
 # when one of the ind selections is a bitvector, have to handle differently
 function _ind_intersect(A::AbstractVector{Bool}, B::AbstractVector)
-    result = falses(length(A))
+    result = fill!(similar(A), false)
     result[B] .= @view A[B]
     return result
 end
 _ind_intersect(A::AbstractVector, B::AbstractVector{Bool}) = _ind_intersect(B, A)
 _ind_intersect(A::AbstractVector{Bool}, B::AbstractVector{Bool}) = A .& B
+
+# when one of the ind selections is a unitrange, filter is more efficient than intersect
+# since we know both selections only contain unique entries
+# (This is also more GPU-friendly!)
+_ind_intersect(A::AbstractUnitRange{Int}, B::AbstractUnitRange{Int}) = intersect(A, B)
+_ind_intersect(A::AbstractVector{Int}, B::AbstractUnitRange{Int}) = filter(in(B), A)
+_ind_intersect(A::AbstractUnitRange{Int}, B::AbstractVector{Int}) = _ind_intersect(B, A)
+
+# when all else fails, call intersect
 _ind_intersect(A, B) = intersect(A, B)
+
+function findtruncated(values::AbstractVector, strategy::TruncationUnion)
+    length(strategy.components) == 0 && return Base.OneTo(0)
+    length(strategy.components) == 1 && return findtruncated(values, only(strategy.components))
+    ind1 = findtruncated(values, strategy.components[1])
+    ind2 = findtruncated(values, TruncationUnion(Base.tail(strategy.components)))
+    return _ind_union(ind1, ind2)
+end
+function findtruncated_svd(values::AbstractVector, strategy::TruncationUnion)
+    length(strategy.components) == 0 && return Base.OneTo(0)
+    length(strategy.components) == 1 && return findtruncated_svd(values, only(strategy.components))
+    ind1 = findtruncated_svd(values, strategy.components[1])
+    ind2 = findtruncated_svd(values, TruncationUnion(Base.tail(strategy.components)))
+    return _ind_union(ind1, ind2)
+end
+
+_ind_union(A::AbstractVector{Bool}, B::AbstractVector{Bool}) = A .| B
+function _ind_union(A::AbstractVector{Bool}, B::AbstractVector)
+    result = copy(A)
+    result[B] .= true
+    return result
+end
+_ind_union(A::AbstractVector, B::AbstractVector{Bool}) = _ind_union(B, A)
+_ind_union(A::Base.OneTo, B::Base.OneTo) = Base.OneTo(max(length(A), length(B)))
+_ind_union(A::AbstractUnitRange, B::AbstractUnitRange) = union(A, B)
+_ind_union(A, B) = union(A, B)
 
 # Truncation error
 # ----------------

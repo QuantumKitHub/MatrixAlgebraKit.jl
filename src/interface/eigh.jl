@@ -84,10 +84,62 @@ truncation strategy is already embedded in the algorithm.
 !!! note
 $(docs_eigh_note)
 
-See also [`eigh_full(!)`](@ref eigh_full), [`eigh_vals(!)`](@ref eigh_vals), and
-[Truncations](@ref) for more information on truncation strategies.
+See also [`eigh_full(!)`](@ref eigh_full), [`eigh_vals(!)`](@ref eigh_vals),
+[`eigh_trunc_no_error(!)`](@ref eigh_trunc_no_error) and [Truncations](@ref)
+for more information on truncation strategies.
 """
 @functiondef eigh_trunc
+
+"""
+    eigh_trunc_no_error(A; [trunc], kwargs...) -> D, V
+    eigh_trunc_no_error(A, alg::AbstractAlgorithm) -> D, V
+    eigh_trunc_no_error!(A, [DV]; [trunc], kwargs...) -> D, V
+    eigh_trunc_no_error!(A, [DV], alg::AbstractAlgorithm) -> D, V
+
+Compute a partial or truncated eigenvalue decomposition of the symmetric or hermitian matrix
+`A`, such that `A * V ≈ V * D`, where the isometric matrix `V` contains a subset of the
+orthogonal eigenvectors and the real diagonal matrix `D` contains the associated eigenvalues,
+selected according to a truncation strategy.  The function does *not* returns the truncation error. 
+
+## Truncation
+The truncation strategy can be controlled via the `trunc` keyword argument. This can be
+either a `NamedTuple` or a [`TruncationStrategy`](@ref). If `trunc` is not provided or
+nothing, all values will be kept.
+
+### `trunc::NamedTuple`
+The supported truncation keyword arguments are:
+
+$docs_truncation_kwargs
+
+### `trunc::TruncationStrategy`
+For more control, a truncation strategy can be supplied directly.
+By default, MatrixAlgebraKit supplies the following:
+
+$docs_truncation_strategies
+
+## Keyword arguments
+Other keyword arguments are passed to the algorithm selection procedure. If no explicit
+`alg` is provided, these keywords are used to select and configure the algorithm through
+[`MatrixAlgebraKit.select_algorithm`](@ref). The remaining keywords after algorithm
+selection are passed to the algorithm constructor. See [`MatrixAlgebraKit.default_algorithm`](@ref)
+for the default algorithm selection behavior.
+
+When `alg` is a [`TruncatedAlgorithm`](@ref), the `trunc` keyword cannot be specified as the
+truncation strategy is already embedded in the algorithm.
+
+!!! note
+    The bang method `eigh_trunc!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `DV` as output.
+
+!!! note
+$(docs_eigh_note)
+
+See also [`eigh_full(!)`](@ref eigh_full), [`eigh_vals(!)`](@ref eigh_vals),
+[`eigh_trunc(!)`](@ref eig_trunc), and [Truncations](@ref) for more information
+on truncation strategies.
+"""
+@functiondef eigh_trunc_no_error
 
 """
     eigh_vals(A; kwargs...) -> D
@@ -115,11 +167,17 @@ default_eigh_algorithm(A; kwargs...) = default_eigh_algorithm(typeof(A); kwargs.
 function default_eigh_algorithm(T::Type; kwargs...)
     throw(MethodError(default_eigh_algorithm, (T,)))
 end
-function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasMat}
-    return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
+function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: YALAPACK.MaybeBlasVecOrMat}
+    return RobustRepresentations(; kwargs...)
 end
 function default_eigh_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)
+end
+function default_eigh_algorithm(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A}
+    return default_eigh_algorithm(A)
+end
+function default_eigh_algorithm(::Type{<:SubArray{T, N, A}}) where {T, N, A}
+    return default_eigh_algorithm(A)
 end
 
 for f in (:eigh_full!, :eigh_vals!)
@@ -128,13 +186,15 @@ for f in (:eigh_full!, :eigh_vals!)
     end
 end
 
-function select_algorithm(::typeof(eigh_trunc!), A, alg; trunc = nothing, kwargs...)
-    if alg isa TruncatedAlgorithm
-        isnothing(trunc) ||
-            throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
-        return alg
-    else
-        alg_eig = select_algorithm(eigh_full!, A, alg; kwargs...)
-        return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+for f in (:eigh_trunc!, :eigh_trunc_no_error!)
+    @eval function select_algorithm(::typeof($f), A, alg; trunc = nothing, kwargs...)
+        if alg isa TruncatedAlgorithm
+            isnothing(trunc) ||
+                throw(ArgumentError("`trunc` can't be specified when `alg` is a `TruncatedAlgorithm`"))
+            return alg
+        else
+            alg_eig = select_algorithm(eigh_full!, A, alg; kwargs...)
+            return TruncatedAlgorithm(alg_eig, select_truncation(trunc))
+        end
     end
 end

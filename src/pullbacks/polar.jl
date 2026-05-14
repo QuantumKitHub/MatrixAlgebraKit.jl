@@ -16,8 +16,8 @@ function left_polar_pullback!(ΔA::AbstractMatrix, A, WP, ΔWP; kwargs...)
     M = zero(P)
     !iszerotangent(ΔW) && mul!(M, W', ΔW, 1, 1)
     !iszerotangent(ΔP) && mul!(M, ΔP, P, -1, 1)
-    C = sylvester(P, P, M' - M)
-    C .+= ΔP
+    C = _sylvester(P, P, M' - M)
+    !iszerotangent(ΔP) && (C .+= ΔP)
     ΔA = mul!(ΔA, W, C, 1, 1)
     if !iszerotangent(ΔW)
         ΔWP = ΔW / P
@@ -46,8 +46,8 @@ function right_polar_pullback!(ΔA::AbstractMatrix, A, PWᴴ, ΔPWᴴ; kwargs...
     M = zero(P)
     !iszerotangent(ΔWᴴ) && mul!(M, ΔWᴴ, Wᴴ', 1, 1)
     !iszerotangent(ΔP) && mul!(M, P, ΔP, -1, 1)
-    C = sylvester(P, P, M' - M)
-    C .+= ΔP
+    C = _sylvester(P, P, M' - M)
+    !iszerotangent(ΔP) && (C .+= ΔP)
     ΔA = mul!(ΔA, C, Wᴴ, 1, 1)
     if !iszerotangent(ΔWᴴ)
         PΔWᴴ = P \ ΔWᴴ

@@ -10,65 +10,195 @@
 # QR, LQ, QL, RQ Decomposition
 # ----------------------------
 """
-    LAPACK_HouseholderQR(; blocksize, positive = false, pivoted = false)
+    Native_HouseholderQR()
+
+Algorithm type to denote a native implementation for computing the QR decomposition of
+a matrix using Householder reflectors. The diagonal elements of `R` will be non-negative
+by construction.
+"""
+@algdef Native_HouseholderQR
+
+"""
+    Native_HouseholderLQ()
+
+Algorithm type to denote a native implementation for computing the LQ decomposition of
+a matrix using Householder reflectors. The diagonal elements of `L` will be non-negative
+by construction.
+"""
+@algdef Native_HouseholderLQ
+
+"""
+    LAPACK_HouseholderQR(; blocksize, positive = true, pivoted = false)
 
 Algorithm type to denote the standard LAPACK algorithm for computing the QR decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
 the keyword arugments, i.e.  `?geqrt` will be chosen if `blocksize > 1`. With
 `blocksize == 1`, `?geqrf` will be chosen if `pivoted == false` and `?geqp3` will be chosen
-if `pivoted == true`. The keyword `positive = true` can be used to ensure that the diagonal
+if `pivoted == true`. The keyword `positive = true` is used to ensure that the diagonal
 elements of `R` are non-negative.
 """
 @algdef LAPACK_HouseholderQR
 
 """
-    LAPACK_HouseholderLQ(; blocksize, positive = false)
+    LAPACK_HouseholderLQ(; blocksize, positive = true)
 
 Algorithm type to denote the standard LAPACK algorithm for computing the LQ decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
 the keyword arugments, i.e. `?gelqt` will be chosen if `blocksize > 1` or `?gelqf` will be
-chosen if `blocksize == 1`. The keyword `positive = true` can be used to ensure that the diagonal
-elements of `L` are non-negative.
+chosen if `blocksize == 1`. The keyword `positive = true` is used to ensure that the
+diagonal elements of `L` are non-negative.
 """
 @algdef LAPACK_HouseholderLQ
 
 """
-    GLA_HouseholderQR(; positive = false)
+    GLA_HouseholderQR(; positive = true)
 
 Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the QR decomposition
 of a matrix using Householder reflectors. Currently, only `blocksize = 1` and `pivoted == false`
-are supported. The keyword `positive = true` can be used to ensure that the diagonal elements
+are supported. The keyword `positive = true` is used to ensure that the diagonal elements
 of `R` are non-negative.
 """
 @algdef GLA_HouseholderQR
 
-# TODO:
 @algdef LAPACK_HouseholderQL
 @algdef LAPACK_HouseholderRQ
 
-# General Eigenvalue Decomposition
-# -------------------------------
 """
-    LAPACK_Simple(; fixgauge::Bool = true)
+    Householder(; [driver], kwargs...)
 
-Algorithm type to denote the simple LAPACK driver for computing the Schur or non-Hermitian
-eigenvalue decomposition of a matrix.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
-see also [`gaugefix!`](@ref).
+Algorithm type to denote the algorithm for computing QR, RQ, QL or LQ decompositions of a matrix using Householder reflectors.
+
+### Keyword arguments
+
+- `positive::Bool = true` : Fix the gauge of the resulting factors by making the diagonal elements of `L` or `R` non-negative.
+- `pivoted::Bool = false` : Use column- or row-pivoting for low-rank input matrices.
+- `blocksize::Int` : Use a blocked version of the algorithm if `blocksize > 1`. Use the default if `blocksize ≤ 0`.
+
+Depending on the driver, various other keywords may be (un)available to customize the implementation.
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef Householder
+function Householder(;
+        blocksize::Int = 0, driver::Driver = DefaultDriver(),
+        pivoted::Bool = false, positive::Bool = true
+    )
+    return Householder((; blocksize, driver, pivoted, positive))
+end
+
+"""
+    DivideAndConquer(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the divide-and-conquer algorithm.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef DivideAndConquer
+
+"""
+    SafeDivideAndConquer(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type to for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the divide-and-conquer algorithm,
+with an additional fallback to the standard QR iteration algorithm in case the former fails to converge.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+
+!!! warning
+    This approach requires a copy of the input matrix, and is thus the most memory intensive SVD strategy.
+    However, as it combines the speed of the Divide and Conquer algorithm with the robustness of the
+    QR Iteration algorithm, it is the default SVD strategy for LAPACK-based implementations in MatrixAlgebraKit.
+
+See also [`DivideAndConquer`](@ref) and [`QRIteration`](@ref).
+"""
+@algdef SafeDivideAndConquer
+
+"""
+    QRIteration(; [driver], fixgauge = default_fixgauge(), kwargs...)
+
+Algorithm type for computing the eigenvalue, Schur or singular value decomposition of a matrix via QR iteration.
+
+## Keyword arguments
+
+Various customizations are available, depending on the type of decomposition this algorithm is used for.
+
+For Schur decompositions, `expert = false` can be used to switch between `gees` and `geesx`.
+
+For non-Hermitian eigenvalue decompositions there is `permute = true` and `scale = true` to control whether
+or not to balance the input matrix before starting the QR iterations.
+
+For the singular value and eigenvalue decompositions, there is residual freedom in the outputs that can be resolved.
+$_fixgauge_docs
+
+In all cases, the optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef QRIteration
+
+"""
+    Bisection(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix
+via the bisection algorithm, or the singular value decomposition of a general matrix.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef Bisection
+
+"""
+    Jacobi(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the Jacobi algorithm.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef Jacobi
+
+"""
+    RobustRepresentations(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the eigenvalue decomposition of a Hermitian matrix
+using the Multiple Relatively Robust Representations algorithm.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef RobustRepresentations
+
+"""
+    SVDViaPolar(; [driver], fixgauge = default_fixgauge(), [tol])
+
+Algorithm type to denote the algorithm for computing the singular value decomposition of a general
+matrix via Halley's iterative algorithm for the polar decomposition followed by the Hermitian
+eigenvalue decomposition of the positive definite factor.
+
+$_fixgauge_docs
+The tolerance `tol` can optionally be used to emit a warning if the decomposition failed to converge beyond that given value.
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef SVDViaPolar
+
+"""
+    LAPACK_Simple(; fixgauge = default_fixgauge())
+
+Algorithm type to denote the simple LAPACK driver for computing the Schur or non-Hermitian eigenvalue decomposition of a matrix.
+
+$_fixgauge_docs
 """
 @algdef LAPACK_Simple
 
 """
-    LAPACK_Expert(; fixgauge::Bool = true)
+    LAPACK_Expert(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the expert LAPACK driver for computing the Schur or non-Hermitian
 eigenvalue decomposition of a matrix.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
-see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef LAPACK_Expert
-
-const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
 
 """
     GS_QRIteration()
@@ -81,84 +211,76 @@ eigenvalue decomposition of a non-Hermitian matrix.
 # Hermitian Eigenvalue Decomposition
 # ----------------------------------
 """
-    LAPACK_QRIteration(; fixgauge::Bool = true)
+    LAPACK_QRIteration(; fixgauge = default_fixgauge())
 
-Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a
-Hermitian matrix, or the singular value decomposition of a general matrix using the
-QR Iteration algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the QR Iteration algorithm.
+$_fixgauge_docs
 """
 @algdef LAPACK_QRIteration
 
 """
-    LAPACK_Bisection(; fixgauge::Bool = true)
+    LAPACK_Bisection(; fixgauge = default_fixgauge())
 
-Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a
-Hermitian matrix, or the singular value decomposition of a general matrix using the
-Bisection algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the Bisection algorithm.
+$_fixgauge_docs
 """
 @algdef LAPACK_Bisection
 
 """
-    LAPACK_DivideAndConquer(; fixgauge::Bool = true)
+    LAPACK_DivideAndConquer(; fixgauge = default_fixgauge())
 
-Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a
-Hermitian matrix, or the singular value decomposition of a general matrix using the
-Divide and Conquer algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a Hermitian matrix,
+or the singular value decomposition of a general matrix using the Divide and Conquer algorithm.
+$_fixgauge_docs
 """
 @algdef LAPACK_DivideAndConquer
 
 """
-    LAPACK_MultipleRelativelyRobustRepresentations(; fixgauge::Bool = true)
+    LAPACK_MultipleRelativelyRobustRepresentations(; fixgauge = default_fixgauge())
 
-Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a
-Hermitian matrix using the Multiple Relatively Robust Representations algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
-see also [`gaugefix!`](@ref).
+Algorithm type to denote the LAPACK driver for computing the eigenvalue decomposition of a Hermitian matrix
+using the Multiple Relatively Robust Representations algorithm.
+$_fixgauge_docs
 """
 @algdef LAPACK_MultipleRelativelyRobustRepresentations
 
-const LAPACK_EighAlgorithm = Union{
-    LAPACK_QRIteration,
-    LAPACK_Bisection,
-    LAPACK_DivideAndConquer,
-    LAPACK_MultipleRelativelyRobustRepresentations,
-}
-
 """
-    GLA_QRIteration(; fixgauge::Bool = true)
+    GLA_QRIteration(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the GenericLinearAlgebra.jl implementation for computing the
 eigenvalue decomposition of a Hermitian matrix, or the singular value decomposition of
 a general matrix.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef GLA_QRIteration
 
 # Singular Value Decomposition
 # ----------------------------
 """
-    LAPACK_Jacobi(; fixgauge::Bool = true)
+    LAPACK_SafeDivideAndConquer(; fixgauge = default_fixgauge())
+
+Algorithm type to denote the LAPACK driver for computing the singular value decomposition of
+a general matrix using the Divide and Conquer algorithm, with an additional fallback to
+the standard QR Iteration algorithm in case the former fails to converge.
+$_fixgauge_docs
+
+!!! warning
+    This approach requires a copy of the input matrix, and is thus the most memory intensive SVD strategy.
+    However, as it combines the speed of the Divide and Conquer algorithm with the robustness of the
+    QR Iteration algorithm, it is the default SVD strategy for LAPACK-based implementations in MatrixAlgebraKit.
+"""
+@algdef LAPACK_SafeDivideAndConquer
+
+"""
+    LAPACK_Jacobi(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the LAPACK driver for computing the singular value decomposition of
 a general matrix using the Jacobi algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular vectors,
-see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef LAPACK_Jacobi
-
-const LAPACK_SVDAlgorithm = Union{
-    LAPACK_QRIteration,
-    LAPACK_Bisection,
-    LAPACK_DivideAndConquer,
-    LAPACK_Jacobi,
-}
 
 # =========================
 # Polar decompositions
@@ -186,6 +308,28 @@ until convergence up to tolerance `tol`.
 # Varia
 # =========================
 """
+    DefaultAlgorithm(; kwargs...)
+
+Algorithm sentinel that resolves to the algorithm selection procedure for a given function and input type at call time.
+This provides a unified approach for package developers to store both keyword argument and direct algorithm inputs.
+Any keyword arguments stored in the instance are forwarded at runtime to [`select_algorithm`](@ref).
+
+For example, the following calls are equivalent:
+
+```julia
+A = rand(3, 3)
+
+# specifying keyword arguments
+Q, R = qr_compact(A; positive = true)
+
+# wrapping keyword arguments in DefaultAlgorithm
+alg = DefaultAlgorithm(; positive = true)
+Q, R = qr_compact(A; alg)
+```
+"""
+@algdef DefaultAlgorithm
+
+"""
     DiagonalAlgorithm(; kwargs...)
 
 Algorithm type to denote a native Julia implementation of the decompositions making use of
@@ -212,7 +356,7 @@ end
 # CUSOLVER ALGORITHMS
 # =========================
 """
-    CUSOLVER_HouseholderQR(; positive = false)
+    CUSOLVER_HouseholderQR(; positive = true)
 
 Algorithm type to denote the standard CUSOLVER algorithm for computing the QR decomposition of
 a matrix using Householder reflectors. The keyword `positive = true` can be used to ensure that
@@ -221,34 +365,31 @@ the diagonal elements of `R` are non-negative.
 @algdef CUSOLVER_HouseholderQR
 
 """
-    CUSOLVER_QRIteration(; fixgauge::Bool = true)
+    CUSOLVER_QRIteration(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the CUSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 QR Iteration algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef CUSOLVER_QRIteration
 
 """
-    CUSOLVER_SVDPolar(; fixgauge::Bool = true)
+    CUSOLVER_SVDPolar(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
 a general matrix by using Halley's iterative algorithm to compute the polar decompositon,
 followed by the hermitian eigenvalue decomposition of the positive definite factor.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular
-vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef CUSOLVER_SVDPolar
 
 """
-    CUSOLVER_Jacobi(; fixgauge::Bool = true)
+    CUSOLVER_Jacobi(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
 a general matrix using the Jacobi algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular
-vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef CUSOLVER_Jacobi
 
@@ -270,109 +411,136 @@ for more information.
 does_truncate(::TruncatedAlgorithm{<:CUSOLVER_Randomized}) = true
 
 """
-    CUSOLVER_Simple(; fixgauge::Bool = true)
+    CUSOLVER_Simple(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the simple CUSOLVER driver for computing the non-Hermitian
 eigenvalue decomposition of a matrix.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigenvectors,
-see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef CUSOLVER_Simple
 
-const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
-
 """
-    CUSOLVER_DivideAndConquer(; fixgauge::Bool = true)
+    CUSOLVER_DivideAndConquer(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the CUSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 Divide and Conquer algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef CUSOLVER_DivideAndConquer
 
-const CUSOLVER_SVDAlgorithm = Union{
-    CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
-}
 
 # =========================
 # ROCSOLVER ALGORITHMS
 # =========================
 """
-    ROCSOLVER_HouseholderQR(; positive = false)
+    ROCSOLVER_HouseholderQR(; positive = true)
 
 Algorithm type to denote the standard ROCSOLVER algorithm for computing the QR decomposition of
-a matrix using Householder reflectors. The keyword `positive=true` can be used to ensure that
+a matrix using Householder reflectors. The keyword `positive = true` is used to ensure that
 the diagonal elements of `R` are non-negative.
 """
 @algdef ROCSOLVER_HouseholderQR
 
 """
-    ROCSOLVER_QRIteration(; fixgauge::Bool = true)
+    ROCSOLVER_QRIteration(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 QR Iteration algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef ROCSOLVER_QRIteration
 
 """
-    ROCSOLVER_Jacobi(; fixgauge::Bool = true)
+    ROCSOLVER_Jacobi(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the ROCSOLVER driver for computing the singular value decomposition of
 a general matrix using the Jacobi algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the singular
-vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef ROCSOLVER_Jacobi
 
 """
-    ROCSOLVER_Bisection(; fixgauge::Bool = true)
+    ROCSOLVER_Bisection(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 Bisection algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef ROCSOLVER_Bisection
 
 """
-    ROCSOLVER_DivideAndConquer(; fixgauge::Bool = true)
+    ROCSOLVER_DivideAndConquer(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the ROCSOLVER driver for computing the eigenvalue decomposition of a
 Hermitian matrix, or the singular value decomposition of a general matrix using the
 Divide and Conquer algorithm.
-The `fixgauge` keyword can be used to toggle whether or not to fix the gauge of the eigen or
-singular vectors, see also [`gaugefix!`](@ref).
+$_fixgauge_docs
 """
 @algdef ROCSOLVER_DivideAndConquer
 
-const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
 
 # Various consts and unions
 # -------------------------
-
-const GPU_Simple = Union{CUSOLVER_Simple}
-const GPU_EigAlgorithm = Union{GPU_Simple}
+# TODO: Deprecated constants, remove in next breaking release
 const GPU_QRIteration = Union{CUSOLVER_QRIteration, ROCSOLVER_QRIteration}
 const GPU_Jacobi = Union{CUSOLVER_Jacobi, ROCSOLVER_Jacobi}
 const GPU_DivideAndConquer = Union{CUSOLVER_DivideAndConquer, ROCSOLVER_DivideAndConquer}
 const GPU_Bisection = Union{ROCSOLVER_Bisection}
-const GPU_EighAlgorithm = Union{
-    GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
-}
-const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
-
+const GPU_Simple = Union{CUSOLVER_Simple}
 const GPU_SVDPolar = Union{CUSOLVER_SVDPolar}
 const GPU_Randomized = Union{CUSOLVER_Randomized}
 
-const QRAlgorithms = Union{LAPACK_HouseholderQR, CUSOLVER_HouseholderQR, ROCSOLVER_HouseholderQR}
-const LQAlgorithms = Union{LAPACK_HouseholderLQ, LQViaTransposedQR}
-const SVDAlgorithms = Union{LAPACK_SVDAlgorithm, GPU_SVDAlgorithm}
+const LAPACK_SVDAlgorithm = Union{
+    LAPACK_QRIteration,
+    LAPACK_Bisection,
+    LAPACK_DivideAndConquer,
+    LAPACK_Jacobi,
+    LAPACK_SafeDivideAndConquer,
+}
+const ROCSOLVER_SVDAlgorithm = Union{ROCSOLVER_QRIteration, ROCSOLVER_Jacobi}
+const CUSOLVER_SVDAlgorithm = Union{
+    CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
+}
+const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
+
+const LAPACK_EighAlgorithm = Union{
+    LAPACK_QRIteration,
+    LAPACK_Bisection,
+    LAPACK_DivideAndConquer,
+    LAPACK_MultipleRelativelyRobustRepresentations,
+}
+const GPU_EighAlgorithm = Union{
+    GPU_QRIteration, GPU_Jacobi, GPU_DivideAndConquer, GPU_Bisection,
+}
+
+const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
+const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
+const GPU_EigAlgorithm = Union{GPU_Simple}
+
+
+# List of available algorithms - for docs and convenience purposes
+const SVDAlgorithms = Union{
+    SafeDivideAndConquer,
+    DivideAndConquer,
+    QRIteration,
+    Bisection,
+    Jacobi,
+    SVDViaPolar,
+}
+const EighAlgorithms = Union{
+    RobustRepresentations,
+    DivideAndConquer,
+    QRIteration,
+    Bisection,
+    Jacobi,
+}
+const SchurAlgorithms = Union{QRIteration}
+const EigAlgorithms = Union{QRIteration, RobustRepresentations}
+const QRAlgorithms = Union{Householder}
+const LQAlgorithms = Union{Householder, LQViaTransposedQR}
 const PolarAlgorithms = Union{PolarViaSVD, PolarNewton}
 
 # ================================
@@ -393,7 +561,7 @@ LeftOrthAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = LeftO
 # Note: specific algorithm selection is handled by `left_orth_alg` in orthnull.jl
 LeftOrthAlgorithm(alg::AbstractAlgorithm) = error(
     """
-    Unkown or invalid `left_orth` algorithm type `$(typeof(alg))`.
+    Unknown or invalid `left_orth` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `left_orth`, define
 
         MatrixAlgebraKit.left_orth_alg(alg::CustomAlgorithm) = LeftOrthAlgorithm{kind}(alg)
@@ -422,7 +590,7 @@ RightOrthAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = Righ
 # Note: specific algorithm selection is handled by `right_orth_alg` in orthnull.jl
 RightOrthAlgorithm(alg::AbstractAlgorithm) = error(
     """
-    Unkown or invalid `right_orth` algorithm type `$(typeof(alg))`.
+    Unknown or invalid `right_orth` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `right_orth`, define
 
         MatrixAlgebraKit.right_orth_alg(alg::CustomAlgorithm) = RightOrthAlgorithm{kind}(alg)
@@ -451,7 +619,7 @@ LeftNullAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = LeftN
 # Note: specific algorithm selection is handled by `left_null_alg` in orthnull.jl
 LeftNullAlgorithm(alg::AbstractAlgorithm) = error(
     """
-    Unkown or invalid `left_null` algorithm type `$(typeof(alg))`.
+    Unknown or invalid `left_null` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `left_null`, define
 
         MatrixAlgebraKit.left_null_alg(alg::CustomAlgorithm) = LeftNullAlgorithm{kind}(alg)
@@ -479,7 +647,7 @@ RightNullAlgorithm{Kind}(alg::Alg) where {Kind, Alg <: AbstractAlgorithm} = Righ
 # Note: specific algorithm selection is handled by `right_null_alg` in orthnull.jl
 RightNullAlgorithm(alg::AbstractAlgorithm) = error(
     """
-    Unkown or invalid `right_null` algorithm type `$(typeof(alg))`.
+    Unknown or invalid `right_null` algorithm type `$(typeof(alg))`.
     To register the algorithm type for `right_null`, define
 
         MatrixAlgebraKit.right_null_alg(alg::CustomAlgorithm) = RightNullAlgorithm{kind}(alg)

@@ -19,7 +19,20 @@ See also [`@algdef`](@ref).
 """
 struct Algorithm{name, K} <: AbstractAlgorithm
     kwargs::K
+
+    # Ensure keywords are always in canonical order
+    function Algorithm{Name}(kwargs::NamedTuple) where {Name}
+        kwargs_sorted = _canonicalize_namedtuple(kwargs)
+        return new{Name, typeof(kwargs_sorted)}(kwargs_sorted)
+    end
 end
+Algorithm{Name}(; kwargs...) where {Name} = Algorithm{Name}(NamedTuple(kwargs))
+
+# Utility function to canonicalize keys
+# TODO: generated function can likely be dropped once Julia 1.10 support is dropped
+@generated _canonicalize_namedtuple(nt::NamedTuple{N}) where {N} =
+    :(NamedTuple{$(Tuple(sort(collect(N))))}(nt))
+
 name(alg::Algorithm) = name(typeof(alg))
 name(::Type{<:Algorithm{N}}) where {N} = N
 
@@ -88,7 +101,9 @@ Finally, the same behavior is obtained when the keyword arguments are
 passed as the third positional argument in the form of a `NamedTuple`. 
 """ select_algorithm
 
-function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
+# WARNING: In order to keep everything type stable, this function is marked as foldable.
+# This mostly means that the `default_algorithm` implementation must be foldable as well
+Base.@assume_effects :foldable function select_algorithm(f::F, A, alg::Alg = nothing; kwargs...) where {F, Alg}
     if isnothing(alg)
         return default_algorithm(f, A; kwargs...)
     elseif alg isa Symbol
@@ -117,8 +132,10 @@ In general, this is called by [`select_algorithm`](@ref) if no algorithm is spec
 explicitly.
 New types should prefer to register their default algorithms in the type domain.
 """ default_algorithm
-default_algorithm(f::F, A; kwargs...) where {F} = default_algorithm(f, typeof(A); kwargs...)
-default_algorithm(f::F, A, B; kwargs...) where {F} = default_algorithm(f, typeof(A), typeof(B); kwargs...)
+@inline default_algorithm(f::F, A; kwargs...) where {F} =
+    default_algorithm(f, typeof(A); kwargs...)
+@inline default_algorithm(f::F, A, B; kwargs...) where {F} =
+    default_algorithm(f, typeof(A), typeof(B); kwargs...)
 # avoid infinite recursion:
 function default_algorithm(f::F, ::Type{T}; kwargs...) where {F, T}
     throw(MethodError(default_algorithm, (f, T)))
@@ -142,6 +159,83 @@ Whenever possible, allocate the destination for applying a given algorithm in-pl
 If this is not possible, for example when the output size is not known a priori or immutable,
 this function may return `nothing`.
 """ initialize_output
+
+
+# Drivers
+# -------
+"""
+    abstract type Driver
+
+Supertype used for customizing various implementations of the same algorithm.
+"""
+abstract type Driver end
+
+"""
+    DefaultDriver <: Driver
+
+Select a default driver at runtime, based on the input matrix.
+"""
+struct DefaultDriver <: Driver end
+
+"""
+    LAPACK <: Driver
+
+Driver to select LAPACK as the implementation strategy.
+"""
+struct LAPACK <: Driver end
+
+"""
+    CUSOLVER <: Driver
+
+Driver to select CUSOLVER as the implementation strategy.
+"""
+struct CUSOLVER <: Driver end
+
+"""
+    ROCSOLVER <: Driver
+
+Driver to select ROCSOLVER as the implementation strategy.
+"""
+struct ROCSOLVER <: Driver end
+
+"""
+    GLA <: Driver
+
+Driver to select GenericLinearAlgebra.jl as the implementation strategy.
+"""
+struct GLA <: Driver end
+
+"""
+    Native <: Driver
+
+Driver to select a native implementation in MatrixAlgebraKit as the implementation strategy.
+"""
+struct Native <: Driver end
+
+"""
+    GS <: Driver
+
+Driver to select GenericSchur.jl as the implementation strategy.
+"""
+struct GS <: Driver end
+
+# In order to avoid amibiguities, this method is implemented in a tiered way
+# default_driver(alg, A) -> default_driver(typeof(alg), typeof(A))
+# default_driver(Talg, TA) -> default_driver(TA)
+# This is to try and minimize ambiguity while allowing overloading at multiple levels
+@inline default_driver(alg::AbstractAlgorithm, A) = default_driver(typeof(alg), A isa Type ? A : typeof(A))
+@inline default_driver(::Type{Alg}, A) where {Alg <: AbstractAlgorithm} = default_driver(Alg, typeof(A))
+@inline default_driver(::Type{Alg}, ::Type{TA}) where {Alg <: AbstractAlgorithm, TA} = default_driver(TA)
+
+# defaults
+default_driver(::Type{TA}) where {TA <: AbstractArray} = Native() # default fallback
+default_driver(::Type{TA}) where {TA <: YALAPACK.MaybeBlasVecOrMat} = LAPACK()
+
+# wrapper types
+@inline default_driver(::Type{Alg}, ::Type{<:SubArray{T, N, A}}) where {Alg <: AbstractAlgorithm, T, N, A} = default_driver(Alg, A)
+@inline default_driver(::Type{Alg}, ::Type{<:Base.ReshapedArray{T, N, A}}) where {Alg <: AbstractAlgorithm, T, N, A} = default_driver(Alg, A)
+@inline default_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = default_driver(A)
+@inline default_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = default_driver(A)
 
 # Truncation strategy
 # -------------------
@@ -173,14 +267,17 @@ function select_truncation(trunc)
 end
 
 @doc """
-    MatrixAlgebraKit.select_null_truncation(trunc)
+    MatrixAlgebraKit.select_null_truncation(A, trunc)
 
-Construct a [`TruncationStrategy`](@ref) from the given `NamedTuple` of keywords or input strategy, to implement a nullspace selection.
+Construct a [`TruncationStrategy`](@ref) for `A` from the given `NamedTuple` of keywords or input strategy, to implement a nullspace selection.
 """ select_null_truncation
 
+select_null_truncation(A, trunc) = select_null_truncation(typeof(A), trunc)
+select_null_truncation(A::Type, trunc) =
+    isnothing(trunc) ? select_null_truncation((; rtol = defaulttol(eltype(A)))) : select_null_truncation(trunc)
 function select_null_truncation(trunc)
     if isnothing(trunc)
-        return NoTruncation()
+        return null_truncation_strategy()
     elseif trunc isa NamedTuple
         return null_truncation_strategy(; trunc...)
     elseif trunc isa TruncationStrategy
@@ -246,11 +343,6 @@ macro algdef(name)
     return esc(
         quote
             const $name{K} = Algorithm{$(QuoteNode(name)), K}
-            function $name(; kwargs...)
-                # TODO: is this necessary/useful?
-                kw = NamedTuple(kwargs) # normalize type
-                return $name{typeof(kw)}(kw)
-            end
             function Base.show(io::IO, alg::$name)
                 return ($_show_alg)(io, alg)
             end
@@ -447,3 +539,7 @@ macro check_size(x, sz, size = :size)
         end
     )
 end
+
+# Check equality of two `TruncationStrategy`s
+Base.:(==)(t1::T, t2::T) where {T <: TruncationStrategy} = all(getfield(t1, f) == getfield(t2, f) for f in fieldnames(T))
+Base.:(==)(t1::T1, t2::T2) where {T1 <: TruncationStrategy, T2 <: TruncationStrategy} = false

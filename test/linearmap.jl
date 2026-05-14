@@ -4,6 +4,7 @@ module LinearMaps
 
     using MatrixAlgebraKit
     using MatrixAlgebraKit: AbstractAlgorithm
+    using GenericLinearAlgebra
     import MatrixAlgebraKit as MAK
 
     using LinearAlgebra: LinearAlgebra, lmul!, rmul!
@@ -30,8 +31,17 @@ module LinearMaps
             MAK.check_input($f!, parent(A), parent.(F), alg)
         @eval MAK.initialize_output(::typeof($f!), A::LinearMap, alg::AbstractAlgorithm) =
             LinearMap.(MAK.initialize_output($f!, parent(A), alg))
-        @eval MAK.$f!(A::LinearMap, F, alg::AbstractAlgorithm) =
-            LinearMap.(MAK.$f!(parent(A), parent.(F), alg))
+    end
+
+    # Define svd_compact! and svd_full! for LinearMap with concrete algorithm types to avoid
+    # ambiguity with methods like `svd_compact!(A, USVᴴ, alg::SafeDivideAndConquer)`.
+    # Using AbstractAlgorithm here would be ambiguous since neither A-type nor alg-type would
+    # be strictly more specific.
+    for f! in (:svd_compact!, :svd_full!)
+        for Alg in (:SafeDivideAndConquer, :DivideAndConquer, :QRIteration, :Bisection, :Jacobi, :SVDViaPolar, :DiagonalAlgorithm)
+            @eval MAK.$f!(A::LinearMap, USVᴴ, alg::MAK.$Alg) =
+                LinearMap.(MAK.$f!(parent(A), parent.(USVᴴ), alg))
+        end
     end
 
     for f in (:qr, :lq, :svd)

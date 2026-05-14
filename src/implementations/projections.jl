@@ -45,6 +45,17 @@ function initialize_output(::typeof(project_isometric!), A::AbstractMatrix, ::Ab
     return similar(A)
 end
 
+# DefaultAlgorithm intercepts
+# ---------------------------
+for f! in (:project_hermitian!, :project_antihermitian!, :project_isometric!)
+    @eval function $f!(A::AbstractMatrix, alg::DefaultAlgorithm)
+        return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+    @eval function $f!(A::AbstractMatrix, out, alg::DefaultAlgorithm)
+        return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+end
+
 # Implementation
 # --------------
 function project_hermitian!(A::AbstractMatrix, Aₕ, alg::NativeBlocked)
@@ -65,11 +76,11 @@ end
 
 function project_hermitian_native!(A::Diagonal, B::Diagonal, ::Val{anti}; kwargs...) where {anti}
     if anti
-        diagview(A) .= _imimag.(diagview(B))
+        diagview(B) .= _imimag.(diagview(A))
     else
-        diagview(A) .= real.(diagview(B))
+        diagview(B) .= real.(diagview(A))
     end
-    return A
+    return B
 end
 
 function project_hermitian_native!(A::AbstractMatrix, B::AbstractMatrix, anti::Val; blocksize = 32)
