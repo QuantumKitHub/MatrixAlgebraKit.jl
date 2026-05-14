@@ -1,0 +1,13 @@
+<svg viewBox="0 0 325 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Connecting line: external legs on the sides, internal bonds between shapes -->
+  <line x1="0" y1="50" x2="325" y2="50" stroke="#2A2A2A" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Left triangle (red) pointing inward (right) -->
+  <polygon points="15,8 15,92 75,50" fill="#CB3C33"/>
+
+  <!-- Middle circle (green) -->
+  <circle cx="162.5" cy="50" r="42" fill="#389826"/>
+
+  <!-- Right triangle (purple) pointing inward (left) -->
+  <polygon points="250,50 310,8 310,92" fill="#9558B2"/>
+</svg>
