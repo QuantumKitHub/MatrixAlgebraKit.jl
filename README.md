@@ -1,3 +1,9 @@
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/main/docs/src/assets/logo-dark.svg">
+    <img alt="MatrixAlgebraKit.jl logo" src="https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/main/docs/src/assets/logo.svg" width="150">
+</picture>
+
+
 # MatrixAlgebraKit
 
 A Julia interface for matrix algebra, with a focus on performance, flexibility and extensibility.
