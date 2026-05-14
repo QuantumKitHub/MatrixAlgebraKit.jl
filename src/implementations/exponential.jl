@@ -6,11 +6,11 @@ end
 
 copy_input(::typeof(exponential), A::Diagonal) = copy(A)
 
-function copy_input(::typeof(exponentiali), τ::Number, A::AbstractMatrix)
-    return τ, copy!(similar(A, complex(eltype(A))), A)
+function copy_input(::typeof(exponentialr), τ::Number, A::AbstractMatrix)
+    return τ, copy!(similar(A, float(eltype(A))), A)
 end
 
-copy_input(::typeof(exponentiali), τ::Number, A::Diagonal) = τ, copy(A)
+copy_input(::typeof(exponentialr), τ::Number, A::Diagonal) = τ, copy(A)
 
 function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
     m, n = size(A)
@@ -38,13 +38,13 @@ function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMa
     return nothing
 end
 
-function check_input(::typeof(exponentiali!), A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
+function check_input(::typeof(exponentialr!), A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
     return @check_size(expA, (m, m))
 end
 
-function check_input(::typeof(exponentiali!), A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+function check_input(::typeof(exponentialr!), A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
     if !ishermitian(A)
         throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix)"))
     end
@@ -53,7 +53,7 @@ function check_input(::typeof(exponentiali!), A::AbstractMatrix, expA::AbstractM
     return @check_size(expA, (m, m))
 end
 
-function check_input(::typeof(exponentiali!), A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
+function check_input(::typeof(exponentialr!), A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
     m, n = size(A)
     @assert m == n && isdiag(A)
     @assert expA isa Diagonal
@@ -63,7 +63,8 @@ end
 # Outputs
 # -------
 initialize_output(::typeof(exponential!), A::AbstractMatrix, ::AbstractAlgorithm) = A
-initialize_output(::typeof(exponentiali!), τ::Number, A::AbstractMatrix, ::AbstractAlgorithm) =
+initialize_output(::typeof(exponentialr!), τ::T, A::AbstractMatrix, ::AbstractAlgorithm) where {T <: Real} = A
+initialize_output(::typeof(exponentialr!), τ::Number, A::AbstractMatrix, ::AbstractAlgorithm) =
     complex(A)
 
 # Implementation
@@ -95,32 +96,36 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     return expA
 end
 
-function exponentiali!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
-    check_input(exponentiali!, A, expA, alg)
-    expA .= A .* (im * τ)
+function exponentialr!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
+    check_input(exponentialr!, A, expA, alg)
+    expA .= A .* τ
     return LinearAlgebra.exp!(expA)
 end
 
-function exponentiali!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
-    check_input(exponentiali!, A, expA, alg)
+function exponentialr!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+    check_input(exponentialr!, A, expA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
-    expD = map_diagonal(x -> exp(x * im * τ), D)
-    if eltype(A) <: Real
-        VexpD = V * expD
+    expD = map_diagonal(x -> exp(x * τ), D)
+    VexpD = V * expD
+    if eltype(A) <: Real && eltype(τ) <: Real
         return expA .= real.(VexpD * V')
     else
-        VexpD = rmul!(V, expD)
         return mul!(expA, VexpD, V')
     end
 end
 
-function exponentiali!(τ::Number, A, expA, alg::MatrixFunctionViaEig)
-    check_input(exponentiali!, A, expA, alg)
+function exponentialr!(τ::Number, A, expA, alg::MatrixFunctionViaEig)
+    check_input(exponentialr!, A, expA, alg)
     D, V = eig_full!(A, alg.eig_alg)
-    expD = map_diagonal!(x -> exp(x * im * τ), D, D)
+    expD = map_diagonal!(x -> exp(x * τ), D, D)
     iV = inv(V)
     VexpD = rmul!(V, expD)
-    return mul!(expA, VexpD, iV)
+    if eltype(A) <: Real && eltype(τ) <: Real
+        expA .= real.(VexpD * iV)
+        return expA
+    else
+        return mul!(expA, VexpD, iV)
+    end
 end
 
 # Diagonal logic
@@ -130,7 +135,7 @@ function exponential!(A, expA, alg::DiagonalAlgorithm)
     return map_diagonal!(exp, expA, A)
 end
 
-function exponentiali!(τ::Number, A, expA, alg::DiagonalAlgorithm)
-    check_input(exponentiali!, A, expA, alg)
-    return map_diagonal!(x -> exp(x * im * τ), expA, A)
+function exponentialr!(τ::Number, A, expA, alg::DiagonalAlgorithm)
+    check_input(exponentialr!, A, expA, alg)
+    return map_diagonal!(x -> exp(x * τ), expA, A)
 end

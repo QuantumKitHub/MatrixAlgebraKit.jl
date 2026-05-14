@@ -26,21 +26,21 @@ GenericFloats = (BigFloat, Complex{BigFloat})
     end
 end
 
-@testset "exponentiali! for T = $T" for T in GenericFloats
+@testset "exponentialr! for T1 = $T1, T2 = $T2" for T1 in GenericFloats, T2 in GenericFloats
     rng = StableRNG(123)
     m = 54
 
-    A = randn(rng, T, m, m)
-    τ = randn(rng, T)
+    A = randn(rng, T1, m, m)
+    τ = randn(rng, T2)
 
     D, V = @constinferred eig_full(A)
     algs = (MatrixFunctionViaEig(GS_QRIteration()),)
     @testset "algorithm $alg" for alg in algs
-        expiτA = @constinferred exponentiali!(τ, copy(A))
-        expiτA2 = @constinferred exponentiali(τ, A; alg)
-        @test expiτA2 ≈ expiτA
+        expτA = @constinferred exponentialr!(τ, copy(A))
+        expτA2 = @constinferred exponentialr(τ, A; alg)
+        @test expτA2 ≈ expτA
 
-        Dexp, Vexp = @constinferred eig_full(expiτA)
-        @test sort(diagview(Dexp); by = imag) ≈ sort(LinearAlgebra.exp.(diagview(D) .* (im * τ)); by = imag)
+        Dexp, Vexp = @constinferred eig_full(expτA)
+        @test sort(diagview(Dexp); by = x -> (imag(x), real(x))) ≈ sort(LinearAlgebra.exp.(diagview(D) .* τ); by = x -> (imag(x), real(x)))
     end
 end

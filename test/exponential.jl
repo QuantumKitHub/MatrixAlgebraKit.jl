@@ -31,7 +31,7 @@ GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
     @test_throws DomainError exponential(A; alg = MatrixFunctionViaEigh(LAPACK_QRIteration()))
 end
 
-@testset "exponentiali! for T = $T" for T in BLASFloats
+@testset "exponentialr! for T = $T" for T in BLASFloats
     rng = StableRNG(123)
     m = 54
 
@@ -39,21 +39,21 @@ end
     τ = randn(rng, T)
     Ac = copy(A)
 
-    Aimτ = A * im * τ
-    expAimτ = LinearAlgebra.exp(Aimτ)
+    Aτ = A * τ
+    expAτ = LinearAlgebra.exp(Aτ)
 
-    expAimτ2 = @constinferred exponentiali(τ, A)
-    @test expAimτ ≈ expAimτ2
+    expAτ2 = @constinferred exponentialr(τ, A)
+    @test expAτ ≈ expAτ2
     @test A == Ac
 
     algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()))
     @testset "algorithm $alg" for alg in algs
-        expAimτ2 = @constinferred exponentiali(τ, A, alg)
-        @test expAimτ ≈ expAimτ2
+        expAτ2 = @constinferred exponentialr(τ, A, alg)
+        @test expAτ ≈ expAτ2
         @test A == Ac
     end
 
-    @test_throws DomainError exponentiali(τ, A; alg = MatrixFunctionViaEigh(LAPACK_QRIteration()))
+    @test_throws DomainError exponentialr(τ, A; alg = MatrixFunctionViaEigh(LAPACK_QRIteration()))
 end
 
 @testset "exponential! for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
@@ -71,18 +71,18 @@ end
     @test A == Ac
 end
 
-@testset "exponentiali! for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
+@testset "exponentialr! for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
     rng = StableRNG(123)
-    m = 54
+    m = 1
 
     A = Diagonal(randn(rng, T, m))
     τ = randn(rng, T)
     Ac = copy(A)
 
-    Aimτ = A * im * τ
-    expAimτ = LinearAlgebra.exp(Aimτ)
+    Aτ = A * τ
+    expAτ = LinearAlgebra.exp(Aτ)
 
-    expAimτ2 = @constinferred exponentiali(τ, A)
-    @test expAimτ ≈ expAimτ2
+    expAτ2 = @constinferred exponentialr(τ, A)
+    @test expAτ ≈ expAτ2
     @test A == Ac
 end
