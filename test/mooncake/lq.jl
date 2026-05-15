@@ -20,4 +20,18 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
             TestSuite.test_mooncake_lq(AT, (m, m); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
         end
     end
+    if CUDA.functional() && T ∈ BLASFloats
+        TestSuite.test_mooncake_lq(CuMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        if m == n
+            AT = Diagonal{T, CuVector{T}}
+            TestSuite.test_mooncake_lq(AT, (m, m); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        end
+    end
+    if AMDGPU.functional() && T ∈ BLASFloats
+        TestSuite.test_mooncake_lq(ROCMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        if m == n
+            AT = Diagonal{T, ROCVector{T}}
+            TestSuite.test_mooncake_lq(AT, (m, m); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
+        end
+    end
 end
