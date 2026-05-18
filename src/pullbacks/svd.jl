@@ -96,7 +96,7 @@ function check_and_prepare_svd_cotangents(
         view(ΔS₁, 1:length(good_indS)) .= real.(view(ΔS, good_indS))
         length(ΔS₁) == length(S₁) || throw(DimensionMismatch(lazy"length of ΔS₁ ($(length(ΔS₁))) does not match length of S₁ ($(length(S₁)))"))
         badΔS₁ = view(ΔS, bad_indS)
-        Δgauge = max(Δgauge, maximum(abs, badΔS₁))
+        Δgauge = max(Δgauge, maximum(abs, badΔS₁); init = 0.0)
     else
         ΔS₁ = nothing
     end
