@@ -185,6 +185,6 @@ function _sylvester(A::AnyROCMatrix, B::AnyROCMatrix, C::AnyROCMatrix)
     return ROCArray(hX)
 end
 
-svd_rank(S::AnyROCVector, rank_atol) = findlast(s -> s ≥ rank_atol, S)
+svd_rank(S::AnyROCVector; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(S)) = findlast(s -> s ≥ rank_atol, S)
 
 end

@@ -274,7 +274,7 @@ function EnzymeRules.reverse(
     Aval = nothing
     USVᴴval = something(cache_USVᴴ, USVᴴ.val)
     if !isa(A, Const)
-        svd_pullback!(A.dval, Aval, USVᴴval, dUSVᴴ, ind)
+        svd_pullback!(A.dval, Aval, USVᴴval, dUSVᴴ, collect(ind))
     end
     !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
     return (nothing, nothing, nothing)

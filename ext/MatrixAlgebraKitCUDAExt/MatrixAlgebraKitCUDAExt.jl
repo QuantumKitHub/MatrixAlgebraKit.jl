@@ -197,6 +197,6 @@ function _sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
     return CuArray(hX)
 end
 
-svd_rank(S::AnyCuVector, rank_atol) = findlast(s -> s ≥ rank_atol, S)
+svd_rank(S::AnyCuVector; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(S)) = findlast(s -> s ≥ rank_atol, S)
 
 end
