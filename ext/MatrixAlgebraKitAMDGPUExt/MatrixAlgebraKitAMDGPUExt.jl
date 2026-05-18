@@ -191,7 +191,7 @@ function svd_rank(S::AnyROCVector; rank_atol = MatrixAlgebraKit.default_pullback
 end
 
 function svd_pullback!(ΔA::AnyROCMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyROCVector; kwargs...)
-    svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
+    return svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
 end
 
 end

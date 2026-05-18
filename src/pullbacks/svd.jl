@@ -90,7 +90,7 @@ function check_and_prepare_svd_cotangents(
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
-        bad_indS = _ind_intersect(r+1:length(ΔS), indS)
+        bad_indS = _ind_intersect((r + 1):length(ΔS), indS)
         good_indS = _ind_intersect(1:r, indS)
         ΔS₁ = zero(S₁)
         view(ΔS₁, 1:length(good_indS)) .= real.(view(ΔS, good_indS))

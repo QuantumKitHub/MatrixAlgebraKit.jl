@@ -203,7 +203,7 @@ function svd_rank(S::AnyCuVector; rank_atol = MatrixAlgebraKit.default_pullback_
 end
 
 function svd_pullback!(ΔA::AnyCuMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyCuVector; kwargs...)
-    svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
+    return svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
 end
 
 end
