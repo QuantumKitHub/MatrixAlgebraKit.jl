@@ -20,7 +20,7 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
             TestSuite.test_mooncake_svd(AT, m; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
         end
     end
-    if T ∈ BLASFloats
+    if T ∈ BLASFloats && CUDA.functional()
         TestSuite.test_mooncake_svd(CuMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
         if m == n
             AT = Diagonal{T, CuVector{T}}
