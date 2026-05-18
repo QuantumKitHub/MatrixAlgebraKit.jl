@@ -91,10 +91,12 @@ function check_and_prepare_svd_cotangents(
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
         bad_indS = _ind_intersect(r+1:length(ΔS), indS)
-        ΔS₁ = real(ΔS)
-        badΔS₁ = view(ΔS₁, bad_indS)
+        good_indS = _ind_intersect(1:r, indS)
+        ΔS₁ = zero(S₁)
+        view(ΔS₁, 1:length(good_indS)) .= real.(view(ΔS, good_indS))
+        length(ΔS₁) == length(S₁) || throw(DimensionMismatch(lazy"length of ΔS₁ ($(length(ΔS₁))) does not match length of S₁ ($(length(S₁)))"))
+        badΔS₁ = view(ΔS, bad_indS)
         Δgauge = max(Δgauge, maximum(abs, badΔS₁))
-        badΔS₁ .= 0
     else
         ΔS₁ = nothing
     end
