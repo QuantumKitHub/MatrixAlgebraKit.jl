@@ -28,14 +28,13 @@ function check_and_prepare_eigh_cotangents(
         aVᴴΔV₁ = zero!(similar(V, (p, p)))
     end
 
-    if !isempty(D) # norm(bc, Inf) calls eltype on empty inputs
-        bc = Base.broadcasted(transpose(D), D, aVᴴΔV₁) do d₁, d₂, v
-            return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
-        end
-        Δgauge = norm(bc, Inf)
-        Δgauge ≤ gauge_atol ||
-            @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    bc = Base.broadcasted(transpose(D), D, aVᴴΔV₁) do d₁, d₂, v
+        return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
+    Δgauge = norm(bc, Inf)
+
+    Δgauge ≤ gauge_atol ||
+        @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
     aVᴴΔV₁ .*= inv_safe.(D' .- D, degeneracy_atol)
     VᴴAΔV = aVᴴΔV₁
@@ -84,6 +83,7 @@ function eigh_pullback!(
     D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    isempty(D) && return ΔA
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, = check_and_prepare_eigh_cotangents(
@@ -139,6 +139,7 @@ function eigh_trunc_pullback!(
     D = diagview(Dmat)
     p == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    isempty(D) && return ΔA
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, ΔV₊ = check_and_prepare_eigh_cotangents(

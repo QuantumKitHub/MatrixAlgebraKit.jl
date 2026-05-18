@@ -27,14 +27,13 @@ function check_and_prepare_eig_cotangents(
         VᴴΔV₁ = zero!(similar(V, (p, p)))
     end
 
-    if !isempty(D) # norm(bc, Inf) calls eltype on empty inputs
-        bc = Base.broadcasted(transpose(D), D, VᴴΔV₁) do d₁, d₂, v
-            return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
-        end
-        Δgauge = norm(bc, Inf)
-        Δgauge ≤ gauge_atol ||
-            @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    bc = Base.broadcasted(transpose(D), D, VᴴΔV₁) do d₁, d₂, v
+        return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
+    Δgauge = norm(bc, Inf)
+
+    Δgauge ≤ gauge_atol ||
+        @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
     VᴴΔV₁ .*= conj.(inv_safe.(transpose(D) .- D, degeneracy_atol))
     VᴴAΔV = VᴴΔV₁
@@ -83,6 +82,7 @@ function eig_pullback!(
     D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    isempty(D) && return ΔA
     ViG = inv(V)'
 
     ΔDmat, ΔV = ΔDV
@@ -146,6 +146,7 @@ function eig_trunc_pullback!(
     (n, n) == size(ΔA) || throw(DimensionMismatch())
     D = diagview(Dmat)
     p == length(D) || throw(DimensionMismatch())
+    isempty(D) && return ΔA
     G = V' * V
     ViG = V / LinearAlgebra.cholesky!(G)
 
