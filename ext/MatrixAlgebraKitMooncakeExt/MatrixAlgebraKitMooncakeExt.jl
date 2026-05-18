@@ -628,7 +628,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
         _warn_pullback_truncerror(dϵ)
 
         # compute pullbacks
-        svd_pullback!(dA, Ac, USVᴴ, dUSVᴴtrunc, collect(ind))
+        svd_pullback!(dA, Ac, USVᴴ, dUSVᴴtrunc, ind)
         zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
         zero!.(dUSVᴴ)
 
@@ -685,7 +685,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Base.front(Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc))))
     function svd_trunc_adjoint((_, _, _, dϵ)::Tuple{NoRData, NoRData, NoRData, Real})
         _warn_pullback_truncerror(dϵ)
-        svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, collect(ind))
+        svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, ind)
         zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
         return ntuple(Returns(NoRData()), 3)
     end
@@ -755,7 +755,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
     dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc)))
     function svd_trunc_adjoint(::NoRData)
         # compute pullbacks
-        svd_pullback!(dA, Ac, USVᴴ, dUSVᴴtrunc, collect(ind))
+        svd_pullback!(dA, Ac, USVᴴ, dUSVᴴtrunc, ind)
         zero!.(dUSVᴴ)
 
         # restore state
@@ -808,7 +808,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, al
     # define pullback
     dUSVᴴtrunc = last.(arrayify.(USVᴴtrunc, Mooncake.tangent(USVᴴtrunc_dUSVᴴtrunc)))
     function svd_trunc_adjoint(::NoRData)
-        svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, collect(ind))
+        svd_pullback!(dA, A, USVᴴ, dUSVᴴtrunc, ind)
         zero!.(dUSVᴴtrunc) # since this is allocated in this function this is probably not required
         return ntuple(Returns(NoRData()), 3)
     end

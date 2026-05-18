@@ -141,7 +141,7 @@ function test_mooncake_svd_trunc(
 
         @testset "trunctol" begin
             S = svd_vals(A)
-            trunc = trunctol(atol = collect(S)[1] / 2)
+            trunc = trunctol(atol = maximum(S) / 2)
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
             USVᴴ, USVᴴtrunc, ΔUSVᴴ_arrays, ΔUSVᴴtrunc_arrays = ad_svd_trunc_setup(A, alg_trunc)

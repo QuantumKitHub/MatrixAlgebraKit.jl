@@ -90,11 +90,11 @@ function check_and_prepare_svd_cotangents(
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
-        ΔS₁ = zero(S₁)
-        good_indS = findall(i -> i <= r, indS)
-        bad_indS = setdiff(1:length(indS), good_indS)
-        ΔS₁[indS[good_indS]] = real.(ΔS[good_indS])
-        Δgauge = max(Δgauge, mapreduce(abs, max, ΔS[bad_indS]))
+        bad_indS = _ind_intersect(r+1:length(ΔS), indS)
+        ΔS₁ = real(ΔS)
+        badΔS₁ = view(ΔS₁, bad_indS)
+        Δgauge = max(Δgauge, maximum(abs, badΔS₁))
+        badΔS₁ .= 0
     else
         ΔS₁ = nothing
     end
