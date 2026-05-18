@@ -27,13 +27,15 @@ function check_and_prepare_eigh_cotangents(
         ΔV₊ = nothing
         aVᴴΔV₁ = zero!(similar(V, (p, p)))
     end
-    bc = Base.broadcasted(transpose(D), D, aVᴴΔV₁) do d₁, d₂, v
-        return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
-    end
-    Δgauge = norm(bc, Inf)
 
-    Δgauge ≤ gauge_atol ||
-        @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    if !isempty(D) # norm(bc, Inf) calls eltype on empty inputs
+        bc = Base.broadcasted(transpose(D), D, aVᴴΔV₁) do d₁, d₂, v
+            return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
+        end
+        Δgauge = norm(bc, Inf)
+        Δgauge ≤ gauge_atol ||
+            @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    end
 
     aVᴴΔV₁ .*= inv_safe.(D' .- D, degeneracy_atol)
     VᴴAΔV = aVᴴΔV₁
