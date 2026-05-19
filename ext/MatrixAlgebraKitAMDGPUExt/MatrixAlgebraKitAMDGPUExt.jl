@@ -186,8 +186,7 @@ function _sylvester(A::AnyROCMatrix, B::AnyROCMatrix, C::AnyROCMatrix)
 end
 
 function svd_rank(S::AnyROCVector; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(S))
-    r = findlast(s -> s ≥ rank_atol, S)
-    return isnothing(r) ? length(S) : r
+    return something(findlast(≥(rank_atol), S), 0)
 end
 
 function svd_pullback!(ΔA::AnyROCMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyROCVector; kwargs...)

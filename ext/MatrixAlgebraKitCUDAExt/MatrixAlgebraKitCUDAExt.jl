@@ -198,8 +198,7 @@ function _sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
 end
 
 function svd_rank(S::AnyCuVector; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(S))
-    r = findlast(s -> s ≥ rank_atol, S)
-    return isnothing(r) ? length(S) : r
+    return something(findlast(≥(rank_atol), S), 0)
 end
 
 function svd_pullback!(ΔA::AnyCuMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyCuVector; kwargs...)
