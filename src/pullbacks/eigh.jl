@@ -83,7 +83,7 @@ function eigh_pullback!(
     D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
-    isempty(D) && return ΔA
+    iszero(n) && return ΔA
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, = check_and_prepare_eigh_cotangents(
@@ -139,7 +139,7 @@ function eigh_trunc_pullback!(
     D = diagview(Dmat)
     p == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
-    isempty(D) && return ΔA
+    iszero(p) && return ΔA
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, ΔV₊ = check_and_prepare_eigh_cotangents(

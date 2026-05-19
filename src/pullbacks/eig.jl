@@ -82,7 +82,7 @@ function eig_pullback!(
     D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
-    isempty(D) && return ΔA
+    iszero(n) && return ΔA
     ViG = inv(V)'
 
     ΔDmat, ΔV = ΔDV
@@ -146,7 +146,7 @@ function eig_trunc_pullback!(
     (n, n) == size(ΔA) || throw(DimensionMismatch())
     D = diagview(Dmat)
     p == length(D) || throw(DimensionMismatch())
-    isempty(D) && return ΔA
+    iszero(p) && return ΔA
     G = V' * V
     ViG = V / LinearAlgebra.cholesky!(G)
 
