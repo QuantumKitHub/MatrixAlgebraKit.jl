@@ -4,11 +4,12 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
-using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
+using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, TruncationByOrder, AbstractAlgorithm
+using MatrixAlgebraKit: GaussianSketching, SketchingStrategy, SketchedAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
 import MatrixAlgebraKit: heevj!, heevd!, geev!
-import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank
+import MatrixAlgebraKit: _sylvester, svd_rank
 using CUDA, CUDA.cuBLAS
 using CUDA: i32
 using LinearAlgebra
@@ -17,6 +18,7 @@ using LinearAlgebra: BlasFloat
 include("yacusolver.jl")
 
 MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedCuVecOrMat{<:BlasFloat}} = CUSOLVER()
+MatrixAlgebraKit.default_driver(::Type{<:SketchedAlgorithm}, ::Type{TA}) where {TA <: StridedCuVecOrMat{<:BlasFloat}} = CUSOLVER()
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
     return QRIteration(; kwargs...)
@@ -50,8 +52,28 @@ end
 gesvdp!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
     YACUSOLVER.gesvdp!(A, S, U, Vᴴ; kwargs...)
 
-_gpu_Xgesvdr!(A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
-    YACUSOLVER.gesvdr!(A, S, U, Vᴴ; kwargs...)
+# Sketched SVD via cuSOLVER's gesvdr kernel.
+# The full m×m / n×n shapes of U / Vᴴ allow YACUSOLVER.gesvdr! to reuse them as cuSOLVER workspace.
+# `alg` is accepted but unused: cuSOLVER's gesvdr fuses the inner SVD itself.
+function gesvdr!(
+        ::CUSOLVER, A::StridedCuMatrix, S, U::StridedCuMatrix, Vᴴ::StridedCuMatrix;
+        sketch::GaussianSketching, trunc::TruncationByOrder, alg::AbstractAlgorithm = DefaultAlgorithm()
+    )
+    isempty(A) && return U, S, Vᴴ
+    m, n = size(A)
+    sketch_amount = min(sketch.howmany, m, n)
+    k = min(trunc.howmany, m, n)
+    p = max(sketch_amount - k, 0)
+    numiter = sketch.numiter
+
+    V = Vᴴ # gesvdr returns V, but this has to be the same size so we will use this as workspace
+
+    YACUSOLVER.gesvdr!(A, diagview(S), U, V; k, p, numiter)
+
+    # Truncate requires Vᴴ, so we adjoint here
+    USVᴴtrunc, _ = MatrixAlgebraKit.truncate(MatrixAlgebraKit.svd_trunc!, (U, S, V'), trunc)
+    return USVᴴtrunc
+end
 
 geev!(::CUSOLVER, A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix) =
     YACUSOLVER.Xgeev!(A, Dd, V)

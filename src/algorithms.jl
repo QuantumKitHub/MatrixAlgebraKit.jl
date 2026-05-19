@@ -220,22 +220,36 @@ Driver to select GenericSchur.jl as the implementation strategy.
 struct GS <: Driver end
 
 # In order to avoid amibiguities, this method is implemented in a tiered way
-# default_driver(alg, A) -> default_driver(typeof(alg), typeof(A))
-# default_driver(Talg, TA) -> default_driver(TA)
+# default_driver(alg, A)   -> default_driver(typeof(alg), typeof(A))
+# default_driver(Talg, A)  -> default_driver(Talg, typeof(A))
+# default_driver(Talg, TA) -> default_driver(Talg, _unwrapped_array_type(TA)) | default_driver(TA)
+# default_driver(TA)       -> driver
 # This is to try and minimize ambiguity while allowing overloading at multiple levels
 @inline default_driver(alg::AbstractAlgorithm, A) = default_driver(typeof(alg), A isa Type ? A : typeof(A))
 @inline default_driver(::Type{Alg}, A) where {Alg <: AbstractAlgorithm} = default_driver(Alg, typeof(A))
-@inline default_driver(::Type{Alg}, ::Type{TA}) where {Alg <: AbstractAlgorithm, TA} = default_driver(TA)
+
+# Generic 2-arg fallback: if `TA` is a supported wrapper type, recurse on the
+# unwrapped storage type (so algorithm-specialized methods on the parent array
+# type still apply). Otherwise drop the algorithm and fall through to the
+# array-only dispatch.
+@inline function default_driver(::Type{Alg}, ::Type{TA}) where {Alg <: AbstractAlgorithm, TA <: AbstractArray}
+    UA = _unwrapped_array_type(TA)
+    return UA === TA ? default_driver(TA) : default_driver(Alg, UA)
+end
 
 # defaults
 default_driver(::Type{TA}) where {TA <: AbstractArray} = Native() # default fallback
 default_driver(::Type{TA}) where {TA <: YALAPACK.MaybeBlasVecOrMat} = LAPACK()
 
-# wrapper types
-@inline default_driver(::Type{Alg}, ::Type{<:SubArray{T, N, A}}) where {Alg <: AbstractAlgorithm, T, N, A} = default_driver(Alg, A)
-@inline default_driver(::Type{Alg}, ::Type{<:Base.ReshapedArray{T, N, A}}) where {Alg <: AbstractAlgorithm, T, N, A} = default_driver(Alg, A)
+# wrapper types (1-arg form, reached via the generic 2-arg fallback)
 @inline default_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = default_driver(A)
 @inline default_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = default_driver(A)
+
+# Internal helper: strip supported wrapper types to the underlying storage
+# array type. Add a new method here when introducing additional wrappers.
+@inline _unwrapped_array_type(::Type{TA}) where {TA <: AbstractArray} = TA
+@inline _unwrapped_array_type(::Type{<:SubArray{T, N, A}}) where {T, N, A} = _unwrapped_array_type(A)
+@inline _unwrapped_array_type(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = _unwrapped_array_type(A)
 
 # Truncation strategy
 # -------------------
@@ -247,6 +261,15 @@ Supertype to denote different strategies for truncated decompositions that are i
 See also [`truncate`](@ref)
 """
 abstract type TruncationStrategy end
+
+"""
+    abstract type SketchingStrategy <: AbstractAlgorithm end
+
+Supertype to denote different sketching strategies, used both as standalone algorithms for
+[`left_sketch!`](@ref) and [`right_sketch!`](@ref) and as the `sketch` field of a
+[`SketchedAlgorithm`](@ref) for self-truncating SVD.
+"""
+abstract type SketchingStrategy <: AbstractAlgorithm end
 
 @doc """
     MatrixAlgebraKit.select_truncation(trunc)
@@ -283,7 +306,26 @@ function select_null_truncation(trunc)
     elseif trunc isa TruncationStrategy
         return trunc
     else
-        return throw(ArgumentError("Unknown truncation strategy: $trunc"))
+        throw(ArgumentError("Unknown truncation strategy: $trunc"))
+    end
+end
+
+@doc """
+    MatrixAlgebraKit.select_sketching(A, sketch)
+
+Construct a [`SketchingStrategy`](@ref) for `A` from the given `NamedTuple` of keywords or input strategy `sketch`.
+""" select_sketching
+
+@inline select_sketching(A, sketch) = select_sketching(typeof(A), sketch)
+@inline function select_sketching(::Type{A}, sketch) where {A}
+    if isnothing(sketch)
+        return nothing
+    elseif sketch isa SketchingStrategy
+        return sketch
+    elseif sketch isa NamedTuple
+        return select_algorithm(left_sketch!, A; sketch...)
+    else
+        throw(ArgumentError("Unknown sketching strategy: $sketch"))
     end
 end
 
@@ -317,17 +359,47 @@ See also [`findtruncated`](@ref) and [`findtruncated_svd`](@ref) for determining
 function truncate end
 
 """
-    TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationAlgorithm)
+    TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationStrategy)
 
 Generic wrapper type for algorithms that consist of first using `alg`, followed by a
 truncation through `trunc`.
 """
-struct TruncatedAlgorithm{A, T} <: AbstractAlgorithm
+struct TruncatedAlgorithm{A <: AbstractAlgorithm, T <: TruncationStrategy} <: AbstractAlgorithm
     alg::A
     trunc::T
 end
 
+"""
+    SketchedAlgorithm(;
+        alg::AbstractAlgorithm, sketch::SketchingStrategy,
+        trunc::TruncationStrategy, driver::Driver = DefaultDriver()
+    )
+
+Generic wrapper type for self-truncating algorithms that produce an approximate low-rank
+factorization by first applying a sketching operation specified by `sketch`, then computing
+a small dense decomposition of the projected matrix using `alg`. The `driver` selects the
+backend implementing the sketched factorization (e.g. `Native()` for the generic
+sketch-then-decompose pipeline, `CUSOLVER()` for the fused `gesvdr` kernel).
+"""
+@kwdef struct SketchedAlgorithm{
+        A <: AbstractAlgorithm, S <: SketchingStrategy,
+        T <: TruncationStrategy, D <: Driver,
+    } <: AbstractAlgorithm
+    alg::A = DefaultAlgorithm()
+    sketch::S
+    trunc::T = notrunc()
+    driver::D = DefaultDriver()
+end
+
+# utility conversion constructor
+TruncatedAlgorithm(alg::SketchedAlgorithm) = TruncatedAlgorithm(alg.alg, alg.trunc)
+
 does_truncate(::TruncatedAlgorithm) = true
+does_truncate(::SketchedAlgorithm) = true
+
+truncated_algorithm(alg::AbstractAlgorithm, trunc::TruncationStrategy, sketch = nothing) =
+    isnothing(sketch) ? TruncatedAlgorithm(alg, trunc) : SketchedAlgorithm(; alg, sketch, trunc)
+
 
 # Utility macros
 # --------------
@@ -535,7 +607,7 @@ macro check_size(x, sz, size = :size)
             szx = $size($x)
             $err = $msgstart * string(szx) * " instead of expected value " *
                 string($sz)
-            szx == $sz || throw(DimensionMismatch($err))
+            (szx == $sz) || throw(DimensionMismatch($err))
         end
     )
 end

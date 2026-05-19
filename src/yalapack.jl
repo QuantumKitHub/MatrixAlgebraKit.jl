@@ -2351,7 +2351,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 throw(DimensionMismatch("length mismatch between A ($n) and S ($(length(S)))"))
 
             lda = max(1, stride(A, 2))
-            mv = Ref{BlasInt}() # unused
+            mv = Ref{BlasInt}(0) # unused by LAPACK when JOBV='V', but must satisfy MV ≥ 0 input check
             if jobv == 'V'
                 if U !== A
                     V = view(U, 1:n, 1:n) # use U as V storage

@@ -12,4 +12,5 @@ MatrixAlgebraKit.default_algorithm
 MatrixAlgebraKit.select_algorithm
 MatrixAlgebraKit.findtruncated
 MatrixAlgebraKit.findtruncated_svd
+MatrixAlgebraKit.select_sketching
 ```

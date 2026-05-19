@@ -22,9 +22,13 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- Randomized sketching API: new `SketchedAlgorithm` wrapper, `SketchingStrategy` supertype with the `GaussianSketching` strategy, and standalone `left_sketch` / `right_sketch` (plus bang variants) entry points for low-rank factorizations. `svd_trunc` / `svd_trunc!` / `svd_trunc_no_error` accept a new `sketch =` keyword that mirrors the existing `trunc =` pattern. The CUDA extension routes `SketchedAlgorithm(; driver = CUSOLVER())` to cuSOLVER's fused `gesvdr` kernel ([#225](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/225)). See [Sketching](@ref) for details.
+
 ### Changed
 
 ### Deprecated
+
+- `CUSOLVER_Randomized` is deprecated in favour of `SketchedAlgorithm(; driver = CUSOLVER())` or the new `sketch =` keyword on `svd_trunc`. Calls using `CUSOLVER_Randomized` now emit a deprecation warning at algorithm selection and are forwarded to the new pipeline ([#225](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/225)).
 
 ### Removed
 

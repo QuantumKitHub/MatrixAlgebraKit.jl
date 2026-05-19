@@ -18,22 +18,32 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 # CPU tests
 # ---------
 if !is_buildkite
-    # LAPACK algorithms:
-    for T in BLASFloats, m in (0, 54), n in (0, 37, m, 63)
+    @testset "LAPACK algorithms ($T, $m, $n)" for T in BLASFloats, m in (0, 54), n in (0, 37, m, 63)
         TestSuite.seed_rng!(123)
         LAPACK_SVD_ALGS = (QRIteration(), DivideAndConquer(), SafeDivideAndConquer(; fixgauge = true))
         TestSuite.test_svd(T, (m, n))
         TestSuite.test_svd_algs(T, (m, n), LAPACK_SVD_ALGS)
         @static if VERSION > v"1.11-" # Jacobi broken on 1.10
-            TestSuite.test_svd_algs(T, (m, n), (LAPACK_Jacobi(),); test_full = false, test_vals = false)
+            TestSuite.test_svd_algs(T, (m, n), (Jacobi(),); test_full = false, test_vals = false)
         end
+    end
+
+    # Sketched algorithms
+    for T in BLASFloats
+        m, n = 54, 63
+        rtol = sqrt(TestSuite.precision(T)) # extra square root
+        algs = [
+            SketchedAlgorithm(; sketch = GaussianSketching(m ÷ 2, numiter = 4), trunc = truncrank(m ÷ 4)),
+        ]
+        TestSuite.test_sketched_svd(T, (m, n), algs; rtol)
+        TestSuite.test_sketched_svd(T, (n, m), algs; rtol)
     end
 
     # Generic floats:
     for T in GenericFloats, m in (0, 54), n in (0, 37, m, 63)
         TestSuite.seed_rng!(123)
         TestSuite.test_svd(T, (m, n))
-        TestSuite.test_svd_algs(T, (m, n), (GLA_QRIteration(),))
+        TestSuite.test_svd_algs(T, (m, n), (QRIteration(; driver = MatrixAlgebraKit.GLA()),))
     end
 
     # Diagonal:
@@ -56,13 +66,19 @@ if CUDA.functional()
         TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
     end
 
-    # Randomized SVD:
+    # Sketched SVD:
     for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
         TestSuite.seed_rng!(123)
         k = 5
         p = min(m, n) - k - 2
         p > 0 || continue
-        TestSuite.test_randomized_svd(CuMatrix{T}, (m, n), (MatrixAlgebraKit.TruncatedAlgorithm(CUSOLVER_Randomized(; k, p, niters = 20), truncrank(k)),))
+        rtol = sqrt(TestSuite.precision(T)) # extra square root
+        cusolver_sketch = SketchedAlgorithm(;
+            sketch = GaussianSketching(k + p; numiter = 20),
+            trunc = truncrank(k),
+            driver = MatrixAlgebraKit.CUSOLVER(),
+        )
+        TestSuite.test_sketched_svd(CuMatrix{T}, (m, n), (cusolver_sketch,); rtol)
     end
 
     # Diagonal:

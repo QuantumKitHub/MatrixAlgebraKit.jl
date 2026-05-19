@@ -53,6 +53,7 @@ makedocs(;
             "user_interface/decompositions.md",
             "user_interface/algorithms.md",
             "user_interface/truncations.md",
+            "user_interface/sketching.md",
             "user_interface/properties.md",
             "user_interface/matrix_functions.md",
         ],

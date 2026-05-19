@@ -95,11 +95,20 @@ function instantiate_rank_deficient_matrix(T, sz; trunc = truncrank(div(min(sz..
     V, C = left_orth!(A; trunc)
     return mul!(A, V, C)
 end
-
 function instantiate_rank_deficient_matrix(::Type{T}, sz; trunc = truncrank(div(min(sz...), 2))) where {T <: Diagonal}
     A = instantiate_matrix(eltype(T), sz)
     V, C = left_orth!(A; trunc)
     return Diagonal(diag(mul!(A, V, C)))
+end
+
+function instantiate_almost_rank_deficient_matrix(
+        T, sz;
+        trunc = truncrank(div(min(sz...), 2)), atol::Real = 0, rtol::Real = precision(T)
+    )
+    A = instantiate_rank_deficient_matrix(T, sz; trunc)
+    noise = normalize(instantiate_matrix(T, sz))
+    A .+= max(atol, rtol * norm(A)) * noise
+    return A
 end
 
 include("ad_utils.jl")
@@ -116,6 +125,7 @@ include("decompositions/eig.jl")
 include("decompositions/eigh.jl")
 include("decompositions/orthnull.jl")
 include("decompositions/svd.jl")
+include("decompositions/sketching.jl")
 
 # Mooncake
 # --------

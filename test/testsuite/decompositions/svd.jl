@@ -363,15 +363,31 @@ function test_svd_trunc_algs(
     end
 end
 
-function test_randomized_svd(T::Type, sz, algs; kwargs...)
+function test_sketched_svd(
+        T::Type, sz, algs;
+        atol::Real = 0, rtol::Real = precision(eltype(T)), kwargs...
+    )
     summary_str = testargs_summary(T, sz)
-    return @testset "randomized svd_trunc! algorithm $alg $summary_str" for alg in algs
-        A = instantiate_matrix(T, sz)
+    return @testset "sketched svd_trunc! algorithm $alg $summary_str" for alg in algs
+        @assert alg isa SketchedAlgorithm "Invalid sketched algorithm type: $(typeof(alg))"
+
+        A = instantiate_almost_rank_deficient_matrix(T, sz; alg.trunc, atol, rtol)
         Ac = deepcopy(A)
-        m, n = size(A)
-        minmn = min(m, n)
-        S₀ = collect(svd_vals(A))
-        U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; alg)
-        @test collect(diagview(S1))[1:alg.alg.k] ≈ S₀[1:alg.alg.k]
+
+        alg2 = MatrixAlgebraKit.TruncatedAlgorithm(alg)
+
+        U, S, Vᴴ, ϵ = @testinferred svd_trunc(A, alg)
+        @test Ac == A
+        ϵ′ = norm(A - U * S * Vᴴ)
+        @test ϵ′ ≈ ϵ atol = sqrt(rtol) * max(one(ϵ′), ϵ′) # comparison to 0 is hard, very imprecise calculation
+
+        U′, S′, Vᴴ′ = svd_trunc_no_error(A, alg2)
+
+        # Need gauge fixing for comparison
+        U, Vᴴ = MatrixAlgebraKit.gaugefix!(svd_trunc!, U, Vᴴ)
+        U′, Vᴴ′ = MatrixAlgebraKit.gaugefix!(svd_trunc!, U′, Vᴴ′)
+        @test U ≈ U′ atol = atol rtol = rtol
+        @test S ≈ S′ atol = atol rtol = rtol
+        @test Vᴴ ≈ Vᴴ′ atol = atol rtol = rtol
     end
 end
