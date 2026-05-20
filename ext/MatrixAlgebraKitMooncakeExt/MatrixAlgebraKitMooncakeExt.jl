@@ -15,6 +15,20 @@ using LinearAlgebra
 
 Mooncake.tangent_type(::Type{<:MatrixAlgebraKit.AbstractAlgorithm}) = Mooncake.NoTangent
 
+# needed for GPU tests because Mooncake can't differentiate through CUDA kernels
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(zero!), AbstractArray}
+function Mooncake.rrule!!(::CoDual{typeof(zero!)}, A_dA::CoDual)
+    A, dA = arrayify(A_dA)
+    Ac = copy(A)
+    zero!(A)
+    function zero_adjoint(::NoRData)
+        copy!(A, Ac)
+        zero!(dA)
+        return NoRData(), NoRData()
+    end
+    return A_dA, zero_adjoint
+end
+
 # two-argument in-place factorizations like LQ, QR, EIG
 for (f!, f, pb, adj) in (
         (:qr_full!, :qr_full, :qr_pullback!, :qr_adjoint),

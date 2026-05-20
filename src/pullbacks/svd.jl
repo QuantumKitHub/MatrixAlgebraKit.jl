@@ -85,19 +85,17 @@ function check_and_prepare_svd_cotangents(
     bc = Base.broadcasted(S₁', S₁, aUᴴΔU₁, aVᴴΔV₁) do s₁, s₂, u, v
         return abs(s₁ - s₂) < degeneracy_atol ? u + v : zero(u) + zero(v)
     end
-    Δgauge = max(Δgauge, norm(bc, Inf))
+    Δgauge = max(Δgauge, maximum(abs, bc))
 
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
+        bad_indS = _ind_intersect((r + 1):length(ΔS), indS)
+        good_indS = _ind_intersect(1:r, indS)
         ΔS₁ = zero(S₁)
-        for (j, i) in enumerate(indS)
-            if i <= r
-                ΔS₁[i] = real(ΔS[j])
-            else
-                Δgauge = max(Δgauge, abs(ΔS[j]))
-            end
-        end
+        ΔS₁[1:length(good_indS)] .= real.(ΔS[good_indS])
+        badΔS₁ = view(ΔS, bad_indS)
+        Δgauge = max(Δgauge, maximum(abs, badΔS₁; init = abs(zero(eltype(ΔS)))))
     else
         ΔS₁ = nothing
     end

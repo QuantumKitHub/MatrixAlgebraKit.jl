@@ -8,7 +8,7 @@ using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, Abstract
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
 import MatrixAlgebraKit: heevj!, heevd!, geev!
-import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank
+import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank, svd_pullback!
 using CUDA, CUDA.cuBLAS
 using CUDA: i32
 using LinearAlgebra
@@ -197,6 +197,12 @@ function _sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
     return CuArray(hX)
 end
 
-svd_rank(S::AnyCuVector, rank_atol) = findlast(s -> s ≥ rank_atol, S)
+function svd_rank(S::AnyCuVector; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(S))
+    return something(findlast(≥(rank_atol), S), 0)
+end
+
+function svd_pullback!(ΔA::AnyCuMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyCuVector; kwargs...)
+    return svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
+end
 
 end
