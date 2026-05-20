@@ -41,7 +41,7 @@ function check_and_prepare_eig_cotangents(
     if !iszerotangent(ΔDmat)
         ΔD = diagview(ΔDmat)
         length(indD) == length(ΔD) || throw(DimensionMismatch())
-         # needed to avoid GPUCompiler errors
+        # needed to avoid GPUCompiler errors
         VᴴAΔV[diagind(VᴴAΔV)[indD]] .+= ΔD
     else
         ΔD = nothing
