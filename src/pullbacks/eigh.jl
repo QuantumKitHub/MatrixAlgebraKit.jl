@@ -31,7 +31,7 @@ function check_and_prepare_eigh_cotangents(
     bc = Base.broadcasted(transpose(D), D, aVᴴΔV₁) do d₁, d₂, v
         return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
-    Δgauge = norm(bc, Inf)
+    Δgauge = maximum(abs, bc; init = abs(zero(eltype(D))))
 
     Δgauge ≤ gauge_atol ||
         @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
@@ -42,7 +42,8 @@ function check_and_prepare_eigh_cotangents(
     if !iszerotangent(ΔDmat)
         ΔD = diagview(ΔDmat)
         length(indD) == length(ΔD) || throw(DimensionMismatch())
-        view(diagview(VᴴAΔV), indD) .+= real.(ΔD)
+        # needed to avoid GPUCompiler errors
+        VᴴAΔV[diagind(VᴴAΔV)[indD]] .+= real.(ΔD)
     else
         ΔD = nothing
     end
