@@ -18,4 +18,9 @@ for T in (BLASFloats..., GenericFloats...)
         AT = Diagonal{T, Vector{T}}
         TestSuite.test_mooncake_eigh(AT, m; atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
     end
+    if T ∈ BLASFloats && CUDA.functional()
+        TestSuite.test_mooncake_eigh(CuMatrix{T}, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
+        AT = Diagonal{T, CuVector{T}}
+        TestSuite.test_mooncake_eigh(AT, m; atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
+    end
 end
