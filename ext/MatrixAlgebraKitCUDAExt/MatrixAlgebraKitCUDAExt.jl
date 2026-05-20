@@ -8,7 +8,11 @@ using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, Abstract
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
 import MatrixAlgebraKit: heevj!, heevd!, geev!
+<<<<<<< HEAD
 import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank, svd_pullback!, eigh_pullback!
+=======
+import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank, svd_pullback!, eig_pullback!
+>>>>>>> 292f243 (Working EIG + CUDA AD)
 using CUDA, CUDA.cuBLAS
 using CUDA: i32
 using LinearAlgebra
@@ -207,6 +211,10 @@ end
 
 function eigh_pullback!(ΔA::AnyCuMatrix, A, DV, ΔDV, ind::AnyCuVector; kwargs...)
     return eigh_pullback!(ΔA, A, DV, ΔDV, collect(ind); kwargs...)
+end
+
+function eig_pullback!(ΔA::AnyCuMatrix, A, DV, ΔDV, ind::AnyCuVector; kwargs...)
+    return eig_pullback!(ΔA, A, DV, ΔDV, collect(ind); kwargs...)
 end
 
 end
