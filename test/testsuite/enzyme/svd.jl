@@ -69,7 +69,7 @@ function test_enzyme_svd_trunc(
         end
         @testset "trunctol" begin
             S = svd_vals(A, alg)
-            trunc = trunctol(atol = S[1] / 2)
+            trunc = trunctol(atol = maximum(S) / 2)
             truncalg = TruncatedAlgorithm(alg, trunc)
             USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
             test_reverse(svd_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)

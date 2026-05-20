@@ -27,6 +27,7 @@ function check_and_prepare_eigh_cotangents(
         ΔV₊ = nothing
         aVᴴΔV₁ = zero!(similar(V, (p, p)))
     end
+
     bc = Base.broadcasted(transpose(D), D, aVᴴΔV₁) do d₁, d₂, v
         return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
@@ -82,6 +83,7 @@ function eigh_pullback!(
     D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    iszero(n) && return ΔA
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, = check_and_prepare_eigh_cotangents(
@@ -137,6 +139,7 @@ function eigh_trunc_pullback!(
     D = diagview(Dmat)
     p == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    iszero(p) && return ΔA
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, ΔV₊ = check_and_prepare_eigh_cotangents(

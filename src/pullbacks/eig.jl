@@ -26,6 +26,7 @@ function check_and_prepare_eig_cotangents(
         ΔV₊ = nothing
         VᴴΔV₁ = zero!(similar(V, (p, p)))
     end
+
     bc = Base.broadcasted(transpose(D), D, VᴴΔV₁) do d₁, d₂, v
         return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
@@ -81,6 +82,7 @@ function eig_pullback!(
     D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    iszero(n) && return ΔA
     ViG = inv(V)'
 
     ΔDmat, ΔV = ΔDV
@@ -144,6 +146,7 @@ function eig_trunc_pullback!(
     (n, n) == size(ΔA) || throw(DimensionMismatch())
     D = diagview(Dmat)
     p == length(D) || throw(DimensionMismatch())
+    iszero(p) && return ΔA
     G = V' * V
     ViG = V / LinearAlgebra.cholesky!(G)
 

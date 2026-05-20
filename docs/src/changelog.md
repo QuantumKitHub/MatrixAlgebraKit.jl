@@ -30,6 +30,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- Pullbacks of `eig_trunc`, `eigh_trunc`, and `svd_trunc` no longer error when the truncation strategy keeps no values; `svd_pullback!` also handles the zero-rank case where every singular value falls below `rank_atol` ([#233](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/233)).
+
 ### Performance
 
 ## [0.6.7](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.6...v0.6.7) - 2026-05-06
