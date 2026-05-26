@@ -10,7 +10,8 @@ is real and positive.
 
 # Helper functions
 _argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
-_largest(x, y) = abs(x) < abs(y) ? y : x
+_largest(x::Real, y::Real) = abs(x) < abs(y) ? y : x
+_largest(x::Complex, y::Complex) = abs2(x) < abs2(y) ? y : x
 
 function gaugefix!(::typeof(qr_householder!), Q, R, Rd)
     ax = Base.OneTo(length(Rd))
