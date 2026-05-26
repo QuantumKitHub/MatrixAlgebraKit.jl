@@ -67,9 +67,9 @@ end
 
 function gaugefix!(::Union{typeof(svd_compact!), typeof(svd_trunc!)}, U, Vᴴ)
     @assert axes(U, 2) == axes(Vᴴ, 1)
-    signs = sign.(reduce(_largest, U; dims = 1, init = zero(eltype(U))))
-    signs_t = transpose(signs)
-    @. U = U * conj(signs)
-    @. Vᴴ = signs_t * Vᴴ
+    max_us = reduce(_largest, U; dims = 1, init = zero(eltype(U)))
+    max_us_t = transpose(max_us)
+    @. U = U * (conj ∘ sign)(max_us)
+    @. Vᴴ = sign(max_us_t) * Vᴴ
     return (U, Vᴴ)
 end
