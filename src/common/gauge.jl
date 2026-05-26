@@ -10,7 +10,7 @@ is real and positive.
 
 # Helper functions
 _argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
-_largest(x, y) = real(abs(x)) < real(abs(y)) ? y : x
+_largest(x, y) = abs(x) < abs(y) ? y : x
 
 function gaugefix!(::typeof(qr_householder!), Q, R, Rd)
     ax = Base.OneTo(length(Rd))
@@ -68,7 +68,8 @@ end
 function gaugefix!(::Union{typeof(svd_compact!), typeof(svd_trunc!)}, U, Vᴴ)
     @assert axes(U, 2) == axes(Vᴴ, 1)
     signs = sign.(reduce(_largest, U; dims = 1, init = zero(eltype(U))))
-    @. U = U * signs
-    @. transpose(Vᴴ) = signs * transpose(Vᴴ)
+    signs_t = transpose(signs)
+    @. U = U * conj(signs)
+    @. Vᴴ = signs_t * Vᴴ
     return (U, Vᴴ)
 end
