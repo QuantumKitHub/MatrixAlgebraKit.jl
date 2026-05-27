@@ -20,6 +20,26 @@ See also [`diagview`](@ref).
 
 diagonal(v::AbstractVector) = Diagonal(v)
 
+"""
+    map_diagonal!(f, dst, src...)
+
+Map the scalar function `f` over all elements of the diagonal of `src...`, returning
+a diagonal result.
+
+See also [`map_diagonal!`](@ref).
+"""
+map_diagonal(f, src, srcs...) = diagonal(f.(diagview(src), map(diagview, srcs)...))
+
+"""
+    map_diagonal!(f, dst, src...)
+
+Map the scalar function `f` over all elements of the diagonal of `src...`,
+into the diagonal elements of destination `dst`.
+
+See also [`map_diagonal`](@ref).
+"""
+map_diagonal!(f, dst, src, srcs...) = (diagview(dst) .= f.(diagview(src), map(diagview, srcs)...); dst)
+
 # triangularind
 function lowertriangularind(A::AbstractMatrix)
     Base.require_one_based_indexing(A)

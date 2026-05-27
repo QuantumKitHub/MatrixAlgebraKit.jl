@@ -47,4 +47,9 @@ Base.@deprecate(
     schur_vals!(A, vals, QRIteration(; driver = GS(), alg.kwargs...))
 )
 
+function MatrixAlgebraKit.default_exponential_algorithm(E::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
+    eig_alg = MatrixAlgebraKit.default_eig_algorithm(E; kwargs...)
+    return MatrixFunctionViaEig(eig_alg)
+end
+
 end
