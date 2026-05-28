@@ -12,10 +12,15 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
 m = 19
 for T in (BLASFloats..., GenericFloats...)
-    TestSuite.seed_rng!(1234)
+    TestSuite.seed_rng!(12345)
     if !is_buildkite
         TestSuite.test_mooncake_eig(T, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
         AT = Diagonal{T, Vector{T}}
         TestSuite.test_mooncake_eig(AT, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
+    end
+    if T ∈ BLASFloats && CUDA.functional()
+        TestSuite.test_mooncake_eig(CuMatrix{T}, (m, m); atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
+        AT = Diagonal{T, CuVector{T}}
+        TestSuite.test_mooncake_eig(AT, m; atol = m * m * TestSuite.precision(T), rtol = m * m * TestSuite.precision(T))
     end
 end
