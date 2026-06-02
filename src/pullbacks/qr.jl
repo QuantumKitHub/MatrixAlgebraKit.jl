@@ -31,9 +31,18 @@ function check_and_prepare_qr_cotangents(
         ΔR₁₁ = UpperTriangular(view(ΔR, 1:p, 1:p))
         ΔR₁₂ = view(ΔR, 1:p, (p + 1):n)
         ΔR₂₂ = view(ΔR, (p + 1):minmn, (p + 1):n)
-        Δgauge_R = norm(view(ΔR₂₂, uppertriangularind(ΔR₂₂)), Inf)
-        Δgauge_R = max(Δgauge_R, norm(view(ΔR₂₂, diagind(ΔR₂₂)), Inf))
-        Δgauge = max(Δgauge, Δgauge_R)
+        if p < minmn # otherwise ΔR₂₂ is empty
+            # uppertriangularind generates linear indices
+            # compute the appropriate offset in ΔR so we aren't
+            # operating on a view-of-view, which doesn't work
+            # for GPU arrays
+            offset = LinearIndices(ΔR)[p + 1, p + 1]
+            upper_inds = uppertriangularind(ΔR₂₂) .+ offset
+            ΔR₂₂upper = view(ΔR, upper_inds)
+            Δgauge_R = norm(ΔR₂₂upper, Inf)
+            Δgauge_R = max(Δgauge_R, norm(view(ΔR₂₂, diagind(ΔR₂₂)), Inf))
+            Δgauge = max(Δgauge, Δgauge_R)
+        end
     else
         ΔR₁₁ = nothing
         ΔR₁₂ = nothing
@@ -160,7 +169,16 @@ function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebr
     end
     ΔR₂₂ = view(ΔR, (r + 1):minmn, (r + 1):size(R, 2))
     zero!(diagview(ΔR₂₂))
-    zero!(view(ΔR₂₂, uppertriangularind(ΔR₂₂)))
+    if r < minmn
+        # uppertriangularind generates linear indices
+        # compute the appropriate offset in ΔR so we aren't
+        # operating on a view-of-view, which doesn't work
+        # for GPU arrays
+        offset = LinearIndices(ΔR)[r + 1, r + 1]
+        upper_inds = uppertriangularind(ΔR₂₂) .+ offset
+        ΔR₂₂upper = view(ΔR, upper_inds)
+        zero!(ΔR₂₂upper)
+    end
     return ΔQ, ΔR
 end
 
