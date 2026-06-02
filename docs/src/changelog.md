@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.7...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.8...HEAD)
 
 ### Added
 
@@ -30,9 +30,30 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+### Performance
+
+## [0.6.8](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.7...v0.6.8) - 2026-05-20
+
+### Added
+
+- Add a MatrixAlgebraKit logo ([#230](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/230)).
+
+### Changed
+
+- Extended AD test coverage to CUDA arrays for the polar decomposition ([#237](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/237)) and the Mooncake projection rules ([#240](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/240)).
+
+### Fixed
+
 - Pullbacks of `eig_trunc`, `eigh_trunc`, and `svd_trunc` no longer error when the truncation strategy keeps no values; `svd_pullback!` also handles the zero-rank case where every singular value falls below `rank_atol` ([#233](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/233)).
+- `svd_pullback!` is now GPU-compatible ([#232](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/232)).
+- LQ pullback no longer modifies input cotangents ([#226](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/226)).
+- `eigh` pullback now works on CUDA arrays ([#235](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/235)).
+- `eig` pullback now works on CUDA arrays ([#236](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/236)).
+- Corrected the Enzyme rule's check for when the cached output argument must be copied ([#239](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/239)).
 
 ### Performance
+
+- Improved `svd` gauge-fixing performance ([#238](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/238)).
 
 ## [0.6.7](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.6...v0.6.7) - 2026-05-06
 
