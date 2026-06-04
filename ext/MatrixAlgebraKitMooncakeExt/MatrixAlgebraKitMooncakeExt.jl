@@ -858,7 +858,7 @@ for (f!, f, adj) in (
         (:project_antihermitian!, :project_antihermitian, :project_antihermitian_adjoint),
     )
     @eval begin
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @is_primitive DefaultCtx Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(f_df::CoDual{typeof($f!)}, A_dA::CoDual, arg_darg::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             arg, darg = A_dA === arg_darg ? (A, dA) : arrayify(arg_darg)
@@ -879,8 +879,14 @@ for (f!, f, adj) in (
 
             return arg_darg, $adj
         end
-
-        @is_primitive DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.frule!!(f_df::Dual{typeof($f!)}, A_dA::Dual, arg_darg::Dual, alg_dalg::Dual{<:MatrixAlgebraKit.AbstractAlgorithm})
+            A, dA = arrayify(A_dA)
+            arg, darg = A_dA === arg_darg ? (A, dA) : arrayify(arg_darg)
+            arg = $f!(A, arg, Mooncake.primal(alg_dalg))
+            $f!(darg)
+            return arg_darg
+        end
+        @is_primitive DefaultCtx Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
@@ -895,6 +901,12 @@ for (f!, f, adj) in (
             end
 
             return output_doutput, $adj
+        end
+        function Mooncake.frule!!(f_df::Dual{typeof($f)}, A_dA::Dual, alg_dalg::Dual{<:MatrixAlgebraKit.AbstractAlgorithm})
+            A, dA = arrayify(A_dA)
+            output = $f(A, Mooncake.primal(alg_dalg))
+            output_doutput = Mooncake.zero_dual(output)
+            return output_doutput
         end
     end
 end
