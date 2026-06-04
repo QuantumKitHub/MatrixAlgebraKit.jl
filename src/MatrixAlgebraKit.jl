@@ -129,6 +129,8 @@ include("pullbacks/eigh.jl")
 include("pullbacks/svd.jl")
 include("pullbacks/polar.jl")
 
+include("pushforwards/polar.jl")
+
 include("precompile.jl")
 
 end

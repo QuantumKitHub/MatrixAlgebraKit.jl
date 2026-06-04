@@ -8,6 +8,7 @@ using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!, eigh_vals_pullback!
 using MatrixAlgebraKit: svd_pullback!, svd_vals_pullback!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
+using MatrixAlgebraKit: left_polar_pushforward!, right_polar_pushforward!
 using Enzyme
 using Enzyme.EnzymeCore
 using Enzyme.EnzymeCore: EnzymeRules
@@ -113,6 +114,36 @@ for (f, pb) in (
                 A_is_arg2 || make_zero!(arg.dval[2])
             end
             return (nothing, nothing, nothing)
+        end
+    end
+end
+
+for (f, pf) in (
+        (left_polar!, left_polar_pushforward!),
+        (right_polar!, right_polar_pushforward!),
+    )
+    @eval begin
+        function EnzymeRules.forward(
+                config::EnzymeRules.FwdConfigWidth{1},
+                func::Const{typeof($f)},
+                ::Type{RT},
+                A::Annotation,
+                arg::Annotation{TA},
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT, TA}
+            $f(A.val, arg.val, alg.val)
+            if !isa(A, Const) && !isa(arg, Const)
+                $pf(A.dval, A.val, arg.val, arg.dval)
+            end
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return arg
+            elseif EnzymeRules.needs_primal(config)
+                return arg.val
+            elseif EnzymeRules.needs_shadow(config)
+                return arg.dval
+            else
+                return nothing
+            end
         end
     end
 end

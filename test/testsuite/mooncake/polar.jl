@@ -14,8 +14,8 @@ end
 """
     test_mooncake_left_polar(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `left_polar` and its in-place variant. Only runs
-for tall or square matrices (`m >= n`).
+Test the Mooncake forward- and reverse-mode AD rule for `left_polar` and its in-place variant.
+Only runs for tall or square matrices (`m >= n`).
 """
 function test_mooncake_left_polar(
         T, sz;
@@ -31,11 +31,11 @@ function test_mooncake_left_polar(
 
         Mooncake.TestUtils.test_rule(
             rng, left_polar, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, left_polar!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
@@ -43,8 +43,8 @@ end
 """
     test_mooncake_right_polar(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `right_polar` and its in-place variant. Only runs
-for wide or square matrices (`m <= n`).
+Test the Mooncake forward- and reverse-mode AD rule for `right_polar` and its in-place variant.
+Only runs for wide or square matrices (`m <= n`).
 """
 function test_mooncake_right_polar(
         T, sz;
@@ -60,11 +60,11 @@ function test_mooncake_right_polar(
 
         Mooncake.TestUtils.test_rule(
             rng, right_polar, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, right_polar!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end
