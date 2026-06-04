@@ -882,8 +882,8 @@ for (f!, f, adj) in (
         function Mooncake.frule!!(f_df::Dual{typeof($f!)}, A_dA::Dual, arg_darg::Dual, alg_dalg::Dual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             arg, darg = A_dA === arg_darg ? (A, dA) : arrayify(arg_darg)
-            arg = $f!(A, arg, Mooncake.primal(alg_dalg))
-            $f!(darg)
+            $f!(A, arg, Mooncake.primal(alg_dalg))
+            $f!(dA, darg, Mooncake.primal(alg_dalg))
             return arg_darg
         end
         @is_primitive DefaultCtx Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -906,6 +906,8 @@ for (f!, f, adj) in (
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
             output_doutput = Mooncake.zero_dual(output)
+            doutput = last(arrayify(output_doutput))
+            $f!(dA, doutput, Mooncake.primal(alg_dalg))
             return output_doutput
         end
     end
