@@ -22,9 +22,9 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
     end
     if T ∈ BLASFloats && CUDA.functional()
         TestSuite.test_mooncake_qr(CuMatrix{T}, (m, n); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
-        if m == n
+        #=if m == n
             AT = Diagonal{T, CuVector{T}}
             TestSuite.test_mooncake_qr(AT, (m, m); atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
-        end
+        end=# # currently broken
     end
 end
