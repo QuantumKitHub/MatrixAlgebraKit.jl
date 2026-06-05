@@ -15,7 +15,7 @@ end
 """
     test_mooncake_eig_full(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `eig_full` and its in-place variant.
+Test the Mooncake forward- and reverse-mode AD rule for `eig_full` and its in-place variant.
 """
 function test_mooncake_eig_full(
         T, sz;
@@ -29,25 +29,39 @@ function test_mooncake_eig_full(
 
         Mooncake.TestUtils.test_rule(
             rng, eig_full, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            mode = Mooncake.ReverseMode,
+            output_tangent, atol, rtol
         )
+        Mooncake.TestUtils.test_rule(
+            rng, call_and_zero!, eig_full!, A, alg;
+            mode = Mooncake.ReverseMode,
+            output_tangent, atol, rtol, is_primitive = false
+        )
+        if !(eltype(T) <: ComplexF64)
+            Mooncake.TestUtils.test_rule(
+                rng, eig_full, A, alg;
+                mode = Mooncake.ForwardMode,
+                atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, call_and_zero!, eig_full!, A, alg;
+                mode = Mooncake.ForwardMode,
+                atol, rtol, is_primitive = false
+            )
+        end
         if T <: Diagonal{<:Complex}
             Mooncake.TestUtils.test_rule(
                 rng, eig_full!, A, (A, DV[2]), alg;
-                mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+                output_tangent, atol, rtol
             )
         end
-        Mooncake.TestUtils.test_rule(
-            rng, call_and_zero!, eig_full!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
-        )
     end
 end
 
 """
     test_mooncake_eig_vals(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `eig_vals` and its in-place variant.
+Test the Mooncake forward- and reverse-mode AD rule for `eig_vals` and its in-place variant.
 """
 function test_mooncake_eig_vals(
         T, sz;
@@ -61,17 +75,17 @@ function test_mooncake_eig_vals(
 
         Mooncake.TestUtils.test_rule(
             rng, eig_vals, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         if T <: Diagonal{<:Complex}
             Mooncake.TestUtils.test_rule(
                 rng, eig_vals!, A, A.diag, alg;
-                mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+                output_tangent, atol, rtol
             )
         end
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, eig_vals!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end

@@ -130,6 +130,8 @@ include("pullbacks/svd.jl")
 include("pullbacks/polar.jl")
 
 include("pushforwards/polar.jl")
+include("pushforwards/eig.jl")
+include("pushforwards/eigh.jl")
 
 include("precompile.jl")
 
