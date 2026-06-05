@@ -17,7 +17,7 @@ end
 """
     test_mooncake_left_orth(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rules for `left_orth` with QR and polar (when `m >= n`)
+Test the Mooncake forward- and reverse-mode AD rules for `left_orth` with QR and polar (when `m >= n`)
 algorithms, and their in-place variants.
 """
 function test_mooncake_left_orth(
@@ -51,11 +51,11 @@ function test_mooncake_left_orth(
 
                 Mooncake.TestUtils.test_rule(
                     rng, left_orth, A, alg;
-                    mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+                    output_tangent, is_primitive = false, atol, rtol
                 )
                 Mooncake.TestUtils.test_rule(
                     rng, call_and_zero!, left_orth!, A, alg;
-                    mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+                    output_tangent, is_primitive = false, atol, rtol
                 )
             end
         end
@@ -65,7 +65,7 @@ end
 """
     test_mooncake_right_orth(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rules for `right_orth` with LQ and polar (when `m <= n`)
+Test the Mooncake forward- and reverse-mode AD rules for `right_orth` with LQ and polar (when `m <= n`)
 algorithms, and their in-place variants.
 """
 function test_mooncake_right_orth(
@@ -99,11 +99,11 @@ function test_mooncake_right_orth(
 
                 Mooncake.TestUtils.test_rule(
                     rng, right_orth, A, alg;
-                    mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+                    output_tangent, is_primitive = false, atol, rtol
                 )
                 Mooncake.TestUtils.test_rule(
                     rng, call_and_zero!, right_orth!, A, alg;
-                    mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+                    output_tangent, is_primitive = false, atol, rtol
                 )
             end
         end
