@@ -8,48 +8,83 @@ function test_enzyme_svd(T::Type, sz; kwargs...)
     end
 end
 
+"""
+    test_enzyme_svd_compact(T, sz; rng, atol, rtol)
+
+Test the Enzyme forward- and reverse-mode AD rule for `svd_compact` and its in-place variant.
+"""
 function test_enzyme_svd_compact(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "svd_compact reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "svd_compact: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(svd_compact, A)
         USVᴴ, ΔUSVᴴ = ad_svd_compact_setup(A)
         test_reverse(svd_compact, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔUSVᴴ, fdm)
         test_reverse(call_and_zero!, RT, (svd_compact!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔUSVᴴ, fdm)
+        if eltype(T) <: Real
+            A = instantiate_matrix(T, sz)
+            test_forward(svd_compact, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (svd_compact!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        end
     end
 end
 
+"""
+    test_enzyme_svd_full(T, sz; rng, atol, rtol)
+
+Test the Enzyme forward- and reverse-mode AD rule for `svd_full` and its in-place variant. The
+gauge-dependent extra columns of `U` and rows of `Vᴴ` are zeroed out in the cotangent.
+"""
 function test_enzyme_svd_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "svd_full reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "svd_full: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(svd_full, A)
         USVᴴ, ΔUSVᴴ = ad_svd_full_setup(A)
         test_reverse(svd_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔUSVᴴ, fdm)
         test_reverse(call_and_zero!, RT, (svd_full!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔUSVᴴ, fdm)
+        if eltype(T) <: Real
+            A = instantiate_matrix(T, sz)
+            test_forward(svd_full, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (svd_full!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        end
     end
 end
 
+"""
+    test_enzyme_svd_vals(T, sz; rng, atol, rtol)
+
+Test the Enzyme forward- and reverse-mode AD rule for `svd_vals` and its in-place variant.
+"""
 function test_enzyme_svd_vals(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "svd_vals reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "svd_vals: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(svd_vals, A)
         S, ΔS = ad_svd_vals_setup(A)
         test_reverse(svd_vals, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔS, fdm)
         test_reverse(call_and_zero!, RT, (svd_vals!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔS, fdm)
+        A = instantiate_matrix(T, sz)
+        test_forward(svd_vals, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(call_and_zero!, RT, (svd_vals!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
     end
 end
 
+"""
+    test_enzyme_svd_trunc(T, sz; rng, atol, rtol)
+
+Test the Enzyme reverse-mode AD rules for `svd_trunc`, `svd_trunc_no_error`, and their
+in-place variants, over a range of truncation ranks and a tolerance-based truncation.
+"""
 function test_enzyme_svd_trunc(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),

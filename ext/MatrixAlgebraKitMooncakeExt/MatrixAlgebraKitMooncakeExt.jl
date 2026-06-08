@@ -13,6 +13,7 @@ using MatrixAlgebraKit: eig_trunc_pullback!, eigh_trunc_pullback!, eigh_vals_pul
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
 using MatrixAlgebraKit: left_polar_pushforward!, right_polar_pushforward!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!, svd_vals_pullback!
+using MatrixAlgebraKit: svd_pushforward!, svd_trunc_pushforward!, svd_vals_pushforward!
 using MatrixAlgebraKit: TruncatedAlgorithm
 using LinearAlgebra
 
@@ -538,7 +539,7 @@ for (f!, f) in (
         (:svd_compact!, :svd_compact),
     )
     @eval begin
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Tuple{<:Any, <:Any, <:Any}, MatrixAlgebraKit.AbstractAlgorithm}
+        @is_primitive Mooncake.DefaultCtx Tuple{typeof($f!), Any, Tuple{<:Any, <:Any, <:Any}, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
             USVᴴ = Mooncake.primal(USVᴴ_dUSVᴴ)
@@ -562,7 +563,18 @@ for (f!, f) in (
             end
             return USVᴴ_dUSVᴴ, svd_adjoint
         end
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.frule!!(::Dual{typeof($f!)}, A_dA::Dual, USVᴴ_dUSVᴴ::Dual, alg_dalg::Dual)
+            A, dA = arrayify(A_dA)
+            USVᴴ = Mooncake.primal(USVᴴ_dUSVᴴ)
+            dUSVᴴ = Mooncake.tangent(USVᴴ_dUSVᴴ)
+            U, dU = arrayify(USVᴴ[1], dUSVᴴ[1])
+            S, dS = arrayify(USVᴴ[2], dUSVᴴ[2])
+            Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
+            $f!(A, USVᴴ, Mooncake.primal(alg_dalg))
+            svd_pushforward!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
+            return USVᴴ_dUSVᴴ
+        end
+        @is_primitive Mooncake.DefaultCtx Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
             USVᴴ = $f(A, Mooncake.primal(alg_dalg))
@@ -585,10 +597,23 @@ for (f!, f) in (
             end
             return USVᴴ_codual, svd_adjoint
         end
+        function Mooncake.frule!!(::Dual{typeof($f)}, A_dA::Dual, alg_dalg::Dual)
+            A, dA = arrayify(A_dA)
+            USVᴴ = $f(A, Mooncake.primal(alg_dalg))
+            dUSVᴴ = Mooncake.zero_tangent(USVᴴ)
+            USVᴴ_dual = Dual(USVᴴ, dUSVᴴ)
+            U, S, Vᴴ = Mooncake.primal(USVᴴ_dual)
+            dU_, dS_, dVᴴ_ = Mooncake.tangent(USVᴴ_dual)
+            U, dU = arrayify(U, dU_)
+            S, dS = arrayify(S, dS_)
+            Vᴴ, dVᴴ = arrayify(Vᴴ, dVᴴ_)
+            svd_pushforward!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
+            return USVᴴ_dual
+        end
     end
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_vals!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+@is_primitive Mooncake.DefaultCtx Tuple{typeof(svd_vals!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -604,8 +629,17 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDua
     end
     return S_dS, svd_vals_adjoint
 end
+function Mooncake.frule!!(::Dual{typeof(svd_vals!)}, A_dA::Dual, S_dS::Dual, alg_dalg::Dual)
+    # compute primal
+    A, dA = arrayify(A_dA)
+    S, dS = arrayify(S_dS)
+    USVᴴ = svd_compact(A, Mooncake.primal(alg_dalg))
+    copy!(S, diagview(USVᴴ[2]))
+    svd_vals_pushforward!(dA, A, USVᴴ, dS)
+    return S_dS
+end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_vals), Any, MatrixAlgebraKit.AbstractAlgorithm}
+@is_primitive Mooncake.DefaultCtx Tuple{typeof(svd_vals), Any, MatrixAlgebraKit.AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -623,6 +657,16 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::Co
         return NoRData(), NoRData(), NoRData()
     end
     return S_codual, svd_vals_adjoint
+end
+function Mooncake.frule!!(::Dual{typeof(svd_vals)}, A_dA::Dual, alg_dalg::Dual)
+    # compute primal
+    A, dA = arrayify(A_dA)
+    USVᴴ = svd_compact(A, Mooncake.primal(alg_dalg))
+    S = diagview(USVᴴ[2])
+    S_dual = Dual(S, Mooncake.zero_tangent(S))
+    S_, dS = arrayify(S_dual)
+    svd_vals_pushforward!(dA, A, USVᴴ, dS)
+    return S_dual
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}

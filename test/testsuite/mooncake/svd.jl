@@ -16,7 +16,7 @@ end
 """
     test_mooncake_svd_compact(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `svd_compact` and its in-place variant.
+Test the Mooncake forward- and reverse-mode AD rule for `svd_compact` and its in-place variant.
 """
 function test_mooncake_svd_compact(
         T, sz;
@@ -36,13 +36,23 @@ function test_mooncake_svd_compact(
             rng, call_and_zero!, svd_compact!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
+        if eltype(T) <: Real # gauge freedom in complex outputs
+            Mooncake.TestUtils.test_rule(
+                rng, svd_compact, A, alg;
+                mode = Mooncake.ForwardMode, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, call_and_zero!, svd_compact!, A, alg;
+                mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
+            )
+        end
     end
 end
 
 """
     test_mooncake_svd_full(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `svd_full` and its in-place variant. The
+Test the Mooncake forward- and reverse-mode AD rule for `svd_full` and its in-place variant. The
 gauge-dependent extra columns of `U` and rows of `Vᴴ` are zeroed out in the cotangent.
 """
 function test_mooncake_svd_full(
@@ -63,13 +73,23 @@ function test_mooncake_svd_full(
             rng, call_and_zero!, svd_full!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
+        if eltype(T) <: Real # gauge freedom in complex outputs
+            Mooncake.TestUtils.test_rule(
+                rng, svd_full, A, alg;
+                mode = Mooncake.ForwardMode, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, call_and_zero!, svd_full!, A, alg;
+                mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
+            )
+        end
     end
 end
 
 """
     test_mooncake_svd_vals(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `svd_vals` and its in-place variant.
+Test the Mooncake forward- and reverse-mode AD rule for `svd_vals` and its in-place variant.
 """
 function test_mooncake_svd_vals(
         T, sz;
@@ -83,11 +103,11 @@ function test_mooncake_svd_vals(
 
         Mooncake.TestUtils.test_rule(
             rng, svd_vals, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, svd_vals!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
     end
 end

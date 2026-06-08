@@ -8,6 +8,7 @@ using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!, eigh_vals_pullback!
 using MatrixAlgebraKit: eig_pushforward!, eigh_pushforward!, eig_vals_pushforward!, eigh_vals_pushforward!
 using MatrixAlgebraKit: svd_pullback!, svd_vals_pullback!
+using MatrixAlgebraKit: svd_pushforward!, svd_vals_pushforward!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
 using MatrixAlgebraKit: left_polar_pushforward!, right_polar_pushforward!
 using Enzyme
@@ -264,6 +265,30 @@ for f in (:svd_compact!, :svd_full!)
             !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
             return (nothing, nothing, nothing)
         end
+        function EnzymeRules.forward(
+                config::EnzymeRules.FwdConfigWidth{1},
+                func::Const{typeof($f)},
+                ::Type{RT},
+                A::Annotation,
+                USVᴴ::Annotation,
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT}
+            $f(A.val, USVᴴ.val, alg.val)
+            if !isa(A, Const) && !isa(USVᴴ, Const)
+                make_zero!(USVᴴ.dval)
+                svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
+            end
+            #!isa(A, Const) && make_zero!(A.dval)
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return USVᴴ
+            elseif EnzymeRules.needs_primal(config)
+                return USVᴴ.val
+            elseif EnzymeRules.needs_shadow(config)
+                return USVᴴ.dval
+            else
+                return nothing
+            end
+        end
     end
 end
 
@@ -501,6 +526,33 @@ function EnzymeRules.reverse(
     end
     !isa(S, Const) && !A_is_arg && make_zero!(S.dval)
     return (nothing, nothing, nothing)
+end
+function EnzymeRules.forward(
+        config::EnzymeRules.FwdConfigWidth{1},
+        func::Const{typeof(svd_vals!)},
+        ::Type{RT},
+        A::Annotation{TA},
+        S::Annotation,
+        alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+    ) where {RT, TA}
+    A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === S.dval
+    U, S_, Vᴴ = svd_compact!(A.val, alg.val)
+    copyto!(S.val, diagview(S_))
+    if !isa(A, Const) && !isa(S, Const)
+        ΔS = A_is_arg ? make_zero(S.dval) : S.dval
+        svd_vals_pushforward!(A.dval, A.val, (U, Diagonal(S.val), Vᴴ), ΔS)
+        A_is_arg && (S.dval .= ΔS)
+    end
+    !isa(A, Const) && !A_is_arg && make_zero!(A.dval)
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return S
+    elseif EnzymeRules.needs_primal(config)
+        return S.val
+    elseif EnzymeRules.needs_shadow(config)
+        return S.dval
+    else
+        return nothing
+    end
 end
 
 end
