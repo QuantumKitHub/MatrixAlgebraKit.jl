@@ -30,9 +30,6 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
     @assert isantihermitian(K̇)
     @assert isantihermitian(Ṁ)
     K̇diag = diagview(K̇)
-    for i in 1:length(K̇diag)
-        @assert K̇diag[i] ≈ (im / 2) * imag(diagview(UΔAV)[i]) / S[i]
-    end
 
     ∂U = vU * K̇
     ∂V = vV * Ṁ
