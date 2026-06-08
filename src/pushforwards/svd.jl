@@ -5,7 +5,7 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
     minmn = min(m, n)
     S = diagview(Smat)
     ΔU, ΔS, ΔVᴴ = ΔUSVᴴ
-    r = searchsortedlast(S, rank_atol; rev = true) # rank
+    r = svd_rank(S; rank_atol)
 
     vΔS = view(ΔS, 1:r, 1:r)
 
