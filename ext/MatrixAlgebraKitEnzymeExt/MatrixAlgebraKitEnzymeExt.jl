@@ -278,7 +278,7 @@ for f in (:svd_compact!, :svd_full!)
                 make_zero!(USVᴴ.dval)
                 svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
             end
-            #!isa(A, Const) && make_zero!(A.dval)
+            !isa(A, Const) && make_zero!(A.dval)
             if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
                 return USVᴴ
             elseif EnzymeRules.needs_primal(config)
@@ -537,13 +537,13 @@ function EnzymeRules.forward(
     ) where {RT, TA}
     A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === S.dval
     U, S_, Vᴴ = svd_compact!(A.val, alg.val)
-    copyto!(S.val, diagview(S_))
     if !isa(A, Const) && !isa(S, Const)
         ΔS = A_is_arg ? make_zero(S.dval) : S.dval
-        svd_vals_pushforward!(A.dval, A.val, (U, Diagonal(S.val), Vᴴ), ΔS)
+        svd_vals_pushforward!(A.dval, A.val, (U, Diagonal(diagview(S_)), Vᴴ), ΔS)
         A_is_arg && (S.dval .= ΔS)
     end
     !isa(A, Const) && !A_is_arg && make_zero!(A.dval)
+    copyto!(S.val, diagview(S_))
     if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
         return S
     elseif EnzymeRules.needs_primal(config)
