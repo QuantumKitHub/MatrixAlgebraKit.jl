@@ -15,38 +15,48 @@ end
 """
     test_enzyme_eig_full(T, sz; rng, atol, rtol)
 
-Test the Enzyme reverse-mode AD rule for `eig_full` and its in-place variant.
+Test the Enzyme foward- and reverse-mode AD rule for `eig_full` and its in-place variant.
 """
 function test_enzyme_eig_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "eig_full reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "eig_full: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = make_eig_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eig_full, A)
         DV, ΔDV = ad_eig_full_setup(A)
         test_reverse(eig_full, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
         test_reverse(call_and_zero!, RT, (eig_full!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
+        if eltype(T) <: Real && T <: Diagonal
+            A = make_eig_matrix(T, sz)
+            test_forward(eig_full, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (eig_full!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        end
     end
 end
 
 """
     test_enzyme_eig_vals(T, sz; rng, atol, rtol)
 
-Test the Enzyme reverse-mode AD rule for `eig_vals` and its in-place variant.
+Test the Enzyme forward- and reverse-mode AD rule for `eig_vals` and its in-place variant.
 """
 function test_enzyme_eig_vals(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "eig_vals reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "eig_vals: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = make_eig_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eig_vals, A)
         D, ΔD = ad_eig_vals_setup(A)
         test_reverse(eig_vals, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
         test_reverse(call_and_zero!, RT, (eig_vals!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
+        if eltype(T) <: Real
+            A = make_eig_matrix(T, sz)
+            test_forward(eig_vals, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (eig_vals!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        end
     end
 end
 

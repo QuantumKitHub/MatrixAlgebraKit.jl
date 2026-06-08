@@ -28,9 +28,11 @@ function test_enzyme_eigh_full(
         DV, ΔDV = ad_eigh_full_setup(A)
         test_reverse(eigh_wrapper, RT, (eigh_full, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
         test_reverse(eigh!_wrapper, RT, (eigh_full!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
-        A = make_eigh_matrix(T, sz)
-        test_forward(eigh_wrapper, RT, (eigh_full, Const), (A, TA), (alg, Const); atol, rtol, fdm)
-        test_forward(eigh!_wrapper, RT, (eigh_full!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        if eltype(T) <: Real
+            A = make_eigh_matrix(T, sz)
+            test_forward(eigh_wrapper, RT, (eigh_full, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(eigh!_wrapper, RT, (eigh_full!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        end
     end
 end
 

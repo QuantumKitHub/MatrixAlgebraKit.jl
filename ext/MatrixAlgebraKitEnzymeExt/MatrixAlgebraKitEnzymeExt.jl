@@ -130,14 +130,18 @@ for (f, pf) in (
                 config::EnzymeRules.FwdConfigWidth{1},
                 func::Const{typeof($f)},
                 ::Type{RT},
-                A::Annotation,
+                A::Annotation{TA},
                 arg::Annotation,
                 alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
-            ) where {RT}
+            ) where {TA, RT}
+            A_is_arg1 = !isa(A, Const) && A.val === arg.val[1]
+            A_is_arg2 = !isa(A, Const) && A.val === arg.val[2]
+            A_is_arg = A_is_arg1 || A_is_arg2
             $f(A.val, arg.val, alg.val)
             if !isa(A, Const) && !isa(arg, Const)
                 $pf(A.dval, A.val, arg.val, arg.dval)
             end
+            !A_is_arg && make_zero!(A.dval)
             if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
                 return arg
             elseif EnzymeRules.needs_primal(config)
@@ -429,15 +433,15 @@ for (f!, f_full!, pb!, pf!) in (
                 D::Annotation,
                 alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
             ) where {RT, TA}
+            A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === D.dval
             DV = $f_full!(A.val, alg.val)
             Dval, V = DV
-            A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === D.dval
             if !isa(A, Const) && !isa(D, Const)
                 ΔD = A_is_arg ? make_zero(D.dval) : D.dval
-                $pf!(A.dval, A.val, (Diagonal(Dval), V), ΔD)
+                $pf!(A.dval, A.val, (Diagonal(diagview(Dval)), V), ΔD)
                 A_is_arg && (D.dval .= ΔD)
-                !A_is_arg && (D.val .= diagview(Dval))
             end
+            copyto!(D.val, diagview(Dval))
             !isa(A, Const) && !A_is_arg && make_zero!(A.dval)
             if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
                 return D
