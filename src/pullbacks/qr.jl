@@ -36,8 +36,8 @@ function check_and_prepare_qr_cotangents(
             # compute the appropriate offset in ΔR so we aren't
             # operating on a view-of-view, which doesn't work
             # for GPU arrays
-            offset = LinearIndices(ΔR)[p + 1, p + 1]
-            upper_inds = uppertriangularind(ΔR₂₂) .+ offset
+            I = uppertriangularind(ΔR₂₂)
+            upper_inds = view(LinearIndices(ΔR), (p + 1):minmn, (p + 1):n)[I]
             ΔR₂₂upper = view(ΔR, upper_inds)
             Δgauge_R = norm(ΔR₂₂upper, Inf)
             Δgauge_R = max(Δgauge_R, norm(view(ΔR₂₂, diagind(ΔR₂₂)), Inf))
@@ -84,7 +84,7 @@ function qr_pullback!(
 
 
     Q₁ = view(Q, :, 1:p)
-    R₁₁ = UpperTriangular(view(R, 1:p, 1:p))
+    R₁₁ = UpperTriangular(R[1:p, 1:p])
     R₁₂ = view(R, 1:p, (p + 1):n)
 
     ΔA₁ = view(ΔA, :, 1:p)
@@ -110,7 +110,8 @@ function qr_pullback!(
         Md = diagview(M)
         Md .= real.(Md)
     end
-    ΔA₁ .+= rdiv!(mul!(ΔQ₁, Q₁, M, +1, 1), R₁₁')
+    mul!(ΔQ₁, Q₁, M, +1, 1)
+    ΔA₁ .+= rdiv!(ΔQ₁, R₁₁')
     return ΔA
 end
 
