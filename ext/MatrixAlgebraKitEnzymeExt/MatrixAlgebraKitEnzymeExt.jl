@@ -269,16 +269,13 @@ for f in (:svd_compact!, :svd_full!)
                 config::EnzymeRules.FwdConfigWidth{1},
                 func::Const{typeof($f)},
                 ::Type{RT},
-                A::Annotation,
+                A::Annotation{TA},
                 USVᴴ::Annotation,
                 alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
-            ) where {RT}
+            ) where {RT, TA}
             $f(A.val, USVᴴ.val, alg.val)
-            if !isa(A, Const) && !isa(USVᴴ, Const)
-                make_zero!(USVᴴ.dval)
-                svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
-            end
-            !isa(A, Const) && make_zero!(A.dval)
+            !isa(A, Const) && !isa(USVᴴ, Const) && svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
+            make_zero!(A.dval)
             if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
                 return USVᴴ
             elseif EnzymeRules.needs_primal(config)
@@ -542,7 +539,7 @@ function EnzymeRules.forward(
         svd_vals_pushforward!(A.dval, A.val, (U, Diagonal(diagview(S_)), Vᴴ), ΔS)
         A_is_arg && (S.dval .= ΔS)
     end
-    !isa(A, Const) && !A_is_arg && make_zero!(A.dval)
+    !A_is_arg && make_zero!(A.dval)
     copyto!(S.val, diagview(S_))
     if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
         return S

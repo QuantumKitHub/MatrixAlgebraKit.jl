@@ -18,9 +18,8 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
     vV = adjoint(vVᴴ)
     UΔAV = vU' * ΔA * vV
     copyto!(diagview(vΔS), diag(real.(UΔAV)))
-    F = one(eltype(S)) ./ (transpose(vS) .- vS)
-    G = one(eltype(S)) ./ (transpose(vS) .+ vS)
-    diagview(F) .= zero(eltype(F))
+    F = inv_safe.(transpose(vS) .- vS)
+    G = inv_safe.(transpose(vS) .+ vS)
     hUΔAV = F .* (UΔAV + UΔAV') ./ 2
     aUΔAV = G .* (UΔAV - UΔAV') ./ 2
     K̇ = hUΔAV + aUΔAV
