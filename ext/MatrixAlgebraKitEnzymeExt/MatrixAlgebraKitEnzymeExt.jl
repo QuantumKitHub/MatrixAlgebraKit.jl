@@ -130,10 +130,10 @@ for (f, pf) in (
                 config::EnzymeRules.FwdConfigWidth{1},
                 func::Const{typeof($f)},
                 ::Type{RT},
-                A::Annotation{TA},
+                A::Annotation,
                 arg::Annotation,
                 alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
-            ) where {TA, RT}
+            ) where {RT}
             A_is_arg1 = !isa(A, Const) && A.val === arg.val[1]
             A_is_arg2 = !isa(A, Const) && A.val === arg.val[2]
             A_is_arg = A_is_arg1 || A_is_arg2
