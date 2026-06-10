@@ -5,8 +5,10 @@ using MatrixAlgebraKit: check_input
 using LinearAlgebra: Diagonal
 using GenericSchur
 
-function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return GS_QRIteration(; kwargs...)
+for elt in (BigFloat, Complex{BigFloat})
+    @eval function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{$elt}}
+        return GS_QRIteration(; kwargs...)
+    end
 end
 
 for f! in (:eig_full!, :eig_vals!)

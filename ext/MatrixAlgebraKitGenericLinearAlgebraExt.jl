@@ -39,8 +39,10 @@ function MatrixAlgebraKit.svd_vals!(A::AbstractMatrix, S, ::GLA_QRIteration)
     return svdvals!(A)
 end
 
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
-    return GLA_QRIteration(; kwargs...)
+for elt in (BigFloat, Complex{BigFloat})
+    @eval function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{$elt}}
+        return GLA_QRIteration(; kwargs...)
+    end
 end
 
 for f! in (:eigh_full!, :eigh_vals!)
