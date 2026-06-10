@@ -11,8 +11,6 @@ function eigh_pushforward!(
         diagview(dD) .= real.(∂Kdiag)
     end
     if !iszerotangent(dV)
-        F = inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
-        diagview(F) .= zero(eltype(F))
         ∂K .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
         dV = mul!(dV, V, ∂K)
     end
