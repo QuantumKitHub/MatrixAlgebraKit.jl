@@ -5,7 +5,9 @@ using MatrixAlgebraKit: sign_safe, check_input, diagview, gaugefix!, default_fix
 using GenericLinearAlgebra: svd!, svdvals!, eigen!, eigvals!, Hermitian, qr!
 using LinearAlgebra: I, Diagonal, lmul!
 
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
+const GLAFloat = Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}
+
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:GLAFloat}}
     return GLA_QRIteration()
 end
 
@@ -45,6 +47,12 @@ for elt in (BigFloat, Complex{BigFloat})
     end
 end
 
+function MatrixAlgebraKit.default_eigh_algorithm(
+        ::Type{T}; driver::Driver = GS(), kwargs...
+    ) where {T <: StridedMatrix{<:GSFloat}}
+    return GLA_QRIteration(; driver, kwargs...)
+end
+
 for f! in (:eigh_full!, :eigh_vals!)
     @eval MatrixAlgebraKit.initialize_output(::typeof($f!), A::AbstractMatrix, ::GLA_QRIteration) = nothing
 end
@@ -58,7 +66,7 @@ function MatrixAlgebraKit.eigh_vals!(A::AbstractMatrix, D, ::GLA_QRIteration)
     return eigvals!(Hermitian(A); sortby = real)
 end
 
-function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
+function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:GLAFloat}}
     return GLA_HouseholderQR(; kwargs...)
 end
 
@@ -111,7 +119,7 @@ function _gla_householder_qr!(A::AbstractMatrix, Q, R; positive = false, blocksi
     return Q, R
 end
 
-function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
+function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{<:GLAFloat}}
     return MatrixAlgebraKit.LQViaTransposedQR(GLA_HouseholderQR(; kwargs...))
 end
 

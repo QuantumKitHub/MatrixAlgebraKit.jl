@@ -6,10 +6,6 @@ import MatrixAlgebraKit: geev!, geevx!, gees!, eig_full!, eig_vals!, schur_full!
 using LinearAlgebra: Diagonal, sorteig!
 using GenericSchur
 
-for elt in (BigFloat, Complex{BigFloat})
-    @eval function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{$elt}}
-        return GS_QRIteration(; kwargs...)
-    end
 const GSFloat = Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}
 
 function MatrixAlgebraKit.default_eig_algorithm(
@@ -51,7 +47,7 @@ Base.@deprecate(
     schur_vals!(A, vals, QRIteration(; driver = GS(), alg.kwargs...))
 )
 
-function MatrixAlgebraKit.default_exponential_algorithm(E::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
+function MatrixAlgebraKit.default_exponential_algorithm(E::Type{T}; kwargs...) where {T <: StridedMatrix{<:GSFloat}}
     eig_alg = MatrixAlgebraKit.default_eig_algorithm(E; kwargs...)
     return MatrixFunctionViaEig(eig_alg)
 end
