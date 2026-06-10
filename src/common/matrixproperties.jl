@@ -50,7 +50,7 @@ function is_left_isometric(A::AbstractMatrix; atol::Real = 0, rtol::Real = defau
     P = A' * A
     nP = norm(P) # isapprox would use `rtol * max(norm(P), norm(I))`
     diagview(P) .-= 1
-    return norm(P) <= max(atol, rtol * nP) # assume that the norm of I is `sqrt(n)`
+    return norm(P) ≤ max(atol, rtol * nP) # assume that the norm of I is `sqrt(n)`
 end
 
 @doc """
@@ -157,7 +157,7 @@ function strided_ishermitian_approx(
     for j in 1:blocksize:n
         jb = min(blocksize, n - j + 1)
         ϵ² += _ishermitian_approx_diag(view(A, j:(j + jb - 1), j:(j + jb - 1)), anti)
-        ϵ² < ϵ²max || return false
+        ϵ² ≤ ϵ²max || return false
         for i in 1:blocksize:(j - 1)
             ib = blocksize
             ϵ² += 2 * _ishermitian_approx_offdiag(
@@ -165,7 +165,7 @@ function strided_ishermitian_approx(
                 view(A, j:(j + jb - 1), i:(i + ib - 1)),
                 anti
             )
-            ϵ² < ϵ²max || return false
+            ϵ² ≤ ϵ²max || return false
         end
     end
     return true

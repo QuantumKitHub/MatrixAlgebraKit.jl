@@ -16,12 +16,12 @@ export project_hermitian, project_antihermitian, project_isometric
 export project_hermitian!, project_antihermitian!, project_isometric!
 export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
-export svd_compact, svd_full, svd_vals, svd_trunc
-export svd_compact!, svd_full!, svd_vals!, svd_trunc!
-export eigh_full, eigh_vals, eigh_trunc
-export eigh_full!, eigh_vals!, eigh_trunc!
-export eig_full, eig_vals, eig_trunc
-export eig_full!, eig_vals!, eig_trunc!
+export svd_compact, svd_full, svd_vals, svd_trunc, svd_trunc_no_error
+export svd_compact!, svd_full!, svd_vals!, svd_trunc!, svd_trunc_no_error!
+export eigh_full, eigh_vals, eigh_trunc, eigh_trunc_no_error
+export eigh_full!, eigh_vals!, eigh_trunc!, eigh_trunc_no_error!
+export eig_full, eig_vals, eig_trunc, eig_trunc_no_error
+export eig_full!, eig_vals!, eig_trunc!, eig_trunc_no_error!
 export gen_eig_full, gen_eig_vals
 export gen_eig_full!, gen_eig_vals!
 export schur_full, schur_vals
@@ -32,13 +32,17 @@ export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
 export exponential, exponential!, exponentialr, exponentialr!
 
+export Householder, Native_HouseholderQR, Native_HouseholderLQ
+export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar
+export RobustRepresentations
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
-    LAPACK_DivideAndConquer, LAPACK_Jacobi
+    LAPACK_DivideAndConquer, LAPACK_Jacobi, LAPACK_SafeDivideAndConquer
 export GLA_HouseholderQR, GLA_QRIteration, GS_QRIteration
 export LQViaTransposedQR
 export PolarViaSVD, PolarNewton
 export MatrixFunctionViaLA, MatrixFunctionViaEig, MatrixFunctionViaEigh
+export DefaultAlgorithm
 export DiagonalAlgorithm
 export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
@@ -58,7 +62,7 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
     eval(
         Expr(
             :public, :TruncationByOrder, :TruncationByFilter, :TruncationByValue,
-            :TruncationByError, :TruncationIntersection, :truncate
+            :TruncationByError, :TruncationIntersection, :TruncationUnion, :truncate
         )
     )
     eval(
@@ -70,10 +74,20 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
             :svd_pullback!, :svd_trunc_pullback!, :svd_vals_pullback!
         )
     )
+    eval(
+        Expr(
+            :public, :remove_svd_gauge_dependence!,
+            :remove_eig_gauge_dependence!, :remove_eigh_gauge_dependence!,
+            :remove_qr_gauge_dependence!, :remove_qr_null_gauge_dependence!,
+            :remove_lq_gauge_dependence!, :remove_lq_null_gauge_dependence!,
+            :remove_left_null_gauge_dependence!, :remove_right_null_gauge_dependence!,
+        )
+    )
     eval(Expr(:public, :is_left_isometric, :is_right_isometric))
 end
 
 include("common/defaults.jl")
+include("common/householder.jl")
 include("common/initialization.jl")
 include("common/pullbacks.jl")
 include("common/safemethods.jl")
@@ -100,8 +114,6 @@ include("interface/polar.jl")
 include("interface/orthnull.jl")
 include("interface/exponential.jl")
 
-include("common/gauge.jl") # needs to be defined after the functions are
-
 include("implementations/projections.jl")
 include("implementations/truncation.jl")
 include("implementations/qr.jl")
@@ -115,11 +127,15 @@ include("implementations/polar.jl")
 include("implementations/orthnull.jl")
 include("implementations/exponential.jl")
 
+include("common/gauge.jl") # needs to be defined after the functions are
+
 include("pullbacks/qr.jl")
 include("pullbacks/lq.jl")
 include("pullbacks/eig.jl")
 include("pullbacks/eigh.jl")
 include("pullbacks/svd.jl")
 include("pullbacks/polar.jl")
+
+include("precompile.jl")
 
 end

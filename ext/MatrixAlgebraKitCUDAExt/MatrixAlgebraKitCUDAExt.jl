@@ -4,72 +4,61 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: @algdef, Algorithm, check_input
 using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
-using MatrixAlgebraKit: LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
+using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
-import MatrixAlgebraKit: _gpu_geqrf!, _gpu_ungqr!, _gpu_unmqr!, _gpu_gesvd!, _gpu_Xgesvdp!, _gpu_Xgesvdr!, _gpu_gesvdj!, _gpu_geev!
-import MatrixAlgebraKit: _gpu_heevj!, _gpu_heevd!
-using CUDA, CUDA.CUBLAS
+import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
+import MatrixAlgebraKit: heevj!, heevd!, geev!
+import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank
+using CUDA, CUDA.cuBLAS
 using CUDA: i32
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
 
 include("yacusolver.jl")
 
-function MatrixAlgebraKit.default_qr_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
-    return CUSOLVER_HouseholderQR(; kwargs...)
+MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedCuVecOrMat{<:BlasFloat}} = CUSOLVER()
+
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
+    return QRIteration(; kwargs...)
 end
-function MatrixAlgebraKit.default_lq_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
-    qr_alg = CUSOLVER_HouseholderQR(; kwargs...)
-    return LQViaTransposedQR(qr_alg)
+function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
+    return QRIteration(; kwargs...)
 end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
-    return CUSOLVER_QRIteration(; kwargs...)
-end
-function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
-    return CUSOLVER_Simple(; kwargs...)
-end
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {TT <: BlasFloat, T <: StridedCuMatrix{TT}}
-    return CUSOLVER_DivideAndConquer(; kwargs...)
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
+    return DivideAndConquer(; kwargs...)
 end
 
-# include for block sector support
-function MatrixAlgebraKit.default_qr_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
-    return CUSOLVER_HouseholderQR(; kwargs...)
-end
-function MatrixAlgebraKit.default_lq_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
-    qr_alg = CUSOLVER_HouseholderQR(; kwargs...)
-    return LQViaTransposedQR(qr_alg)
-end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
-    return CUSOLVER_Jacobi(; kwargs...)
-end
-function MatrixAlgebraKit.default_eig_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
-    return CUSOLVER_Simple(; kwargs...)
-end
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{Base.ReshapedArray{T, 2, SubArray{T, 1, A, Tuple{UnitRange{Int}}, true}, Tuple{}}}; kwargs...) where {T <: BlasFloat, A <: CuVecOrMat{T}}
-    return CUSOLVER_DivideAndConquer(; kwargs...)
+
+for f in (:geqrf!, :ungqr!, :unmqr!)
+    @eval $f(::CUSOLVER, args...) = YACUSOLVER.$f(args...)
 end
 
-_gpu_geev!(A::StridedCuMatrix, D::StridedCuVector, V::StridedCuMatrix) =
-    YACUSOLVER.Xgeev!(A, D, V)
-_gpu_geqrf!(A::StridedCuMatrix) =
-    YACUSOLVER.geqrf!(A)
-_gpu_ungqr!(A::StridedCuMatrix, τ::StridedCuVector) =
-    YACUSOLVER.ungqr!(A, τ)
-_gpu_unmqr!(side::AbstractChar, trans::AbstractChar, A::StridedCuMatrix, τ::StridedCuVector, C::StridedCuVecOrMat) =
-    YACUSOLVER.unmqr!(side, trans, A, τ, C)
-_gpu_gesvd!(A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix) =
-    YACUSOLVER.gesvd!(A, S, U, Vᴴ)
-_gpu_Xgesvdp!(A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
-    YACUSOLVER.Xgesvdp!(A, S, U, Vᴴ; kwargs...)
+MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
+
+function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
+    m, n = size(A)
+    m >= n && return YACUSOLVER.gesvd!(A, S, U, Vᴴ)
+    return MatrixAlgebraKit.svd_via_adjoint!(gesvd!, CUSOLVER(), A, S, U, Vᴴ; kwargs...)
+end
+
+function gesvdj!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
+    m, n = size(A)
+    m >= n && return YACUSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
+    return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, CUSOLVER(), A, S, U, Vᴴ; kwargs...)
+end
+
+gesvdp!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
+    YACUSOLVER.gesvdp!(A, S, U, Vᴴ; kwargs...)
+
 _gpu_Xgesvdr!(A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
-    YACUSOLVER.Xgesvdr!(A, S, U, Vᴴ; kwargs...)
-_gpu_gesvdj!(A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
-    YACUSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
+    YACUSOLVER.gesvdr!(A, S, U, Vᴴ; kwargs...)
 
-_gpu_heevj!(A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix; kwargs...) =
+geev!(::CUSOLVER, A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix) =
+    YACUSOLVER.Xgeev!(A, Dd, V)
+
+heevj!(::CUSOLVER, A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix; kwargs...) =
     YACUSOLVER.heevj!(A, Dd, V; kwargs...)
-_gpu_heevd!(A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix; kwargs...) =
+heevd!(::CUSOLVER, A::StridedCuMatrix, Dd::StridedCuVector, V::StridedCuMatrix; kwargs...) =
     YACUSOLVER.heevd!(A, Dd, V; kwargs...)
 
 function MatrixAlgebraKit.findtruncated_svd(values::StridedCuVector, strategy::TruncationByValue)
@@ -182,5 +171,32 @@ function MatrixAlgebraKit._avgdiff!(A::StridedCuMatrix, B::StridedCuMatrix)
     @cuda threads = thread_dim blocks = block_dim _avgdiff_kernel(A, B)
     return A, B
 end
+
+# avoids calling the BlasMat specialization that assumes syrk! or herk! is called
+# TODO: remove once syrk! or herk! is defined
+function MatrixAlgebraKit._mul_herm!(C::StridedCuMatrix{T}, A::StridedCuMatrix{T}) where {T <: BlasFloat}
+    mul!(C, A, A')
+    project_hermitian!(C)
+    return C
+end
+
+# TODO: intersect/union don't work on GPU
+MatrixAlgebraKit._ind_intersect(A::CuVector{Int}, B::CuVector{Int}) =
+    MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
+MatrixAlgebraKit._ind_union(A::AbstractVector{<:Integer}, B::CuVector{Int}) =
+    MatrixAlgebraKit._ind_union(A, collect(B))
+MatrixAlgebraKit._ind_union(A::CuVector{Int}, B::AbstractVector{<:Integer}) =
+    MatrixAlgebraKit._ind_union(collect(A), B)
+MatrixAlgebraKit._ind_union(A::CuVector{Int}, B::CuVector{Int}) =
+    MatrixAlgebraKit._ind_union(collect(A), collect(B))
+
+function _sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
+    # https://github.com/JuliaGPU/CUDA.jl/issues/3021
+    # to add native sylvester to CUDA
+    hX = sylvester(collect(A), collect(B), collect(C))
+    return CuArray(hX)
+end
+
+svd_rank(S::AnyCuVector, rank_atol) = findlast(s -> s ≥ rank_atol, S)
 
 end

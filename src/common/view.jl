@@ -44,7 +44,8 @@ map_diagonal!(f, dst, src, srcs...) = (diagview(dst) .= f.(diagview(src), map(di
 function lowertriangularind(A::AbstractMatrix)
     Base.require_one_based_indexing(A)
     m, n = size(A)
-    I = Vector{Int}(undef, div(m * (m - 1), 2) + m * (n - m))
+    minmn = min(m, n)
+    I = Vector{Int}(undef, div(minmn * (minmn - 1), 2) + minmn * (m - minmn))
     offset = 0
     for j in 1:n
         r = (j + 1):m
@@ -57,7 +58,8 @@ end
 function uppertriangularind(A::AbstractMatrix)
     Base.require_one_based_indexing(A)
     m, n = size(A)
-    I = Vector{Int}(undef, div(m * (m - 1), 2) + m * (n - m))
+    minmn = min(m, n)
+    I = Vector{Int}(undef, div(minmn * (minmn - 1), 2) + minmn * (n - minmn))
     offset = 0
     for i in 1:m
         r = (i + 1):n

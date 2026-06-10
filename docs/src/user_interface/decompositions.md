@@ -16,6 +16,7 @@ f!(A, [F]; kwargs...) -> F...
 
 Here, the input matrix is always the first argument, and optionally the output can be provided as well.
 The keywords are algorithm-specific, and can be used to influence the behavior of the algorithms.
+For a full description of how to select and configure algorithms, see [Algorithm Selection](@ref sec_algorithmselection).
 Importantly, for generic code patterns it is recommended to always use the output `F` explicitly, since some implementations may not be able to reuse the provided memory.
 Additionally, the `f!` method typically assumes that it is allowed to destroy the input `A`, and making use of the contents of `A` afterwards should be deemed as undefined behavior.
 
@@ -39,11 +40,11 @@ lq_full
 lq_compact
 ```
 
-Alongside these functions, we provide a LAPACK-based implementation for dense arrays, as provided by the following algorithm:
+The following algorithms are available for QR and LQ decompositions:
 
-```@docs; canonical=false
-LAPACK_HouseholderQR
-LAPACK_HouseholderLQ
+```@autodocs; canonical=false
+Modules = [MatrixAlgebraKit]
+Filter = t -> t isa Type && (t <: MatrixAlgebraKit.QRAlgorithms || t <: MatrixAlgebraKit.LQAlgorithms)
 ```
 
 ## Eigenvalue Decomposition
@@ -62,9 +63,9 @@ These functions return the diagonal elements of `D` in a vector.
 Finally, it is also possible to compute a partial or truncated eigenvalue decomposition, using the [`eig_trunc`](@ref) and [`eigh_trunc`](@ref) functions.
 To control the behavior of the truncation, we refer to [Truncations](@ref) for more information.
 
-### Symmetric Eigenvalue Decomposition
+### Hermitian or Real Symmetric Eigenvalue Decomposition
 
-For symmetric matrices, we provide the following functions:
+For hermitian matrices, thus including real symmetric matrices, we provide the following functions:
 
 ```@docs; canonical=false
 eigh_full
@@ -77,11 +78,11 @@ eigh_vals
     By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
     See [Gauge choices](@ref sec_gaugefix) for more details.
 
-Alongside these functions, we provide a LAPACK-based implementation for dense arrays, as provided by the following algorithms:
+The following algorithms are available for the hermitian eigenvalue decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_EighAlgorithm
+Filter = t -> t isa Type && t <: MatrixAlgebraKit.EighAlgorithms
 ```
 
 ### Eigenvalue Decomposition
@@ -99,11 +100,11 @@ eig_vals
     By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
     See [Gauge choices](@ref sec_gaugefix) for more details.
 
-Alongside these functions, we provide a LAPACK-based implementation for dense arrays, as provided by the following algorithms:
+The following algorithms are available for the standard eigenvalue decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_EigAlgorithm
+Filter = t -> t isa Type && t <: MatrixAlgebraKit.EigAlgorithms
 ```
 
 ## Schur Decomposition
@@ -119,11 +120,11 @@ schur_full
 schur_vals
 ```
 
-The LAPACK-based implementation for dense arrays is provided by the following algorithms:
+The following algorithms are available for the Schur decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_EigAlgorithm
+Filter = t -> t isa Type && t <: MatrixAlgebraKit.SchurAlgorithms
 ```
 
 ## Singular Value Decomposition
@@ -152,11 +153,11 @@ svd_trunc
     By default, MatrixAlgebraKit applies a gauge fixing convention to ensure reproducible results.
     See [Gauge choices](@ref sec_gaugefix) for more details.
 
-MatrixAlgebraKit again ships with LAPACK-based implementations for dense arrays:
+The following algorithms are available for the singular value decomposition:
 
 ```@autodocs; canonical=false
 Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && t <: MatrixAlgebraKit.LAPACK_SVDAlgorithm
+Filter = t -> t isa Type && t <: MatrixAlgebraKit.SVDAlgorithms
 ```
 
 ## Polar Decomposition

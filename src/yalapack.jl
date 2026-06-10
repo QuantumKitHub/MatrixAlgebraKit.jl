@@ -10,76 +10,79 @@ module YALAPACK # Yet another lapack wrapper
 
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, Char, LAPACK,
     LAPACKException, SingularException, PosDefException, checksquare, chkstride1,
-    require_one_based_indexing, triu!, isposdef, adjoint!
+    require_one_based_indexing, triu!, isposdef, adjoint!, rmul!
 
 using LinearAlgebra.BLAS: @blasfunc, libblastrampoline
 using LinearAlgebra.LAPACK: chkfinite, chktrans, chkside, chkuplofinite, chklapackerror
 
-# type alias for matrices that are definitely supported by YALAPACK
+# type alias for vectors/matrices that are definitely supported by YALAPACK
+const BlasVec{T <: BlasFloat} = StridedVector{T}
 const BlasMat{T <: BlasFloat} = StridedMatrix{T}
-# type alias for matrices that are possibly supported by YALAPACK, after conversion
+# type alias for vectors/matrices that are possibly supported by YALAPACK, after conversion
+const MaybeBlasVec = Union{BlasVec, AbstractVector{<:Integer}}
 const MaybeBlasMat = Union{BlasMat, AbstractMatrix{<:Integer}}
+const MaybeBlasVecOrMat = Union{MaybeBlasVec, MaybeBlasMat}
 
-# LU factorisation
-for (getrf, getrs, elty) in (
-        (:dgetrf_, :dgetrs_, :Float64),
-        (:sgetrf_, :sgetrs_, :Float32),
-        (:zgetrf_, :zgetrs_, :ComplexF64),
-        (:cgetrf_, :cgetrs_, :ComplexF32),
-    )
-    @eval begin
-        function getrf!(
-                A::AbstractMatrix{$elty}, ipiv::AbstractVector{BlasInt};
-                check::Bool = true
-            )
-            require_one_based_indexing(A, ipiv)
-            chkstride1(A, ipiv)
-            chkfinite(A)
-            m, n = size(A)
+# LU factorisation (currently unused in MatrixAlgebraKit)
+# for (getrf, getrs, elty) in (
+#         (:dgetrf_, :dgetrs_, :Float64),
+#         (:sgetrf_, :sgetrs_, :Float32),
+#         (:zgetrf_, :zgetrs_, :ComplexF64),
+#         (:cgetrf_, :cgetrs_, :ComplexF32),
+#     )
+#     @eval begin
+#         function getrf!(
+#                 A::AbstractMatrix{$elty}, ipiv::AbstractVector{BlasInt};
+#                 check::Bool = true
+#             )
+#             require_one_based_indexing(A, ipiv)
+#             chkstride1(A, ipiv)
+#             chkfinite(A)
+#             m, n = size(A)
 
-            lda = max(1, stride(A, 2))
-            info = Ref{BlasInt}()
-            ccall(
-                (@blasfunc($getrf), libblastrampoline), Cvoid,
-                (
-                    Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty},
-                    Ref{BlasInt}, Ptr{BlasInt}, Ptr{BlasInt},
-                ),
-                m, n, A, lda, ipiv, info
-            )
-            chkargsok(info[])
-            return A, ipiv, info[] #Error code is stored in LU factorization type
-        end
-        function getrs!(
-                trans::AbstractChar, A::AbstractMatrix{$elty},
-                ipiv::AbstractVector{BlasInt}, B::AbstractVecOrMat{$elty}
-            )
-            require_one_based_indexing(A, ipiv, B)
-            chktrans(trans)
-            chkstride1(A, B, ipiv)
-            n = checksquare(A)
-            if n != size(B, 1)
-                throw(DimensionMismatch(lazy"B has leading dimension $(size(B,1)), but needs $n"))
-            end
-            if n != length(ipiv)
-                throw(DimensionMismatch(lazy"ipiv has length $(length(ipiv)), but needs to be $n"))
-            end
-            nrhs = size(B, 2)
-            info = Ref{BlasInt}()
-            ccall(
-                (@blasfunc($getrs), libblastrampoline), Cvoid,
-                (
-                    Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                    Ptr{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong,
-                ),
-                trans, n, size(B, 2), A, max(1, stride(A, 2)), ipiv, B,
-                max(1, stride(B, 2)), info, 1
-            )
-            chklapackerror(info[])
-            return B
-        end
-    end
-end
+#             lda = max(1, stride(A, 2))
+#             info = Ref{BlasInt}()
+#             ccall(
+#                 (@blasfunc($getrf), libblastrampoline), Cvoid,
+#                 (
+#                     Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty},
+#                     Ref{BlasInt}, Ptr{BlasInt}, Ptr{BlasInt},
+#                 ),
+#                 m, n, A, lda, ipiv, info
+#             )
+#             chkargsok(info[])
+#             return A, ipiv, info[] #Error code is stored in LU factorization type
+#         end
+#         function getrs!(
+#                 trans::AbstractChar, A::AbstractMatrix{$elty},
+#                 ipiv::AbstractVector{BlasInt}, B::AbstractVecOrMat{$elty}
+#             )
+#             require_one_based_indexing(A, ipiv, B)
+#             chktrans(trans)
+#             chkstride1(A, B, ipiv)
+#             n = checksquare(A)
+#             if n != size(B, 1)
+#                 throw(DimensionMismatch(lazy"B has leading dimension $(size(B,1)), but needs $n"))
+#             end
+#             if n != length(ipiv)
+#                 throw(DimensionMismatch(lazy"ipiv has length $(length(ipiv)), but needs to be $n"))
+#             end
+#             nrhs = size(B, 2)
+#             info = Ref{BlasInt}()
+#             ccall(
+#                 (@blasfunc($getrs), libblastrampoline), Cvoid,
+#                 (
+#                     Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+#                     Ptr{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong,
+#                 ),
+#                 trans, n, size(B, 2), A, max(1, stride(A, 2)), ipiv, B,
+#                 max(1, stride(B, 2)), info, 1
+#             )
+#             chklapackerror(info[])
+#             return B
+#         end
+#     end
+# end
 
 # LQ, RQ, QL, and QR factorisation
 const DEFAULT_QR_BLOCKSIZE = 36
@@ -96,7 +99,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
     #! format: on
     @eval begin
         # Flexible QR / LQ
-        function geqr!(A::AbstractMatrix{$elty})
+        #=function geqr!(A::AbstractMatrix{$elty})
             require_one_based_indexing(A)
             chkstride1(A)
             m, n = size(A)
@@ -159,7 +162,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
                 end
             end
             return A, t
-        end
+        end=#
 
         # Classic QR / LQ / QL / RQ
         function geqrf!(
@@ -228,7 +231,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             end
             return A, tau
         end
-        function geqlf!(
+        #=function geqlf!(
                 A::AbstractMatrix{$elty},
                 tau::AbstractVector{$elty} = similar(A, $elty, min(size(A)...))
             )
@@ -293,7 +296,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
                 end
             end
             return A, tau
-        end
+        end=#
 
         # QR and LQ with block reflectors
         #! format: off
@@ -438,7 +441,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
     #! format: on
     @eval begin
         # multiply with Q factor of flexible QR / LQ
-        function gemqr!(
+        #=function gemqr!(
                 side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
                 T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty}
             )
@@ -451,16 +454,16 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             k = min(mA, nA)
 
             if side == 'L' && mC != mA
-                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $m, must equal the first dimension of A, $mA"))
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $mC, must equal the first dimension of A, $mA"))
             end
             if side == 'R' && nC != mA
-                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $n, must equal the first dimension of A, $mA"))
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $nC, must equal the first dimension of A, $mA"))
             end
             if side == 'L' && k > mC
-                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= m = $m"))
+                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= m = $mC"))
             end
             if side == 'R' && k > nC
-                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= n = $n"))
+                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= n = $nC"))
             end
             lda = max(1, stride(A, 2))
             ldc = max(1, stride(C, 2))
@@ -503,16 +506,16 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             k = min(mA, nA)
 
             if side == 'L' && mC != nA
-                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $m, must equal the second dimension of A, $nA"))
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $mC, must equal the second dimension of A, $nA"))
             end
             if side == 'R' && nC != nA
-                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $n, must equal the second dimension of A, $nA"))
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $nC, must equal the second dimension of A, $nA"))
             end
             if side == 'L' && k > mC
-                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= m = $m"))
+                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= m = $mC"))
             end
             if side == 'R' && k > nC
-                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= n = $n"))
+                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= n = $nC"))
             end
             lda = max(1, stride(A, 2))
             ldc = max(1, stride(C, 2))
@@ -541,7 +544,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return C
-        end
+        end=#
 
         # Build Q factor of classic QR / LQ / QL / RQ in the space of `A`
         function ungqr!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
@@ -612,7 +615,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return A
         end
-        function ungql!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
+        #=function ungql!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
             m, n = size(A)
@@ -679,7 +682,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return A
-        end
+        end=#
 
         # multiply with Q factor of classic QR / LQ / QL / RQ
         function unmqr!(
@@ -778,7 +781,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
             end
             return C
         end
-        function unmql!(
+        #=function unmql!(
                 side::AbstractChar, trans::AbstractChar,
                 A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
                 C::AbstractVecOrMat{$elty}
@@ -873,7 +876,7 @@ for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqr
                 end
             end
             return C
-        end
+        end=#
 
         # Multiply with blocked Q factor from QR / LQ
         function gemqrt!(
@@ -1170,6 +1173,7 @@ for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
             n = checksquare(A)
             chkuplofinite(A, uplo)
             if haskey(kwargs, :irange)
+                irange = convert(UnitRange{Int}, kwargs[:irange])
                 il = first(irange)
                 iu = last(irange)
                 vl = vu = zero($relty)
@@ -1963,6 +1967,27 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
             minmn = min(m, n)
+            work = Vector{$elty}(undef, 1)
+            cmplx = eltype(A) <: Complex
+            if cmplx
+                rwork = Vector{$relty}(undef, 5 * minmn)
+            else
+                rwork = nothing
+            end
+            (S, U, Vᴴ), info = _gesvd_body!(A, S, U, Vᴴ, work, rwork)
+            chklapackerror(info)
+            return S, U, Vᴴ
+        end
+        function _gesvd_body!(
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty},
+                U::AbstractMatrix{$elty},
+                Vᴴ::AbstractMatrix{$elty},
+                work::Vector{$elty},
+                rwork::Union{Vector{$relty}, Nothing}
+            )
+            m, n = size(A)
+            minmn = min(m, n)
             if length(U) == 0
                 jobu = 'N'
             else
@@ -2003,16 +2028,11 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(U, 2))
             ldv = max(1, stride(Vᴴ, 2))
-            work = Vector{$elty}(undef, 1)
             lwork = BlasInt(-1)
-            cmplx = eltype(A) <: Complex
-            if cmplx
-                rwork = Vector{$relty}(undef, 5 * minmn)
-            end
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
                 #! format: off
-                if cmplx
+                if eltype(A) <: Complex
                     ccall((@blasfunc($gesvd), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
@@ -2034,13 +2054,13 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                           info, 1, 1)
                 end
                 #! format: on
-                chklapackerror(info[])
                 if i == 1
+                    chklapackerror(info[]) # bail out early if even the workspace query failed
                     lwork = BlasInt(real(work[1]))
                     resize!(work, lwork)
                 end
             end
-            return (S, U, Vᴴ)
+            return (S, U, Vᴴ), info[]
         end
         #! format: off
         function gesdd!(
@@ -2052,6 +2072,33 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             #! format: on
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            minmn = min(m, n)
+            work = Vector{$elty}(undef, 1)
+            if eltype(A) <: Complex
+                if length(U) == 0 && length(Vᴴ) == 0
+                    lrwork = (LAPACK.version() <= v"3.6") ? 7 * minmn : 5 * minmn
+                else
+                    lrwork = minmn * max(5 * minmn + 5, 2 * max(m, n) + 2 * minmn + 1)
+                end
+                rwork = Vector{$relty}(undef, lrwork)
+            else
+                rwork = nothing
+            end
+            (S, U, Vᴴ), info = _gesdd_body!(A, S, U, Vᴴ, work, rwork)
+            chklapackerror(info)
+            return S, U, Vᴴ
+        end
+        #! format: off
+        function _gesdd_body!(
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty},
+                U::AbstractMatrix{$elty},
+                Vᴴ::AbstractMatrix{$elty},
+                work::Vector{$elty},
+                rwork::Union{Vector{$relty}, Nothing}
+            )
+            #! format: on
             m, n = size(A)
             minmn = min(m, n)
 
@@ -2082,19 +2129,12 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(U, 2))
             ldv = max(1, stride(Vᴴ, 2))
-            work = Vector{$elty}(undef, 1)
             lwork = BlasInt(-1)
-            cmplx = eltype(A) <: Complex
-            if cmplx
-                lrwork = job == 'N' ? 7 * minmn :
-                    minmn * max(5 * minmn + 7, 2 * max(m, n) + 2 * minmn + 1)
-                rwork = Vector{$relty}(undef, lrwork)
-            end
             iwork = Vector{BlasInt}(undef, 8 * minmn)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
                 #! format: off
-                if cmplx
+                if eltype(A) <: Complex
                     ccall((@blasfunc($gesdd), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
@@ -2116,8 +2156,8 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                           info, 1)
                 end
                 #! format: on
-                chklapackerror(info[])
                 if i == 1
+                    chklapackerror(info[]) # bail out if even the workspace query failed
                     # Work around issue with truncated Float32 representation of lwork in
                     # sgesdd by using nextfloat. See
                     # http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=13&t=4587&p=11036&hilit=sgesdd#p11036
@@ -2127,7 +2167,38 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                     resize!(work, lwork)
                 end
             end
-            return (S, U, Vᴴ)
+            return (S, U, Vᴴ), info[]
+        end
+        #! format: off
+        function gesdvd!( # SafeSVD implementation
+                A::AbstractMatrix{$elty},
+                S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::AbstractMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::AbstractMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+            )
+            #! format: on
+            require_one_based_indexing(A, U, Vᴴ, S)
+            chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            minmn = min(m, n)
+            work = Vector{$elty}(undef, 1)
+            if eltype(A) <: Complex
+                if length(U) == 0 && length(Vᴴ) == 0
+                    lrwork = (LAPACK.version() <= v"3.6") ? 7 * minmn : 5 * minmn
+                else
+                    lrwork = minmn * max(5 * minmn + 5, 2 * max(m, n) + 2 * minmn + 1)
+                end
+                rwork = Vector{$relty}(undef, lrwork)
+            else
+                rwork = nothing
+            end
+            Ac = copy(A)
+            (S, U, Vᴴ), info = _gesdd_body!(Ac, S, U, Vᴴ, work, rwork)
+            if info > 0
+                (S, U, Vᴴ), info = _gesvd_body!(A, S, U, Vᴴ, work, rwork)
+            end
+            chklapackerror(info)
+            return S, U, Vᴴ
         end
         #! format: off
         function gesvdx!(
@@ -2143,6 +2214,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             m, n = size(A)
             minmn = min(m, n)
             if haskey(kwargs, :irange)
+                irange = convert(UnitRange{Int}, kwargs[:irange])
                 il = first(irange)
                 iu = last(irange)
                 vl = vu = zero($relty)
@@ -2162,7 +2234,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 jobu = 'N'
             else
                 size(U, 1) == m ||
-                    throw(DimensionMismatch("row size mismatch between A and U"))
+                    throw(DimensionMismatch("row size mismatch between A ($m) and U ($(size(U, 1)))"))
                 size(U, 2) >= (range == 'I' ? iu - il + 1 : minmn) ||
                     throw(DimensionMismatch("invalid column size of U"))
                 jobu = 'V'
@@ -2171,13 +2243,13 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 jobvt = 'N'
             else
                 size(Vᴴ, 2) == n ||
-                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                    throw(DimensionMismatch("column size mismatch between A ($n) and Vᴴ ($(size(Vᴴ, 2)))"))
                 size(Vᴴ, 1) >= (range == 'I' ? iu - il + 1 : minmn) ||
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 jobvt = 'V'
             end
             length(S) == minmn ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+                throw(DimensionMismatch("length mismatch between A ($minmn) and S ($(length(S)))"))
 
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(U, 2))
@@ -2231,7 +2303,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             end
             return (S, U, Vᴴ)
         end
-        function gesvj!(
+        function gesvdj!(
                 A::AbstractMatrix{$elty},
                 S::AbstractVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::AbstractMatrix{$elty} = similar(
@@ -2247,15 +2319,15 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
-            m >= n ||
-                throw(ArgumentError("gejsv! requires a matrix with at least as many rows as columns"))
+            m ≥ n ||
+                throw(ArgumentError("gejsv! requires a matrix with at least as many rows ($m) as columns ($n)"))
 
             joba = 'G'
             if length(U) == 0
                 jobu = 'N'
             else
                 size(U, 1) == m ||
-                    throw(DimensionMismatch("row size mismatch between A and U"))
+                    throw(DimensionMismatch("row size mismatch between A ($m) and U ($(size(U, 1)))"))
                 if size(U, 2) == n
                     jobu = 'U'
                 elseif size(U, 2) == m
@@ -2268,7 +2340,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 jobv = 'N'
             else
                 size(Vᴴ, 2) == n ||
-                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                    throw(DimensionMismatch("column size mismatch between A ($n) and Vᴴ ($(size(Vᴴ, 2)))"))
                 if size(Vᴴ, 1) == n
                     jobv = 'V'
                 else
@@ -2276,7 +2348,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 end
             end
             length(S) == n ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+                throw(DimensionMismatch("length mismatch between A ($n) and S ($(length(S)))"))
 
             lda = max(1, stride(A, 2))
             mv = Ref{BlasInt}() # unused
@@ -2284,7 +2356,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                 if U !== A
                     V = view(U, 1:n, 1:n) # use U as V storage
                 else
-                    V = view(similar(V), 1:n, 1:n)
+                    V = view(similar(Vᴴ), 1:n, 1:n)
                 end
             else
                 V = Vᴴ # doesn't matter, V is not used
@@ -2342,12 +2414,12 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             if cmplx
                 if !isone(rwork[1])
                     @warn "singular values might have underflowed or overflowed"
-                    LinearAlgebra.rmul!(S, rwork[1])
+                    rmul!(S, rwork[1])
                 end
             else
                 if !isone(work[1])
                     @warn "singular values might have underflowed or overflowed"
-                    LinearAlgebra.rmul!(S, work[1])
+                    rmul!(S, work[1])
                 end
             end
             if jobu == 'U' && U !== A

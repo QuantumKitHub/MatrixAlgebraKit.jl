@@ -1,142 +1,40 @@
-using SafeTestsets
+using ParallelTestRunner
+using MatrixAlgebraKit
 
-# don't run all tests on GPU, only the GPU
-# specific ones
-is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
-if !is_buildkite
-    @safetestset "Algorithms" begin
-        include("algorithms.jl")
-    end
-    @safetestset "Projections" begin
-        include("projections.jl")
-    end
-    @safetestset "Truncate" begin
-        include("truncate.jl")
-    end
-    @safetestset "QR / LQ Decomposition" begin
-        include("qr.jl")
-        include("lq.jl")
-    end
-    @safetestset "Singular Value Decomposition" begin
-        include("svd.jl")
-    end
-    @safetestset "Hermitian Eigenvalue Decomposition" begin
-        include("eigh.jl")
-    end
-    @safetestset "General Eigenvalue Decomposition" begin
-        include("eig.jl")
-    end
-    @safetestset "Generalized Eigenvalue Decomposition" begin
-        include("gen_eig.jl")
-    end
-    @safetestset "Schur Decomposition" begin
-        include("schur.jl")
-    end
-    @safetestset "Polar Decomposition" begin
-        include("polar.jl")
-    end
-    @safetestset "Image and Null Space" begin
-        include("orthnull.jl")
-    end
-    @safetestset "Exponential" begin
-        include("exponential.jl")
-    end
-    @safetestset "Mooncake" begin
-        include("mooncake.jl")
-    end
-    @safetestset "ChainRules" begin
-        include("chainrules.jl")
-    end
-    @safetestset "MatrixAlgebraKit.jl" begin
-        @safetestset "Code quality (Aqua.jl)" begin
-            using MatrixAlgebraKit
-            using Aqua
-            Aqua.test_all(MatrixAlgebraKit)
+# Start with autodiscovered tests
+testsuite = find_tests(@__DIR__)
+
+# remove testsuite
+filter!(!(startswith("testsuite") ∘ first), testsuite)
+
+# remove utils
+delete!(testsuite, "utilities")
+delete!(testsuite, "linearmap")
+
+# Parse arguments
+args = parse_args(ARGS; custom = ["fast"])
+
+fast = !isnothing(args.custom["fast"])
+fast && @info "Selected fast tests"
+
+if filter_tests!(testsuite, args)
+    # don't run all tests on GPU, only the GPU specific ones
+    is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
+    if is_buildkite
+        delete!(testsuite, "algorithms")
+        delete!(testsuite, "truncate")
+        delete!(testsuite, "gen_eig")
+        delete!(testsuite, "chainrules")
+        delete!(testsuite, "codequality")
+    else
+        is_apple_ci = Sys.isapple() && get(ENV, "CI", "false") == "true"
+        is_windows_ci = Sys.iswindows() && get(ENV, "CI", "false") == "true"
+        if is_apple_ci
+            filter!(p -> !startswith(first(p), "mooncake/"), testsuite)
+            filter!(p -> !startswith(first(p), "chainrules/"), testsuite)
         end
-        @safetestset "Code linting (JET.jl)" begin
-            using MatrixAlgebraKit
-            using JET
-            JET.test_package(MatrixAlgebraKit; target_defined_modules = true)
-        end
+        (is_windows_ci || is_apple_ci) && filter!(p -> !startswith(first(p), "enzyme/"), testsuite)
     end
 end
 
-using CUDA
-if CUDA.functional()
-    @safetestset "CUDA QR" begin
-        include("cuda/qr.jl")
-    end
-    @safetestset "CUDA LQ" begin
-        include("cuda/lq.jl")
-    end
-    @safetestset "CUDA Projections" begin
-        include("cuda/projections.jl")
-    end
-    @safetestset "CUDA SVD" begin
-        include("cuda/svd.jl")
-    end
-    @safetestset "CUDA General Eigenvalue Decomposition" begin
-        include("cuda/eig.jl")
-    end
-    @safetestset "CUDA Hermitian Eigenvalue Decomposition" begin
-        include("cuda/eigh.jl")
-    end
-    @safetestset "CUDA Polar Decomposition" begin
-        include("cuda/polar.jl")
-    end
-    @safetestset "CUDA Image and Null Space" begin
-        include("cuda/orthnull.jl")
-    end
-end
-
-using AMDGPU
-if AMDGPU.functional()
-    @safetestset "AMDGPU QR" begin
-        include("amd/qr.jl")
-    end
-    @safetestset "AMDGPU LQ" begin
-        include("amd/lq.jl")
-    end
-    @safetestset "AMDGPU Projections" begin
-        include("amd/projections.jl")
-    end
-    @safetestset "AMDGPU SVD" begin
-        include("amd/svd.jl")
-    end
-    @safetestset "AMDGPU Hermitian Eigenvalue Decomposition" begin
-        include("amd/eigh.jl")
-    end
-    @safetestset "AMDGPU Polar Decomposition" begin
-        include("amd/polar.jl")
-    end
-    @safetestset "AMDGPU Image and Null Space" begin
-        include("amd/orthnull.jl")
-    end
-end
-
-using GenericLinearAlgebra
-if !is_buildkite
-    @safetestset "QR / LQ Decomposition" begin
-        include("genericlinearalgebra/qr.jl")
-        include("genericlinearalgebra/lq.jl")
-    end
-    @safetestset "Singular Value Decomposition" begin
-        include("genericlinearalgebra/svd.jl")
-    end
-    @safetestset "Hermitian Eigenvalue Decomposition" begin
-        include("genericlinearalgebra/eigh.jl")
-    end
-    @safetestset "Exponential" begin
-        include("genericlinearalgebra/exponential.jl")
-    end
-end
-
-using GenericSchur
-if !is_buildkite
-    @safetestset "General Eigenvalue Decomposition" begin
-        include("genericschur/eig.jl")
-    end
-    @safetestset "Exponential" begin
-        include("genericschur/exponential.jl")
-    end
-end
+runtests(MatrixAlgebraKit, args; testsuite, init_code = :(const fast_tests = $fast))

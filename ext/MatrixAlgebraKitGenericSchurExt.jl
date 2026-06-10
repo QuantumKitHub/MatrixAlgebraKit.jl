@@ -1,28 +1,55 @@
 module MatrixAlgebraKitGenericSchurExt
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: check_input
-using LinearAlgebra: Diagonal
+using MatrixAlgebraKit: check_input, GS, Driver
+import MatrixAlgebraKit: geev!, geevx!, gees!, eig_full!, eig_vals!, schur_full!, schur_vals!
+using LinearAlgebra: Diagonal, sorteig!
 using GenericSchur
 
 for elt in (BigFloat, Complex{BigFloat})
     @eval function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedMatrix{$elt}}
         return GS_QRIteration(; kwargs...)
     end
+const GSFloat = Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}
+
+function MatrixAlgebraKit.default_eig_algorithm(
+        ::Type{T}; driver::Driver = GS(), kwargs...
+    ) where {T <: StridedMatrix{<:GSFloat}}
+    return QRIteration(; driver, kwargs...)
 end
 
-for f! in (:eig_full!, :eig_vals!)
-    @eval MatrixAlgebraKit.initialize_output(::typeof($f!), A::AbstractMatrix, ::GS_QRIteration) = nothing
+function geev!(::GS, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)
+    D, Vmat = GenericSchur.eigen!(A)
+    copyto!(Dd, D)
+    length(V) > 0 && copyto!(V, Vmat)
+    return Dd, V
 end
 
-function MatrixAlgebraKit.eig_full!(A::AbstractMatrix, DV, ::GS_QRIteration)
-    D, V = GenericSchur.eigen!(A)
-    return Diagonal(D), V
+function gees!(driver::GS, A::AbstractMatrix, Z::AbstractMatrix, vals::AbstractVector)
+    S = GenericSchur.gschur(A)
+    copyto!(A, S.T)
+    length(Z) > 0 && copyto!(Z, S.Z)
+    copyto!(vals, sorteig!(S.values))
+    return A, Z, vals
 end
 
-function MatrixAlgebraKit.eig_vals!(A::AbstractMatrix, D, ::GS_QRIteration)
-    return GenericSchur.eigvals!(A)
-end
+Base.@deprecate(
+    eig_full!(A, DV, alg::GS_QRIteration),
+    eig_full!(A, DV, QRIteration(; driver = GS(), alg.kwargs...))
+)
+Base.@deprecate(
+    eig_vals!(A, D, alg::GS_QRIteration),
+    eig_vals!(A, D, QRIteration(; driver = GS(), alg.kwargs...))
+)
+
+Base.@deprecate(
+    schur_full!(A, TZv, alg::GS_QRIteration),
+    schur_full!(A, TZv, QRIteration(; driver = GS(), alg.kwargs...))
+)
+Base.@deprecate(
+    schur_vals!(A, vals, alg::GS_QRIteration),
+    schur_vals!(A, vals, QRIteration(; driver = GS(), alg.kwargs...))
+)
 
 function MatrixAlgebraKit.default_exponential_algorithm(E::Type{T}; kwargs...) where {T <: StridedMatrix{<:Union{BigFloat, Complex{BigFloat}}}}
     eig_alg = MatrixAlgebraKit.default_eig_algorithm(E; kwargs...)

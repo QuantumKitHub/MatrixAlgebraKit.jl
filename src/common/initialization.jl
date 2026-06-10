@@ -3,6 +3,10 @@ function zero!(A::AbstractArray)
     A .= zero(eltype(A))
     return A
 end
+function zero!(A::Diagonal)
+    diagview(A) .= zero(eltype(A))
+    return A
+end
 
 function one!(A::AbstractMatrix)
     length(A) > 0 || return A

@@ -6,8 +6,8 @@ copy_input(::typeof(right_polar), A) = copy_input(svd_full, A)
 function check_input(::typeof(left_polar!), A::AbstractMatrix, WP, ::AbstractAlgorithm)
     m, n = size(A)
     W, P = WP
-    m >= n ||
-        throw(ArgumentError("input matrix needs at least as many rows as columns"))
+    m ≥ n ||
+        throw(ArgumentError("input matrix needs at least as many rows ($m) as columns ($n)"))
     @assert W isa AbstractMatrix && P isa AbstractMatrix
     @check_size(W, (m, n))
     @check_scalar(W, A)
@@ -18,8 +18,8 @@ end
 function check_input(::typeof(right_polar!), A::AbstractMatrix, PWᴴ, ::AbstractAlgorithm)
     m, n = size(A)
     P, Wᴴ = PWᴴ
-    n >= m ||
-        throw(ArgumentError("input matrix needs at least as many columns as rows"))
+    n ≥ m ||
+        throw(ArgumentError("input matrix needs at least as many columns ($n) as rows ($m)"))
     @assert P isa AbstractMatrix && Wᴴ isa AbstractMatrix
     isempty(P) || @check_size(P, (m, m))
     @check_scalar(P, A)
@@ -43,6 +43,17 @@ function initialize_output(::typeof(right_polar!), A::AbstractMatrix, ::Abstract
     return (P, Wᴴ)
 end
 
+# DefaultAlgorithm intercepts
+# ---------------------------
+for f! in (:left_polar!, :right_polar!)
+    @eval function $f!(A::AbstractMatrix, alg::DefaultAlgorithm)
+        return $f!(A, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+    @eval function $f!(A::AbstractMatrix, out, alg::DefaultAlgorithm)
+        return $f!(A, out, select_algorithm($f!, A, nothing; alg.kwargs...))
+    end
+end
+
 # Implementation via SVD
 # -----------------------
 function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
@@ -53,7 +64,7 @@ function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
     if !isempty(P)
         S .= sqrt.(S)
         SsqrtVᴴ = lmul!(S, Vᴴ)
-        P = mul!(P, SsqrtVᴴ', SsqrtVᴴ)
+        P = _mul_herm!(P, SsqrtVᴴ')
     end
     return (W, P)
 end
@@ -65,9 +76,22 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarViaSVD)
     if !isempty(P)
         S .= sqrt.(S)
         USsqrt = rmul!(U, S)
-        P = mul!(P, USsqrt, USsqrt')
+        P = _mul_herm!(P, USsqrt)
     end
     return (P, Wᴴ)
+end
+
+# Implement `mul!(C, A', A)` and guarantee the result is hermitian.
+# For BLAS calls that dispatch to `syrk` or `herk` this works automatically
+# for GPU this currently does not seem to be guaranteed so we manually project
+function _mul_herm!(C, A)
+    mul!(C, A, A')
+    project_hermitian!(C)
+    return C
+end
+function _mul_herm!(C::YALAPACK.BlasMat{T}, A::YALAPACK.BlasMat{T}) where {T <: YALAPACK.BlasFloat}
+    mul!(C, A, A')
+    return C
 end
 
 # Implementation via Newton
@@ -76,10 +100,10 @@ function left_polar!(A::AbstractMatrix, WP, alg::PolarNewton)
     check_input(left_polar!, A, WP, alg)
     W, P = WP
     if isempty(P)
-        W = _left_polarnewton!(A, W, P; alg.kwargs...)
+        W = left_polar_newton!(A, W, P; alg.kwargs...)
         return W, P
     else
-        W = _left_polarnewton!(copy(A), W, P; alg.kwargs...)
+        W = left_polar_newton!(copy(A), W, P; alg.kwargs...)
         # we still need `A` to compute `P`
         P = project_hermitian!(mul!(P, W', A))
         return W, P
@@ -90,10 +114,10 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarNewton)
     check_input(right_polar!, A, PWᴴ, alg)
     P, Wᴴ = PWᴴ
     if isempty(P)
-        Wᴴ = _right_polarnewton!(A, Wᴴ, P; alg.kwargs...)
+        Wᴴ = right_polar_newton!(A, Wᴴ, P; alg.kwargs...)
         return P, Wᴴ
     else
-        Wᴴ = _right_polarnewton!(copy(A), Wᴴ, P; alg.kwargs...)
+        Wᴴ = right_polar_newton!(copy(A), Wᴴ, P; alg.kwargs...)
         # we still need `A` to compute `P`
         P = project_hermitian!(mul!(P, A, Wᴴ'))
         return P, Wᴴ
@@ -101,25 +125,25 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarNewton)
 end
 
 # these methods only compute W and destroy A in the process
-function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = defaulttol(A), maxiter = 10)
+function left_polar_newton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = defaulttol(A), maxiter = 10)
     m, n = size(A) # we must have m >= n
     Rᴴinv = isempty(P) ? similar(P, (n, n)) : P # use P as workspace when available
     if m > n # initial QR
         Q, R = qr_compact!(A)
         Rc = view(A, 1:n, 1:n)
-        copy!(Rc, R)
+        Rc .= R
         Rᴴinv = ldiv!(UpperTriangular(Rc)', one!(Rᴴinv))
     else # m == n
         R = A
         Rc = view(W, 1:n, 1:n)
-        copy!(Rc, R)
+        Rc .= R
         Rᴴinv = ldiv!(lu!(Rc)', one!(Rᴴinv))
     end
     γ = sqrt(norm(Rᴴinv) / norm(R)) # scaling factor
     rmul!(R, γ)
     rmul!(Rᴴinv, 1 / γ)
     R, Rᴴinv = _avgdiff!(R, Rᴴinv)
-    copy!(Rc, R)
+    Rc .= R
     i = 1
     conv = norm(Rᴴinv, Inf)
     while i < maxiter && conv > tol
@@ -128,7 +152,7 @@ function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = 
         rmul!(R, γ)
         rmul!(Rᴴinv, 1 / γ)
         R, Rᴴinv = _avgdiff!(R, Rᴴinv)
-        copy!(Rc, R)
+        Rc .= R
         conv = norm(Rᴴinv, Inf)
         i += 1
     end
@@ -141,7 +165,7 @@ function _left_polarnewton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = 
     return W
 end
 
-function _right_polarnewton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); tol = defaulttol(A), maxiter = 10)
+function right_polar_newton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); tol = defaulttol(A), maxiter = 10)
     m, n = size(A) # we must have m <= n
     Lᴴinv = isempty(P) ? similar(P, (m, m)) : P # use P as workspace when available
     if m < n # initial QR
@@ -152,7 +176,7 @@ function _right_polarnewton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); to
     else # m == n
         L = A
         Lc = view(Wᴴ, 1:m, 1:m)
-        copy!(Lc, L)
+        Lc .= L
         Lᴴinv = ldiv!(lu!(Lc)', one!(Lᴴinv))
     end
     γ = sqrt(norm(Lᴴinv) / norm(L)) # scaling factor
@@ -168,7 +192,7 @@ function _right_polarnewton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); to
         rmul!(L, γ)
         rmul!(Lᴴinv, 1 / γ)
         L, Lᴴinv = _avgdiff!(L, Lᴴinv)
-        copy!(Lc, L)
+        Lc .= L
         conv = norm(Lᴴinv, Inf)
         i += 1
     end

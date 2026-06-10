@@ -14,14 +14,11 @@ When making changes to this project, please update the "Unreleased" section with
 - **Deprecated** for soon-to-be removed features.
 - **Removed** for now removed features.
 - **Fixed** for any bug fixes.
-- **Security** in case of vulnerabilities.
+- **Performance** for performance improvements.
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-[Unreleased]: https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.0...HEAD
-[0.6.0]: https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/releases/tag/v0.6.0
-
-## [Unreleased]
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.7...HEAD)
 
 ### Added
 
@@ -33,9 +30,142 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
-### Security
+### Performance
 
-## [0.6.0] - 2025-11-14
+## [0.6.7](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.6...v0.6.7) - 2026-05-06
+
+### Changed
+
+- Test infrastructure: use a test setup matrix like TensorKit ([#215](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/215)).
+
+### Fixed
+
+- Improved consistency of gauge fixing in eigenvalue pullback functions ([#221](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/221)).
+- Ensure no sharing of data in LQ decomposition output ([#219](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/219)).
+- Mooncake and Enzyme AD rules for `Diagonal` inputs ([#179](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/179)).
+
+### Performance
+
+- Added a rudimentary precompile workload to reduce time-to-first-execution ([#217](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/217)).
+
+## [0.6.6](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.5...v0.6.6) - 2026-04-24
+
+### Added
+
+- Add equality comparison (`==`) for `TruncationStrategy` types ([#211](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/211)).
+
+### Changed
+
+- Reorganized pullback implementations and fixed pullback correctness for rank-degenerate SVD cases ([#208](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/208)).
+- Centralized QR/LQ gauge-fixing logic ([#203](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/203)).
+- Bumped CUDA compat to v6, dropping support for older versions ([#209](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/209)).
+- Replaced `CompatHelper` with `dependabot` for dependency updates ([#212](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/212)).
+
+## [0.6.5](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.4...v0.6.5) - 2026-03-24
+
+### Added
+
+- Add AD (ChainRules/Mooncake/Enzyme) pullback rules for (anti-)hermitian projection ([#174](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/174)).
+- Add `TruncationUnion` to support combining multiple truncation schemes by supplying minimal ranks ([#183](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/183)).
+- Add `SafeDivideAndConquer` algorithm variant for more robust singular value decompositions ([#185](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/185)).
+- Add `DefaultAlgorithm` type for explicit dispatch to the default algorithm ([#195](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/195)).
+
+### Changed
+
+- The default behavior of SVD-based nullspaces now includes some small tolerance ([#172](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/170)).
+- The Mooncake rules for truncated decompositions with `TruncatedAlgorithm` now use the pullbacks that make use of the full decomposition. ([#171](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/171))
+- Default algorithms now defined for `SubArray` and `ReshapedArray` ([#182](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/182)).
+- Separated `Algorithm` and `Driver` concepts for QR/LQ, SVD, and Schur/Eig decompositions ([#178](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/178), [#189](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/189), [#194](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/194), [#196](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/196)).
+
+### Fixed
+
+- QR and LQ decompositions were supposed to default to `positive = true` ([#170](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/170)).
+
+## [0.6.4](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.3...v0.6.4) - 2026-01-29
+
+### Added
+
+- Tests for randomized SVD algorithms ([#159](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/159)).
+
+### Changed
+
+- Bumped Mooncake to v0.5 ([#164](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/164)).
+- Test infrastructure: migrated AD tests to `TestSuite` ([#126](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/126)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Mooncake AD rules now correctly set/reset in and outputs ([#158](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/158)).
+- Storage type is now retained in `_ind_intersect` for GPU arrays ([#161](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/161)).
+
+## [0.6.3](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.2...v0.6.3) - 2026-01-23
+
+### Added
+
+- Reverse-mode automatic differentiation rules for Enzyme ([#86](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/86)).
+- Native algorithm implementations for QR and LQ decompositions ([#90](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/90)).
+- Pullbacks for `Diagonal` input matrices in eigenvalue and singular value decompositions ([#156](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/156)).
+
+### Changed
+
+- Test infrastructure: migrated to `ParallelTestRunner` for improved test execution ([#155](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/155)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Eigenvalue decompositions of diagonal inputs are sorted and have the same type as non-diagonal inputs ([#151](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/151)).
+- Consistent `checksquare` usage across codebase ([#154](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/154)).
+- Typos in error messages ([#153](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/153)).
+
+## [0.6.2](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.1...v0.6.2) - 2026-01-08
+
+### Added
+
+### Changed
+
+- Improved test infrastructure: migrated additional tests to the common `TestSuite` and added GPU/truncated-methods tests for SVD and related functionality ([#137](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/137), [#142](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/142), [#146](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/146), [#128](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/128)).
+- Eigenvalue decompositions of diagonal inputs have the same sorting as non-diagonal inputs ([#143](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/142)
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Polar decompositions return exact hermitian factors ([#143](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/143)).
+- Fixed a small typo in `TruncationByValue` and related docstrings ([#136](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/136)).
+- YALAPACK fixes and test adjustments ([#135](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/135)).
+- Various truncation schemes are now supported on the GPU.
+
+## [0.6.1](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.0...v0.6.1) - 2025-12-28
+
+### Added
+
+- Support for null-space computation via Householder QR in the `GenericLinearAlgebra` extension ([#132](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/132)).
+- New truncated-eigensolver variants: `eig_trunc_no_error` and `eigh_trunc_no_error` ([#117](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/117)).
+- New truncated-singular value variant: `svd_trunc_no_error` to improve GPU synchronization and AD support ([#116](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/116)).
+- AD: ChainRules support for `svd_vals`, `eig_vals`, `eigh_vals`, and `diagonal` ([#107](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/107)).
+
+### Changed
+
+- Improved GPU compatibility for some wrapper arrays ([#100](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/100)).
+- Test infrastructure migrated to a common `TestSuite` to reduce duplication ([#119](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/119), [#130](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/130), [#131](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/131), [#127](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/127), [#125](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/125), [#123](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/123), [#124](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/124)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- `ishermitian` now correctly handles all-zero matrices ([#121](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/121)).
+
+## [0.6.0](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/releases/tag/v0.6.0) - 2025-11-14
 
 ### Added
 - New `project_isometric` function for projecting matrices onto isometric manifold ([#67](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/67))
