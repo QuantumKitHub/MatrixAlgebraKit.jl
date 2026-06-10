@@ -5,8 +5,7 @@ function eigh_pushforward!(
     )
     D, V = DV
     dD, dV = dDV
-    tmpV = V \ dA
-    ∂K = tmpV * V
+    ∂K = V' * dA * V
     ∂Kdiag = diag(∂K)
     if !iszerotangent(dD)
         diagview(dD) .= real.(∂Kdiag)
@@ -14,9 +13,8 @@ function eigh_pushforward!(
     if !iszerotangent(dV)
         F = inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
         diagview(F) .= zero(eltype(F))
-        ∂K .*= F
-        ∂V = mul!(tmpV, V, ∂K)
-        copyto!(dV, ∂V)
+        ∂K .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
+        dV = mul!(dV, V, ∂K)
     end
     return (dD, dV)
 end

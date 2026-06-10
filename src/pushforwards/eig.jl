@@ -10,8 +10,8 @@ function eig_pushforward!(
         diagview(ΔD) .= diagview(iVΔAV)
     end
     if !iszerotangent(ΔV)
-        F = inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
-        K̇ = F .* iVΔAV
+        iVΔAV .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
+        K̇ = iVΔAV
         mul!(ΔV, V, K̇, 1, 0)
     end
     return ΔDV
