@@ -7,9 +7,8 @@ function eigh_pushforward!(
     ΔD, ΔV = ΔDV
     ΔAV = mul!(ΔV, ΔA, V)
     ∂K = V' * ΔAV
-    ∂Kdiag = diag(∂K)
     if !iszerotangent(ΔD)
-        diagview(ΔD) .= real.(∂Kdiag)
+        diagview(ΔD) .= real.(diagview(∂K))
     end
     if !iszerotangent(ΔV)
         ∂K .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
