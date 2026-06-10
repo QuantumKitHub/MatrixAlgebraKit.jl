@@ -1,21 +1,21 @@
 function eigh_pushforward!(
-        dA, A, DV, dDV;
+        ΔA, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(dDV[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
     D, V = DV
-    dD, dV = dDV
-    dAV = mul!(dV, dA, V)
-    ∂K = V' * dAV
+    ΔD, ΔV = ΔDV
+    ΔAV = mul!(ΔV, ΔA, V)
+    ∂K = V' * ΔAV
     ∂Kdiag = diag(∂K)
-    if !iszerotangent(dD)
-        diagview(dD) .= real.(∂Kdiag)
+    if !iszerotangent(ΔD)
+        diagview(ΔD) .= real.(∂Kdiag)
     end
-    if !iszerotangent(dV)
+    if !iszerotangent(ΔV)
         ∂K .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
-        dV = mul!(dV, V, ∂K)
+        ΔV = mul!(ΔV, V, ∂K)
     end
-    return (dD, dV)
+    return (ΔD, ΔV)
 end
 
 function eigh_vals_pushforward!(ΔA, A, DV, ΔD; kwargs...)

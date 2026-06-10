@@ -6,14 +6,13 @@ function eig_pushforward!(
     D, V = DV
     ΔD, ΔV = ΔDV
     ΔAV = mul!(ΔV, ΔA, V) # reusing ΔV memory
-    iVΔAV = V \ ΔAV
+    ∂K = V \ ΔAV
     if !iszerotangent(ΔD)
-        diagview(ΔD) .= diagview(iVΔAV)
+        diagview(ΔD) .= diagview(∂K)
     end
     if !iszerotangent(ΔV)
-        iVΔAV .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
-        K̇ = iVΔAV
-        mul!(ΔV, V, K̇, 1, 0)
+        ∂K .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
+        mul!(ΔV, V, ∂K, 1, 0)
     end
     return ΔDV
 end
