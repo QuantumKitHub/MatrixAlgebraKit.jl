@@ -5,7 +5,7 @@ function eigh_pushforward!(
     )
     D, V = DV
     ΔD, ΔV = ΔDV
-    ΔAV = mul!(ΔV, ΔA, V)
+    ΔAV = isnothing(ΔV) ? ΔA * V : mul!(ΔV, ΔA, V) # reusing ΔV memory if possible
     ∂K = V' * ΔAV
     if !iszerotangent(ΔD)
         diagview(ΔD) .= real.(diagview(∂K))
