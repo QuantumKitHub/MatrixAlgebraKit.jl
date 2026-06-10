@@ -5,7 +5,8 @@ function eigh_pushforward!(
     )
     D, V = DV
     dD, dV = dDV
-    ∂K = V' * dA * V
+    dAV = mul!(dV, dA, V)
+    ∂K = V' * dAV
     ∂Kdiag = diag(∂K)
     if !iszerotangent(dD)
         diagview(dD) .= real.(∂Kdiag)

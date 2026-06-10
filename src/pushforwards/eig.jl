@@ -5,7 +5,8 @@ function eig_pushforward!(
     )
     D, V = DV
     ΔD, ΔV = ΔDV
-    iVΔAV = inv(V) * ΔA * V
+    ΔAV = mul!(ΔV, ΔA, V) # reusing ΔV memory
+    iVΔAV = V \ ΔAV
     if !iszerotangent(ΔD)
         diagview(ΔD) .= diagview(iVΔAV)
     end
