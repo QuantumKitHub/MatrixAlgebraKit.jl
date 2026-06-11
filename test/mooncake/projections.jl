@@ -18,4 +18,8 @@ for T in (BLASFloats..., GenericFloats...)
         TestSuite.test_mooncake_projections(T, (m, m); atol, rtol)
         TestSuite.test_mooncake_projections(Diagonal{T, Vector{T}}, (m, m); atol, rtol)
     end
+    if T ∈ BLASFloats && CUDA.functional()
+        TestSuite.test_mooncake_projections(CuMatrix{T}, (m, m); atol, rtol)
+        TestSuite.test_mooncake_projections(Diagonal{T, CuVector{T}}, (m, m); atol, rtol)
+    end
 end

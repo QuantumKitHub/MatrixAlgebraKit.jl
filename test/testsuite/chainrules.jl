@@ -329,6 +329,16 @@ function test_chainrules_eig(
                 output_tangent = ΔDVtrunc, atol = atol, rtol = rtol
             )
             @test isequal(ΔDVtrunc, ΔDVtrunc_copy)
+            @testset "empty truncation" begin
+                truncalg = TruncatedAlgorithm(alg, truncrank(0))
+                DV, DVtrunc, _, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
+                @test isempty(diagview(DVtrunc[1]))
+                ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
+                dA1 = MatrixAlgebraKit.eig_pullback!(zero(A), A, DV, ΔDVtrunc, ind)
+                dA2 = MatrixAlgebraKit.eig_trunc_pullback!(zero(A), A, DVtrunc, ΔDVtrunc)
+                @test iszero(dA1)
+                @test iszero(dA2)
+            end
         end
     end
 end
@@ -473,6 +483,16 @@ function test_chainrules_eigh(
                 atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
             )
             @test isequal(ΔDVtrunc, ΔDVtrunc_copy)
+            @testset "empty truncation" begin
+                truncalg = TruncatedAlgorithm(alg, truncrank(0))
+                DV, DVtrunc, _, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
+                @test isempty(diagview(DVtrunc[1]))
+                ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
+                dA1 = MatrixAlgebraKit.eigh_pullback!(zero(A), A, DV, ΔDVtrunc, ind)
+                dA2 = MatrixAlgebraKit.eigh_trunc_pullback!(zero(A), A, DVtrunc, ΔDVtrunc)
+                @test iszero(dA1)
+                @test iszero(dA2)
+            end
         end
     end
 end
@@ -624,6 +644,23 @@ function test_chainrules_svd(
                 atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
             )
             @test isequal(ΔUSVᴴtrunc, ΔUSVᴴtrunc_copy)
+            @testset "empty truncation / zero rank" begin
+                truncalg = TruncatedAlgorithm(alg, truncrank(0))
+                USVᴴ, USVᴴtrunc, _, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
+                @test isempty(diagview(USVᴴtrunc[2]))
+                ind = MatrixAlgebraKit.findtruncated(diagview(USVᴴ[2]), truncalg.trunc)
+                dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, USVᴴ, ΔUSVᴴtrunc, ind)
+                dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), A, USVᴴtrunc, ΔUSVᴴtrunc)
+                @test iszero(dA1)
+                @test iszero(dA2)
+                # svd_pullback! short-circuits when every singular value is below rank_atol
+                _, ΔUSVᴴ = ad_svd_compact_setup(A)
+                huge_atol = 2 * maximum(diagview(USVᴴ[2]))
+                dA3 = MatrixAlgebraKit.svd_pullback!(
+                    zero(A), A, USVᴴ, ΔUSVᴴ; rank_atol = huge_atol
+                )
+                @test iszero(dA3)
+            end
         end
     end
 end

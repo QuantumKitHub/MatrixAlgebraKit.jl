@@ -81,22 +81,21 @@ function check_and_prepare_svd_cotangents(
         ΔV₊ᴴ = nothing
         aVᴴΔV₁ = zero!(similar(V₁ᴴ, (r, r)))
     end
+
     bc = Base.broadcasted(S₁', S₁, aUᴴΔU₁, aVᴴΔV₁) do s₁, s₂, u, v
         return abs(s₁ - s₂) < degeneracy_atol ? u + v : zero(u) + zero(v)
     end
-    Δgauge = max(Δgauge, norm(bc, Inf))
+    Δgauge = max(Δgauge, maximum(abs, bc))
 
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
+        bad_indS = _ind_intersect((r + 1):length(ΔS), indS)
+        good_indS = _ind_intersect(1:r, indS)
         ΔS₁ = zero(S₁)
-        for (j, i) in enumerate(indS)
-            if i <= r
-                ΔS₁[i] = real(ΔS[j])
-            else
-                Δgauge = max(Δgauge, abs(ΔS[j]))
-            end
-        end
+        ΔS₁[1:length(good_indS)] .= real.(ΔS[good_indS])
+        badΔS₁ = view(ΔS, bad_indS)
+        Δgauge = max(Δgauge, maximum(abs, badΔS₁; init = abs(zero(eltype(ΔS)))))
     else
         ΔS₁ = nothing
     end
@@ -149,6 +148,7 @@ function svd_pullback!(
     (m, n) == size(ΔA) || throw(DimensionMismatch(lazy"size of ΔA ($(size(ΔA))) does not match size of USVᴴ ($m, $n)"))
     S = diagview(Smat)
     r = svd_rank(S; rank_atol)
+    iszero(r) && return ΔA
 
     U₁ = view(U, :, 1:r)
     V₁ᴴ = view(Vᴴ, 1:r, :)
@@ -220,6 +220,7 @@ function svd_trunc_pullback!(
     p = length(S)
     p == size(U, 2) || throw(DimensionMismatch(lazy"U has $p columns but S has $(length(S)) singular values"))
     p == size(Vᴴ, 1) || throw(DimensionMismatch(lazy"Vᴴ has $p rows but  S has $(length(S)) singular values"))
+    iszero(p) && return ΔA
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ

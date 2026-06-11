@@ -26,10 +26,11 @@ function check_and_prepare_eig_cotangents(
         ΔV₊ = nothing
         VᴴΔV₁ = zero!(similar(V, (p, p)))
     end
+
     bc = Base.broadcasted(transpose(D), D, VᴴΔV₁) do d₁, d₂, v
         return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
-    Δgauge = norm(bc, Inf)
+    Δgauge = maximum(abs, bc; init = abs(zero(eltype(D))))
 
     Δgauge ≤ gauge_atol ||
         @warn "`eig` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
@@ -40,7 +41,8 @@ function check_and_prepare_eig_cotangents(
     if !iszerotangent(ΔDmat)
         ΔD = diagview(ΔDmat)
         length(indD) == length(ΔD) || throw(DimensionMismatch())
-        view(diagview(VᴴAΔV), indD) .+= ΔD
+        # needed to avoid GPUCompiler errors
+        VᴴAΔV[diagind(VᴴAΔV)[indD]] .+= ΔD
     else
         ΔD = nothing
     end
@@ -81,6 +83,7 @@ function eig_pullback!(
     D = diagview(Dmat)
     n == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
+    iszero(n) && return ΔA
     ViG = inv(V)'
 
     ΔDmat, ΔV = ΔDV
@@ -144,6 +147,7 @@ function eig_trunc_pullback!(
     (n, n) == size(ΔA) || throw(DimensionMismatch())
     D = diagview(Dmat)
     p == length(D) || throw(DimensionMismatch())
+    iszero(p) && return ΔA
     G = V' * V
     ViG = V / LinearAlgebra.cholesky!(G)
 
@@ -240,7 +244,7 @@ function remove_eig_gauge_dependence!(
     Ddiag = diagview(D)
     gaugepart = V' * ΔV
     gaugepart[abs.(transpose(Ddiag) .- Ddiag) .>= degeneracy_atol] .= 0
-    ViG = V / LinearAlgebra.cholesky!(V' * V)
+    ViG = V / LinearAlgebra.cholesky!(Hermitian(V' * V))
     mul!(ΔV, ViG, gaugepart, -1, 1)
     return ΔV
 end

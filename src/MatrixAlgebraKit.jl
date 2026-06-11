@@ -5,7 +5,7 @@ using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!, adjoint!, rdiv!, ldiv!
 using LinearAlgebra: sylvester, lu!, diagm
 using LinearAlgebra: isposdef, issymmetric
-using LinearAlgebra: Diagonal, diag, diagind, isdiag
+using LinearAlgebra: Diagonal, Hermitian, diag, diagind, isdiag
 using LinearAlgebra: UpperTriangular, LowerTriangular
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
@@ -135,6 +135,10 @@ include("pullbacks/eig.jl")
 include("pullbacks/eigh.jl")
 include("pullbacks/svd.jl")
 include("pullbacks/polar.jl")
+
+include("pushforwards/polar.jl")
+include("pushforwards/eig.jl")
+include("pushforwards/eigh.jl")
 
 include("precompile.jl")
 

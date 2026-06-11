@@ -8,7 +8,7 @@ using MatrixAlgebraKit: ROCSOLVER, LQViaTransposedQR, TruncationStrategy, NoTrun
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdj!
 import MatrixAlgebraKit: heevj!, heevd!, heev!, heevx!
-import MatrixAlgebraKit: _sylvester, svd_rank
+import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!
 using AMDGPU
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
@@ -185,6 +185,12 @@ function _sylvester(A::AnyROCMatrix, B::AnyROCMatrix, C::AnyROCMatrix)
     return ROCArray(hX)
 end
 
-svd_rank(S::AnyROCVector, rank_atol) = findlast(s -> s ≥ rank_atol, S)
+function svd_rank(S::AnyROCVector; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(S))
+    return something(findlast(≥(rank_atol), S), 0)
+end
+
+function svd_pullback!(ΔA::AnyROCMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyROCVector; kwargs...)
+    return svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
+end
 
 end

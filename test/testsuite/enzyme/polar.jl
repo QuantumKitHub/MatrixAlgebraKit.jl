@@ -14,14 +14,14 @@ end
 """
     test_enzyme_left_polar(T, sz; rng, atol, rtol)
 
-Test the Enzyme reverse-mode AD rule for `left_polar` and its in-place variant. Only runs
-for tall or square matrices (`m >= n`).
+Test the Enzyme forward- and reverse-mode AD rule for `left_polar` and its in-place variant.
+Only runs for tall or square matrices (`m >= n`).
 """
 function test_enzyme_left_polar(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
     )
-    return @testset "left_polar reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "left_polar: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         m, n = size(A)
         if m >= n
@@ -29,6 +29,9 @@ function test_enzyme_left_polar(
             WP, ΔWP = ad_left_polar_setup(A)
             test_reverse(left_polar, RT, (A, TA), (alg, Const); atol, rtol)
             test_reverse(call_and_zero!, RT, (left_polar!, Const), (A, TA), (alg, Const); atol, rtol)
+            A = instantiate_matrix(T, sz)
+            test_forward(left_polar, RT, (A, TA), (alg, Const); atol, rtol)
+            test_forward(call_and_zero!, RT, (left_polar!, Const), (A, TA), (alg, Const); atol, rtol)
         end
     end
 end
@@ -36,14 +39,14 @@ end
 """
     test_enzyme_right_polar(T, sz; rng, atol, rtol)
 
-Test the Enzyme reverse-mode AD rule for `right_polar` and its in-place variant. Only runs
-for wide or square matrices (`m <= n`).
+Test the Enzyme forward- and reverse-mode AD rule for `right_polar` and its in-place variant.
+Only runs for wide or square matrices (`m <= n`).
 """
 function test_enzyme_right_polar(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
     )
-    return @testset "right_polar reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "right_polar: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         m, n = size(A)
         if m <= n
@@ -51,6 +54,9 @@ function test_enzyme_right_polar(
             PWᴴ, ΔPWᴴ = ad_right_polar_setup(A)
             test_reverse(right_polar, RT, (A, TA), (alg, Const); atol, rtol)
             test_reverse(call_and_zero!, RT, (right_polar!, Const), (A, TA), (alg, Const); atol, rtol)
+            A = instantiate_matrix(T, sz)
+            test_forward(right_polar, RT, (A, TA), (alg, Const); atol, rtol)
+            test_forward(call_and_zero!, RT, (right_polar!, Const), (A, TA), (alg, Const); atol, rtol)
         end
     end
 end
