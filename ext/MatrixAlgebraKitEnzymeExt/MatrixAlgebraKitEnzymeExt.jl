@@ -274,8 +274,10 @@ for f in (:svd_compact!, :svd_full!)
                 alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
             ) where {RT, TA}
             $f(A.val, USVᴴ.val, alg.val)
-            !isa(A, Const) && !isa(USVᴴ, Const) && svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
-            make_zero!(A.dval)
+            if !isa(A, Const)
+                !isa(USVᴴ, Const) && svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
+                make_zero!(A.dval)
+            end
             if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
                 return USVᴴ
             elseif EnzymeRules.needs_primal(config)
