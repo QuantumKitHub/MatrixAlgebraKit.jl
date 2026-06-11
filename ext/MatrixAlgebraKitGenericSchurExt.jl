@@ -9,15 +9,15 @@ using GenericSchur
 const GSFloat = Union{Float16, ComplexF16, BigFloat, Complex{BigFloat}}
 
 function MatrixAlgebraKit.default_eig_algorithm(
-    ::Type{T}; driver::Driver = GS(), kwargs...
+        ::Type{T}; driver::Driver = GS(), kwargs...
     ) where {T <: StridedMatrix{<:GSFloat}}
     return QRIteration(; driver, kwargs...)
 end
 
 function MatrixAlgebraKit.default_exponential_algorithm(
-    ::Type{T}; driver::Driver = GS(), kwargs...
+        type::Type{T}; driver::Driver = GS(), kwargs...
     ) where {T <: StridedMatrix{<:GSFloat}}
-    eig_alg = MatrixAlgebraKit.default_eig_algorithm(E; kwargs...)
+    eig_alg = MatrixAlgebraKit.default_eig_algorithm(type; driver, kwargs...)
     return MatrixFunctionViaEig(eig_alg)
 end
 
