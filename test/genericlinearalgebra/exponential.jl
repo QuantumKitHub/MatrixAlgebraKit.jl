@@ -4,6 +4,7 @@ using TestExtras
 using StableRNGs
 using MatrixAlgebraKit: diagview
 using LinearAlgebra
+using GenericLinearAlgebra
 
 GenericFloats = (BigFloat, Complex{BigFloat})
 
