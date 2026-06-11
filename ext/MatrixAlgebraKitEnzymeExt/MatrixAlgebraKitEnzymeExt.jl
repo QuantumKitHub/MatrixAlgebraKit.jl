@@ -275,7 +275,7 @@ for f in (:svd_compact!, :svd_full!)
             ) where {RT, TA}
             $f(A.val, USVᴴ.val, alg.val)
             if !isa(A, Const)
-                if $(f == svd_compact!) 
+                if $(f == svd_compact!)
                     make_zero!(USVᴴ.dval[2].diag)
                 else
                     make_zero!(USVᴴ.dval[2])

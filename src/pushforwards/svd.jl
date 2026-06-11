@@ -44,7 +44,7 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
         view(UÃÃV, (1:size(aUAV, 1)), size(aUAV, 1) .+ (1:size(aUAV, 2))) .= aUAV
         view(UÃÃV, size(aUAV, 1) .+ (1:size(aUAV, 2)), 1:size(aUAV, 1)) .= aUAV'
         rhs = vcat(adjoint(Uperp * ΔA * Vᴴ), Vᴴperp * ΔA' * U)
-        superKM = -sylvester(UÃÃV, Smat, rhs)
+        superKM = -_sylvester(UÃÃV, Smat, rhs)
         K̇perp = view(superKM, 1:size(aUAV, 2))
         Ṁperp = view(superKM, (size(aUAV, 2) + 1):(size(aUAV, 1) + size(aUAV, 2)))
         ∂U .+= Uperp * K̇perp
@@ -62,7 +62,7 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
         view(ÃÃ, (1:m), m .+ (1:n)) .= Ã
         view(ÃÃ, m .+ (1:n), 1:m) .= Ã'
 
-        superLN = -sylvester(ÃÃ, vSmat, rhs)
+        superLN = -_sylvester(ÃÃ, vSmat, rhs)
         ∂U += view(superLN, 1:size(upper, 1), :)
         ∂V += view(superLN, (size(upper, 1) + 1):(size(upper, 1) + size(lower, 1)), :)
     end
