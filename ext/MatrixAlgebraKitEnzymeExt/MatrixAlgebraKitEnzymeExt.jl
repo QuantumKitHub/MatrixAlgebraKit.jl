@@ -275,6 +275,11 @@ for f in (:svd_compact!, :svd_full!)
             ) where {RT, TA}
             $f(A.val, USVᴴ.val, alg.val)
             if !isa(A, Const)
+                if $(f == svd_compact!) 
+                    make_zero!(USVᴴ.dval[2].diag)
+                else
+                    make_zero!(USVᴴ.dval[2])
+                end
                 !isa(USVᴴ, Const) && svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
                 make_zero!(A.dval)
             end

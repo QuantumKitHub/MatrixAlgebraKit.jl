@@ -7,7 +7,7 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
     ΔU, ΔS, ΔVᴴ = ΔUSVᴴ
     r = svd_rank(S; rank_atol)
 
-    vΔS = view(ΔS, 1:r, 1:r)
+    vΔS = view(diagview(ΔS), 1:r)
 
     vU = view(U, :, 1:r)
     vS = view(S, 1:r)
@@ -17,7 +17,7 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
     # compact region
     vV = adjoint(vVᴴ)
     UΔAV = vU' * ΔA * vV
-    copyto!(diagview(vΔS), real.(diagview(UΔAV)))
+    copyto!(vΔS, real.(diagview(UΔAV)))
     F = inv_safe.(transpose(vS) .- vS)
     G = inv_safe.(transpose(vS) .+ vS)
     hUΔAV = F .* (UΔAV + UΔAV') ./ 2
