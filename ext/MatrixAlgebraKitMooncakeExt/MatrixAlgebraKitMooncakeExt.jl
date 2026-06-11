@@ -7,6 +7,8 @@ using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output, zero!
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!
+using MatrixAlgebraKit: eig_pushforward!, eig_vals_pushforward!
+using MatrixAlgebraKit: eigh_pushforward!, eigh_vals_pushforward!
 using MatrixAlgebraKit: eig_trunc_pullback!, eigh_trunc_pullback!, eigh_vals_pullback!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
 using MatrixAlgebraKit: left_polar_pushforward!, right_polar_pushforward!
@@ -113,6 +115,8 @@ end
 for (f!, f, pf) in (
         (:left_polar!, :left_polar, :left_polar_pushforward!),
         (:right_polar!, :right_polar, :right_polar_pushforward!),
+        (:eig_full!, :eig_full, :eig_pushforward!),
+        (:eigh_full!, :eigh_full, :eigh_pushforward!),
     )
     @eval begin
         @is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof($f!), Any, Tuple{<:Any, <:Any}, MatrixAlgebraKit.AbstractAlgorithm}
@@ -177,12 +181,12 @@ for (f!, f, pb, adj) in (
     end
 end
 
-for (f!, f, f_full, pb, adj) in (
-        (:eig_vals!, :eig_vals, :eig_full, :eig_vals_pullback!, :eig_vals_adjoint),
-        (:eigh_vals!, :eigh_vals, :eigh_full, :eigh_vals_pullback!, :eigh_vals_adjoint),
+for (f!, f, f_full, pb, pf, adj) in (
+        (:eig_vals!, :eig_vals, :eig_full, :eig_vals_pullback!, :eig_vals_pushforward!, :eig_vals_adjoint),
+        (:eigh_vals!, :eigh_vals, :eigh_full, :eigh_vals_pullback!, :eigh_vals_pushforward!, :eigh_vals_adjoint),
     )
     @eval begin
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+        @is_primitive Mooncake.DefaultCtx Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, D_dD::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -210,7 +214,18 @@ for (f!, f, f_full, pb, adj) in (
             end
             return D_dD, $adj
         end
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.frule!!(::Dual{typeof($f!)}, A_dA::Dual, D_dD::Dual, alg_dalg::Dual)
+            # compute primal
+            A, dA = arrayify(A_dA)
+            D, dD = arrayify(D_dD)
+            # update primal
+            DV = $f_full(A, Mooncake.primal(alg_dalg))
+            V = DV[2]
+            copyto!(D, diagview(DV[1]))
+            $pf(dA, A, (D, V), dD)
+            return D_dD
+        end
+        @is_primitive Mooncake.DefaultCtx Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
             # compute primal
             A, dA = arrayify(A_dA)
@@ -226,6 +241,18 @@ for (f!, f, f_full, pb, adj) in (
                 return NoRData(), NoRData(), NoRData()
             end
             return output_codual, $adj
+        end
+        function Mooncake.frule!!(::Dual{typeof($f)}, A_dA::Dual, alg_dalg::Dual)
+            # compute primal
+            A, dA = arrayify(A_dA)
+            # update primal
+            DV = $f_full(A, Mooncake.primal(alg_dalg))
+            V = DV[2]
+            output = diagview(DV[1])
+            output_dual = Dual(output, Mooncake.zero_tangent(output))
+            D, dD = arrayify(output_dual)
+            $pf(dA, A, DV, dD)
+            return output_dual
         end
     end
 end

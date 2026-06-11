@@ -15,38 +15,46 @@ end
 """
     test_enzyme_eigh_full(T, sz; rng, atol, rtol)
 
-Test the Enzyme reverse-mode AD rule for `eigh_full` and its in-place variant.
+Test the Enzyme forward- and reverse-mode AD rule for `eigh_full` and its in-place variant.
 """
 function test_enzyme_eigh_full(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "eigh_full reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "eigh_full: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = make_eigh_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eigh_full, A)
         DV, ΔDV = ad_eigh_full_setup(A)
         test_reverse(eigh_wrapper, RT, (eigh_full, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
         test_reverse(eigh!_wrapper, RT, (eigh_full!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
+        if eltype(T) <: Real
+            A = make_eigh_matrix(T, sz)
+            test_forward(eigh_wrapper, RT, (eigh_full, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(eigh!_wrapper, RT, (eigh_full!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        end
     end
 end
 
 """
     test_enzyme_eigh_vals(T, sz; rng, atol, rtol)
 
-Test the Enzyme reverse-mode AD rule for `eigh_vals` and its in-place variant.
+Test the Enzyme forward- and reverse-mode AD rule for `eigh_vals` and its in-place variant.
 """
 function test_enzyme_eigh_vals(
         T, sz;
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "eigh_vals reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "eigh_vals: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = make_eigh_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eigh_vals, A)
         D, ΔD = ad_eigh_vals_setup(A)
         test_reverse(eigh_wrapper, RT, (eigh_vals, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
         test_reverse(eigh!_wrapper, RT, (eigh_vals!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
+        A = make_eigh_matrix(T, sz)
+        test_forward(eigh_wrapper, RT, (eigh_vals, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(eigh!_wrapper, RT, (eigh_vals!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
     end
 end
 

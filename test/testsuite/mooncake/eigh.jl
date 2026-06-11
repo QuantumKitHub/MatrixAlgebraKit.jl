@@ -35,6 +35,16 @@ function test_mooncake_eigh_full(
             rng, eigh!_wrapper, eigh_full!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
         )
+        if !(eltype(T) <: Complex)
+            Mooncake.TestUtils.test_rule(
+                rng, eigh_wrapper, eigh_full, A, alg;
+                mode = Mooncake.ForwardMode, output_tangent, is_primitive = false, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, eigh!_wrapper, eigh_full!, A, alg;
+                mode = Mooncake.ForwardMode, output_tangent, is_primitive = false, atol, rtol
+            )
+        end
     end
 end
 
@@ -55,11 +65,11 @@ function test_mooncake_eigh_vals(
 
         Mooncake.TestUtils.test_rule(
             rng, eigh_wrapper, eigh_vals, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+            output_tangent, is_primitive = false, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, eigh!_wrapper, eigh_vals!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+            output_tangent, is_primitive = false, atol, rtol
         )
     end
 end

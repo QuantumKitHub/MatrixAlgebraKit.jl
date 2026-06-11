@@ -6,6 +6,7 @@ using MatrixAlgebraKit: diagview, inv_safe, truncate
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!, eigh_vals_pullback!
+using MatrixAlgebraKit: eig_pushforward!, eigh_pushforward!, eig_vals_pushforward!, eigh_vals_pushforward!
 using MatrixAlgebraKit: svd_pullback!, svd_vals_pullback!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
 using MatrixAlgebraKit: left_polar_pushforward!, right_polar_pushforward!
@@ -119,8 +120,10 @@ for (f, pb) in (
 end
 
 for (f, pf) in (
-        (left_polar!, left_polar_pushforward!),
-        (right_polar!, right_polar_pushforward!),
+        (:right_polar!, :right_polar_pushforward!),
+        (:left_polar!, :left_polar_pushforward!),
+        (:eigh_full!, :eigh_pushforward!),
+        (:eig_full!, :eig_pushforward!),
     )
     @eval begin
         function EnzymeRules.forward(
@@ -128,13 +131,17 @@ for (f, pf) in (
                 func::Const{typeof($f)},
                 ::Type{RT},
                 A::Annotation,
-                arg::Annotation{TA},
+                arg::Annotation,
                 alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
-            ) where {RT, TA}
+            ) where {RT}
+            A_is_arg1 = !isa(A, Const) && A.val === arg.val[1]
+            A_is_arg2 = !isa(A, Const) && A.val === arg.val[2]
+            A_is_arg = A_is_arg1 || A_is_arg2
             $f(A.val, arg.val, alg.val)
             if !isa(A, Const) && !isa(arg, Const)
                 $pf(A.dval, A.val, arg.val, arg.dval)
             end
+            !A_is_arg && make_zero!(A.dval)
             if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
                 return arg
             elseif EnzymeRules.needs_primal(config)
@@ -367,9 +374,9 @@ for (f, trunc_f, full_f, pb) in (
     end
 end
 
-for (f!, f_full!, pb!) in (
-        (eig_vals!, eig_full!, eig_vals_pullback!),
-        (eigh_vals!, eigh_full!, eigh_vals_pullback!),
+for (f!, f_full!, pb!, pf!) in (
+        (:eig_vals!, :eig_full!, :eig_vals_pullback!, :eig_vals_pushforward!),
+        (:eigh_vals!, :eigh_full!, :eigh_vals_pullback!, :eigh_vals_pushforward!),
     )
     @eval begin
         function EnzymeRules.augmented_primal(
@@ -417,6 +424,34 @@ for (f!, f_full!, pb!) in (
             end
             !isa(D, Const) && !A_is_arg && make_zero!(D.dval)
             return (nothing, nothing, nothing)
+        end
+        function EnzymeRules.forward(
+                config::EnzymeRules.FwdConfigWidth{1},
+                func::Const{typeof($f!)},
+                ::Type{RT},
+                A::Annotation{TA},
+                D::Annotation,
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT, TA}
+            A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === D.dval
+            DV = $f_full!(A.val, alg.val)
+            Dval, V = DV
+            if !isa(A, Const) && !isa(D, Const)
+                ΔD = A_is_arg ? make_zero(D.dval) : D.dval
+                $pf!(A.dval, A.val, (Diagonal(diagview(Dval)), V), ΔD)
+                A_is_arg && (D.dval .= ΔD)
+            end
+            copyto!(D.val, diagview(Dval))
+            !isa(A, Const) && !A_is_arg && make_zero!(A.dval)
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return D
+            elseif EnzymeRules.needs_primal(config)
+                return D.val
+            elseif EnzymeRules.needs_shadow(config)
+                return D.dval
+            else
+                return nothing
+            end
         end
     end
 end
