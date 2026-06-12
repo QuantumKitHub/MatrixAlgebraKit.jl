@@ -5,8 +5,8 @@ function copy_input(::typeof(exponential), A::AbstractMatrix)
 end
 
 copy_input(::typeof(exponential), A::Diagonal) = copy(A)
-copy_input(::typeof(exponential), (τ,A)::Tuple{Number,AbstractMatrix}) = (τ,copy!(similar(A, float(eltype(A))), A))
-copy_input(::typeof(exponential), (τ,A)::Tuple{Number,Diagonal}) = τ, copy(A)
+copy_input(::typeof(exponential), (τ, A)::Tuple{Number, AbstractMatrix}) = (τ, copy!(similar(A, float(eltype(A))), A))
+copy_input(::typeof(exponential), (τ, A)::Tuple{Number, Diagonal}) = τ, copy(A)
 
 function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm; scalar_check = true)
     m, n = size(A)
@@ -45,8 +45,8 @@ end
 # Outputs
 # -------
 initialize_output(::typeof(exponential!), A::AbstractMatrix, ::AbstractAlgorithm) = A
-initialize_output(::typeof(exponential!), (τ,A)::Tuple{T,AbstractMatrix}, ::AbstractAlgorithm) where {T <: Real} = A
-initialize_output(::typeof(exponential!), (τ,A)::Tuple{Number,AbstractMatrix}, ::AbstractAlgorithm) = complex(A)
+initialize_output(::typeof(exponential!), (τ, A)::Tuple{T, AbstractMatrix}, ::AbstractAlgorithm) where {T <: Real} = A
+initialize_output(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}, ::AbstractAlgorithm) = complex(A)
 
 # Implementation
 # --------------
@@ -79,13 +79,13 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     return expA
 end
 
-function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
     check_input(exponential!, A, expA, alg; scalar_check = false)
     expA .= A .* τ
     return LinearAlgebra.exp!(expA)
 end
 
-function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
     check_input(exponential!, A, expA, alg; scalar_check = false)
     D, V = eigh_full!(A, alg.eigh_alg)
     expD = map_diagonal(x -> exp(x * τ), D)
@@ -97,7 +97,7 @@ function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA::AbstractMatrix
     end
 end
 
-function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA, alg::MatrixFunctionViaEig)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::MatrixFunctionViaEig)
     check_input(exponential!, A, expA, alg; scalar_check = false)
     D, V = eig_full!(A, alg.eig_alg)
     expD = map_diagonal!(x -> exp(x * τ), D, D)
@@ -118,7 +118,7 @@ function exponential!(A, expA, alg::DiagonalAlgorithm)
     return map_diagonal!(exp, expA, A)
 end
 
-function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA, alg::DiagonalAlgorithm)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::DiagonalAlgorithm)
     check_input(exponential!, A, expA, alg; scalar_check = false)
     return map_diagonal!(x -> exp(x * τ), expA, A)
 end
