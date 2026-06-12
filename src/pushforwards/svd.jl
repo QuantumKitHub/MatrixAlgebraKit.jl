@@ -50,8 +50,8 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
         ∂U .+= Uperp * K̇perp
         ∂V .+= Vᴴperp * Ṁperp
     else
-        ImUU = (LinearAlgebra.diagm(ones(eltype(U), m)) - vU * vU')
-        ImVV = (LinearAlgebra.diagm(ones(eltype(Vᴴ), n)) - vV * vVᴴ)
+        ImUU = (LinearAlgebra.diagm(one!(similar(U, m))) - vU * vU')
+        ImVV = (LinearAlgebra.diagm(one!(similar(Vᴴ, n))) - vV * vVᴴ)
         upper = ImUU * ΔA * vV
         lower = ImVV * ΔA' * vU
         rhs = vcat(upper, lower)
