@@ -32,8 +32,7 @@ function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMa
 end
 
 function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
+    m = LinearAlgebra.checksquare(A)
     @check_size(expA, (m, m))
     (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
     return nothing
