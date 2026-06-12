@@ -17,9 +17,6 @@ function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMa
 end
 
 function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
-    if !ishermitian(A)
-        throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix)"))
-    end
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
     @check_size(expA, (m, m))
@@ -45,9 +42,6 @@ function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA
 end
 
 function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
-    if !ishermitian(A)
-        throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix)"))
-    end
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
     @check_size(expA, (m, m))
