@@ -41,14 +41,6 @@ function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA
     return nothing
 end
 
-function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
-    @check_size(expA, (m, m))
-    (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
-    return nothing
-end
-
 function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
     m, n = size(A)
     @assert m == n && isdiag(A)
