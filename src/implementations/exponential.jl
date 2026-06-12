@@ -39,8 +39,8 @@ function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA
 end
 
 function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
-    m, n = size(A)
-    @assert m == n && isdiag(A)
+    m = LinearAlgebra.checksquare(A)
+    @assert isdiag(A)
     @assert expA isa Diagonal
     @check_size(expA, (m, m))
     (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
