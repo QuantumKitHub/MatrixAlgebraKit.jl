@@ -12,8 +12,7 @@ GenericFloats = (BigFloat, Complex{BigFloat})
     rng = StableRNG(123)
     m = 54
 
-    A = randn(rng, T, m, m)
-    A = (A + A') / 2
+    A = project_hermitian!(randn(rng, T, m, m))
     D, V = @constinferred eigh_full(A)
     algs = (MatrixFunctionViaEigh(GLA_QRIteration()),)
     @testset "algorithm $alg" for alg in algs
