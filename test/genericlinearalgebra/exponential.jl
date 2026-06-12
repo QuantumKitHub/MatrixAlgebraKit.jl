@@ -26,7 +26,7 @@ GenericFloats = (BigFloat, Complex{BigFloat})
 end
 
 using GenericSchur
-@testset "exponentialr! for T1 = $T1, T2 = $T2" for T1 in GenericFloats, T2 in GenericFloats
+@testset "exponential! for T1 = $T1, T2 = $T2" for T1 in GenericFloats, T2 in GenericFloats
     rng = StableRNG(123)
     m = 54
     A = project_hermitian!(randn(rng, T1, m, m))
@@ -35,8 +35,8 @@ using GenericSchur
     D, V = @constinferred eigh_full(A)
     algs = (MatrixFunctionViaEigh(GLA_QRIteration()),)
     @testset "algorithm $alg" for alg in algs
-        expτA = @constinferred exponentialr!(τ, copy(A); alg)
-        expτA2 = @constinferred exponentialr(τ, A; alg)
+        expτA = @constinferred exponential!((τ, copy(A)); alg)
+        expτA2 = @constinferred exponential((τ, A); alg)
         @test expτA2 ≈ expτA
 
         Dexp, Vexp = @constinferred eig_full(expτA)

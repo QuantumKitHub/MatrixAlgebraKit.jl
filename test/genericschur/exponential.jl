@@ -27,7 +27,7 @@ GenericFloats = (BigFloat, Complex{BigFloat})
     end
 end
 
-@testset "exponentialr! for T1 = $T1, T2 = $T2" for T1 in GenericFloats, T2 in GenericFloats
+@testset "exponential! for T1 = $T1, T2 = $T2" for T1 in GenericFloats, T2 in GenericFloats
     rng = StableRNG(123)
     m = 54
 
@@ -37,8 +37,8 @@ end
     D, V = @constinferred eig_full(A)
     algs = (MatrixFunctionViaEig(GS_QRIteration()),)
     @testset "algorithm $alg" for alg in algs
-        expτA = @constinferred exponentialr!(τ, copy(A))
-        expτA2 = @constinferred exponentialr(τ, A; alg)
+        expτA = @constinferred exponential!((τ, copy(A)))
+        expτA2 = @constinferred exponential((τ, A); alg)
         @test expτA2 ≈ expτA
 
         Dexp, Vexp = @constinferred eig_full(expτA)

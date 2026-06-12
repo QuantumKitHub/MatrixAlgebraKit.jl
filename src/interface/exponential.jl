@@ -6,36 +6,19 @@
     exponential(A, alg::AbstractAlgorithm) -> expA
     exponential!(A, [expA]; kwargs...) -> expA
     exponential!(A, [expA], alg::AbstractAlgorithm) -> expA
+    exponential((τ,A); kwargs...) -> expτA
+    exponential((τ,A), alg::AbstractAlgorithm) -> expτA
+    exponential!((τ,A), [expA]; kwargs...) -> expτA
+    exponential!((τ,A), [expA], alg::AbstractAlgorithm) -> expτA
 
-Compute the exponential of the square matrix `A`,
+Compute the exponential of the square matrix `A` or `τ*A`,
 
 !!! note
     The bang method `exponential!` optionally accepts the output structure and
     possibly destroys the input matrix `A`. Always use the return value of the function
     as it may not always be possible to use the provided `expA` as output.
-
-See also [`exponentialr(!)`](@ref exponentialr).
 """
 @functiondef exponential
-
-"""
-    exponentialr(τ, A; kwargs...) -> expiτA
-    exponentialr(τ, A, alg::AbstractAlgorithm) -> expiτA
-    exponentialr!(τ, A, [expiτA]; kwargs...) -> expiτA
-    exponentialr!(τ, A, [expiτA], alg::AbstractAlgorithm) -> expiτA
-
-Compute the exponential of `i*τ*A`, where `i` is the imaginary unit, `τ` is a scalar, and `A` is a square matrix.
-This allows the user to use the hermitian eigendecomposition when `A` is hermitian, even when `i*τ*A` is not.
-
-!!! note
-    The bang method `exponentialr!` optionally accepts the output structure and
-    possibly destroys the input matrix `A`.
-    Always use the return value of the function as it may not always be
-    possible to use the provided `expiτA` as output.
-
-See also [`exponential(!)`](@ref exponential).
-"""
-@functiondef n_args = 2 exponentialr
 
 # Algorithm selection
 # -------------------
@@ -53,7 +36,7 @@ for f in (:exponential!,)
     end
 end
 
-for f in (:exponentialr!,)
+for f in (:exponential!,)
     @eval function default_algorithm(::typeof($f), ::Tuple{A, B}; kwargs...) where {A, B}
         return default_exponential_algorithm(B; kwargs...)
     end

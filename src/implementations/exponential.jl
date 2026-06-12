@@ -5,73 +5,56 @@ function copy_input(::typeof(exponential), A::AbstractMatrix)
 end
 
 copy_input(::typeof(exponential), A::Diagonal) = copy(A)
+copy_input(::typeof(exponential), (τ,A)::Tuple{Number,AbstractMatrix}) = (τ,copy!(similar(A, float(eltype(A))), A))
+copy_input(::typeof(exponential), (τ,A)::Tuple{Number,Diagonal}) = τ, copy(A)
 
-function copy_input(::typeof(exponentialr), τ::Number, A::AbstractMatrix)
-    return τ, copy!(similar(A, float(eltype(A))), A)
-end
-
-copy_input(::typeof(exponentialr), τ::Number, A::Diagonal) = τ, copy(A)
-
-function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
+function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm; scalar_check = true)
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
     @check_size(expA, (m, m))
-    return @check_scalar(expA, A)
-end
-
-function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
-    if !ishermitian(A)
-        throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix)"))
+    if scalar_check
+        @check_scalar(expA, A)
     end
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
-    @check_size(expA, (m, m))
-    return @check_scalar(expA, A)
-end
-
-function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
-    m, n = size(A)
-    @assert m == n && isdiag(A)
-    @assert expA isa Diagonal
-    @check_size(expA, (m, m))
-    @check_scalar(expA, A)
     return nothing
 end
 
-function check_input(::typeof(exponentialr!), A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
-    m, n = size(A)
-    m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
-    return @check_size(expA, (m, m))
-end
-
-function check_input(::typeof(exponentialr!), A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh; scalar_check = true)
     if !ishermitian(A)
         throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix)"))
     end
     m, n = size(A)
     m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
-    return @check_size(expA, (m, m))
+    @check_size(expA, (m, m))
+    if scalar_check
+        @check_scalar(expA, A)
+    end
+    return nothing
 end
 
-function check_input(::typeof(exponentialr!), A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
+function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm; scalar_check = true)
     m, n = size(A)
     @assert m == n && isdiag(A)
     @assert expA isa Diagonal
-    return @check_size(expA, (m, m))
+    @check_size(expA, (m, m))
+    if scalar_check
+        @check_scalar(expA, A)
+    end
+    return nothing
 end
 
 # Outputs
 # -------
 initialize_output(::typeof(exponential!), A::AbstractMatrix, ::AbstractAlgorithm) = A
-initialize_output(::typeof(exponentialr!), τ::T, A::AbstractMatrix, ::AbstractAlgorithm) where {T <: Real} = A
-initialize_output(::typeof(exponentialr!), τ::Number, A::AbstractMatrix, ::AbstractAlgorithm) =
-    complex(A)
+initialize_output(::typeof(exponential!), (τ,A)::Tuple{T,AbstractMatrix}, ::AbstractAlgorithm) where {T <: Real} = A
+initialize_output(::typeof(exponential!), (τ,A)::Tuple{Number,AbstractMatrix}, ::AbstractAlgorithm) = complex(A)
 
 # Implementation
 # --------------
 function exponential!(A, expA, alg::MatrixFunctionViaLA)
     check_input(exponential!, A, expA, alg)
-    return LinearAlgebra.exp!(A)
+    A = LinearAlgebra.exp!(A)
+    A === expA || copy!(expA, A)
+    return expA
 end
 
 function exponential!(A, expA, alg::MatrixFunctionViaEigh)
@@ -96,14 +79,14 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     return expA
 end
 
-function exponentialr!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
-    check_input(exponentialr!, A, expA, alg)
+function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
+    check_input(exponential!, A, expA, alg; scalar_check = false)
     expA .= A .* τ
     return LinearAlgebra.exp!(expA)
 end
 
-function exponentialr!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
-    check_input(exponentialr!, A, expA, alg)
+function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+    check_input(exponential!, A, expA, alg; scalar_check = false)
     D, V = eigh_full!(A, alg.eigh_alg)
     expD = map_diagonal(x -> exp(x * τ), D)
     VexpD = V * expD
@@ -114,8 +97,8 @@ function exponentialr!(τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg:
     end
 end
 
-function exponentialr!(τ::Number, A, expA, alg::MatrixFunctionViaEig)
-    check_input(exponentialr!, A, expA, alg)
+function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA, alg::MatrixFunctionViaEig)
+    check_input(exponential!, A, expA, alg; scalar_check = false)
     D, V = eig_full!(A, alg.eig_alg)
     expD = map_diagonal!(x -> exp(x * τ), D, D)
     iV = inv(V)
@@ -135,7 +118,7 @@ function exponential!(A, expA, alg::DiagonalAlgorithm)
     return map_diagonal!(exp, expA, A)
 end
 
-function exponentialr!(τ::Number, A, expA, alg::DiagonalAlgorithm)
-    check_input(exponentialr!, A, expA, alg)
+function exponential!((τ,A)::Tuple{Number,AbstractMatrix}, expA, alg::DiagonalAlgorithm)
+    check_input(exponential!, A, expA, alg; scalar_check = false)
     return map_diagonal!(x -> exp(x * τ), expA, A)
 end
