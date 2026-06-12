@@ -34,7 +34,7 @@ end
 function check_input(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::AbstractAlgorithm)
     m = LinearAlgebra.checksquare(A)
     @check_size(expA, (m, m))
-    (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
+    @check_scalar(expA, A, (τ isa Real) ? identity : complex)
     return nothing
 end
 
