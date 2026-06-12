@@ -31,14 +31,14 @@ function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMa
     return nothing
 end
 
-function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
+function check_input(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::AbstractAlgorithm)
     m = LinearAlgebra.checksquare(A)
     @check_size(expA, (m, m))
     (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
     return nothing
 end
 
-function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
+function check_input(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, ::DiagonalAlgorithm)
     m = LinearAlgebra.checksquare(A)
     @assert isdiag(A)
     @assert expA isa Diagonal
@@ -85,13 +85,13 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
 end
 
 function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
-    check_input(exponential!, τ, A, expA, alg)
+    check_input(exponential!, (τ, A), expA, alg)
     expA .= A .* τ
     return LinearAlgebra.exp!(expA)
 end
 
 function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
-    check_input(exponential!, τ, A, expA, alg)
+    check_input(exponential!, (τ, A), expA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
     expD = map_diagonal(x -> exp(x * τ), D)
     VexpD = V * expD
@@ -103,7 +103,7 @@ function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatr
 end
 
 function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::MatrixFunctionViaEig)
-    check_input(exponential!, τ, A, expA, alg)
+    check_input(exponential!, (τ, A), expA, alg)
     D, V = eig_full!(A, alg.eig_alg)
     expD = map_diagonal!(x -> exp(x * τ), D, D)
     iV = inv(V)
@@ -124,6 +124,6 @@ function exponential!(A, expA, alg::DiagonalAlgorithm)
 end
 
 function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::DiagonalAlgorithm)
-    check_input(exponential!, τ, A, expA, alg)
+    check_input(exponential!, (τ, A), expA, alg)
     return map_diagonal!(x -> exp(x * τ), expA, A)
 end
