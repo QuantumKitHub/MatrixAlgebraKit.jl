@@ -15,9 +15,9 @@ function MatrixAlgebraKit.default_eig_algorithm(
 end
 
 function MatrixAlgebraKit.default_exponential_algorithm(
-        type::Type{T}; driver::Driver = GS(), kwargs...
+        type::Type{T}; kwargs...
     ) where {T <: StridedMatrix{<:GSFloat}}
-    eig_alg = MatrixAlgebraKit.default_eig_algorithm(type; driver, kwargs...)
+    eig_alg = MatrixAlgebraKit.default_eig_algorithm(type; kwargs...)
     return MatrixFunctionViaEig(eig_alg)
 end
 
