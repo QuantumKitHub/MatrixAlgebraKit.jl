@@ -36,14 +36,33 @@ function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMa
     return nothing
 end
 
-function check_input(type::typeof(exponential!), τ::Real, A::AbstractMatrix, expA::AbstractMatrix, alg)
-    return check_input(type, A, expA, alg)
+function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
+    m, n = size(A)
+    m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
+    @check_size(expA, (m, m))
+    (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
+    return nothing
 end
 
-function check_input(type::typeof(exponential!), τ, A::AbstractMatrix, expA::AbstractMatrix, alg)
-    return check_input(type, complex(A), expA, alg)
+function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+    if !ishermitian(A)
+        throw(DomainError(A, "Hermitian matrix was expected. Use `project_hermitian` to project onto the nearest hermitian matrix)"))
+    end
+    m, n = size(A)
+    m == n || throw(DimensionMismatch("square input matrix expected. Got ($m,$n)"))
+    @check_size(expA, (m, m))
+    (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
+    return nothing
 end
 
+function check_input(::typeof(exponential!), τ::Number, A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
+    m, n = size(A)
+    @assert m == n && isdiag(A)
+    @assert expA isa Diagonal
+    @check_size(expA, (m, m))
+    (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
+    return nothing
+end
 
 # Outputs
 # -------
