@@ -43,7 +43,7 @@ function check_input(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatr
     @assert isdiag(A)
     @assert expA isa Diagonal
     @check_size(expA, (m, m))
-    (τ isa Real) ? @check_scalar(expA, A) : @check_scalar(expA, A, complex)
+    @check_scalar(expA, A, (τ isa Real) ? identity : complex)
     return nothing
 end
 
