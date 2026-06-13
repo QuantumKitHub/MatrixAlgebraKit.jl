@@ -30,7 +30,7 @@ export left_polar, right_polar
 export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
-export exponential, exponential!, exponentialr, exponentialr!
+export exponential, exponential!
 
 export Householder, Native_HouseholderQR, Native_HouseholderLQ
 export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar
