@@ -7,72 +7,58 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
     ΔU, ΔS, ΔVᴴ = ΔUSVᴴ
     r = svd_rank(S; rank_atol)
 
-    vΔS = view(diagview(ΔS), 1:r)
-
-    vU = view(U, :, 1:r)
-    vS = view(S, 1:r)
-    vSmat = view(Smat, 1:r, 1:r)
-    vVᴴ = view(Vᴴ, 1:r, :)
+    U₁ = view(U, :, 1:r)
+    S₁ = view(S, 1:r)
+    V₁ᴴ = view(Vᴴ, 1:r, :)
 
     # compact region
-    vV = adjoint(vVᴴ)
-    UΔAV = vU' * ΔA * vV
-    copyto!(vΔS, real.(diagview(UΔAV)))
-    F = inv_safe.(transpose(vS) .- vS)
-    G = inv_safe.(transpose(vS) .+ vS)
-    hUΔAV = F .* (UΔAV + UΔAV') ./ 2
-    aUΔAV = G .* (UΔAV - UΔAV') ./ 2
-    K̇ = hUΔAV + aUΔAV
-    Ṁ = hUΔAV - aUΔAV
-
-    # check gauge condition
-    @assert isantihermitian(K̇)
-    @assert isantihermitian(Ṁ)
-    K̇diag = diagview(K̇)
-
-    ∂U = vU * K̇
-    ∂V = vV * Ṁ
-    # full component
-    if size(U, 2) > minmn && size(Vᴴ, 1) > minmn
-        Uperp = view(U, :, (minmn + 1):m)
-        Vᴴperp = view(Vᴴ, (minmn + 1):n, :)
-
-        aUAV = adjoint(Uperp) * A * adjoint(Vᴴperp)
-
-        UÃÃV = similar(A, (size(aUAV, 1) + size(aUAV, 2), size(aUAV, 1) + size(aUAV, 2)))
-        fill!(UÃÃV, 0)
-        view(UÃÃV, (1:size(aUAV, 1)), size(aUAV, 1) .+ (1:size(aUAV, 2))) .= aUAV
-        view(UÃÃV, size(aUAV, 1) .+ (1:size(aUAV, 2)), 1:size(aUAV, 1)) .= aUAV'
-        rhs = vcat(adjoint(Uperp * ΔA * Vᴴ), Vᴴperp * ΔA' * U)
-        superKM = -_sylvester(UÃÃV, Smat, rhs)
-        K̇perp = view(superKM, 1:size(aUAV, 2))
-        Ṁperp = view(superKM, (size(aUAV, 2) + 1):(size(aUAV, 1) + size(aUAV, 2)))
-        ∂U .+= Uperp * K̇perp
-        ∂V .+= Vᴴperp * Ṁperp
-    else
-        ImUU = (UniformScaling(1) - vU * vU')
-        ImVV = (UniformScaling(1) - vV * vVᴴ)
-        upper = ImUU * ΔA * vV
-        lower = ImVV * ΔA' * vU
-        rhs = vcat(upper, lower)
-
-        Ã = ImUU * A * ImVV
-        ÃÃ = similar(A, (m + n, m + n))
-        fill!(ÃÃ, 0)
-        view(ÃÃ, (1:m), m .+ (1:n)) .= Ã
-        view(ÃÃ, m .+ (1:n), 1:m) .= Ã'
-
-        superLN = -_sylvester(ÃÃ, vSmat, rhs)
-        ∂U += view(superLN, 1:size(upper, 1), :)
-        ∂V += view(superLN, (size(upper, 1) + 1):(size(upper, 1) + size(lower, 1)), :)
+    V₁ = adjoint(V₁ᴴ)
+    ΔAV₁ = ΔA * V₁
+    UᴴΔAV₁ = U₁' * ΔAV₁
+    if !iszerotangent(ΔS)
+        ΔS₁ = view(diagview(ΔS), 1:r)
+        ΔS₁ .= real.(diagview(UᴴΔAV₁))
     end
-    if !iszerotangent(ΔU)
-        vΔU = view(ΔU, :, 1:r)
-        copyto!(vΔU, ∂U)
-    end
-    if !iszerotangent(ΔVᴴ)
-        vΔVᴴ = view(ΔVᴴ, 1:r, :)
-        adjoint!(vΔVᴴ, ∂V)
+    if !iszerotangent(ΔU) || !iszerotangent(ΔVᴴ)
+        hUᴴΔAV₁ = inv_safe.(transpose(S₁) .- S₁) .* project_hermitian(UᴴΔAV₁)
+        aUᴴΔAV₁ = inv_safe.(transpose(S₁) .+ S₁) .* project_antihermitian(UᴴΔAV₁)
+        if !iszerotangent(ΔU)
+            ΔU₁ = view(ΔU, :, 1:r)
+            K̇ = hUᴴΔAV₁ + aUᴴΔAV₁
+            mul!(ΔU₁, U₁, K̇)
+            if m > r
+                ΔAV₁ = mul!(ΔAV₁, U₁, UᴴΔAV₁, -1, 1)
+                ΔU₁ .+= ΔAV₁ ./ transpose(S₁)
+            end
+            if size(U, 2) > r # these columns of U are undetermined, but U' * U̇ should be antihermitian
+                U₂ = view(U, :, (r + 1):size(U, 2))
+                ΔU₁ᴴU₂ = ΔU₁' * U₂
+                ΔU₂ = view(ΔU, :, (r + 1):size(U, 2))
+                mul!(ΔU₂, U₁, ΔU₁ᴴU₂, -1, 0)
+            end
+        end
+        if !iszerotangent(ΔVᴴ)
+            ΔV₁ᴴ = view(ΔVᴴ, 1:r, :)
+            Ṁ = hUᴴΔAV₁ - aUᴴΔAV₁
+            mul!(ΔV₁ᴴ, Ṁ', V₁ᴴ)
+            if n > r
+                UᴴΔA₁ = U₁' * ΔA
+                UᴴΔA₁ = mul!(UᴴΔA₁, UᴴΔAV₁, V₁ᴴ, -1, 1)
+                ΔV₁ᴴ .+= S₁ .\ UᴴΔA₁
+            end
+            if size(Vᴴ, 1) > r # these rows of Vᴴ are undetermined, but V * V̇ should be antihermitian
+                V₂ᴴ = view(Vᴴ, (r + 1):size(Vᴴ, 1), :)
+                V₂ᴴΔV₁ = V₂ᴴ * ΔV₁ᴴ'
+                ΔV₂ᴴ = view(ΔVᴴ, (r + 1):size(Vᴴ, 1), :)
+                mul!(ΔV₂ᴴ, V₂ᴴΔV₁, V₁ᴴ, -1, 0)
+            end
+        end
+        if eltype(U) <: Complex && !iszerotangent(ΔU) && !iszerotangent(ΔVᴴ) # fix gauge
+            _, I = findmax(abs, U₁; dims = 1)
+            infinitesimal_phases = imag.(ΔU₁[I] ./ U₁[I])
+            ΔU₁ .-= im .* U₁ .* infinitesimal_phases
+            ΔV₁ᴴ .+= im .* transpose(infinitesimal_phases) .* V₁ᴴ
+        end
     end
     return (ΔU, ΔS, ΔVᴴ)
 end
