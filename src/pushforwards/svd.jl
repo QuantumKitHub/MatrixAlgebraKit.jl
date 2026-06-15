@@ -53,7 +53,7 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
                 mul!(ΔV₂ᴴ, V₂ᴴΔV₁, V₁ᴴ, -1, 0)
             end
         end
-        if eltype(U) <: Complex && !iszerotangent(ΔU) && !iszerotangent(ΔVᴴ) # fix gauge
+        if eltype(U) <: Complex && !iszerotangent(ΔU) && !iszerotangent(ΔVᴴ) # fix gauge for `gaugefix!` compatibility
             _, I = findmax(abs, U₁; dims = 1)
             infinitesimal_phases = imag.(ΔU₁[I] ./ U₁[I])
             ΔU₁ .-= im .* U₁ .* infinitesimal_phases
