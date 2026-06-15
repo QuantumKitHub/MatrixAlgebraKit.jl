@@ -6,7 +6,7 @@ using LinearAlgebra: mul!, rmul!, lmul!, adjoint!, rdiv!, ldiv!
 using LinearAlgebra: sylvester, lu!, diagm
 using LinearAlgebra: isposdef, issymmetric
 using LinearAlgebra: Diagonal, Hermitian, diag, diagind, isdiag
-using LinearAlgebra: UpperTriangular, LowerTriangular
+using LinearAlgebra: UpperTriangular, LowerTriangular, UniformScaling
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt
 
 export isisometric, isunitary, ishermitian, isantihermitian

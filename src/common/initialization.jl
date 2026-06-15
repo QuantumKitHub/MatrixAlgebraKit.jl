@@ -15,12 +15,6 @@ function one!(A::AbstractMatrix)
     return A
 end
 
-function one!(A::AbstractVector)
-    length(A) > 0 || return A
-    A .= one(eltype(A))
-    return A
-end
-
 function uppertriangular!(A::AbstractMatrix)
     Base.require_one_based_indexing(A)
     m, n = size(A)
