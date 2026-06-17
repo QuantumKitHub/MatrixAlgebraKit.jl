@@ -36,16 +36,14 @@ function test_mooncake_svd_compact(
             rng, call_and_zero!, svd_compact!, copy(A), alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
-        if eltype(T) <: Real # gauge freedom in complex outputs
-            Mooncake.TestUtils.test_rule(
-                rng, svd_compact, A, alg;
-                mode = Mooncake.ForwardMode, atol, rtol
-            )
-            Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, svd_compact!, copy(A), alg;
-                mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
-            )
-        end
+        Mooncake.TestUtils.test_rule(
+            rng, svd_compact, A, alg;
+            mode = Mooncake.ForwardMode, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, call_and_zero!, svd_compact!, copy(A), alg;
+            mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
+        )
     end
 end
 
@@ -73,7 +71,7 @@ function test_mooncake_svd_full(
             rng, call_and_zero!, svd_full!, copy(A), alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
-        if eltype(T) <: Real # gauge freedom in complex outputs
+        if size(A, 1) == size(A, 2) # gauge freedom in complex outputs
             Mooncake.TestUtils.test_rule(
                 rng, svd_full, A, alg;
                 mode = Mooncake.ForwardMode, atol, rtol
