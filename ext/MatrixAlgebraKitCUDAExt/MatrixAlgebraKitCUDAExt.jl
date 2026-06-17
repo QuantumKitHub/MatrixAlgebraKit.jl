@@ -8,7 +8,7 @@ using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, Abstract
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
 import MatrixAlgebraKit: heevj!, heevd!, geev!
-import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank, svd_pullback!, eigh_pullback!, eig_pullback!
+import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank, svd_pullback!, eigh_pullback!, eig_pullback!, svd_pushforward!
 using CUDA, CUDA.cuBLAS
 using CUDA: i32
 using LinearAlgebra
@@ -211,6 +211,16 @@ end
 
 function eig_pullback!(ΔA::AnyCuMatrix, A, DV, ΔDV, ind::AnyCuVector; kwargs...)
     return eig_pullback!(ΔA, A, DV, ΔDV, collect(ind); kwargs...)
+end
+
+# have to override this as methods are missing in GPUArrays for the various
+# views of Diagonal of ΔA
+function svd_pushforward!(
+        ΔA::Diagonal{T, <:CuVector{T}}, A, USVᴴ, ΔUSVᴴ, ind = Colon();
+        rank_atol::Real = MatrixAlgebraKit.default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol::Real = MatrixAlgebraKit.default_pullback_rank_atol(USVᴴ[2])
+    ) where {T}
+    return MatrixAlgebraKit.svd_pushforward!(diagm(diagview(ΔA)), A, USVᴴ, ΔUSVᴴ, ind; rank_atol, degeneracy_atol)
 end
 
 end

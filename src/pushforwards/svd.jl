@@ -63,9 +63,9 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
     return (ΔU, ΔS, ΔVᴴ)
 end
 
-function svd_trunc_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind; rank_atol = default_pullback_rank_atol(A), kwargs...)
-    # TODO
-end
+# TODO
+#=function svd_trunc_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind; rank_atol = default_pullback_rank_atol(A), kwargs...)
+end=#
 
 function svd_vals_pushforward!(
         ΔA, A, USVᴴ, ΔS, ind = Colon();
