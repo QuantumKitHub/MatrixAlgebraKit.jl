@@ -633,7 +633,7 @@ function Mooncake.frule!!(::Dual{typeof(svd_vals!)}, A_dA::Dual, S_dS::Dual, alg
     # compute primal
     A, dA = arrayify(A_dA)
     S, dS = arrayify(S_dS)
-    USVᴴ = svd_compact(A, Mooncake.primal(alg_dalg))
+    USVᴴ = svd_compact!(A, Mooncake.primal(alg_dalg))
     copy!(S, diagview(USVᴴ[2]))
     svd_vals_pushforward!(dA, A, USVᴴ, dS)
     return S_dS
