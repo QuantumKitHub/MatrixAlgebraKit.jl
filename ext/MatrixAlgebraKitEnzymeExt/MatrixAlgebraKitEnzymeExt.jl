@@ -210,11 +210,11 @@ for (f, pb) in (
     end
 end
 
-for f in (:svd_compact!, :svd_full!)
+for f! in (:svd_compact!, :svd_full!)
     @eval begin
         function EnzymeRules.augmented_primal(
                 config::EnzymeRules.RevConfigWidth{1},
-                func::Const{typeof($f)},
+                func::Const{typeof($f!)},
                 ::Type{RT},
                 A::Annotation,
                 USVᴴ::Annotation{Tuple{TU, TS, TVᴴ}},
@@ -232,7 +232,7 @@ for f in (:svd_compact!, :svd_full!)
             dret = if EnzymeRules.needs_shadow(config) && ((TU == TS == TVᴴ == Nothing) || isa(USVᴴ, Const))
                 dU = zero(ret[1])
                 # special casing `Diagonal` seems to be necessary due to Enzyme's type analysis
-                dS = $(f == svd_compact!) ? Diagonal(zero(ret[2].diag)) : zero(ret[2])
+                dS = $(f! == svd_compact!) ? Diagonal(zero(ret[2].diag)) : zero(ret[2])
                 dVᴴ = zero(ret[3])
                 (dU, dS, dVᴴ)
             elseif EnzymeRules.needs_shadow(config)
@@ -245,7 +245,7 @@ for f in (:svd_compact!, :svd_full!)
         end
         function EnzymeRules.reverse(
                 config::EnzymeRules.RevConfigWidth{1},
-                func::Const{typeof($f)},
+                func::Const{typeof($f!)},
                 ::Type{RT},
                 cache,
                 A::Annotation,
@@ -267,21 +267,17 @@ for f in (:svd_compact!, :svd_full!)
         end
         function EnzymeRules.forward(
                 config::EnzymeRules.FwdConfigWidth{1},
-                func::Const{typeof($f)},
+                func::Const{typeof($f!)},
                 ::Type{RT},
                 A::Annotation{TA},
                 USVᴴ::Annotation,
                 alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
             ) where {RT, TA}
-            $f(A.val, USVᴴ.val, alg.val)
+            $f!(A.val, USVᴴ.val, alg.val)
+            A_is_arg = !isa(A, Const) && TA <: Diagonal && diagview(A.dval) === USVᴴ.dval[2]
             if !isa(A, Const)
-                if $(f == svd_compact!)
-                    make_zero!(USVᴴ.dval[2].diag)
-                else
-                    make_zero!(USVᴴ.dval[2])
-                end
                 !isa(USVᴴ, Const) && svd_pushforward!(A.dval, A.val, USVᴴ.val, USVᴴ.dval)
-                make_zero!(A.dval)
+                !A_is_arg && make_zero!(A.dval)
             end
             if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
                 return USVᴴ
