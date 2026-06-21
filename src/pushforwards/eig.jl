@@ -1,7 +1,6 @@
 function eig_pushforward!(
         ΔA, A, DV, ΔDV;
-        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1])
     )
     D, V = DV
     ΔD, ΔV = ΔDV
@@ -23,5 +22,5 @@ function eig_pushforward!(
 end
 
 function eig_vals_pushforward!(ΔA, A, DV, ΔD; kwargs...)
-    return eig_pushforward!(ΔA, A, DV, (Diagonal(ΔD), nothing); kwargs...)
+    return eig_pushforward!(ΔA, A, DV, (diagonal(ΔD), nothing); kwargs...)
 end

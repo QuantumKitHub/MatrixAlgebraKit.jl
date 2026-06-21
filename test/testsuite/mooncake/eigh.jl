@@ -67,6 +67,18 @@ function test_mooncake_eigh_vals(
             rng, eigh_wrapper, eigh_vals, A, alg;
             output_tangent, is_primitive = false, atol, rtol
         )
+        if A isa Diagonal{<:Real}
+            A2 = copy(A)
+            Mooncake.TestUtils.test_rule(
+                rng, eig_vals!, A2, copy(A2.diag), alg;
+                output_tangent, atol, rtol
+            )
+            A2 = copy(A)
+            Mooncake.TestUtils.test_rule(
+                rng, eig_vals!, A2, A2.diag, alg;
+                output_tangent, atol, rtol
+            )
+        end
         Mooncake.TestUtils.test_rule(
             rng, eigh!_wrapper, eigh_vals!, A, alg;
             output_tangent, is_primitive = false, atol, rtol

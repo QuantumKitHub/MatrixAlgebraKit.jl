@@ -1,4 +1,8 @@
-function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = default_pullback_rank_atol(A), kwargs...)
+function svd_pushforward!(
+        ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon();
+        rank_atol = default_pullback_rank_atol(USVᴴ[2]),
+        degeneracy_atol = default_pullback_rank_atol(USVᴴ[2])
+    )
     U, Smat, Vᴴ = USVᴴ
     m, n = size(U, 1), size(Vᴴ, 2)
     (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of U*S*Vᴴ ($m, $n)"))
@@ -16,12 +20,13 @@ function svd_pushforward!(ΔA, A, USVᴴ, ΔUSVᴴ, ind = Colon(); rank_atol = d
     ΔAV₁ = ΔA * V₁
     UᴴΔAV₁ = U₁' * ΔAV₁
     if !iszerotangent(ΔS)
+        zero!(ΔS) # make off-diagonal entries zero in case of full ΔS (svd_full!)
         ΔS₁ = view(diagview(ΔS), 1:r)
         ΔS₁ .= real.(diagview(UᴴΔAV₁))
     end
     if !iszerotangent(ΔU) || !iszerotangent(ΔVᴴ)
-        hUᴴΔAV₁ = inv_safe.(transpose(S₁) .- S₁) .* project_hermitian(UᴴΔAV₁)
-        aUᴴΔAV₁ = inv_safe.(transpose(S₁) .+ S₁) .* project_antihermitian(UᴴΔAV₁)
+        hUᴴΔAV₁ = inv_safe.(transpose(S₁) .- S₁, degeneracy_atol) .* project_hermitian(UᴴΔAV₁)
+        aUᴴΔAV₁ = inv_safe.(transpose(S₁) .+ S₁, degeneracy_atol) .* project_antihermitian(UᴴΔAV₁)
         if !iszerotangent(ΔU)
             ΔU₁ = view(ΔU, :, 1:r)
             K̇ = hUᴴΔAV₁ + aUᴴΔAV₁

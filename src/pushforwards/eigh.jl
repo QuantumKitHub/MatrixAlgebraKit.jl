@@ -1,7 +1,6 @@
 function eigh_pushforward!(
         ΔA, A, DV, ΔDV;
-        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1])
     )
     D, V = DV
     ΔD, ΔV = ΔDV

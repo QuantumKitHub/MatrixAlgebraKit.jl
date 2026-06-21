@@ -165,7 +165,7 @@ function eig_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
     D, V = DV
     diagA = diagview(A)
     I = sortperm(diagA; by = eig_sortby)
-    if D === A
+    if has_equal_storage(A, D)
         permute!(diagA, I)
     else
         diagview(D) .= view(diagA, I)
@@ -179,8 +179,8 @@ end
 
 function eig_vals!(A::Diagonal, D::AbstractVector, alg::DiagonalAlgorithm)
     check_input(eig_vals!, A, D, alg)
-    Ad = diagview(A)
-    D === Ad || copy!(D, Ad)
+    diagA = diagview(A)
+    has_equal_storage(A, D) || copy!(D, diagA)
     sort!(D; by = eig_sortby)
     return D
 end
