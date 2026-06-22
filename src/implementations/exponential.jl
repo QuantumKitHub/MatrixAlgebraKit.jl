@@ -67,7 +67,7 @@ function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatr
     check_input(exponential!, (τ, A), expA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
     if eltype(A) <: Real && eltype(τ) <: Real
-        V .*= exp.(transpose(diagview(D)) .* τ ./ 2)
+        V .*= transpose(diagview(exponential!((τ / 2, D), D, DiagonalAlgorithm())))
         return mul!(expA, V, V')
     else
         VexpD = V .* exp.(transpose(diagview(D)) .* τ)
@@ -79,11 +79,11 @@ function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatr
     check_input(exponential!, (τ, A), expA, alg)
     D, V = eig_full!(A, alg.eig_alg)
     if eltype(A) <: Real && eltype(τ) <: Real
-        VexpD = V .* exp.(transpose(diagview(D)) .* τ)
+        VexpD = V .* transpose(diagview(exponential!((τ, D), D, DiagonalAlgorithm())))
         expAc = rdiv!(VexpD, LinearAlgebra.lu!(V))
         return expA .= real.(expAc)
     else
-        expA .= V .* exp.(transpose(D) .* τ)
+        expA .= V .* transpose(diagview(exponential!((τ, D), D, DiagonalAlgorithm())))
         return rdiv!(expA, LinearAlgebra.lu!(V))
     end
 end
