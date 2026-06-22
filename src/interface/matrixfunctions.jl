@@ -24,9 +24,9 @@ function Base.show(io::IO, alg::MatrixFunctionViaEigh)
 end
 
 """
-    MatrixFunctionViaEig()
+    MatrixFunctionViaEig(eig_alg)
 
-Algorithm type to denote finding the exponential `A` by computing the eigendecomposition of `A`.
+Algorithm type for computing a function of a matrix by computing its eigenvalue decomposition and applying the function to the eigenvalues.
 The `eig_alg` specifies which eigendecomposition implementation to use.
 """
 struct MatrixFunctionViaEig{A <: AbstractAlgorithm} <: AbstractAlgorithm
