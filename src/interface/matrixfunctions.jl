@@ -9,7 +9,7 @@ Algorithm type to denote finding the exponential of `A` via the implementation o
 @algdef MatrixFunctionViaLA
 
 """
-    MatrixFunctionViaEigh()
+    MatrixFunctionViaEigh(eigh_alg)
 
 Algorithm type to denote finding the exponential `A` by computing the hermitian eigendecomposition of `A`.
 The `eigh_alg` specifies which hermitian eigendecomposition implementation to use.
