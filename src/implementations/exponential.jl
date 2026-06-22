@@ -84,7 +84,7 @@ function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatr
         expAc = rdiv!(VexpD, LinearAlgebra.lu!(V))
         return expA .= real.(expAc)
     else
-        expA .= V .* transpose(diagview(exponential!((τ, D), D, DiagonalAlgorithm())))
+        expA .= V .* transpose(diagview(exponential!((τ, D), D)))
         return rdiv!(expA, LinearAlgebra.lu!(V))
     end
 end
