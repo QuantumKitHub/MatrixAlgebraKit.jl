@@ -11,7 +11,7 @@ Algorithm type to denote finding the exponential of `A` via the implementation o
 """
     MatrixFunctionViaEigh(eigh_alg)
 
-Algorithm type to denote finding the exponential `A` by computing the hermitian eigendecomposition of `A`.
+Algorithm type for computing a function of a matrix by computing its hermitian eigenvalue decomposition and applying the function to the eigenvalues.
 The `eigh_alg` specifies which hermitian eigendecomposition implementation to use.
 """
 struct MatrixFunctionViaEigh{A <: AbstractAlgorithm} <: AbstractAlgorithm
