@@ -80,7 +80,7 @@ function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatr
     check_input(exponential!, (τ, A), expA, alg)
     D, V = eig_full!(A, alg.eig_alg)
     if eltype(A) <: Real && eltype(τ) <: Real
-        VexpD = V * exponential!((τ, D), D)))
+        VexpD = V * exponential!((τ, D), D)
         expAc = rdiv!(VexpD, LinearAlgebra.lu!(V))
         return expA .= real.(expAc)
     else
