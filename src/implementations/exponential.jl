@@ -67,7 +67,8 @@ function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatr
     check_input(exponential!, (τ, A), expA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
     if eltype(A) <: Real && eltype(τ) <: Real
-        V .*= transpose(diagview(exponential!((τ / 2, D), D, DiagonalAlgorithm())))
+        expD = exponential!((τ / 2, D), D)
+        rmul!(V, expD)
         return mul!(expA, V, V')
     else
         VexpD = V .* exp.(transpose(diagview(D)) .* τ)
