@@ -30,14 +30,10 @@ function default_exponential_algorithm(::Type{T}; kwargs...) where {T <: Diagona
     return DiagonalAlgorithm(; kwargs...)
 end
 
-for f in (:exponential!,)
-    @eval function default_algorithm(::typeof($f), ::Type{A}; kwargs...) where {A}
-        return default_exponential_algorithm(A; kwargs...)
-    end
+function default_algorithm(::typeof(exponential!), ::Type{A}; kwargs...) where {A}
+    return default_exponential_algorithm(A; kwargs...)
 end
 
-for f in (:exponential!,)
-    @eval function default_algorithm(::typeof($f), ::Tuple{A, B}; kwargs...) where {A, B}
-        return default_exponential_algorithm(B; kwargs...)
-    end
+function default_algorithm(::typeof(exponential!), ::Tuple{A, B}; kwargs...) where {A, B}
+    return default_exponential_algorithm(B; kwargs...)
 end
