@@ -77,9 +77,15 @@ function test_mooncake_eig_vals(
             rng, eig_vals, A, alg;
             output_tangent, atol, rtol
         )
-        if T <: Diagonal{<:Complex}
+        if A isa Diagonal{<:Complex}
+            A2 = copy(A)
             Mooncake.TestUtils.test_rule(
-                rng, eig_vals!, A, A.diag, alg;
+                rng, eig_vals!, A2, copy(A2.diag), alg;
+                output_tangent, atol, rtol
+            )
+            A2 = copy(A)
+            Mooncake.TestUtils.test_rule(
+                rng, eig_vals!, A2, A2.diag, alg;
                 output_tangent, atol, rtol
             )
         end

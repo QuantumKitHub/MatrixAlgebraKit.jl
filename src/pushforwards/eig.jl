@@ -1,7 +1,6 @@
 function eig_pushforward!(
         ΔA, A, DV, ΔDV;
-        degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+        degeneracy_atol::Real = default_pullback_rank_atol(DV[1])
     )
     D, V = DV
     ΔD, ΔV = ΔDV
@@ -12,11 +11,16 @@ function eig_pushforward!(
     end
     if !iszerotangent(ΔV)
         ∂K .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
-        mul!(ΔV, V, ∂K, 1, 0)
+        mul!(ΔV, V, ∂K)
+        if eltype(V) <: Complex # fix gauge for `gaugefix!` compatibility
+            _, I = findmax(abs, V; dims = 1)
+            infinitesimal_phases = imag.(ΔV[I] ./ V[I])
+            ΔV .-= im .* V .* infinitesimal_phases
+        end
     end
     return ΔDV
 end
 
 function eig_vals_pushforward!(ΔA, A, DV, ΔD; kwargs...)
-    return eig_pushforward!(ΔA, A, DV, (Diagonal(ΔD), nothing); kwargs...)
+    return eig_pushforward!(ΔA, A, DV, (diagonal(ΔD), nothing); kwargs...)
 end

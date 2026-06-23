@@ -3,7 +3,7 @@ module MatrixAlgebraKitMooncakeExt
 using Mooncake
 using Mooncake: DefaultCtx, CoDual, Dual, NoRData, rrule!!, frule!!, arrayify, @is_primitive
 using MatrixAlgebraKit
-using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output, zero!
+using MatrixAlgebraKit: inv_safe, diagview, copy_input, initialize_output, zero!, has_equal_storage
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!
@@ -13,6 +13,7 @@ using MatrixAlgebraKit: eig_trunc_pullback!, eigh_trunc_pullback!, eigh_vals_pul
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
 using MatrixAlgebraKit: left_polar_pushforward!, right_polar_pushforward!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!, svd_vals_pullback!
+using MatrixAlgebraKit: svd_pushforward!, svd_vals_pushforward!
 using MatrixAlgebraKit: TruncatedAlgorithm
 using LinearAlgebra
 
@@ -66,17 +67,17 @@ for (f!, f, pb, adj) in (
                 # of the output args -- this can
                 # mess up the pullback because
                 # generally the args are used there
-                if !(A === arg1 || A === arg2)
+                if !(has_equal_storage(A, arg1) || has_equal_storage(A, arg2))
                     copy!(A, Ac)
                     $pb(dA, A, (arg1, arg2), (darg1, darg2))
                 else
                     ΔA = zero(A)
-                    $pb(ΔA, A, (arg1, arg2), (darg1, darg2))
+                    $pb(ΔA, Ac, (arg1, arg2), (darg1, darg2))
                     dA .= ΔA
                 end
-                if A === arg1
+                if has_equal_storage(A, arg1)
                     zero!(darg2)
-                elseif A === arg2
+                elseif has_equal_storage(A, arg2)
                     zero!(darg1)
                 else
                     zero!(darg1)
@@ -92,11 +93,7 @@ for (f!, f, pb, adj) in (
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
-            # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-            # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-            # pass). For many types this is done automatically when the forward step returns, but
-            # not for nested structs with various fields (like Diagonal{Complex})
-            output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+            output_codual = Mooncake.zero_fcodual(output)
             function $adj(::NoRData)
                 arg1, arg2 = Mooncake.primal(output_codual)
                 darg1_, darg2_ = Mooncake.tangent(output_codual)
@@ -127,7 +124,9 @@ for (f!, f, pf) in (
             arg1, darg1 = arrayify(args[1], dargs[1])
             arg2, darg2 = arrayify(args[2], dargs[2])
             $f!(A, args, Mooncake.primal(alg_dalg))
-            $pf(dA, A, (arg1, arg2), (darg1, darg2))
+            # A is not used in the pushforward; since we have destroyed A, we insert A = nothing
+            # to trigger an error in case the pushfward is modified to directly use A
+            $pf(dA, nothing, (arg1, arg2), (darg1, darg2))
             return args_dargs
         end
         @is_primitive Mooncake.DefaultCtx Mooncake.ForwardMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -169,7 +168,7 @@ for (f!, f, pb, adj) in (
         function Mooncake.rrule!!(f_df::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual{<:MatrixAlgebraKit.AbstractAlgorithm})
             A, dA = arrayify(A_dA)
             output = $f(A, Mooncake.primal(alg_dalg))
-            output_codual = CoDual(output, Mooncake.zero_tangent(output))
+            output_codual = Mooncake.zero_fcodual(output)
             function $adj(::NoRData)
                 arg, darg = arrayify(output_codual)
                 $pb(dA, A, arg, darg)
@@ -181,9 +180,9 @@ for (f!, f, pb, adj) in (
     end
 end
 
-for (f!, f, f_full, pb, pf, adj) in (
-        (:eig_vals!, :eig_vals, :eig_full, :eig_vals_pullback!, :eig_vals_pushforward!, :eig_vals_adjoint),
-        (:eigh_vals!, :eigh_vals, :eigh_full, :eigh_vals_pullback!, :eigh_vals_pushforward!, :eigh_vals_adjoint),
+for (f!, f, f_full, f_full!, pb, pf, adj) in (
+        (:eig_vals!, :eig_vals, :eig_full, :eig_full!, :eig_vals_pullback!, :eig_vals_pushforward!, :eig_vals_adjoint),
+        (:eigh_vals!, :eigh_vals, :eigh_full, :eigh_full!, :eigh_vals_pullback!, :eigh_vals_pushforward!, :eigh_vals_adjoint),
     )
     @eval begin
         @is_primitive Mooncake.DefaultCtx Tuple{typeof($f!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -191,38 +190,45 @@ for (f!, f, f_full, pb, pf, adj) in (
             # compute primal
             A, dA = arrayify(A_dA)
             D, dD = arrayify(D_dD)
-            Dc = copy(D)
-            # update primal
             DV = $f_full(A, Mooncake.primal(alg_dalg))
+            Ac = has_equal_storage(A, D) ? copy(A) : A
+            Dc = copy(D)
             copy!(D, diagview(DV[1]))
             V = DV[2]
             function $adj(::NoRData)
-                if A !== D
+                if !has_equal_storage(A, D) # A is unchanged
                     $pb(dA, A, DV, dD)
-                else
-                    ΔA = zero(A)
-                    $pb(ΔA, A, DV, dD)
-                    dA .= A
-                end
-                if A !== D
                     zero!(dD)
                     copy!(D, Dc)
-                else
+                else # A and D have the same storage
+                    ΔA = zero(A)
+                    $pb(ΔA, Ac, DV, dD)
+                    copy!(dA, ΔA)
                     copy!(A, Ac)
                 end
                 return NoRData(), NoRData(), NoRData(), NoRData()
             end
             return D_dD, $adj
         end
-        function Mooncake.frule!!(::Dual{typeof($f!)}, A_dA::Dual, D_dD::Dual, alg_dalg::Dual)
+        function Mooncake.frule!!(f_df::Dual{typeof($f!)}, A_dA::Dual, D_dD::Dual, alg_dalg::Dual)
             # compute primal
             A, dA = arrayify(A_dA)
             D, dD = arrayify(D_dD)
-            # update primal
-            DV = $f_full(A, Mooncake.primal(alg_dalg))
-            V = DV[2]
-            copyto!(D, diagview(DV[1]))
-            $pf(dA, A, (D, V), dD)
+            # have to do it like this to make Mooncake tests pass for both the case when D === A.diag and when not
+            _, V = initialize_output($f_full!, A, Mooncake.primal(alg_dalg))
+            DV = (diagonal(D), V)
+            DV = $f_full!(A, DV, Mooncake.primal(alg_dalg))
+            Dmat = DV[1]
+            if !(has_equal_storage(Dmat, D))
+                copy!(D, diagview(Dmat))
+            end
+            # A is not used in the pushforward; since we have destroyed A, we insert A = nothing
+            # to trigger an error in case the pushfward is modified to directly use A
+            if !(has_equal_storage(dA, dD))
+                $pf(dA, nothing, DV, dD)
+            else
+                $pf(copy(dA), nothing, DV, dD)
+            end
             return D_dD
         end
         @is_primitive Mooncake.DefaultCtx Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -231,16 +237,15 @@ for (f!, f, f_full, pb, pf, adj) in (
             A, dA = arrayify(A_dA)
             # update primal
             DV = $f_full(A, Mooncake.primal(alg_dalg))
-            V = DV[2]
-            output = diagview(DV[1])
-            output_codual = CoDual(output, Mooncake.zero_tangent(output))
+            D = diagview(DV[1])
+            D_codual = Mooncake.zero_fcodual(D)
             function $adj(::NoRData)
-                D, dD = arrayify(output_codual)
+                D, dD = arrayify(D_codual)
                 $pb(dA, A, DV, dD)
                 zero!(dD)
                 return NoRData(), NoRData(), NoRData()
             end
-            return output_codual, $adj
+            return D_codual, $adj
         end
         function Mooncake.frule!!(::Dual{typeof($f)}, A_dA::Dual, alg_dalg::Dual)
             # compute primal
@@ -248,11 +253,11 @@ for (f!, f, f_full, pb, pf, adj) in (
             # update primal
             DV = $f_full(A, Mooncake.primal(alg_dalg))
             V = DV[2]
-            output = diagview(DV[1])
-            output_dual = Dual(output, Mooncake.zero_tangent(output))
-            D, dD = arrayify(output_dual)
+            D = diagview(DV[1])
+            D_dual = Dual(D, Mooncake.zero_tangent(D))
+            _, dD = arrayify(D_dual)
             $pf(dA, A, DV, dD)
-            return output_dual
+            return D_dual
         end
     end
 end
@@ -283,10 +288,6 @@ for f in (:eig, :eigh)
             DVc = copy.(DV)
             alg = Mooncake.primal(alg_dalg)
             output = $f_trunc!(A, DV, alg)
-            # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-            # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-            # pass). For many types this is done automatically when the forward step returns, but
-            # not for nested structs with various fields (like Diagonal{Complex})
             output_codual = Mooncake.zero_fcodual(output)
             function $f_adjoint!(dy::Tuple{NoRData, NoRData, <:Real})
                 Dtrunc, Vtrunc, ϵ = Mooncake.primal(output_codual)
@@ -297,7 +298,7 @@ for f in (:eig, :eigh)
                 D, dD = arrayify(DV[1], dDV[1])
                 V, dV = arrayify(DV[2], dDV[2])
                 copy!(A, Ac)
-                if !(A === D || A === V)
+                if !has_equal_storage(A, D) # A is unchanged
                     $f_trunc_pullback!(dA, A, (D′, V′), (dD′, dV′))
                 else
                     ΔA = zero(A)
@@ -368,11 +369,7 @@ for f in (:eig, :eigh)
             A, dA = arrayify(A_dA)
             alg = Mooncake.primal(alg_dalg)
             output = $f_trunc(A, alg)
-            # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-            # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-            # pass). For many types this is done automatically when the forward step returns, but
-            # not for nested structs with various fields (like Diagonal{Complex})
-            output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+            output_codual = Mooncake.zero_fcodual(output)
             function $f_adjoint!(dy::Tuple{NoRData, NoRData, T}) where {T <: Real}
                 Dtrunc, Vtrunc, ϵ = Mooncake.primal(output_codual)
                 dDtrunc_, dVtrunc_, dϵ = Mooncake.tangent(output_codual)
@@ -421,11 +418,7 @@ for f in (:eig, :eigh)
             Ac = copy(A)
             DVc = copy.(DV)
             output = $f_trunc_no_error!(A, DV, alg)
-            # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-            # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-            # pass). For many types this is done automatically when the forward step returns, but
-            # not for nested structs with various fields (like Diagonal{Complex})
-            output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+            output_codual = Mooncake.zero_fcodual(output)
             function $f_adjoint!(::NoRData)
                 copy!(A, Ac)
                 Dtrunc, Vtrunc = Mooncake.primal(output_codual)
@@ -433,8 +426,7 @@ for f in (:eig, :eigh)
                 D′, dD′ = arrayify(Dtrunc, dDtrunc_)
                 V′, dV′ = arrayify(Vtrunc, dVtrunc_)
                 $f_pullback!(dA, A, (D′, V′), (dD′, dV′))
-                copy!(DV[1], DVc[1])
-                copy!(DV[2], DVc[2])
+                copy!.(DV, DVc)
                 zero!(dD′)
                 zero!(dV′)
                 return NoRData(), NoRData(), NoRData(), NoRData()
@@ -491,11 +483,7 @@ for f in (:eig, :eigh)
             A, dA = arrayify(A_dA)
             alg = Mooncake.primal(alg_dalg)
             output = $f_trunc_no_error(A, alg)
-            # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-            # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-            # pass). For many types this is done automatically when the forward step returns, but
-            # not for nested structs with various fields (like Diagonal{Complex})
-            output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+            output_codual = Mooncake.zero_fcodual(output)
             function $f_adjoint!(::NoRData)
                 Dtrunc, Vtrunc = Mooncake.primal(output_codual)
                 dDtrunc_, dVtrunc_ = Mooncake.tangent(output_codual)
@@ -538,7 +526,7 @@ for (f!, f) in (
         (:svd_compact!, :svd_compact),
     )
     @eval begin
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f!), Any, Tuple{<:Any, <:Any, <:Any}, MatrixAlgebraKit.AbstractAlgorithm}
+        @is_primitive Mooncake.DefaultCtx Tuple{typeof($f!), Any, Tuple{<:Any, <:Any, <:Any}, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
             USVᴴ = Mooncake.primal(USVᴴ_dUSVᴴ)
@@ -552,9 +540,7 @@ for (f!, f) in (
             function svd_adjoint(::NoRData)
                 copy!(A, Ac)
                 svd_pullback!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
-                copy!(U, USVᴴc[1])
-                copy!(S, USVᴴc[2])
-                copy!(Vᴴ, USVᴴc[3])
+                copy!.(USVᴴ, USVᴴc)
                 zero!(dU)
                 zero!(dS)
                 zero!(dVᴴ)
@@ -562,15 +548,24 @@ for (f!, f) in (
             end
             return USVᴴ_dUSVᴴ, svd_adjoint
         end
-        @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
+        function Mooncake.frule!!(::Dual{typeof($f!)}, A_dA::Dual, USVᴴ_dUSVᴴ::Dual, alg_dalg::Dual)
+            A, dA = arrayify(A_dA)
+            USVᴴ = Mooncake.primal(USVᴴ_dUSVᴴ)
+            dUSVᴴ = Mooncake.tangent(USVᴴ_dUSVᴴ)
+            U, dU = arrayify(USVᴴ[1], dUSVᴴ[1])
+            S, dS = arrayify(USVᴴ[2], dUSVᴴ[2])
+            Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
+            $f!(A, USVᴴ, Mooncake.primal(alg_dalg))
+            # A is not used in the pushforward; since we have destroyed A, we insert A = nothing
+            # to trigger an error in case the pushfward is modified to directly use A
+            svd_pushforward!(dA, nothing, (U, S, Vᴴ), (dU, dS, dVᴴ))
+            return USVᴴ_dUSVᴴ
+        end
+        @is_primitive Mooncake.DefaultCtx Tuple{typeof($f), Any, MatrixAlgebraKit.AbstractAlgorithm}
         function Mooncake.rrule!!(::CoDual{typeof($f)}, A_dA::CoDual, alg_dalg::CoDual)
             A, dA = arrayify(A_dA)
             USVᴴ = $f(A, Mooncake.primal(alg_dalg))
-            # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-            # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-            # pass). For many types this is done automatically when the forward step returns, but
-            # not for nested structs with various fields (like Diagonal{Complex})
-            USVᴴ_codual = CoDual(USVᴴ, Mooncake.fdata(Mooncake.zero_tangent(USVᴴ)))
+            USVᴴ_codual = Mooncake.zero_fcodual(USVᴴ)
             function svd_adjoint(::NoRData)
                 U, S, Vᴴ = Mooncake.primal(USVᴴ_codual)
                 dU_, dS_, dVᴴ_ = Mooncake.tangent(USVᴴ_codual)
@@ -585,10 +580,23 @@ for (f!, f) in (
             end
             return USVᴴ_codual, svd_adjoint
         end
+        function Mooncake.frule!!(::Dual{typeof($f)}, A_dA::Dual, alg_dalg::Dual)
+            A, dA = arrayify(A_dA)
+            USVᴴ = $f(A, Mooncake.primal(alg_dalg))
+            dUSVᴴ = Mooncake.zero_tangent(USVᴴ)
+            USVᴴ_dual = Dual(USVᴴ, dUSVᴴ)
+            U, S, Vᴴ = Mooncake.primal(USVᴴ_dual)
+            dU_, dS_, dVᴴ_ = Mooncake.tangent(USVᴴ_dual)
+            U, dU = arrayify(U, dU_)
+            S, dS = arrayify(S, dS_)
+            Vᴴ, dVᴴ = arrayify(Vᴴ, dVᴴ_)
+            svd_pushforward!(dA, A, (U, S, Vᴴ), (dU, dS, dVᴴ))
+            return USVᴴ_dual
+        end
     end
 end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_vals!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
+@is_primitive Mooncake.DefaultCtx Tuple{typeof(svd_vals!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
@@ -604,18 +612,25 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals!)}, A_dA::CoDual, S_dS::CoDua
     end
     return S_dS, svd_vals_adjoint
 end
+function Mooncake.frule!!(::Dual{typeof(svd_vals!)}, A_dA::Dual, S_dS::Dual, alg_dalg::Dual)
+    # compute primal
+    A, dA = arrayify(A_dA)
+    S, dS = arrayify(S_dS)
+    USVᴴ = svd_compact!(A, Mooncake.primal(alg_dalg))
+    copy!(S, diagview(USVᴴ[2]))
+    # A is not used in the pushforward; since we have destroyed A, we insert A = nothing
+    # to trigger an error in case the pushfward is modified to directly use A
+    svd_vals_pushforward!(dA, nothing, USVᴴ, dS)
+    return S_dS
+end
 
-@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_vals), Any, MatrixAlgebraKit.AbstractAlgorithm}
+@is_primitive Mooncake.DefaultCtx Tuple{typeof(svd_vals), Any, MatrixAlgebraKit.AbstractAlgorithm}
 function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
     USVᴴ = svd_compact(A, Mooncake.primal(alg_dalg))
-    # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-    # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-    # pass). For many types this is done automatically when the forward step returns, but
-    # not for nested structs with various fields (like Diagonal{Complex})
     S = diagview(USVᴴ[2])
-    S_codual = CoDual(S, Mooncake.fdata(Mooncake.zero_tangent(S)))
+    S_codual = Mooncake.zero_fcodual(S)
     function svd_vals_adjoint(::NoRData)
         S, dS = arrayify(S_codual)
         svd_vals_pullback!(dA, A, USVᴴ, dS)
@@ -623,6 +638,16 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_vals)}, A_dA::CoDual, alg_dalg::Co
         return NoRData(), NoRData(), NoRData()
     end
     return S_codual, svd_vals_adjoint
+end
+function Mooncake.frule!!(::Dual{typeof(svd_vals)}, A_dA::Dual, alg_dalg::Dual)
+    # compute primal
+    A, dA = arrayify(A_dA)
+    USVᴴ = svd_compact(A, Mooncake.primal(alg_dalg))
+    S = diagview(USVᴴ[2])
+    S_dual = Mooncake.zero_dual(S)
+    S_, dS = arrayify(S_dual)
+    svd_vals_pushforward!(dA, A, USVᴴ, dS)
+    return S_dual
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
@@ -638,10 +663,6 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
     Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
     USVᴴc = copy.(USVᴴ)
     output = svd_trunc!(A, USVᴴ, alg)
-    # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-    # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-    # pass). For many types this is done automatically when the forward step returns, but
-    # not for nested structs with various fields (like Diagonal{Complex})
     output_codual = Mooncake.zero_fcodual(output)
     function svd_trunc_adjoint(dy::Tuple{NoRData, NoRData, NoRData, T}) where {T <: Real}
         copy!(A, Ac)
@@ -652,9 +673,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
         S′, dS′ = arrayify(Strunc, dStrunc_)
         Vᴴ′, dVᴴ′ = arrayify(Vᴴtrunc, dVᴴtrunc_)
         svd_trunc_pullback!(dA, A, (U′, S′, Vᴴ′), (dU′, dS′, dVᴴ′))
-        copy!(U, USVᴴc[1])
-        copy!(S, USVᴴc[2])
-        copy!(Vᴴ, USVᴴc[3])
+        copy!.(USVᴴ, USVᴴc)
         zero!(dU)
         zero!(dS)
         zero!(dVᴴ)
@@ -711,11 +730,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     A, dA = arrayify(A_dA)
     alg = Mooncake.primal(alg_dalg)
     output = svd_trunc(A, alg)
-    # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-    # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-    # pass). For many types this is done automatically when the forward step returns, but
-    # not for nested structs with various fields (like Diagonal{Complex})
-    output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+    output_codual = Mooncake.zero_fcodual(output)
     function svd_trunc_adjoint(dy::Tuple{NoRData, NoRData, NoRData, T}) where {T <: Real}
         Utrunc, Strunc, Vᴴtrunc, ϵ = Mooncake.primal(output_codual)
         dUtrunc_, dStrunc_, dVᴴtrunc_, dϵ = Mooncake.tangent(output_codual)
@@ -769,11 +784,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
     Vᴴ, dVᴴ = arrayify(USVᴴ[3], dUSVᴴ[3])
     USVᴴc = copy.(USVᴴ)
     output = svd_trunc_no_error!(A, USVᴴ, alg)
-    # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-    # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-    # pass). For many types this is done automatically when the forward step returns, but
-    # not for nested structs with various fields (like Diagonal{Complex})
-    output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+    output_codual = Mooncake.zero_fcodual(output)
     function svd_trunc_adjoint(::NoRData)
         copy!(A, Ac)
         Utrunc, Strunc, Vᴴtrunc = Mooncake.primal(output_codual)
@@ -837,11 +848,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, al
     A, dA = arrayify(A_dA)
     alg = Mooncake.primal(alg_dalg)
     output = svd_trunc_no_error(A, alg)
-    # fdata call here is necessary to convert complicated Tangent type (e.g. of a Diagonal
-    # of ComplexF32) into the correct **forwards** data type (since we are now in the forward
-    # pass). For many types this is done automatically when the forward step returns, but
-    # not for nested structs with various fields (like Diagonal{Complex})
-    output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+    output_codual = Mooncake.zero_fcodual(output)
     function svd_trunc_adjoint(::NoRData)
         Utrunc, Strunc, Vᴴtrunc = Mooncake.primal(output_codual)
         dUtrunc_, dStrunc_, dVᴴtrunc_ = Mooncake.tangent(output_codual)
