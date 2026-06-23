@@ -1,4 +1,3 @@
-
 function has_equal_storage(A::Diagonal, B::Diagonal)
     return diagview(A) === diagview(B)
 end
