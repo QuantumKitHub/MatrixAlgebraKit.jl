@@ -203,7 +203,7 @@ for (f!, f, f_full, f_full!, pb, pf, adj) in (
                 else # A and D have the same storage
                     ΔA = zero(A)
                     $pb(ΔA, Ac, DV, dD)
-                    dA .= ΔA
+                    copy!(dA, ΔA)
                     copy!(A, Ac)
                 end
                 return NoRData(), NoRData(), NoRData(), NoRData()
