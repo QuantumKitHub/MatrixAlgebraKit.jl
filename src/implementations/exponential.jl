@@ -66,12 +66,19 @@ end
 function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
     check_input(exponential!, (τ, A), expA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
-    if eltype(A) <: Real && eltype(τ) <: Real
-        expD = exponential!((τ / 2, D), D)
-        rmul!(V, expD)
-        return mul!(expA, V, V')
+    if eltype(A) <: Real
+        if eltype(τ) <: Real
+            VexpD = rmul!(V, exponential!((τ / 2, D), D))
+        else
+            VexpD = V * exponential((τ / 2, D))
+        end
+        return mul!(expA, VexpD, transpose(VexpD))
     else
-        VexpD = V .* exp.(transpose(diagview(D)) .* τ)
+        if eltype(τ) <: Real
+            VexpD = V * exponential!((τ, D), D)
+        else
+            VexpD = V * exponential((τ, D))
+        end
         return mul!(expA, VexpD, V')
     end
 end
