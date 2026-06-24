@@ -94,11 +94,15 @@ function eigh_pullback!(
     ΔA = mul!(ΔA, V * VᴴΔAV, V', 1, 1)
     return ΔA
 end
+# Diagonal: do not specialize on `A`, since we may insert `A = nothing` to assert independence of `A` in the implementation
 function eigh_pullback!(
         ΔA::Diagonal, A, DV, ΔDV, ind = Colon();
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
     )
+    # TODO:
+    # If A and ΔA are diagonal, then V is a permutation matrix and so is inv(V) = V'.
+    # Furthermore, since V̇ is 0, the pullback ΔV cannot contribute and we only have to unpermute ΔD.
     ΔA_full = zero!(similar(ΔA, size(ΔA)))
     ΔA_full = eigh_pullback!(ΔA_full, A, DV, ΔDV, ind; degeneracy_atol, gauge_atol)
     diagview(ΔA) .+= diagview(ΔA_full)

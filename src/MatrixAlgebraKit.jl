@@ -94,6 +94,7 @@ include("common/safemethods.jl")
 include("common/view.jl")
 include("common/regularinv.jl")
 include("common/matrixproperties.jl")
+include("common/utility.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
@@ -139,6 +140,7 @@ include("pullbacks/polar.jl")
 include("pushforwards/polar.jl")
 include("pushforwards/eig.jl")
 include("pushforwards/eigh.jl")
+include("pushforwards/svd.jl")
 
 include("precompile.jl")
 

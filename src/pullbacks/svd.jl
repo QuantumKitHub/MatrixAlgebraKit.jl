@@ -171,12 +171,16 @@ function svd_pullback!(
     end
     return ΔA
 end
+# Diagonal: do not specialize on `A`, since we may insert `A = nothing` to assert independence of `A` in the implementation
 function svd_pullback!(
         ΔA::Diagonal, A, USVᴴ, ΔUSVᴴ, ind = Colon();
         rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...)
     )
+    # TODO:
+    # If A and ΔA are diagonal, then U and V are permutation matrices (up to signs/phases).
+    # Furthermore, since U̇ and V̇ are 0, the pullbacks ΔU and ΔV cannot contribute and we only have to unpermute ΔS.
     ΔA_full = zero!(similar(ΔA, size(ΔA)))
     ΔA_full = svd_pullback!(ΔA_full, A, USVᴴ, ΔUSVᴴ, ind; rank_atol, degeneracy_atol, gauge_atol)
     diagview(ΔA) .+= diagview(ΔA_full)
