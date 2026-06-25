@@ -103,7 +103,7 @@ function exponential!(A, expA, alg::DiagonalAlgorithm)
     return map_diagonal!(exp, expA, A)
 end
 
-function exponential!((τ, A)::Tuple{Number, Any}, expA, alg::DiagonalAlgorithm)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::DiagonalAlgorithm)
     check_input(exponential!, (τ, A), expA, alg)
     return map_diagonal!(x -> exp(x * τ), expA, A)
 end
