@@ -11,7 +11,7 @@
     exponential!((τ, A), [expA]; kwargs...) -> expτA
     exponential!((τ, A), [expA], alg::AbstractAlgorithm) -> expτA
 
-Compute the exponential of the square matrix `A` or `τ*A`,
+Compute the exponential of the square matrix `A` or `τ * A`,
 
 !!! note
     The bang method `exponential!` optionally accepts the output structure and
