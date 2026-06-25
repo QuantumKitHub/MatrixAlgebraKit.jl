@@ -6,10 +6,10 @@
     exponential(A, alg::AbstractAlgorithm) -> expA
     exponential!(A, [expA]; kwargs...) -> expA
     exponential!(A, [expA], alg::AbstractAlgorithm) -> expA
-    exponential((τ,A); kwargs...) -> expτA
-    exponential((τ,A), alg::AbstractAlgorithm) -> expτA
-    exponential!((τ,A), [expA]; kwargs...) -> expτA
-    exponential!((τ,A), [expA], alg::AbstractAlgorithm) -> expτA
+    exponential((τ, A); kwargs...) -> expτA
+    exponential((τ, A), alg::AbstractAlgorithm) -> expτA
+    exponential!((τ, A), [expA]; kwargs...) -> expτA
+    exponential!((τ, A), [expA], alg::AbstractAlgorithm) -> expτA
 
 Compute the exponential of the square matrix `A` or `τ*A`,
 
