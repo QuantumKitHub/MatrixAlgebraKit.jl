@@ -98,7 +98,7 @@ end
 
 # Diagonal logic
 # --------------
-function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::DiagonalAlgorithm)
+function exponential!(A, expA, alg::DiagonalAlgorithm)
     check_input(exponential!, A, expA, alg)
     return map_diagonal!(exp, expA, A)
 end
