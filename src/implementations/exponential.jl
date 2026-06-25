@@ -105,6 +105,5 @@ end
 
 function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::DiagonalAlgorithm)
     check_input(exponential!, (τ, A), expA, alg)
-    diagview(expA) .= exp.(diagview(A) .* τ)
-    return expA
+    return map_diagonal!(x -> exp(x * τ), expA, A)
 end
