@@ -14,6 +14,13 @@ function MatrixAlgebraKit.default_eig_algorithm(
     return QRIteration(; driver, kwargs...)
 end
 
+function MatrixAlgebraKit.default_exponential_algorithm(
+        type::Type{T}; kwargs...
+    ) where {T <: StridedMatrix{<:GSFloat}}
+    eig_alg = MatrixAlgebraKit.default_eig_algorithm(type; kwargs...)
+    return MatrixFunctionViaEig(eig_alg)
+end
+
 function geev!(::GS, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)
     D, Vmat = GenericSchur.eigen!(A)
     copyto!(Dd, D)
