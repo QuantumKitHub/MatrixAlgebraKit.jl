@@ -30,9 +30,7 @@ This is done by `eig_full` and `eigh_full` via the algorithms [`MatrixFunctionVi
 
 ```@docs; canonical=false
 exponential
-```
-
-```@autodocs; canonical=false
-Modules = [MatrixAlgebraKit]
-Filter = t -> t isa Type && (t <: MatrixAlgebraKit.MatrixFunctionViaLA || t <: MatrixAlgebraKit.MatrixFunctionViaEig || t <: MatrixAlgebraKit.MatrixFunctionViaEigh)
+MatrixAlgebraKit.MatrixFunctionViaLA
+MatrixAlgebraKit.MatrixFunctionViaEig
+MatrixAlgebraKit.MatrixFunctionViaEigh
 ```
