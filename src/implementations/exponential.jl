@@ -55,7 +55,7 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     return expA
 end
 
-exponential!(A, expA, alg::MatrixFunctionViaEigh) = exponential!((one(eltype(A)), A), expA, alg)
+exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh) = exponential!((one(eltype(A)), A), expA, alg)
 exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEig) = exponential!((one(eltype(A)), A), expA, alg)
 
 function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::AbstractAlgorithm)
