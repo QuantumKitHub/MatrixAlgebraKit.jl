@@ -180,7 +180,7 @@ function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebr
         # operating on a view-of-view, which doesn't work
         # for GPU arrays
         I = uppertriangularind(ΔR₂₂)
-        upper_inds = view(LinearIndices(ΔR), (p + 1):minmn, (p + 1):n)[I]
+        upper_inds = view(LinearIndices(ΔR), (r + 1):minmn, (r + 1):n)[I]
         ΔR₂₂upper = view(ΔR, upper_inds)
         zero!(ΔR₂₂upper)
     end
