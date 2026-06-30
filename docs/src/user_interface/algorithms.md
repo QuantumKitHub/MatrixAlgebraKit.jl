@@ -80,8 +80,10 @@ DefaultAlgorithm
 
 ## Available Algorithm Types
 
-The following high-level algorithm types are available.
+There are several high-level algorithm types available.
 They all accept an optional `driver` keyword to select the computational backend; see [Driver Selection](@ref sec_driverselection) for details.
+
+The following algorithms for matrix decompositions are available.
 
 | Algorithm | Applicable decompositions | Key keyword arguments |
 |:----------|:--------------------------|:----------------------|
@@ -95,6 +97,11 @@ They all accept an optional `driver` keyword to select the computational backend
 | [`SVDViaPolar`](@ref) | SVD | `fixgauge`, `tol` |
 | [`PolarViaSVD`](@ref) | polar | positional `svd_alg` argument |
 | [`PolarNewton`](@ref) | polar | `maxiter`, `tol` |
+
+The following algorithms for matrix functions are available.
+
+| Algorithm | Applicable matrix functions | Key keyword arguments |
+|:----------|:--------------------------|:----------------------|
 | [`MatrixFunctionViaLA`](@ref) | exponential | |
 | [`MatrixFunctionViaEig`](@ref) | exponential | `eig_alg` |
 | [`MatrixFunctionViaEigh`](@ref) | exponential | `eigh_alg` |
