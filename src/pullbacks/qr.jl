@@ -157,7 +157,8 @@ ambiguity. Additionally, rows of `ΔR` beyond the rank are zeroed out.
 """
 function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(R))
     r = MatrixAlgebraKit.qr_rank(R; rank_atol)
-    minmn = min(size(A)...)
+    m, n = size(A, 1), size(A, 2)
+    minmn = min(m, n)
     Q₁ = view(Q, :, 1:r)
     ΔQ₂ = view(ΔQ, :, (r + 1):minmn)
     zero!(ΔQ₂)
