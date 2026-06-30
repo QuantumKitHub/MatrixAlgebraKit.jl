@@ -95,6 +95,9 @@ They all accept an optional `driver` keyword to select the computational backend
 | [`SVDViaPolar`](@ref) | SVD | `fixgauge`, `tol` |
 | [`PolarViaSVD`](@ref) | polar | positional `svd_alg` argument |
 | [`PolarNewton`](@ref) | polar | `maxiter`, `tol` |
+| [`MatrixFunctionViaLA`](@ref) | exponential | |
+| [`MatrixFunctionViaEig`](@ref) | exponential | `eig_alg` |
+| [`MatrixFunctionViaEigh`](@ref) | exponential | `eigh_alg` |
 
 For full docstring details on each algorithm type, see the corresponding section in [Decompositions](@ref).
 
