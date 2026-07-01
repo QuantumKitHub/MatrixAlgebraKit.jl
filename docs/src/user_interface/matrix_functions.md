@@ -22,7 +22,7 @@ Additionally, the `f!` method typically assumes that it is allowed to destroy th
 
 ## Exponential
 
-The [exponential](https://en.wikipedia.org/wiki/Matrix_exponential) of a rectangular matrix `A` is used in many quantum many-body problems.
+The [exponential](https://en.wikipedia.org/wiki/Matrix_exponential) of a square matrix `A` is used in many scientific applications, as it arises in the solution of an autonomous linear differential equation.
 This is implemented in `LinearAlgebra`, which can be accessed by the algorithm [`MatrixFunctionViaLA`](@ref).
 For more generic data types, the exponential can be calculated by first calculating the (hermitian) eigenvalue decomposition.
 This is done by `eig_full` and `eigh_full` via the algorithms [`MatrixFunctionViaEig`](@ref) and [`MatrixFunctionViaEigh`](@ref), respectively.
