@@ -23,10 +23,11 @@ Additionally, the `f!` method typically assumes that it is allowed to destroy th
 ## Exponential
 
 The [exponential](https://en.wikipedia.org/wiki/Matrix_exponential) of a square matrix `A` is used in many scientific applications, as it arises in the solution of an autonomous linear differential equation.
-This is implemented in `LinearAlgebra`, which can be accessed by the algorithm [`MatrixFunctionViaLA`](@ref).
-For more generic data types, the exponential can be calculated by first calculating the (hermitian) eigenvalue decomposition.
-This is done by `eig_full` and `eigh_full` via the algorithms [`MatrixFunctionViaEig`](@ref) and [`MatrixFunctionViaEigh`](@ref), respectively.
- Additionally, in order to calculate `exp(τ * A)`, the function `exponential` can be called with `(τ, A)`, using the same algorithms as before.
+An implementation for the matrix exponential based on a Padé approximation is available in `LinearAlgebra`, and can be accessed by the algorithm [`MatrixFunctionViaLA`](@ref).
+For more generic data types, the exponential can be calculated by first calculating the (hermitian) eigenvalue decomposition, and then computing
+the scalar exponential of the diagonal elements.
+This strategy is implemented via the algorithms [`MatrixFunctionViaEig`](@ref) and [`MatrixFunctionViaEigh`](@ref), and call `eig_full` and `eigh_full`, respectively.
+Additionally, in order to calculate `exp(τ * A)`, the function `exponential` can be called with `(τ, A)`, using the same algorithms as before.
 
 ```@docs; canonical=false
 exponential
