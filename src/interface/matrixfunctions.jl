@@ -9,6 +9,18 @@ Algorithm type to denote finding the exponential of `A` via the implementation o
 @algdef MatrixFunctionViaLA
 
 """
+    MatrixFunctionViaTaylor(; tol=eps, balance=true)
+
+Algorithm type to denote finding the exponential of `A` through a pure-Julia scaling-and-squaring
+evaluation of its Taylor series, following Fasi & Higham (2018).
+The truncation order and the number of squarings are chosen to reach a relative accuracy `tol`,
+and the Taylor polynomial is evaluated with the Paterson–Stockmeyer scheme.
+When `balance` is `true`, `A` is first balanced by a diagonal similarity.
+As this algorithm requires no LAPACK support, it also applies at arbitrary precision.
+"""
+@algdef MatrixFunctionViaTaylor
+
+"""
     MatrixFunctionViaEigh(eigh_alg)
 
 Algorithm type for computing a function of a matrix by computing its hermitian eigenvalue decomposition and applying the function to the eigenvalues.

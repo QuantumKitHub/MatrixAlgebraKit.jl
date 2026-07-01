@@ -21,7 +21,7 @@ GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
     @test expA ≈ expA2
     @test A == Ac
 
-    algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()))
+    algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()), MatrixFunctionViaTaylor())
     @testset "algorithm $alg" for alg in algs
         expA2 = @constinferred exponential(A, alg)
         @test expA ≈ expA2
@@ -46,7 +46,7 @@ end
     @test expAτ ≈ expAτ2
     @test A == Ac
 
-    algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()))
+    algs = (MatrixFunctionViaLA(), MatrixFunctionViaEig(LAPACK_Simple()), MatrixFunctionViaTaylor())
     @testset "algorithm $alg" for alg in algs
         expAτ2 = @constinferred exponential((τ, A), alg)
         @test expAτ ≈ expAτ2
@@ -85,4 +85,23 @@ end
     expAτ2 = @constinferred exponential((τ, A))
     @test expAτ ≈ expAτ2
     @test A == Ac
+end
+
+@testset "exponential via Taylor for T = $T" for T in GenericFloats
+    rng = StableRNG(123)
+    m = 54
+
+    A = randn(rng, T, m, m) ./ (2 * m)
+    τ = randn(rng, T)
+    Ac = copy(A)
+    alg = MatrixFunctionViaTaylor()
+    reltol = max(1.0e-7, sqrt(eps(real(T))))
+
+    expA = @constinferred exponential(A, alg)
+    @test A == Ac
+    @test isapprox(expA * exponential(-A, alg), I; rtol = reltol)
+    @test isapprox(ComplexF64.(expA), exp(ComplexF64.(A)); rtol = reltol)
+
+    expτA = @constinferred exponential((τ, A), alg)
+    @test isapprox(ComplexF64.(expτA), exp(ComplexF64(τ) .* ComplexF64.(A)); rtol = reltol)
 end

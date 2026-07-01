@@ -41,7 +41,7 @@ export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
 export GLA_HouseholderQR, GLA_QRIteration, GS_QRIteration
 export LQViaTransposedQR
 export PolarViaSVD, PolarNewton
-export MatrixFunctionViaLA, MatrixFunctionViaEig, MatrixFunctionViaEigh
+export MatrixFunctionViaLA, MatrixFunctionViaEig, MatrixFunctionViaEigh, MatrixFunctionViaTaylor
 export DefaultAlgorithm
 export DiagonalAlgorithm
 export NativeBlocked
@@ -94,6 +94,7 @@ include("common/safemethods.jl")
 include("common/view.jl")
 include("common/regularinv.jl")
 include("common/matrixproperties.jl")
+include("common/balancing.jl")
 include("common/utility.jl")
 
 include("yalapack.jl")
