@@ -102,6 +102,7 @@ The following algorithms for matrix functions are available.
 
 | Algorithm | Applicable matrix functions | Key keyword arguments |
 |:----------|:--------------------------|:----------------------|
+| [`MatrixFunctionViaTaylor`](@ref) | exponential | `tol`, `balance` |
 | [`MatrixFunctionViaLA`](@ref) | exponential | |
 | [`MatrixFunctionViaEig`](@ref) | exponential | `eig_alg` |
 | [`MatrixFunctionViaEigh`](@ref) | exponential | `eigh_alg` |
