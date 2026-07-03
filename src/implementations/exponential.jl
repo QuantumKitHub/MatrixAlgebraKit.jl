@@ -122,7 +122,9 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     T = eltype(A)
     R = real(T)
     tol = convert(R, get(alg.kwargs, :tol, eps(R)))
-    scale = get(alg.kwargs, :balance, true) ? balance!(A)[2] : fill!(similar(A, R, size(A, 1)), one(R))
+
+    dobalance = get(alg.kwargs, :balance, false)
+    scale = dobalance ? balance!(A)[2] : nothing
 
     θ = LinearAlgebra.opnorm(A, 1)
     iszero(θ) && return one!(expA)
@@ -131,15 +133,17 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     squarings > 0 && rmul!(A, inv(convert(T, 2)^squarings))
 
     X = taylor_polynomial(A, order)
-    if squarings > 0
-        Y = similar(X)
-        for _ in 1:squarings
-            mul!(Y, X, X)
-            X, Y = Y, X
-        end
+    Y = expA # can reuse this memory
+    for _ in 1:squarings
+        mul!(Y, X, X)
+        X, Y = Y, X
     end
 
-    expA .= scale .* X ./ transpose(scale)
+    if dobalance
+        expA .= scale .* X ./ transpose(scale)
+    else
+        X === expA || copyto!(expA, X)
+    end
     return expA
 end
 
