@@ -23,10 +23,11 @@ using Printf
 using DelimitedFiles
 using StableRNGs
 using BenchmarkTools
+using DoubleFloats
 using MatrixAlgebraKit
 using MatrixAlgebraKit: MatrixFunctionViaTaylor, MatrixFunctionViaLA,
-    MatrixFunctionViaEig, MatrixFunctionViaEigh
-# Loading these makes the generic (BigFloat) eig / eigh drivers available.
+    MatrixFunctionViaEig, MatrixFunctionViaEigh, QRIteration, GS, GLA
+# Loading these makes the generic (BigFloat / Double64) eig / eigh drivers available.
 using GenericSchur
 using GenericLinearAlgebra
 
@@ -38,18 +39,28 @@ const CSV_PATH = let i = findfirst(==("--csv"), ARGS)
     i === nothing ? joinpath(@__DIR__, "results.csv") : ARGS[i + 1]
 end
 
-const ELTYPES = (Float64, ComplexF64, BigFloat, Complex{BigFloat})
+# Ordered by increasing precision: hardware BLAS floats, then double-double (~106 bits,
+# software but fast), then arbitrary-precision BigFloat.
+const ELTYPES = (
+    Float64, ComplexF64, Double64, Complex{Double64}, BigFloat, Complex{BigFloat},
+)
+
+_isblas(::Type{T}) where {T} = T <: Union{Float32, Float64, ComplexF32, ComplexF64}
+_isdouble(::Type{T}) where {T} = T <: Union{Double64, Complex{Double64}}
 
 # Sizes for the timing sweep (generic types are far slower, so use fewer / smaller).
+# Double64 is software but only ~10-30× slower than BLAS, so it gets an intermediate range;
+# BigFloat is far slower still.
 blas_sizes() = QUICK ? [8, 16, 32] : [8, 16, 32, 64, 128, 256]
+double_sizes() = QUICK ? [8, 16] : [8, 16, 32, 64, 128]
 generic_sizes() = QUICK ? [8, 16] : [8, 16, 32, 64]
-perf_sizes(T) = (T <: Union{Float32, Float64, ComplexF32, ComplexF64}) ? blas_sizes() : generic_sizes()
+perf_sizes(T) = _isblas(T) ? blas_sizes() : (_isdouble(T) ? double_sizes() : generic_sizes())
 
 # Sizes for the accuracy sweep (kept small: high-precision reference is expensive).
 acc_sizes() = QUICK ? [12] : [16, 48]
 
 # Timing budget per (matrix, algorithm), in seconds.
-perf_seconds(T) = QUICK ? 0.1 : (T <: Union{Float32, Float64, ComplexF32, ComplexF64} ? 0.3 : 0.8)
+perf_seconds(T) = QUICK ? 0.1 : (_isblas(T) ? 0.3 : 0.8)
 
 # Precision of the analytic reference and its tolerance (must beat the tested precision).
 const HIGH_BITS = QUICK ? 512 : 1024
@@ -217,16 +228,29 @@ catch
     nothing
 end
 
+# The library only registers default eig / eigh algorithms for BLAS and BigFloat element
+# types, but GenericSchur / GenericLinearAlgebra actually drive any `AbstractFloat`.  For
+# types without a registered default (e.g. Double64) fall back to those drivers directly,
+# using the same `QRIteration` the BigFloat default resolves to.
+function eig_algorithm_for(A)
+    eig = _trydefault(MatrixAlgebraKit.default_eig_algorithm, A)
+    return eig !== nothing ? eig : QRIteration(; driver = GS())
+end
+function eigh_algorithm_for(A)
+    eigh = _trydefault(MatrixAlgebraKit.default_eigh_algorithm, A)
+    return eigh !== nothing ? eigh : QRIteration(; driver = GLA())
+end
+
 function algorithms_for(A, hermitian::Bool)
     T = eltype(A)
     algs = Tuple{String, Any}[("Taylor", MatrixFunctionViaTaylor())]
     if T <: LinearAlgebra.BlasFloat
         push!(algs, ("LA", MatrixFunctionViaLA()))
     end
-    eig = _trydefault(MatrixAlgebraKit.default_eig_algorithm, A)
+    eig = eig_algorithm_for(A)
     eig !== nothing && push!(algs, ("Eig", MatrixFunctionViaEig(eig)))
     if hermitian
-        eigh = _trydefault(MatrixAlgebraKit.default_eigh_algorithm, A)
+        eigh = eigh_algorithm_for(A)
         eigh !== nothing && push!(algs, ("Eigh", MatrixFunctionViaEigh(eigh)))
     end
     return algs

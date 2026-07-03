@@ -2,7 +2,11 @@
 
 `bench_exponential.jl` times and accuracy-tests every applicable `MatrixAlgebraKit.exponential`
 algorithm (`MatrixFunctionViaTaylor`, `MatrixFunctionViaLA`, `MatrixFunctionViaEig`,
-`MatrixFunctionViaEigh`) for `Float64`, `ComplexF64`, `BigFloat` and `Complex{BigFloat}`.
+`MatrixFunctionViaEigh`) for `Float64`, `ComplexF64`, `Double64`, `Complex{Double64}`,
+`BigFloat` and `Complex{BigFloat}`.
+The `Double64` (double-double, ~106-bit) types sit between the hardware BLAS floats and
+arbitrary-precision `BigFloat`, and exercise the `Eig`/`Eigh` paths through the generic
+GenericSchur / GenericLinearAlgebra drivers (the `LA` LAPACK path applies to BLAS types only).
 
 Accuracy inputs are built from a *known* spectrum as `A = V · Diag(λ) · V⁻¹`, so the exact
 `exp(A) = V · Diag(exp λ) · V⁻¹` is available analytically (computed at high precision).
