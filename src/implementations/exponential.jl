@@ -125,11 +125,7 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     scale = get(alg.kwargs, :balance, true) ? balance!(A)[2] : fill!(similar(A, R, size(A, 1)), one(R))
 
     θ = LinearAlgebra.opnorm(A, 1)
-    if iszero(θ)
-        fill!(expA, zero(T))
-        diagview(expA) .= one(T)
-        return expA
-    end
+    iszero(θ) && return one!(expA)
 
     order, squarings = taylor_order_and_squarings(θ, tol)
     squarings > 0 && rmul!(A, inv(convert(T, 2)^squarings))
