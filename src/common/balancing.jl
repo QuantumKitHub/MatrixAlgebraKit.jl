@@ -1,57 +1,54 @@
 """
-    balance!(A::AbstractMatrix; radix=2) -> A, scale
+    balance!(A::AbstractMatrix; radix=2, maxiter=100) -> A, scale
 
 Balance the square matrix `A` in place through a diagonal similarity `A ← D⁻¹ A D` that
-reduces its norm, using the scaling phase of the Parlett–Reinsch algorithm (as in LAPACK's
-`gebal`). The returned `scale` holds the diagonal of `D`, so that a matrix function of the
-original input can be recovered from a matrix function `f` of the balanced matrix through
+reduces its norm. Each sweep computes, for every index at once, the power-of-`radix` factor
+that best equalizes the off-diagonal row and column norms (a simultaneous, Osborne-style
+variant of the Parlett–Reinsch scaling), and applies all factors together; sweeps repeat
+until no index changes or `maxiter` is reached. Because it is expressed entirely through
+reductions and broadcasts (no scalar indexing), the same code runs on CPU and GPU arrays.
+
+The returned `scale` holds the diagonal of `D`, so that a matrix function of the original
+input can be recovered from a matrix function `f` of the balanced matrix through
 `D f(D⁻¹AD) D⁻¹`, i.e. `expA[i, j] = scale[i] * f(B)[i, j] / scale[j]`.
 """
-function balance!(A::AbstractMatrix{T}; radix::Integer = 2) where {T}
+function balance!(A::AbstractMatrix{T}; radix::Integer = 2, maxiter::Integer = 100) where {T}
     n = LinearAlgebra.checksquare(A)
     R = real(T)
-    scale = ones(R, n)
     β = convert(R, radix)
-    β² = β * β
+    logβ = log(β)
+    scale = fill!(similar(A, R, n), one(R))
 
-    converged = false
-    while !converged
-        converged = true
-        for i in 1:n
-            colnorm = zero(R)
-            rownorm = zero(R)
-            for j in 1:n
-                j == i && continue
-                colnorm += abs(A[j, i])
-                rownorm += abs(A[i, j])
-            end
-            (iszero(colnorm) || iszero(rownorm)) && continue
+    colnorm = similar(A, R, n)
+    rownorm = similar(A, R, n)
+    f = similar(A, R, n)
+    colsum = reshape(colnorm, 1, n)
+    rowsum = reshape(rownorm, n, 1)
+    d = abs.(diagview(A))
+    fᵀ = transpose(f)
 
-            factor = one(R)
-            total = colnorm + rownorm
-            threshold = rownorm / β
-            while colnorm < threshold
-                factor *= β
-                colnorm *= β²
-            end
-            threshold = rownorm * β
-            while colnorm >= threshold
-                factor /= β
-                colnorm /= β²
-            end
-
-            (colnorm + rownorm) < convert(R, 0.95) * factor * total || continue
-            converged = false
-            scale[i] *= factor
-            invfactor = inv(factor)
-            for j in 1:n
-                A[i, j] *= invfactor
-            end
-            for j in 1:n
-                A[j, i] *= factor
-            end
-        end
+    for _ in 1:maxiter
+        fill!(colsum, zero(R))
+        Base.mapreducedim!(abs, +, colsum, A)
+        fill!(rowsum, zero(R))
+        Base.mapreducedim!(abs, +, rowsum, A)
+        colnorm .-= d
+        rownorm .-= d
+        f .= _balance_factor.(colnorm, rownorm, β, logβ)
+        all(isone, f) && break
+        # apply Aᵢⱼ ← Aᵢⱼ fⱼ / fᵢ (i.e. column j scaled by fⱼ, row i by 1/fᵢ) and accumulate.
+        A .= A .* fᵀ ./ f
+        scale .*= f
     end
 
     return A, scale
+end
+
+# Nearest power-of-`radix` factor `f` that equalizes the scaled off-diagonal norms
+# `colnorm·f` and `rownorm/f`, kept only when it reduces their sum (avoids oscillation and
+# leaves degenerate rows/columns untouched).
+@inline function _balance_factor(colnorm::R, rownorm::R, β::R, logβ::R) where {R}
+    (colnorm > 0 && rownorm > 0) || return one(R)
+    f = β^round(log(rownorm / colnorm) / (2 * logβ))
+    return (colnorm * f + rownorm / f) < convert(R, 0.95) * (colnorm + rownorm) ? f : one(R)
 end

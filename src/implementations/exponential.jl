@@ -120,8 +120,9 @@ end
 function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaTaylor)
     check_input(exponential!, A, expA, alg)
     T = eltype(A)
-    tol = convert(real(T), get(alg.kwargs, :tol, eps(real(T))))
-    scale = get(alg.kwargs, :balance, true) ? balance!(A)[2] : ones(real(T), size(A, 1))
+    R = real(T)
+    tol = convert(R, get(alg.kwargs, :tol, eps(R)))
+    scale = get(alg.kwargs, :balance, true) ? balance!(A)[2] : fill!(similar(A, R, size(A, 1)), one(R))
 
     θ = LinearAlgebra.opnorm(A, 1)
     if iszero(θ)
