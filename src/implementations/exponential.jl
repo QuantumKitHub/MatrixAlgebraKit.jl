@@ -43,9 +43,9 @@ end
 # Algorithm selection
 # ---------------------------
 exponential!(A::AbstractMatrix, alg::DefaultAlgorithm) = exponential!(A, select_algorithm(exponential!, A, nothing; alg.kwargs...))
-exponential!(A::AbstractMatrix, out, alg::DefaultAlgorithm) = exponential!(A, out, select_algorithm(exponential!, A, nothing; alg.kwargs...))
+exponential!(A::AbstractMatrix, out::AbstractMatrix, alg::DefaultAlgorithm) = exponential!(A, out, select_algorithm(exponential!, A, nothing; alg.kwargs...))
 exponential!((τ, A)::Tuple{Number, AbstractMatrix}, alg::DefaultAlgorithm) = exponential!(A, select_algorithm(exponential!, A, nothing; alg.kwargs...))
-exponential!((τ, A)::Tuple{Number, AbstractMatrix}, out, alg::DefaultAlgorithm) = exponential!(A, out, select_algorithm(exponential!, A, nothing; alg.kwargs...))
+exponential!((τ, A)::Tuple{Number, AbstractMatrix}, out::AbstractMatrix, alg::DefaultAlgorithm) = exponential!(A, out, select_algorithm(exponential!, A, nothing; alg.kwargs...))
 
 # Outputs
 # -------
