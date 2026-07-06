@@ -119,6 +119,7 @@ end
 # ------------
 function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaTaylor)
     check_input(exponential!, A, expA, alg)
+    m = LinearAlgebra.checksquare(A)
     T = eltype(A)
     R = real(T)
     tol = convert(R, get(alg.kwargs, :tol, eps(R)))
@@ -126,13 +127,40 @@ function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFuncti
     dobalance = get(alg.kwargs, :balance, false)
     scale = dobalance ? balance!(A)[2] : nothing
 
-    θ = LinearAlgebra.opnorm(A, 1)
-    iszero(θ) && return one!(expA)
+    # Form a minimal set of powers of A up front and use them to sharpen the norm estimate
+    # through the Al-Mohy–Higham quantities dₚ = ‖Aᵖ‖^(1/p).
+    p₀ = min(convert(Int, get(alg.kwargs, :estimate_order, 4)), m)
+    powers = Vector{typeof(A)}(undef, p₀)
+    powers[1] = A
+    d = Vector{R}(undef, p₀)
+    d[1] = LinearAlgebra.opnorm(A, 1)
+    iszero(d[1]) && return one!(expA)
+    for p in 2:p₀
+        powers[p] = powers[p - 1] * A
+        d[p] = LinearAlgebra.opnorm(powers[p], 1)^(1 / p)
+    end
 
-    order, squarings = taylor_order_and_squarings(θ, tol)
-    squarings > 0 && rmul!(A, inv(convert(T, 2)^squarings))
+    order, squarings = taylor_order_and_squarings(d, tol)
+    blocksize = ceil(Int, sqrt(order + 1))
 
-    X = taylor_polynomial(A, order)
+    # Rescale the (≤ p₀) powers we hold into powers of A/2ˢ
+    resize!(powers, min(p₀, blocksize))
+    if squarings > 0
+        f = inv(convert(T, 2)^squarings)
+        fk = one(T)
+        for k in 1:length(powers)
+            fk *= f
+            rmul!(powers[k], fk) # powers[k] ← (A/2ˢ)ᵏ
+        end
+    end
+    # Extend to `blocksize` powers
+    for p in (length(powers) + 1):blocksize
+        push!(powers, powers[p - 1] * powers[1])
+    end
+
+
+    # Paterson–Stockmeyer evaluation, followed by squaring
+    X = taylor_polynomial(powers, order)
     Y = expA # can reuse this memory
     for _ in 1:squarings
         mul!(Y, X, X)
@@ -149,8 +177,14 @@ end
 
 # Truncation order `m` and number of squarings `s` minimizing the Paterson–Stockmeyer
 # matrix-multiplication count subject to the Taylor remainder bound `(θ/2ˢ)ᵐ⁺¹/(m+1)! ≤ tol`.
-function taylor_order_and_squarings(θ::Real, tol::Real)
-    log2θ = log2(Float64(θ))
+#
+# The effective norm `θ` per candidate order is the sharpest Al-Mohy–Higham quantity
+# `αₚ = max(dₚ, dₚ₊₁)` (with `dₚ = ‖Aᵖ‖^(1/p)`) that is valid for that order: since every
+# `k ≥ p(p-1)` is a nonnegative combination of `p` and `p+1`, `‖Aᵏ‖ ≤ αₚᵏ` holds for `k ≥ p(p-1)`,
+# so `αₚ` bounds the degree-`m` remainder whenever `m+1 ≥ p(p-1)`. The `length(d)` powers already
+# formed count as free in the cost model.
+function taylor_order_and_squarings(d::AbstractVector{<:Real}, tol::Real)
+    p₀ = length(d)
     log2tol = log2(Float64(tol))
     log2factorial = 0.0
     best_order = 1
@@ -158,9 +192,18 @@ function taylor_order_and_squarings(θ::Real, tol::Real)
     best_cost = typemax(Int)
     for order in 1:100
         log2factorial += log2(order + 1)
-        squarings = max(0, ceil(Int, log2θ - (log2tol + log2factorial) / (order + 1)))
+        # sharpest valid αₚ = min over p with p(p-1) ≤ order+1 and p+1 ≤ p₀
+        θ = Float64(d[1])
+        for p in 1:(p₀ - 1)
+            p * (p - 1) ≤ order + 1 || break
+            θ = min(θ, max(Float64(d[p]), Float64(d[p + 1])))
+        end
+        # `θ == 0` (a nilpotent Aᵖ) makes the remainder vanish exactly ⇒ no squarings needed;
+        # guard the `log2(0) = -Inf` before it reaches `ceil(Int, ⋅)`.
+        excess = log2(θ) - (log2tol + log2factorial) / (order + 1)
+        squarings = excess > 0 ? ceil(Int, excess) : 0
         blocksize = ceil(Int, sqrt(order + 1))
-        cost = (blocksize - 1) + (cld(order + 1, blocksize) - 1) + squarings
+        cost = max(0, blocksize - p₀) + (cld(order + 1, blocksize) - 1) + squarings
         if cost < best_cost
             best_cost = cost
             best_order = order
@@ -171,20 +214,16 @@ function taylor_order_and_squarings(θ::Real, tol::Real)
 end
 
 # Evaluate ∑ₖ₌₀ᵐ Aᵏ/k! via the Paterson–Stockmeyer scheme, returning a freshly allocated matrix.
-function taylor_polynomial(A::AbstractMatrix, order::Integer)
+# `powers` holds A, A², …, A^blocksize (already scaled), with blocksize = ceil(√(order+1)).
+function taylor_polynomial(powers::AbstractVector{<:AbstractMatrix}, order::Integer)
+    A = powers[1]
     T = eltype(A)
-    blocksize = ceil(Int, sqrt(order + 1))
+    blocksize = length(powers)
 
     invfactorial = Vector{T}(undef, order + 1)
     invfactorial[1] = one(T)
     for k in 1:order
         invfactorial[k + 1] = invfactorial[k] / k
-    end
-
-    powers = Vector{typeof(A)}(undef, blocksize)
-    powers[1] = A
-    for p in 2:blocksize
-        powers[p] = powers[p - 1] * A
     end
 
     result = similar(A)

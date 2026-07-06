@@ -9,13 +9,15 @@ Algorithm type to denote finding the exponential of `A` via the implementation o
 @algdef MatrixFunctionViaLA
 
 """
-    MatrixFunctionViaTaylor(; tol=eps, balance=true)
+    MatrixFunctionViaTaylor(; tol=eps, balance=true, estimate_order=4)
 
 Algorithm type to denote finding the exponential of `A` through a pure-Julia scaling-and-squaring
 evaluation of its Taylor series, following Fasi & Higham (2018).
 The truncation order and the number of squarings are chosen to reach a relative accuracy `tol`,
 and the Taylor polynomial is evaluated with the Paterson–Stockmeyer scheme.
 When `balance` is `true`, `A` is first balanced by a diagonal similarity.
+`estimate_order` sets how many powers of `A` are formed up front to sharpen the norm estimate via the
+Al-Mohy–Higham quantities `‖Aᵖ‖^(1/p)`; these powers are reused by the Paterson–Stockmeyer evaluation.
 As this algorithm requires no LAPACK support, it also applies at arbitrary precision.
 """
 @algdef MatrixFunctionViaTaylor
