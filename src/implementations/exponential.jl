@@ -8,14 +8,14 @@ copy_input(::typeof(exponential), A::Diagonal) = copy(A)
 copy_input(::typeof(exponential), (τ, A)::Tuple{Number, AbstractMatrix}) = (τ, copy!(similar(A, float(eltype(A))), A))
 copy_input(::typeof(exponential), (τ, A)::Tuple{Number, Diagonal}) = τ, copy(A)
 
-function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, alg::AbstractAlgorithm)
+function check_input(::typeof(exponential!), A::AbstractMatrix, expA, alg::AbstractAlgorithm)
     m = LinearAlgebra.checksquare(A)
     @check_size(expA, (m, m))
     @check_scalar(expA, A)
     return nothing
 end
 
-function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMatrix, ::DiagonalAlgorithm)
+function check_input(::typeof(exponential!), A::AbstractMatrix, expA, ::DiagonalAlgorithm)
     m = LinearAlgebra.checksquare(A)
     @assert isdiag(A)
     @assert expA isa Diagonal
@@ -24,14 +24,14 @@ function check_input(::typeof(exponential!), A::AbstractMatrix, expA::AbstractMa
     return nothing
 end
 
-function check_input(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::AbstractAlgorithm)
+function check_input(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::AbstractAlgorithm)
     m = LinearAlgebra.checksquare(A)
     @check_size(expA, (m, m))
     @check_scalar(expA, A, (τ isa Real) ? identity : complex)
     return nothing
 end
 
-function check_input(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, ::DiagonalAlgorithm)
+function check_input(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}, expA, ::DiagonalAlgorithm)
     m = LinearAlgebra.checksquare(A)
     @assert isdiag(A)
     @assert expA isa Diagonal
@@ -43,9 +43,9 @@ end
 # Algorithm selection
 # ---------------------------
 exponential!(A::AbstractMatrix, alg::DefaultAlgorithm) = exponential!(A, select_algorithm(exponential!, A, nothing; alg.kwargs...))
-exponential!(A::AbstractMatrix, out::AbstractMatrix, alg::DefaultAlgorithm) = exponential!(A, out, select_algorithm(exponential!, A, nothing; alg.kwargs...))
+exponential!(A::AbstractMatrix, out, alg::DefaultAlgorithm) = exponential!(A, out, select_algorithm(exponential!, A, nothing; alg.kwargs...))
 exponential!(τA::Tuple{Number, AbstractMatrix}, alg::DefaultAlgorithm) = exponential!(τA, select_algorithm(exponential!, τA, nothing; alg.kwargs...))
-exponential!(τA::Tuple{Number, AbstractMatrix}, out::AbstractMatrix, alg::DefaultAlgorithm) = exponential!(τA, out, select_algorithm(exponential!, τA, nothing; alg.kwargs...))
+exponential!(τA::Tuple{Number, AbstractMatrix}, out, alg::DefaultAlgorithm) = exponential!(τA, out, select_algorithm(exponential!, τA, nothing; alg.kwargs...))
 
 # Outputs
 # -------
@@ -55,22 +55,22 @@ initialize_output(::typeof(exponential!), (τ, A)::Tuple{Number, AbstractMatrix}
 
 # Implementation
 # --------------
-function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaLA)
+function exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaLA)
     check_input(exponential!, A, expA, alg)
     A = LinearAlgebra.exp!(A)
     A === expA || copy!(expA, A)
     return expA
 end
 
-exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEigh) = exponential!((one(eltype(A)), A), expA, alg)
-exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaEig) = exponential!((one(eltype(A)), A), expA, alg)
+exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaEigh) = exponential!((one(eltype(A)), A), expA, alg)
+exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaEig) = exponential!((one(eltype(A)), A), expA, alg)
 
-function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::AbstractAlgorithm)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::AbstractAlgorithm)
     expA .= A .* τ
     return exponential!(expA, expA, alg)
 end
 
-function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaEigh)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::MatrixFunctionViaEigh)
     check_input(exponential!, (τ, A), expA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
     if eltype(A) <: Real
@@ -90,7 +90,7 @@ function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatr
     end
 end
 
-function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::MatrixFunctionViaEig)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::MatrixFunctionViaEig)
     check_input(exponential!, (τ, A), expA, alg)
     D, V = eig_full!(A, alg.eig_alg)
     if eltype(A) <: Real && eltype(τ) <: Real
@@ -105,12 +105,12 @@ end
 
 # Diagonal logic
 # --------------
-function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::DiagonalAlgorithm)
+function exponential!(A::AbstractMatrix, expA, alg::DiagonalAlgorithm)
     check_input(exponential!, A, expA, alg)
     return map_diagonal!(exp, expA, A)
 end
 
-function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA::AbstractMatrix, alg::DiagonalAlgorithm)
+function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::DiagonalAlgorithm)
     check_input(exponential!, (τ, A), expA, alg)
     return map_diagonal!(x -> exp(x * τ), expA, A)
 end
