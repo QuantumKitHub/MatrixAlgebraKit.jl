@@ -35,5 +35,9 @@ function default_algorithm(::typeof(exponential!), ::Type{A}; kwargs...) where {
 end
 
 function default_algorithm(::typeof(exponential!), ::Tuple{A, B}; kwargs...) where {A, B}
-    return default_exponential_algorithm(B; kwargs...)
+    return default_algorithm(exponential!, B; kwargs...)
+end
+
+function default_algorithm(::typeof(exponential!), ::Type{Tuple{A, B}}; kwargs...) where {A, B}
+    return default_algorithm(exponential!, B; kwargs...)
 end
