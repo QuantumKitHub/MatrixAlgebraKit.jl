@@ -117,7 +117,7 @@ end
 
 # Taylor logic
 # ------------
-function exponential!(A::AbstractMatrix, expA::AbstractMatrix, alg::MatrixFunctionViaTaylor)
+function exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaTaylor)
     check_input(exponential!, A, expA, alg)
     m = LinearAlgebra.checksquare(A)
     T = eltype(A)
