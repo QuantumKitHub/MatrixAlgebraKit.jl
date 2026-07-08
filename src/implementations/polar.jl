@@ -81,19 +81,6 @@ function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarViaSVD)
     return (P, Wᴴ)
 end
 
-# Implement `mul!(C, A', A)` and guarantee the result is hermitian.
-# For BLAS calls that dispatch to `syrk` or `herk` this works automatically
-# for GPU this currently does not seem to be guaranteed so we manually project
-function _mul_herm!(C, A)
-    mul!(C, A, A')
-    project_hermitian!(C)
-    return C
-end
-function _mul_herm!(C::YALAPACK.BlasMat{T}, A::YALAPACK.BlasMat{T}) where {T <: YALAPACK.BlasFloat}
-    mul!(C, A, A')
-    return C
-end
-
 # Implementation via Newton
 # --------------------------
 function left_polar!(A::AbstractMatrix, WP, alg::PolarNewton)

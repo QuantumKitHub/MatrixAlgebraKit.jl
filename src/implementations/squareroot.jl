@@ -35,8 +35,13 @@ initialize_output(::typeof(squareroot!), A::AbstractMatrix, ::AbstractAlgorithm)
 function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaLA)
     check_input(squareroot!, A, sqrtA, alg)
     isempty(alg.kwargs) || throw(ArgumentError("`MatrixFunctionViaLA` does not accept keyword arguments for `squareroot`"))
-    result = LinearAlgebra.sqrt(A)
-    _copy_result!(squareroot!, sqrtA, result)
+    # `LinearAlgebra.sqrt` of a real matrix is real whenever the principal square root is,
+    # so a complex result with a real output signals a genuine domain violation
+    sqrtAc = LinearAlgebra.sqrt(A)
+    if eltype(sqrtAc) <: Complex && !(eltype(sqrtA) <: Complex)
+        throw(_realness_domainerror(squareroot!))
+    end
+    copy!(sqrtA, sqrtAc)
     return sqrtA
 end
 
@@ -49,8 +54,7 @@ function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaEigh)
     # `sqrt(A) = (V * D^(1/4)) * (V * D^(1/4))'` is hermitian by construction
     λ .= sqrt.(sqrt.(λ))
     Vs = rmul!(V, D)
-    mul!(sqrtA, Vs, Vs')
-    return project_hermitian!(sqrtA)
+    return _mul_herm!(sqrtA, Vs)
 end
 
 function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaEig)
