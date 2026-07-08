@@ -22,6 +22,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- New matrix functions `squareroot`, `logarithm` and `power` (with both integer and fractional exponents), supporting the `MatrixFunctionViaLA`, `MatrixFunctionViaEig`, `MatrixFunctionViaEigh` and `DiagonalAlgorithm` algorithms.
+- The scalar type of the output of these matrix functions matches that of the input, and out-of-domain eigenvalues (e.g. on the negative real axis for a real input) throw a `DomainError`; eigenvalues that violate the domain within a tolerance `domain_atol` (defaulting to `default_domain_atol`) are treated as rounding artifacts and clamped to the domain boundary.
+- `MatrixFunctionViaEig` and `MatrixFunctionViaEigh` accept a `domain_atol` keyword argument to control this tolerance.
+
 ### Changed
 
 ### Deprecated
