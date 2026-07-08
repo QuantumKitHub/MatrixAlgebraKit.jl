@@ -1,23 +1,23 @@
 """
-    balance!(A::AbstractMatrix; radix=2, maxiter=100) -> A, scale
+    balance!(A::AbstractMatrix; maxiter=100) -> A, scale
 
 Balance the square matrix `A` in place through a diagonal similarity `A ← D⁻¹ A D` that reduces its norm.
-Each sweep computes, for every index at once, the power-of-`radix` factor that best equalizes the
+Each sweep computes, for every index at once, the power-of-two factor that best equalizes the
 off-diagonal row and column norms (a simultaneous, Osborne-style variant of the Parlett–Reinsch scaling),
 and applies all factors together; sweeps repeat until no index changes or `maxiter` is reached.
 
-The radix is chosen such that the transformation is exact even in floating point arithmetic, which for most
-scalar types is just ``2``. The row and column norms are simultaneously adapted to avoid scalar indexing
+The scaling factors are integer powers of two, the machine radix, so that the transformation is exact even
+in floating point arithmetic. The row and column norms are simultaneously adapted to avoid scalar indexing
 and lots of kernel calls on GPUs.
 
 The returned `scale` holds the diagonal of `D`, so that a matrix function of the original
 input can be recovered from a matrix function `f` of the balanced matrix through
 `D f(D⁻¹AD) D⁻¹`, i.e. `expA[i, j] = scale[i] * f(B)[i, j] / scale[j]`.
 """
-function balance!(A::AbstractMatrix{T}; radix::Integer = 2, maxiter::Integer = 100) where {T}
+function balance!(A::AbstractMatrix{T}; maxiter::Integer = 100) where {T}
     n = LinearAlgebra.checksquare(A)
     R = real(T)
-    β = convert(R, radix)
+    β = convert(R, 2)
     logβ = log(β)
     scale = fill!(similar(A, R, n), one(R))
 
@@ -46,7 +46,7 @@ function balance!(A::AbstractMatrix{T}; radix::Integer = 2, maxiter::Integer = 1
     return A, scale
 end
 
-# Nearest power-of-`radix` factor `f` that equalizes the scaled off-diagonal norms
+# Nearest power-of-`β` factor `f` that equalizes the scaled off-diagonal norms
 # `colnorm·f` and `rownorm/f`, kept only when it reduces their sum (avoids oscillation and
 # leaves degenerate rows/columns untouched).
 @inline function _balance_factor(colnorm::R, rownorm::R, β::R, logβ::R) where {R}
