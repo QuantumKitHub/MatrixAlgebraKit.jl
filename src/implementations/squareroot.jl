@@ -48,29 +48,25 @@ end
 function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaEigh)
     check_input(squareroot!, A, sqrtA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
-    λ = diagview(D)
-    atol = something(alg.domain_atol, default_domain_atol(λ))
-    _clamp_domain_eigenvalues!(λ, atol)
+    diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
     # `sqrt(A) = (V * D^(1/4)) * (V * D^(1/4))'` is hermitian by construction
-    λ .= sqrt.(sqrt.(λ))
-    Vs = rmul!(V, D)
+    sqrtD = squareroot!(D, D, diag_alg)
+    Vs = rmul!(V, squareroot!(sqrtD, sqrtD, diag_alg))
     return _mul_herm!(sqrtA, Vs)
 end
 
 function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaEig)
     check_input(squareroot!, A, sqrtA, alg)
     D, V = eig_full!(A, alg.eig_alg)
-    λ = diagview(D)
+    diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
     if eltype(A) <: Real
-        atol = something(alg.domain_atol, default_domain_atol(λ))
-        _clamp_domain_eigenvalues!(λ, atol)
-        λ .= sqrt.(λ)
-        VD = V * D
-        sqrtAc = rdiv!(VD, LinearAlgebra.lu!(V))
+        atol = something(alg.domain_atol, default_domain_atol(diagview(D)))
+        _clamp_domain_eigenvalues!(diagview(D), atol)
+        VsqrtD = V * squareroot!(D, D, diag_alg)
+        sqrtAc = rdiv!(VsqrtD, LinearAlgebra.lu!(V))
         return sqrtA .= real.(sqrtAc)
     else
-        λ .= sqrt.(λ)
-        sqrtA .= V .* transpose(λ)
+        sqrtA .= V .* transpose(diagview(squareroot!(D, D, diag_alg)))
         return rdiv!(sqrtA, LinearAlgebra.lu!(V))
     end
 end
