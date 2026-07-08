@@ -1,12 +1,14 @@
 """
     balance!(A::AbstractMatrix; radix=2, maxiter=100) -> A, scale
 
-Balance the square matrix `A` in place through a diagonal similarity `A ← D⁻¹ A D` that
-reduces its norm. Each sweep computes, for every index at once, the power-of-`radix` factor
-that best equalizes the off-diagonal row and column norms (a simultaneous, Osborne-style
-variant of the Parlett–Reinsch scaling), and applies all factors together; sweeps repeat
-until no index changes or `maxiter` is reached. Because it is expressed entirely through
-reductions and broadcasts (no scalar indexing), the same code runs on CPU and GPU arrays.
+Balance the square matrix `A` in place through a diagonal similarity `A ← D⁻¹ A D` that reduces its norm.
+Each sweep computes, for every index at once, the power-of-`radix` factor that best equalizes the
+off-diagonal row and column norms (a simultaneous, Osborne-style variant of the Parlett–Reinsch scaling),
+and applies all factors together; sweeps repeat until no index changes or `maxiter` is reached.
+
+The radix is chosen such that the transformation is exact even in floating point arithmetic, which for most
+scalar types is just ``2``. The row and column norms are simultaneously adapted to avoid scalar indexing
+and lots of kernel calls on GPUs.
 
 The returned `scale` holds the diagonal of `D`, so that a matrix function of the original
 input can be recovered from a matrix function `f` of the balanced matrix through
@@ -50,5 +52,5 @@ end
 @inline function _balance_factor(colnorm::R, rownorm::R, β::R, logβ::R) where {R}
     (colnorm > 0 && rownorm > 0) || return one(R)
     f = β^round(log(rownorm / colnorm) / (2 * logβ))
-    return (colnorm * f + rownorm / f) < convert(R, 0.95) * (colnorm + rownorm) ? f : one(R)
+    return (colnorm * f + rownorm / f) < convert(R, 19 // 20) * (colnorm + rownorm) ? f : one(R)
 end
