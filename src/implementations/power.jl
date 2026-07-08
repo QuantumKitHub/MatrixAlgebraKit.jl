@@ -71,10 +71,7 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEig)
     D, V = eig_full!(A, alg.eig_alg)
     diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
     if eltype(A) <: Real
-        if !isinteger(p)
-            atol = something(alg.domain_atol, default_domain_atol(diagview(D)))
-            _clamp_domain_eigenvalues!(diagview(D), atol)
-        end
+        isinteger(p) || _clamp_domain_eigenvalues!(D, alg.domain_atol)
         VpD = V * power!(D, p, D, diag_alg)
         powAc = rdiv!(VpD, LinearAlgebra.lu!(V))
         return powA .= real.(powAc)
