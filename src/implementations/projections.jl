@@ -140,3 +140,16 @@ end
 
 _imimag(x::Real) = zero(x)
 _imimag(x::Complex) = im * imag(x)
+
+# Implement `mul!(C, A, A')` and guarantee the result is hermitian.
+# For BLAS calls that dispatch to `syrk` or `herk` this works automatically
+# for GPU this currently does not seem to be guaranteed so we manually project
+function _mul_herm!(C, A)
+    mul!(C, A, A')
+    project_hermitian!(C)
+    return C
+end
+function _mul_herm!(C::YALAPACK.BlasMat{T}, A::YALAPACK.BlasMat{T}) where {T <: YALAPACK.BlasFloat}
+    mul!(C, A, A')
+    return C
+end

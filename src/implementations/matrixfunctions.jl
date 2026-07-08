@@ -61,31 +61,12 @@ function _check_nonzero_eigenvalues(λ, atol::Real)
 end
 
 # For `MatrixFunctionViaLA`, domain violations surface as a complex result from
-# `LinearAlgebra`; detect this after the fact to preserve type-stable output.
-# `LinearAlgebra` sometimes computes a real result in complex arithmetic (e.g. fractional
-# powers via a complex Schur decomposition), so rounding-level imaginary components do
-# not signal a domain violation and are simply discarded.
-function _copy_result!(f, out::AbstractMatrix, result::AbstractMatrix)
-    if eltype(result) <: Complex && !(eltype(out) <: Complex)
-        # base the tolerance on the working precision, which is the lower of the two:
-        # `LinearAlgebra` may internally promote, e.g. `Float32` fractional powers are
-        # computed with `Float64`-eltype results but `Float32`-level accuracy
-        atol = max(defaulttol(out), defaulttol(result)) * norm(result, Inf)
-        for x in result
-            if abs(imag(x)) > atol
-                throw(
-                    DomainError(
-                        f,
-                        "The result of this matrix function applied to the given real matrix is complex (eigenvalues on the negative real axis). " *
-                            "Pass a complex matrix to obtain the principal value, or use `MatrixFunctionViaEigh`/`MatrixFunctionViaEig` with a suitable " *
-                            "`domain_atol` if the offending eigenvalues are rounding artifacts."
-                    )
-                )
-            end
-        end
-        out .= real.(result)
-    else
-        copy!(out, result)
-    end
-    return out
+# `LinearAlgebra` while the output should remain real.
+function _realness_domainerror(f)
+    return DomainError(
+        f,
+        "The result of this matrix function applied to the given real matrix is complex (eigenvalues on the negative real axis). " *
+            "Pass a complex matrix to obtain the principal value, or use `MatrixFunctionViaEigh`/`MatrixFunctionViaEig` with a suitable " *
+            "`domain_atol` if the offending eigenvalues are rounding artifacts."
+    )
 end

@@ -35,8 +35,13 @@ initialize_output(::typeof(logarithm!), A::AbstractMatrix, ::AbstractAlgorithm) 
 function logarithm!(A::AbstractMatrix, logA, alg::MatrixFunctionViaLA)
     check_input(logarithm!, A, logA, alg)
     isempty(alg.kwargs) || throw(ArgumentError("`MatrixFunctionViaLA` does not accept keyword arguments for `logarithm`"))
-    result = LinearAlgebra.log(A)
-    _copy_result!(logarithm!, logA, result)
+    # `LinearAlgebra.log` of a real matrix is real whenever the principal logarithm is,
+    # so a complex result with a real output signals a genuine domain violation
+    logAc = LinearAlgebra.log(A)
+    if eltype(logAc) <: Complex && !(eltype(logA) <: Complex)
+        throw(_realness_domainerror(logarithm!))
+    end
+    copy!(logA, logAc)
     return logA
 end
 

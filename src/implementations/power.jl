@@ -35,8 +35,19 @@ initialize_output(::typeof(power!), A::AbstractMatrix, p::Real, ::AbstractAlgori
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaLA)
     check_input(power!, A, p, powA, alg)
     isempty(alg.kwargs) || throw(ArgumentError("`MatrixFunctionViaLA` does not accept keyword arguments for `power`"))
-    result = A^p
-    _copy_result!(power!, powA, result)
+    powAc = A^p
+    if eltype(powAc) <: Complex && !(eltype(powA) <: Complex)
+        # `LinearAlgebra` computes fractional powers of real matrices in complex
+        # arithmetic and only casts back to real when the result is exactly real,
+        # so rounding-level imaginary components do not signal a domain violation.
+        # The tolerance is based on the working precision, which may be lower than
+        # the result eltype suggests (e.g. `Float32` input promotes to `ComplexF64`).
+        atol = defaulttol(powA) * norm(powAc, Inf)
+        all(x -> abs(imag(x)) <= atol, powAc) || throw(_realness_domainerror(power!))
+        powA .= real.(powAc)
+        return powA
+    end
+    copy!(powA, powAc)
     return powA
 end
 
@@ -49,6 +60,7 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEigh)
         λ .= λ .^ p
         VD = V * D
         mul!(powA, VD, V')
+        return project_hermitian!(powA)
     else
         atol = something(alg.domain_atol, default_domain_atol(λ))
         p < 0 && _check_nonzero_eigenvalues(λ, atol)
@@ -56,9 +68,8 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEigh)
         # `A^p = (V * D^(p/2)) * (V * D^(p/2))'` is hermitian by construction
         λ .= λ .^ (p / 2)
         Vs = rmul!(V, D)
-        mul!(powA, Vs, Vs')
+        return _mul_herm!(powA, Vs)
     end
-    return project_hermitian!(powA)
 end
 
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEig)
