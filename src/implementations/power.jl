@@ -54,20 +54,14 @@ end
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEigh)
     check_input(power!, A, p, powA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
-    λ = diagview(D)
+    diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
     if isinteger(p)
-        p < 0 && any(iszero, λ) && throw(LinearAlgebra.SingularException(0))
-        λ .= λ .^ p
-        VD = V * D
+        VD = V * power!(D, p, D, diag_alg)
         mul!(powA, VD, V')
         return project_hermitian!(powA)
     else
-        atol = something(alg.domain_atol, default_domain_atol(λ))
-        p < 0 && _check_nonzero_eigenvalues(λ, atol)
-        _clamp_domain_eigenvalues!(λ, atol)
         # `A^p = (V * D^(p/2)) * (V * D^(p/2))'` is hermitian by construction
-        λ .= λ .^ (p / 2)
-        Vs = rmul!(V, D)
+        Vs = rmul!(V, power!(D, p / 2, D, diag_alg))
         return _mul_herm!(powA, Vs)
     end
 end
@@ -75,22 +69,17 @@ end
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEig)
     check_input(power!, A, p, powA, alg)
     D, V = eig_full!(A, alg.eig_alg)
-    λ = diagview(D)
-    if isinteger(p)
-        p < 0 && any(iszero, λ) && throw(LinearAlgebra.SingularException(0))
-    else
-        atol = something(alg.domain_atol, default_domain_atol(λ))
-        p < 0 && _check_nonzero_eigenvalues(λ, atol)
-        eltype(A) <: Real && _clamp_domain_eigenvalues!(λ, atol)
-    end
+    diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
     if eltype(A) <: Real
-        λ .= λ .^ p
-        VD = V * D
-        powAc = rdiv!(VD, LinearAlgebra.lu!(V))
+        if !isinteger(p)
+            atol = something(alg.domain_atol, default_domain_atol(diagview(D)))
+            _clamp_domain_eigenvalues!(diagview(D), atol)
+        end
+        VpD = V * power!(D, p, D, diag_alg)
+        powAc = rdiv!(VpD, LinearAlgebra.lu!(V))
         return powA .= real.(powAc)
     else
-        λ .= λ .^ p
-        powA .= V .* transpose(λ)
+        powA .= V .* transpose(diagview(power!(D, p, D, diag_alg)))
         return rdiv!(powA, LinearAlgebra.lu!(V))
     end
 end

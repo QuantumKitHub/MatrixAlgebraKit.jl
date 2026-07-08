@@ -48,12 +48,7 @@ end
 function logarithm!(A::AbstractMatrix, logA, alg::MatrixFunctionViaEigh)
     check_input(logarithm!, A, logA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
-    λ = diagview(D)
-    atol = something(alg.domain_atol, default_domain_atol(λ))
-    _check_nonzero_eigenvalues(λ, atol)
-    _clamp_domain_eigenvalues!(λ, atol)
-    λ .= log.(λ)
-    VD = V * D
+    VD = V * logarithm!(D, D, DiagonalAlgorithm(; domain_atol = alg.domain_atol))
     mul!(logA, VD, V')
     return project_hermitian!(logA)
 end
@@ -61,18 +56,15 @@ end
 function logarithm!(A::AbstractMatrix, logA, alg::MatrixFunctionViaEig)
     check_input(logarithm!, A, logA, alg)
     D, V = eig_full!(A, alg.eig_alg)
-    λ = diagview(D)
-    atol = something(alg.domain_atol, default_domain_atol(λ))
-    _check_nonzero_eigenvalues(λ, atol)
+    diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
     if eltype(A) <: Real
-        _clamp_domain_eigenvalues!(λ, atol)
-        λ .= log.(λ)
-        VD = V * D
-        logAc = rdiv!(VD, LinearAlgebra.lu!(V))
+        atol = something(alg.domain_atol, default_domain_atol(diagview(D)))
+        _clamp_domain_eigenvalues!(diagview(D), atol)
+        VlogD = V * logarithm!(D, D, diag_alg)
+        logAc = rdiv!(VlogD, LinearAlgebra.lu!(V))
         return logA .= real.(logAc)
     else
-        λ .= log.(λ)
-        logA .= V .* transpose(λ)
+        logA .= V .* transpose(diagview(logarithm!(D, D, diag_alg)))
         return rdiv!(logA, LinearAlgebra.lu!(V))
     end
 end
