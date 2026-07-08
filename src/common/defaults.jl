@@ -43,6 +43,15 @@ Default tolerance for deciding to warn if the provided `A` is not hermitian.
 """
 default_hermitian_tol(A) = eps(norm(A, Inf))^(3 / 4)
 
+"""
+    default_domain_atol(λ)
+
+Default absolute tolerance for deciding when the eigenvalues `λ` should be considered
+to lie outside of the domain of a matrix function, e.g. on the negative real axis for
+[`squareroot`](@ref) and [`logarithm`](@ref) of a real matrix.
+"""
+default_domain_atol(λ) = defaulttol(λ) * maximum(abs, λ; init = abs(zero(eltype(λ))))
+
 
 const DEFAULT_FIXGAUGE = Ref(true)
 

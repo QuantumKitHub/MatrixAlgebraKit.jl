@@ -1,0 +1,86 @@
+# Inputs
+# ------
+function copy_input(::typeof(squareroot), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
+end
+copy_input(::typeof(squareroot), A::Diagonal) = Diagonal(float.(diagview(A)))
+
+function check_input(::typeof(squareroot!), A::AbstractMatrix, sqrtA, alg::AbstractAlgorithm)
+    m = LinearAlgebra.checksquare(A)
+    @check_size(sqrtA, (m, m))
+    @check_scalar(sqrtA, A)
+    return nothing
+end
+
+function check_input(::typeof(squareroot!), A::AbstractMatrix, sqrtA, ::DiagonalAlgorithm)
+    m = LinearAlgebra.checksquare(A)
+    @assert isdiag(A)
+    @assert sqrtA isa Diagonal
+    @check_size(sqrtA, (m, m))
+    @check_scalar(sqrtA, A)
+    return nothing
+end
+
+# Algorithm selection
+# -------------------
+squareroot!(A::AbstractMatrix, alg::DefaultAlgorithm) = squareroot!(A, select_algorithm(squareroot!, A, nothing; alg.kwargs...))
+squareroot!(A::AbstractMatrix, out, alg::DefaultAlgorithm) = squareroot!(A, out, select_algorithm(squareroot!, A, nothing; alg.kwargs...))
+
+# Outputs
+# -------
+initialize_output(::typeof(squareroot!), A::AbstractMatrix, ::AbstractAlgorithm) = A
+
+# Implementation
+# --------------
+function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaLA)
+    check_input(squareroot!, A, sqrtA, alg)
+    isempty(alg.kwargs) || throw(ArgumentError("`MatrixFunctionViaLA` does not accept keyword arguments for `squareroot`"))
+    result = LinearAlgebra.sqrt(A)
+    _copy_result!(squareroot!, sqrtA, result)
+    return sqrtA
+end
+
+function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaEigh)
+    check_input(squareroot!, A, sqrtA, alg)
+    D, V = eigh_full!(A, alg.eigh_alg)
+    λ = diagview(D)
+    atol = something(alg.domain_atol, default_domain_atol(λ))
+    _clamp_domain_eigenvalues!(λ, atol)
+    # `sqrt(A) = (V * D^(1/4)) * (V * D^(1/4))'` is hermitian by construction
+    λ .= sqrt.(sqrt.(λ))
+    Vs = rmul!(V, D)
+    mul!(sqrtA, Vs, Vs')
+    return project_hermitian!(sqrtA)
+end
+
+function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaEig)
+    check_input(squareroot!, A, sqrtA, alg)
+    D, V = eig_full!(A, alg.eig_alg)
+    λ = diagview(D)
+    if eltype(A) <: Real
+        atol = something(alg.domain_atol, default_domain_atol(λ))
+        _clamp_domain_eigenvalues!(λ, atol)
+        λ .= sqrt.(λ)
+        VD = V * D
+        sqrtAc = rdiv!(VD, LinearAlgebra.lu!(V))
+        return sqrtA .= real.(sqrtAc)
+    else
+        λ .= sqrt.(λ)
+        sqrtA .= V .* transpose(λ)
+        return rdiv!(sqrtA, LinearAlgebra.lu!(V))
+    end
+end
+
+# Diagonal logic
+# --------------
+function squareroot!(A::AbstractMatrix, sqrtA, alg::DiagonalAlgorithm)
+    check_input(squareroot!, A, sqrtA, alg)
+    λ = diagview(sqrtA)
+    copyto!(λ, diagview(A))
+    if eltype(λ) <: Real
+        atol = something(get(alg.kwargs, :domain_atol, nothing), default_domain_atol(λ))
+        _clamp_domain_eigenvalues!(λ, atol)
+    end
+    λ .= sqrt.(λ)
+    return sqrtA
+end
