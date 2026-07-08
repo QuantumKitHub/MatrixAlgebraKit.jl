@@ -102,9 +102,9 @@ The following algorithms for matrix functions are available.
 
 | Algorithm | Applicable matrix functions | Key keyword arguments |
 |:----------|:--------------------------|:----------------------|
-| [`MatrixFunctionViaLA`](@ref) | exponential | |
-| [`MatrixFunctionViaEig`](@ref) | exponential | `eig_alg` |
-| [`MatrixFunctionViaEigh`](@ref) | exponential | `eigh_alg` |
+| [`MatrixFunctionViaLA`](@ref) | exponential, squareroot, logarithm, power | |
+| [`MatrixFunctionViaEig`](@ref) | exponential, squareroot, logarithm, power | `eig_alg`, `domain_atol` |
+| [`MatrixFunctionViaEigh`](@ref) | exponential, squareroot, logarithm, power | `eigh_alg`, `domain_atol` |
 
 For full docstring details on each algorithm type, see the corresponding section in [Decompositions](@ref).
 

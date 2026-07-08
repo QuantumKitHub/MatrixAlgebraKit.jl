@@ -35,3 +35,41 @@ MatrixAlgebraKit.MatrixFunctionViaLA
 MatrixAlgebraKit.MatrixFunctionViaEig
 MatrixAlgebraKit.MatrixFunctionViaEigh
 ```
+
+## Domain considerations
+
+The functions below ([`squareroot`](@ref), [`logarithm`](@ref) and [`power`](@ref) with fractional powers) are only defined for matrices whose eigenvalues avoid (part of) the negative real axis, and their principal values are complex whenever eigenvalues on that axis are present.
+In MatrixAlgebraKit, the scalar type of the output always matches that of the input, and a real matrix with eigenvalues on the negative real axis therefore leads to a `DomainError`; pass a complex matrix instead to obtain the complex principal value.
+To avoid spurious errors for eigenvalues that lie on the negative real axis only because of rounding errors (e.g. a positive semidefinite matrix with a tiny negative eigenvalue), eigenvalues within an absolute tolerance `domain_atol` of the domain boundary are clamped onto it.
+This tolerance defaults to [`default_domain_atol`](@ref) and can be specified explicitly for the algorithms that support it, e.g. `MatrixFunctionViaEigh(eigh_alg; domain_atol=...)`.
+
+```@docs; canonical=false
+MatrixAlgebraKit.default_domain_atol
+```
+
+## Square root
+
+The principal [square root](https://en.wikipedia.org/wiki/Square_root_of_a_matrix) of a square matrix `A` is the unique square root whose eigenvalues have nonnegative real part.
+It is computed by the function [`squareroot`](@ref), where the default algorithm [`MatrixFunctionViaLA`](@ref) wraps the Schur-based implementation of `LinearAlgebra`, and the eigenvalue-decomposition-based algorithms [`MatrixFunctionViaEig`](@ref) and [`MatrixFunctionViaEigh`](@ref) are available as well.
+
+```@docs; canonical=false
+squareroot
+```
+
+## Logarithm
+
+The principal [logarithm](https://en.wikipedia.org/wiki/Logarithm_of_a_matrix) of a square matrix `A` is the unique logarithm whose eigenvalues have imaginary part in `(-π, π]`, and exists for matrices without (numerically) zero eigenvalues that satisfy the domain considerations above.
+It is computed by the function [`logarithm`](@ref), with the same algorithm choices as [`squareroot`](@ref).
+
+```@docs; canonical=false
+logarithm
+```
+
+## Power
+
+Matrix powers `A^p` for real `p` are computed by the function [`power`](@ref), which takes the exponent as a second positional argument.
+Integer powers are defined for any square matrix (invertible for negative powers) and reduce to repeated multiplication, while fractional powers are principal powers subject to the domain considerations above.
+
+```@docs; canonical=false
+power
+```
