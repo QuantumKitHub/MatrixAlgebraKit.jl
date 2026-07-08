@@ -22,6 +22,14 @@ function _clamp_domain_eigenvalues!(λ::AbstractVector{<:Real}, atol::Real)
     return λ
 end
 
+# Convenience method for the eigenvalues of a decomposition, deriving the default
+# tolerance from the eigenvalues themselves when `domain_atol` is `nothing`.
+function _clamp_domain_eigenvalues!(D::Diagonal, domain_atol::Union{Nothing, Real})
+    λ = diagview(D)
+    atol = something(domain_atol, default_domain_atol(λ))
+    return _clamp_domain_eigenvalues!(λ, atol)
+end
+
 # Complex eigenvalues of a real matrix: only eigenvalues (numerically) on the negative
 # real axis obstruct a real result; complex-conjugate pairs do not.
 function _clamp_domain_eigenvalues!(λ::AbstractVector{<:Complex}, atol::Real)
