@@ -175,67 +175,48 @@ function exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaTaylor)
 end
 
 # Truncation order `m`, blocksize `b` and number of squarings `s` minimizing the total
-# matrix-multiplication count subject to the Taylor remainder bound `(θ/2ˢ)ᵐ⁺¹/(m+1)! ≤ tol`.
-#
-# The Paterson–Stockmeyer scheme (see `taylor_polynomial`) splits the degree-`m` polynomial
-# into `K = cld(m, b)` blocks spanning powers A¹..Aᵇ plus a separate constant term, costing
-# `max(0, b - p₀)` multiplications to extend the `p₀` powers already formed (those are free)
-# and `K - 1` Horner multiplications. Since the polynomial cost is a step function of the
-# order while squarings only decrease with it, only the highest order per multiplication
-# budget `μ` needs considering: with `max(0, b - p₀) + (K - 1) = μ` the order `K⋅b` equals
-# `(μ + p₀ + 1 - b)⋅b`, a downward parabola in `b ≥ p₀` maximized near `(μ + p₀ + 1)/2`.
-# For `p₀ = 1` this reproduces the tabulated optimal Paterson–Stockmeyer orders
-# 1, 2, 4, 6, 9, 12, 16, 20, 25, ... (Sastre, Linear Algebra Appl. 574 (2019),
-# https://www.sciencedirect.com/science/article/pii/S0024379519301454).
-#
-# The effective norm `θ` per candidate order is the sharpest Al-Mohy–Higham quantity
-# `αₚ = max(dₚ, dₚ₊₁)` (with `dₚ = ‖Aᵖ‖^(1/p)`) that is valid for that order: since every
-# `k ≥ p(p-1)` is a nonnegative combination of `p` and `p+1`, `‖Aᵏ‖ ≤ αₚᵏ` holds for `k ≥ p(p-1)`,
-# so `αₚ` bounds the degree-`m` remainder whenever `m+1 ≥ p(p-1)`.
+# matrix-multiplication count needed to make the Taylor remainder bound `(θ/2ˢ)ᵐ⁺¹/(m+1)! ≤ tol`.
 function taylor_order_and_squarings(d::AbstractVector{<:Real}, tol::Real)
     p₀ = length(d)
     log2tol = Float64(log2(tol)) # log2 before conversion: high-precision `tol` may underflow Float64
     log2factorial = 0.0 # log2((order + 1)!), accumulated incrementally across increasing orders
-    prev_order = 0
-    best_order = best_blocksize = best_squarings = 0
+    prev_order = best_order = best_blocksize = best_squarings = 0
     best_cost = typemax(Int)
-    μ = 0
-    while μ < best_cost # cost(μ) ≥ μ, so larger budgets cannot improve
-        # highest order reachable with μ multiplications
-        b_star = (μ + p₀ + 1) / 2
-        order = blocksize = 0
-        for bc in (floor(Int, b_star), ceil(Int, b_star))
-            b = clamp(bc, p₀, μ + p₀)
-            numblocks = μ + p₀ + 1 - b
-            if numblocks * b > order
-                order = numblocks * b
-                blocksize = b
-            end
-        end
-        for k in (prev_order + 2):(order + 1)
-            log2factorial += log2(k)
-        end
-        prev_order = order
+
+    budget = 0 # multiplications spent on powers and Horner steps, excluding squarings
+    while budget < best_cost # total cost ≥ budget, so larger budgets cannot improve
+        # highest order = numblocks * blocksize reachable within `budget`: the sum
+        # numblocks + blocksize is fixed, so balance the split, keeping blocksize ≥ p₀
+        blocksize = max(p₀, (budget + p₀ + 1) ÷ 2)
+        numblocks = budget + p₀ + 1 - blocksize
+        order = numblocks * blocksize
+
         # sharpest valid αₚ = min over p with p(p-1) ≤ order+1 and p+1 ≤ p₀
         θ = d[1]
         for p in 1:(p₀ - 1)
             p * (p - 1) ≤ order + 1 || break
             θ = min(θ, max(d[p], d[p + 1]))
         end
-        # `θ == 0` (a nilpotent Aᵖ) makes the remainder vanish exactly ⇒ no squarings needed;
-        # guard the `log2(0) = -Inf` before it reaches `ceil(Int, ⋅)`.
+
+        # compute squarings needed to make `(θ/2ˢ)ᵐ⁺¹/(m+1)! ≤ tol`
+        for k in (prev_order + 2):(order + 1)
+            log2factorial += log2(k)
+        end
+        prev_order = order
         excess = Float64(log2(θ)) - (log2tol + log2factorial) / (order + 1)
-        squarings = excess > 0 ? ceil(Int, excess) : 0
-        cost = μ + squarings
-        if cost ≤ best_cost # ties → larger budget → fewer squarings (avoid overscaling)
+        squarings = excess > 0 ? ceil(Int, excess) : 0 # be careful with θ = 0
+
+
+        cost = budget + squarings
+        if cost ≤ best_cost # ties → larger budget → fewer squarings (more accurate)
             best_cost = cost
             best_order = order
             best_blocksize = blocksize
             best_squarings = squarings
         end
-        squarings == 0 && break # cost can only grow beyond this point
-        μ += 1
+        budget += 1
     end
+
     return best_order, best_blocksize, best_squarings
 end
 
@@ -272,11 +253,14 @@ end
 # total degree `order`, written into `out`.
 function taylor_block!(out::AbstractMatrix, powers, invfactorial, blockindex::Integer, blocksize::Integer, order::Integer)
     offset = (blockindex - 1) * blocksize
-    fill!(out, zero(eltype(out)))
     for i in 1:blocksize
         k = offset + i
         k > order && break
-        out .+= invfactorial[k + 1] .* powers[i]
+        if i == 1
+            out .= invfactorial[k + 1] .* powers[i]
+        else
+            out .+= invfactorial[k + 1] .* powers[i]
+        end
     end
     return out
 end
