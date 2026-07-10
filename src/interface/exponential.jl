@@ -24,7 +24,7 @@ Compute the exponential of the square matrix `A` or `τ * A`,
 # -------------------
 default_exponential_algorithm(A; kwargs...) = default_exponential_algorithm(typeof(A); kwargs...)
 function default_exponential_algorithm(T::Type; kwargs...)
-    return MatrixFunctionViaLA(; kwargs...)
+    return MatrixFunctionViaTaylor(; kwargs...)
 end
 function default_exponential_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)
