@@ -135,7 +135,7 @@ function exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaTaylor)
     iszero(d[1]) && return one!(expA)
 
     powers = Vector{Base.promote_op(similar, typeof(A))}(undef, p₀)
-    powers[1] = S === typeof(A) ? A : copyto!(similar(A), A)
+    powers[1] = eltype(powers) === typeof(A) ? A : copyto!(similar(A), A)
 
     for p in 2:p₀
         powers[p] = similar(powers[1])
