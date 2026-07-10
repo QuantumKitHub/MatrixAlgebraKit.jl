@@ -192,6 +192,8 @@ function taylor_order_and_squarings(d::AbstractVector{<:Real}, tol::Real)
         order = numblocks * blocksize
 
         # sharpest valid αₚ = min over p with p(p-1) ≤ order+1 and p+1 ≤ p₀
+        # Al-Mohy, A. H. and Higham, N. J., "A New Scaling and Squaring Algorithm for the Matrix Exponential",
+        # SIAM J. Matrix Anal. Appl., 31(3), 970–989, 2009, Lemma 4.1 and Theorem 4.2(a).
         θ = d[1]
         for p in 1:(p₀ - 1)
             p * (p - 1) ≤ order + 1 || break
