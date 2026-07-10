@@ -142,18 +142,17 @@ function exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaTaylor)
 
     order, blocksize, squarings = taylor_order_and_squarings(d, tol)
 
-    # Rescale the (≤ p₀) powers we hold into powers of A/2ˢ
-    resize!(powers, min(p₀, blocksize))
+    # Rescale the p₀ powers we hold into powers of A/2ˢ
     if squarings > 0
         f = inv(convert(T, 2)^squarings)
         fk = one(T)
-        for k in 1:length(powers)
+        for k in 1:p₀
             fk *= f
             rmul!(powers[k], fk) # powers[k] ← (A/2ˢ)ᵏ
         end
     end
-    # Extend to `blocksize` powers
-    for p in (length(powers) + 1):blocksize
+    # Extend from p₀ to `blocksize` powers (blocksize ≥ p₀ always, see taylor_order_and_squarings)
+    for p in (p₀ + 1):blocksize
         push!(powers, powers[p - 1] * powers[1])
     end
 
