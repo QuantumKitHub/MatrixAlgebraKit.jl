@@ -130,13 +130,16 @@ function exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaTaylor)
     # Form a minimal set of powers of A up front and use them to sharpen the norm estimate
     # through the Al-Mohy–Higham quantities dₚ = ‖Aᵖ‖^(1/p).
     p₀ = min(convert(Int, get(alg.kwargs, :estimate_order, 4)), m)
-    powers = Vector{typeof(A)}(undef, p₀)
-    powers[1] = A
     d = Vector{R}(undef, p₀)
     d[1] = LinearAlgebra.opnorm(A, 1)
     iszero(d[1]) && return one!(expA)
+
+    powers = Vector{Base.promote_op(similar, typeof(A))}(undef, p₀)
+    powers[1] = S === typeof(A) ? A : copyto!(similar(A), A)
+
     for p in 2:p₀
-        powers[p] = powers[p - 1] * A
+        powers[p] = similar(powers[1])
+        mul!(powers[p], powers[p - 1], powers[1])
         d[p] = LinearAlgebra.opnorm(powers[p], 1)^(1 / p)
     end
 
@@ -152,8 +155,11 @@ function exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaTaylor)
         end
     end
     # Extend from p₀ to `blocksize` powers (blocksize ≥ p₀ always, see taylor_order_and_squarings)
+    sizehint!(powers, blocksize)
     for p in (p₀ + 1):blocksize
-        push!(powers, powers[p - 1] * powers[1])
+        Pp = similar(powers[1])
+        mul!(Pp, powers[p - 1], powers[1])
+        push!(powers, Pp)
     end
 
 
