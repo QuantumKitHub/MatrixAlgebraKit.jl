@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "MatrixAlgebraKit.jl"
+type: software
+url: "https://github.com/QuantumKitHub/MatrixAlgebraKit.jl"
+repository-code: "https://github.com/QuantumKitHub/MatrixAlgebraKit.jl"
+authors:
+  - given-names: Jutho
+    family-names: Haegeman
+    email: jutho.haegeman@ugent.be
+  - given-names: Lukas
+    family-names: Devos
+  - given-names: Katharine
+    family-names: Hyatt
+version: "0.6.9"
+date-released: "2026-07-10"
