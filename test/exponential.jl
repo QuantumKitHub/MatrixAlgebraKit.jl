@@ -57,6 +57,24 @@ end
     @test_throws DomainError exponential((τ, A); alg = MatrixFunctionViaEigh(LAPACK_QRIteration()))
 end
 
+@testset "exponential! for non-Matrix input $T" for T in BLASFloats
+    rng = StableRNG(123)
+    m = 12
+    A = LinearAlgebra.normalize!(randn(rng, T, m, m))
+    expA = LinearAlgebra.exp(A)
+
+    wrappers = (
+        ("view", B -> view(B, :, :)),
+        ("PermutedDimsArray", B -> PermutedDimsArray(permutedims(B), (2, 1))),
+        ("ReshapedArray", B -> reshape(view(vec(B), 1:(m * m)), m, m)),
+    )
+    @testset "$name" for (name, wrap) in wrappers
+        W = wrap(copy(A))
+        @test !(W isa Matrix)
+        @test exponential!(W) ≈ expA
+    end
+end
+
 @testset "exponential! for Diagonal{$T}" for T in (BLASFloats..., GenericFloats...)
     rng = StableRNG(123)
     m = 54
