@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.8...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.9...HEAD)
 
 ### Added
 
@@ -31,6 +31,14 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 ### Performance
+
+## [0.6.9](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.8...v0.6.9) - 2026-07-10
+
+### Added
+
+- Matrix `exponential` / `exponential!` function with selectable algorithms: `MatrixFunctionViaLA` (Padé via `LinearAlgebra`), `MatrixFunctionViaEig` / `MatrixFunctionViaEigh` (via eigendecomposition), and `DiagonalAlgorithm` for `Diagonal` inputs; supports the scaled `exponential((τ, A))` form ([#94](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/94), [#251](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/251), [#252](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/252), [#253](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/253)).
+- Native, LAPACK-free scaling-and-squaring Taylor algorithm `MatrixFunctionViaTaylor`, outperforming LinearAlgebra.jl and the default for dense matrices and the only path covering arbitrary-precision element types such as `BigFloat` ([#243](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/243)).
+- Forward-mode (pushforward) automatic-differentiation rules for the polar, `eig` / `eigh`, and SVD decompositions and the projection / `orth`–`null` functions, available through the Enzyme and Mooncake extensions ([#242](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/242), [#244](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/244), [#245](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/245), [#246](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/246), [#247](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/247)).
 
 ## [0.6.8](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.7...v0.6.8) - 2026-05-20
 
