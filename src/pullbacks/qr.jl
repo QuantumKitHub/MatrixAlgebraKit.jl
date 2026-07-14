@@ -84,7 +84,7 @@ function qr_pullback!(
 
 
     Q₁ = view(Q, :, 1:p)
-    R₁₁ = UpperTriangular(R[1:p, 1:p])
+    R₁₁ = UpperTriangular(view(R, 1:p, 1:p))
     R₁₂ = view(R, 1:p, (p + 1):n)
 
     ΔA₁ = view(ΔA, :, 1:p)
@@ -111,7 +111,8 @@ function qr_pullback!(
         Md .= real.(Md)
     end
     mul!(ΔQ₁, Q₁, M, +1, 1)
-    ΔA₁ .+= rdiv!(ΔQ₁, R₁₁')
+    # bypass istriu check
+    ΔA₁ .+= LinearAlgebra._rdiv!(ΔQ₁, ΔQ₁, R₁₁')
     return ΔA
 end
 
