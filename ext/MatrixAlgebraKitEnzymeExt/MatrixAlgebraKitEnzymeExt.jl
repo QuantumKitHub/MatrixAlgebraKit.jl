@@ -74,7 +74,7 @@ for (f, pb) in (
             A_is_arg1 = !isa(A, Const) && has_equal_storage(A.val, arg.val[1])
             A_is_arg2 = !isa(A, Const) && has_equal_storage(A.val, arg.val[2])
             A_is_arg = A_is_arg1 || A_is_arg2
-            cache_arg = arg.val !== ret || A_is_arg || EnzymeRules.overwritten(config)[3] ? copy.(ret) : nothing
+            cache_arg = arg.val !== ret || A_is_arg || EnzymeRules.overwritten(config)[3] ? copy.(ret) : ret
             dret = if EnzymeRules.needs_shadow(config) && ((TA == Nothing && TB == Nothing) || isa(arg, Const))
                 make_zero.(ret)
             elseif EnzymeRules.needs_shadow(config)
@@ -101,7 +101,7 @@ for (f, pb) in (
             A_is_arg1 = !isa(A, Const) && has_equal_storage(A.dval, arg.dval[1])
             A_is_arg2 = !isa(A, Const) && has_equal_storage(A.dval, arg.dval[2])
             A_is_arg = A_is_arg1 || A_is_arg2
-            argval = something(cache_arg, arg.val)
+            argval = cache_arg
             if !isa(A, Const)
                 ΔA = A_is_arg ? make_zero(A.dval) : A.dval
                 $pb(ΔA, Aval, argval, darg)
@@ -221,7 +221,7 @@ for f! in (:svd_compact!, :svd_full!)
             # if USVᴴ.val == ret, the annotation must be Duplicated or DuplicatedNoNeed
             # if USVᴴ isa Const, ret may still be modified further down the call graph so we should
             # copy it to protect ourselves
-            cache_USVᴴ = (USVᴴ.val !== ret) || EnzymeRules.overwritten(config)[3] ? copy.(ret) : nothing
+            cache_USVᴴ = (USVᴴ.val !== ret) || EnzymeRules.overwritten(config)[3] ? copy.(ret) : ret
             # the USVᴴ may be nothing for eltypes handled by GenericLinearAlgebra
             dret = if EnzymeRules.needs_shadow(config)
                 ((TU == TS == TVᴴ == Nothing) || isa(USVᴴ, Const)) ? make_zero(ret) : USVᴴ.dval
@@ -244,7 +244,7 @@ for f! in (:svd_compact!, :svd_full!)
             # A is not used in the pullback; since we have destroyed A, we insert Aval = nothing
             # to trigger an error in case the pushfward is modified to directly use A
             Aval = nothing
-            USVᴴval = something(cache_USVᴴ, USVᴴ.val)
+            USVᴴval = cache_USVᴴ
             if !isa(A, Const)
                 svd_pullback!(A.dval, Aval, USVᴴval, dUSVᴴ)
             end
