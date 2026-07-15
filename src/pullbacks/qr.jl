@@ -31,9 +31,18 @@ function check_and_prepare_qr_cotangents(
         ΔR₁₁ = UpperTriangular(view(ΔR, 1:p, 1:p))
         ΔR₁₂ = view(ΔR, 1:p, (p + 1):n)
         ΔR₂₂ = view(ΔR, (p + 1):minmn, (p + 1):n)
-        Δgauge_R = norm(view(ΔR₂₂, uppertriangularind(ΔR₂₂)), Inf)
-        Δgauge_R = max(Δgauge_R, norm(view(ΔR₂₂, diagind(ΔR₂₂)), Inf))
-        Δgauge = max(Δgauge, Δgauge_R)
+        if p < minmn # otherwise ΔR₂₂ is empty
+            # uppertriangularind generates linear indices
+            # compute the appropriate offset in ΔR so we aren't
+            # operating on a view-of-view, which doesn't work
+            # for GPU arrays
+            I = uppertriangularind(ΔR₂₂)
+            upper_inds = view(LinearIndices(ΔR), (p + 1):minmn, (p + 1):n)[I]
+            ΔR₂₂upper = view(ΔR, upper_inds)
+            Δgauge_R = norm(ΔR₂₂upper, Inf)
+            Δgauge_R = max(Δgauge_R, norm(view(ΔR₂₂, diagind(ΔR₂₂)), Inf))
+            Δgauge = max(Δgauge, Δgauge_R)
+        end
     else
         ΔR₁₁ = nothing
         ΔR₁₂ = nothing
@@ -101,7 +110,12 @@ function qr_pullback!(
         Md = diagview(M)
         Md .= real.(Md)
     end
-    ΔA₁ .+= rdiv!(mul!(ΔQ₁, Q₁, M, +1, 1), R₁₁')
+    mul!(ΔQ₁, Q₁, M, +1, 1)
+    # bypass istriu check in LinearAlgebra's toplevel rdiv
+    # which causes scalar indexing for GPU arrays.
+    # TODO: revisit this if/when LinearAlgebra becomes more
+    # sensible.
+    ΔA₁ .+= LinearAlgebra._rdiv!(ΔQ₁, ΔQ₁, R₁₁')
     return ΔA
 end
 
@@ -147,7 +161,8 @@ ambiguity. Additionally, rows of `ΔR` beyond the rank are zeroed out.
 """
 function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(R))
     r = MatrixAlgebraKit.qr_rank(R; rank_atol)
-    minmn = min(size(A)...)
+    m, n = size(A, 1), size(A, 2)
+    minmn = min(m, n)
     Q₁ = view(Q, :, 1:r)
     ΔQ₂ = view(ΔQ, :, (r + 1):minmn)
     zero!(ΔQ₂)
@@ -160,7 +175,16 @@ function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebr
     end
     ΔR₂₂ = view(ΔR, (r + 1):minmn, (r + 1):size(R, 2))
     zero!(diagview(ΔR₂₂))
-    zero!(view(ΔR₂₂, uppertriangularind(ΔR₂₂)))
+    if r < minmn
+        # uppertriangularind generates linear indices
+        # compute the appropriate offset in ΔR so we aren't
+        # operating on a view-of-view, which doesn't work
+        # for GPU arrays
+        I = uppertriangularind(ΔR₂₂)
+        upper_inds = view(LinearIndices(ΔR), (r + 1):minmn, (r + 1):n)[I]
+        ΔR₂₂upper = view(ΔR, upper_inds)
+        zero!(ΔR₂₂upper)
+    end
     return ΔQ, ΔR
 end
 
