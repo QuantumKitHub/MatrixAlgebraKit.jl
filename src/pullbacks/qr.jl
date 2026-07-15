@@ -111,7 +111,10 @@ function qr_pullback!(
         Md .= real.(Md)
     end
     mul!(ΔQ₁, Q₁, M, +1, 1)
-    # bypass istriu check
+    # bypass istriu check in LinearAlgebra's toplevel rdiv
+    # which causes scalar indexing for GPU arrays.
+    # TODO: revisit this if/when LinearAlgebra becomes more
+    # sensible.
     ΔA₁ .+= LinearAlgebra._rdiv!(ΔQ₁, ΔQ₁, R₁₁')
     return ΔA
 end
