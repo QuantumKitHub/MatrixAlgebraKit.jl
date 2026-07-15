@@ -30,9 +30,18 @@ function check_and_prepare_lq_cotangents(
         ΔL₁₁ = LowerTriangular(view(ΔL, 1:p, 1:p))
         ΔL₂₁ = view(ΔL, (p + 1):size(ΔL, 1), 1:p)
         ΔL₂₂ = view(ΔL, (p + 1):size(ΔL, 1), (p + 1):minmn)
-        Δgauge_L = norm(view(ΔL₂₂, lowertriangularind(ΔL₂₂)), Inf)
-        Δgauge_L = max(Δgauge_L, norm(view(ΔL₂₂, diagind(ΔL₂₂)), Inf))
-        Δgauge = max(Δgauge, Δgauge_L)
+        if p < minmn # otherwise ΔL₂₂ is empty
+            # lowertriangularind generates linear indices
+            # compute the appropriate offset in ΔL so we aren't
+            # operating on a view-of-view, which doesn't work
+            # for GPU arrays
+            I = lowertriangularind(ΔL₂₂)
+            lower_inds = view(LinearIndices(ΔL), (p + 1):m, (p + 1):minmn)[I]
+            ΔL₂₂lower = view(ΔL, lower_inds)
+            Δgauge_L = norm(ΔL₂₂lower, Inf)
+            Δgauge_L = max(Δgauge_L, norm(view(ΔL₂₂, diagind(ΔL₂₂)), Inf))
+            Δgauge = max(Δgauge, Δgauge_L)
+        end
     else
         ΔL₁₁ = nothing
         ΔL₂₁ = nothing
@@ -145,20 +154,32 @@ Additionally, columns of `ΔL` beyond the rank are zeroed out.
 """
 function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(L))
     r = MatrixAlgebraKit.lq_rank(L; rank_atol)
-    minmn = min(size(A)...)
+    m, n = size(A)
+    minmn = min(m, n)
     Q₁ = view(Q, 1:r, :)
     ΔQ₂ = view(ΔQ, (r + 1):minmn, :)
     zero!(ΔQ₂)
     ΔQ₃ = view(ΔQ, (minmn + 1):size(ΔQ, 1), :) # extra rows in the case of lq_full
-    if r == minmn
+    # use this isempty check here to avoid GPU dispatch errors
+    # since CUBLAS scal! can't handle an array with stride > 1
+    # on dimension 1
+    if r == minmn && !isempty(ΔQ₃)
         ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
         mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁)
     else # rank-deficient case, no gauge-invariant information
         zero!(ΔQ₃)
     end
     ΔL₂₂ = view(ΔL, (r + 1):size(ΔL, 1), (r + 1):minmn)
-    zero!(diagview(ΔL₂₂))
-    zero!(view(ΔL₂₂, lowertriangularind(ΔL₂₂)))
+    if r < minmn
+        # lowertriangularind generates linear indices
+        # compute the appropriate offset in ΔL so we aren't
+        # operating on a view-of-view, which doesn't work
+        # for GPU arrays
+        I = lowertriangularind(ΔL₂₂)
+        lower_inds = view(LinearIndices(ΔL), (r + 1):m, (r + 1):minmn)[I]
+        ΔL₂₂lower = view(ΔL, lower_inds)
+        zero!(ΔL₂₂lower)
+    end
     return ΔL, ΔQ
 end
 
