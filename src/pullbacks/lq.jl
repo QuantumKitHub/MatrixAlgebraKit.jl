@@ -170,6 +170,7 @@ function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = MatrixAlgebr
         zero!(ΔQ₃)
     end
     ΔL₂₂ = view(ΔL, (r + 1):size(ΔL, 1), (r + 1):minmn)
+    zero!(diagview(ΔL₂₂))
     if r < minmn
         # lowertriangularind generates linear indices
         # compute the appropriate offset in ΔL so we aren't
