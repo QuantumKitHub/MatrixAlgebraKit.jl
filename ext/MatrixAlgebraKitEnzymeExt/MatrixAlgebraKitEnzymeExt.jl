@@ -413,7 +413,7 @@ for (f!, f_full!, pb!, pf!) in (
             A_is_arg = !isa(A, Const) && has_equal_storage(A.dval, D.dval)
             if !isa(A, Const)
                 ΔA = A_is_arg ? make_zero(A.dval) : A.dval
-                $pb!(ΔA, Aval, (Diagonal(Dval), V), dD)
+                $pb!(ΔA, Aval, (diagonal(Dval), V), dD)
                 A_is_arg && (A.dval .= ΔA)
             end
             !isa(D, Const) && !A_is_arg && make_zero!(D.dval)
