@@ -4,7 +4,7 @@ using LinearAlgebra: Diagonal
 using CUDA, AMDGPU
 
 BLASFloats = (Float64, ComplexF64) # full suite is too expensive on CI
-GenericFloats = ()
+GenericFloats = (BigFloat, Complex{BigFloat})
 @isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
 using .TestSuite
 
