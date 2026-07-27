@@ -1,20 +1,33 @@
 # Shared helpers for matrix functions with a restricted domain
 # -------------------------------------------------------------
 
+# The throwing branches live in `@noinline` helpers so that the reductions and broadcasts
+# below stay free of error-path code, which keeps them GPU friendly.
+@noinline function throw_negative_eigenvalue(λmin, atol, what)
+    return throw(
+        DomainError(
+            λmin,
+            "The matrix has $what beyond `domain_atol = $atol` and the result of this matrix function is complex. " *
+                "Pass a complex matrix to obtain the principal value, or increase `domain_atol` if the eigenvalue is a rounding artifact."
+        )
+    )
+end
+
+@noinline function throw_zero_eigenvalue(amin, atol)
+    return throw(
+        DomainError(
+            amin,
+            "The matrix has a (numerically) zero eigenvalue within `domain_atol = $atol`, for which this matrix function is not defined."
+        )
+    )
+end
+
 # Clamp real eigenvalues that are negative within `atol` (rounding artifacts) to zero,
 # and throw a `DomainError` for eigenvalues that are genuinely negative, since then the
 # result cannot be expressed with the same (real) scalar type.
 function _clamp_domain_eigenvalues!(λ::AbstractVector{<:Real}, atol::Real)
     λmin = minimum(λ; init = zero(eltype(λ)))
-    if λmin < -atol
-        throw(
-            DomainError(
-                λmin,
-                "The matrix has a negative real eigenvalue beyond `domain_atol = $atol` and the result of this matrix function is complex. " *
-                    "Pass a complex matrix to obtain the principal value, or increase `domain_atol` if the eigenvalue is a rounding artifact."
-            )
-        )
-    end
+    λmin < -atol && throw_negative_eigenvalue(λmin, atol, "a negative real eigenvalue")
     λ .= max.(λ, zero(eltype(λ)))
     return λ
 end
@@ -32,15 +45,7 @@ end
 function _clamp_domain_eigenvalues!(λ::AbstractVector{<:Complex}, atol::Real)
     onaxis = x -> abs(imag(x)) <= atol && real(x) < 0
     λmin = mapreduce(x -> onaxis(x) ? real(x) : zero(real(x)), min, λ; init = zero(real(eltype(λ))))
-    if λmin < -atol
-        throw(
-            DomainError(
-                λmin,
-                "The matrix has an eigenvalue on the negative real axis beyond `domain_atol = $atol` and the result of this matrix function is complex. " *
-                    "Pass a complex matrix to obtain the principal value, or increase `domain_atol` if the eigenvalue is a rounding artifact."
-            )
-        )
-    end
+    λmin < -atol && throw_negative_eigenvalue(λmin, atol, "an eigenvalue on the negative real axis")
     λ .= ifelse.(onaxis.(λ), zero(eltype(λ)), λ)
     return λ
 end
@@ -49,14 +54,7 @@ end
 # e.g. `logarithm` and `power` with a negative fractional power.
 function _check_nonzero_eigenvalues(λ, atol::Real)
     amin = minimum(abs, λ; init = typemax(real(eltype(λ))))
-    if amin <= atol
-        throw(
-            DomainError(
-                amin,
-                "The matrix has a (numerically) zero eigenvalue within `domain_atol = $atol`, for which this matrix function is not defined."
-            )
-        )
-    end
+    amin <= atol && throw_zero_eigenvalue(amin, atol)
     return λ
 end
 
