@@ -4,6 +4,7 @@ using TestExtras
 using StableRNGs
 using MatrixAlgebraKit: diagview
 using LinearAlgebra
+using CUDA, AMDGPU
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
@@ -123,4 +124,54 @@ end
     end
     @test_throws SingularException power(Diagonal(zeros(T, m)), -1)
     @test_throws DomainError power(Diagonal(zeros(T, m)), -0.5)
+end
+
+# GPU tests
+# ---------
+# As for `squareroot`, the `DiagonalAlgorithm` kernel and the shared domain helpers are
+# backend-generic, and `MatrixFunctionViaEigh` goes through the device `eigh_full!`. Both the
+# integer branch (which only checks for singularity) and the fractional branch (which clamps
+# and rejects out-of-domain eigenvalues) are exercised. If any step fell back to scalar
+# indexing these would error under GPUArrays' scalar-indexing guard.
+function test_power_gpu(ArrayT, T)
+    rng = StableRNG(123)
+    m = 54
+
+    # Diagonal fast path, integer and fractional exponents
+    data = T <: Real ? (abs.(randn(rng, T, m)) .+ one(T)) : (randn(rng, T, m) .+ 4 * one(T))
+    for p in (2, -1, 0.5, -0.25)
+        @test Array(diagview(power(Diagonal(ArrayT(data)), p))) ≈
+            diagview(power(Diagonal(data), p))
+    end
+
+    # hermitian positive definite, via the eigenvalue decomposition
+    X = randn(rng, T, m, m)
+    A = Matrix(LinearAlgebra.Hermitian(X * X' + one(real(T)) * LinearAlgebra.I))
+    A_gpu = ArrayT(A)
+    alg_gpu = MatrixFunctionViaEigh(MatrixAlgebraKit.select_algorithm(eigh_full, A_gpu))
+    alg_cpu = MatrixFunctionViaEigh(MatrixAlgebraKit.select_algorithm(eigh_full, A))
+    for p in (2, -1, 0.5, -0.5)
+        @test Array(power(A_gpu, p, alg_gpu)) ≈ power(A, p, alg_cpu)
+    end
+
+    # domain handling: integer powers ignore the domain, fractional ones do not
+    if T <: Real
+        @test Array(diagview(power(Diagonal(ArrayT(-data)), 2))) ≈ data .^ 2
+        @test_throws DomainError power(Diagonal(ArrayT(-data)), 0.5)
+    end
+    @test_throws SingularException power(Diagonal(ArrayT(zeros(T, m))), -1)
+    @test_throws DomainError power(Diagonal(ArrayT(zeros(T, m))), -0.5)
+    return nothing
+end
+
+if CUDA.functional()
+    @testset "power on CUDA for T = $T" for T in BLASFloats
+        test_power_gpu(CuArray, T)
+    end
+end
+
+if AMDGPU.functional()
+    @testset "power on AMDGPU for T = $T" for T in BLASFloats
+        test_power_gpu(ROCArray, T)
+    end
 end

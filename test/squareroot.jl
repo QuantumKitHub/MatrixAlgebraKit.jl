@@ -4,6 +4,7 @@ using TestExtras
 using StableRNGs
 using MatrixAlgebraKit: diagview
 using LinearAlgebra
+using CUDA, AMDGPU
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
 GenericFloats = (Float16, ComplexF16, BigFloat, Complex{BigFloat})
@@ -102,5 +103,52 @@ end
         @test_throws DomainError squareroot(Diagonal(-data))
         # roundoff-scale negative entries are clamped
         @test squareroot(Diagonal(T[-eps(T), 1])) ≈ Diagonal(T[0, 1])
+    end
+end
+
+# GPU tests
+# ---------
+# The `DiagonalAlgorithm` kernel and the shared domain helpers are written as reductions and
+# broadcasts rather than scalar loops, so the same code runs on GPU; the `MatrixFunctionViaEigh`
+# path additionally goes through the device `eigh_full!`. Compare against the CPU reference and
+# exercise both domain outcomes, since the clamp and the throw are exactly what the reductions
+# replaced. If any step fell back to scalar indexing these would error under GPUArrays'
+# scalar-indexing guard.
+function test_squareroot_gpu(ArrayT, T)
+    rng = StableRNG(123)
+    m = 54
+
+    # Diagonal fast path
+    data = T <: Real ? (abs.(randn(rng, T, m)) .+ one(T)) : randn(rng, T, m)
+    @test Array(diagview(squareroot(Diagonal(ArrayT(data))))) ≈
+        diagview(squareroot(Diagonal(data)))
+
+    # hermitian positive definite, via the eigenvalue decomposition
+    X = randn(rng, T, m, m)
+    A = Matrix(LinearAlgebra.Hermitian(X * X' + one(real(T)) * LinearAlgebra.I))
+    A_gpu = ArrayT(A)
+    alg_gpu = MatrixFunctionViaEigh(MatrixAlgebraKit.select_algorithm(eigh_full, A_gpu))
+    alg_cpu = MatrixFunctionViaEigh(MatrixAlgebraKit.select_algorithm(eigh_full, A))
+    sqrtA = squareroot(A_gpu, alg_gpu)
+    @test Array(sqrtA) ≈ squareroot(A, alg_cpu)
+    @test Array(sqrtA) * Array(sqrtA) ≈ A
+
+    # domain handling: roundoff-scale negatives are clamped, genuine ones throw
+    if T <: Real
+        @test Array(diagview(squareroot(Diagonal(ArrayT(T[-eps(T), 1]))))) ≈ T[0, 1]
+        @test_throws DomainError squareroot(Diagonal(ArrayT(-data)))
+    end
+    return nothing
+end
+
+if CUDA.functional()
+    @testset "squareroot on CUDA for T = $T" for T in BLASFloats
+        test_squareroot_gpu(CuArray, T)
+    end
+end
+
+if AMDGPU.functional()
+    @testset "squareroot on AMDGPU for T = $T" for T in BLASFloats
+        test_squareroot_gpu(ROCArray, T)
     end
 end

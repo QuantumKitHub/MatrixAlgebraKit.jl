@@ -4,6 +4,7 @@ using TestExtras
 using StableRNGs
 using MatrixAlgebraKit: diagview
 using LinearAlgebra
+using CUDA, AMDGPU
 using LinearAlgebra: exp
 
 BLASFloats = (Float32, Float64, ComplexF32, ComplexF64)
@@ -99,4 +100,46 @@ end
         @test_throws DomainError logarithm(Diagonal(-data))
     end
     @test_throws DomainError logarithm(Diagonal(zeros(T, m)))
+end
+
+# GPU tests
+# ---------
+# As for `squareroot`, the `DiagonalAlgorithm` kernel and the shared domain helpers are
+# backend-generic, and `MatrixFunctionViaEigh` goes through the device `eigh_full!`. Both
+# domain rejections (negative real axis, and the zero eigenvalue where no logarithm exists)
+# are exercised, since `_check_nonzero_eigenvalues` is a reduction too. If any step fell back
+# to scalar indexing these would error under GPUArrays' scalar-indexing guard.
+function test_logarithm_gpu(ArrayT, T)
+    rng = StableRNG(123)
+    m = 54
+
+    # Diagonal fast path
+    data = T <: Real ? (abs.(randn(rng, T, m)) .+ one(T)) : (randn(rng, T, m) .+ 4 * one(T))
+    @test Array(diagview(logarithm(Diagonal(ArrayT(data))))) ≈
+        diagview(logarithm(Diagonal(data)))
+
+    # hermitian positive definite, via the eigenvalue decomposition
+    X = randn(rng, T, m, m)
+    A = Matrix(LinearAlgebra.Hermitian(X * X' + one(real(T)) * LinearAlgebra.I))
+    A_gpu = ArrayT(A)
+    alg_gpu = MatrixFunctionViaEigh(MatrixAlgebraKit.select_algorithm(eigh_full, A_gpu))
+    alg_cpu = MatrixFunctionViaEigh(MatrixAlgebraKit.select_algorithm(eigh_full, A))
+    @test Array(logarithm(A_gpu, alg_gpu)) ≈ logarithm(A, alg_cpu)
+
+    # domain handling: negative real axis, and no logarithm at a zero eigenvalue
+    T <: Real && @test_throws DomainError logarithm(Diagonal(ArrayT(-data)))
+    @test_throws DomainError logarithm(Diagonal(ArrayT(zeros(T, m))))
+    return nothing
+end
+
+if CUDA.functional()
+    @testset "logarithm on CUDA for T = $T" for T in BLASFloats
+        test_logarithm_gpu(CuArray, T)
+    end
+end
+
+if AMDGPU.functional()
+    @testset "logarithm on AMDGPU for T = $T" for T in BLASFloats
+        test_logarithm_gpu(ROCArray, T)
+    end
 end
