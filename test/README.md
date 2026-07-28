@@ -73,13 +73,18 @@ file placed directly in `test/` would belong to no group and never run in CI.
 
 | Group | Contents |
 |-------|----------|
-| `common` | Algorithm selection and defaults, truncation strategies, projections, matrix exponential, Aqua code-quality checks |
+| `common` | Algorithm selection and defaults, truncation strategies, projections, Aqua code-quality checks |
 | `decompositions` | `qr`, `lq`, `svd`, `eig`, `eigh`, `gen_eig`, `schur`, `polar`, `orthnull` on CPU and GPU array types |
+| `matrixfunctions` | `exponential`, `squareroot`, `logarithm`, `power` on CPU and GPU array types |
 | `chainrules` | ChainRulesCore rules, exercised through ChainRulesTestUtils and Zygote |
 | `mooncake` | Mooncake AD rules |
 | `enzyme` | Enzyme AD rules, exercised through EnzymeTestUtils |
-| `genericlinearalgebra` | `MatrixAlgebraKitGenericLinearAlgebraExt` |
-| `genericschur` | `MatrixAlgebraKitGenericSchurExt` |
+
+The generic element types (`BigFloat` and friends) are not a group of their own: each driver covers
+them alongside the BLAS floats, naming the `MatrixAlgebraKitGenericSchurExt` and
+`MatrixAlgebraKitGenericLinearAlgebraExt` algorithms explicitly. Both extensions are loaded at once,
+so a bare `QRIteration()` resolves its driver to GenericLinearAlgebra, which provides no `geev!`;
+`eig`-based algorithms therefore have to spell out `QRIteration(; driver = GS())`.
 
 Two directories are *not* groups: `testsuite/` holds the shared implementation described below and
 is excluded both from discovery (in `runtests.jl`) and from CI (`exclude: '["testsuite"]'`).
@@ -125,6 +130,11 @@ Supporting infrastructure in the module:
 - Predicates used throughout the assertions: `isleftnull`, `isrightnull`, `isleftcomplete`,
   `isrightcomplete`, `has_positive_diagonal`.
 - `instantiate_unitary`, `instantiate_rank_deficient_matrix` — inputs with prescribed structure.
+- `instantiate_smallnorm_matrix`, `instantiate_offaxis_matrix`, `instantiate_posdef_matrix`,
+  `instantiate_hermitian_spectrum` — inputs with a prescribed *spectrum*, which the matrix functions
+  need: `squareroot`, `logarithm` and fractional `power` are only defined away from the negative
+  real axis, and `logarithm` also requires a nonzero spectrum, so the plain `randn` of
+  `instantiate_matrix` will not do.
 
 `test/linearmap.jl` is a further helper, defining a `LinearMap` wrapper that is deliberately *not* an
 `AbstractMatrix`, used to check the generic code paths. It is excluded from discovery and included
