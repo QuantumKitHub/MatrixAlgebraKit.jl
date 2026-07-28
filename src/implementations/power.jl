@@ -1,24 +1,9 @@
 # Inputs
 # ------
-function copy_input(::typeof(power), A::AbstractMatrix, p::Real)
-    return copy!(similar(A, float(eltype(A))), A), p
-end
-copy_input(::typeof(power), A::Diagonal, p::Real) = map_diagonal(float, A), p
+copy_input(::typeof(power), A::AbstractMatrix, p::Real) = _matrixfunction_copy_input(A), p
 
 function check_input(::typeof(power!), A::AbstractMatrix, p::Real, powA, alg::AbstractAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    @check_size(powA, (m, m))
-    @check_scalar(powA, A)
-    return nothing
-end
-
-function check_input(::typeof(power!), A::AbstractMatrix, p::Real, powA, ::DiagonalAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    @assert isdiag(A)
-    @assert powA isa Diagonal
-    @check_size(powA, (m, m))
-    @check_scalar(powA, A)
-    return nothing
+    return _matrixfunction_check_input(A, powA, alg)
 end
 
 # Algorithm selection
@@ -60,15 +45,9 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEigh)
     isone(p) && ((powA === A || copy!(powA, A)); return powA)
     D, V = eigh_full!(A, alg.eigh_alg)
     diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
-    if isinteger(p)
-        VD = V * power!(D, p, D, diag_alg)
-        mul!(powA, VD, V')
-        return project_hermitian!(powA)
-    else
-        # `A^p = (V * D^(p/2)) * (V * D^(p/2))'` is hermitian by construction
-        Vs = rmul!(V, power!(D, p / 2, D, diag_alg))
-        return _mul_herm!(powA, Vs)
-    end
+    isinteger(p) && return _apply_eigh!(powA, V, power!(D, p, D, diag_alg))
+    # `A^p = (V * D^(p/2)) * (V * D^(p/2))'` is hermitian by construction
+    return _mul_herm!(powA, rmul!(V, power!(D, p / 2, D, diag_alg)))
 end
 
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEig)
@@ -76,16 +55,10 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEig)
     iszero(p) && return one!(powA)
     isone(p) && ((powA === A || copy!(powA, A)); return powA)
     D, V = eig_full!(A, alg.eig_alg)
+    # only a fractional power of a real matrix needs the spectrum off the negative real axis
+    eltype(A) <: Real && !isinteger(p) && _clamp_domain_eigenvalues!(D, alg.domain_atol)
     diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
-    if eltype(A) <: Real
-        isinteger(p) || _clamp_domain_eigenvalues!(D, alg.domain_atol)
-        VpD = V * power!(D, p, D, diag_alg)
-        powAc = rdiv!(VpD, LinearAlgebra.lu!(V))
-        return powA .= real.(powAc)
-    else
-        powA .= V .* transpose(diagview(power!(D, p, D, diag_alg)))
-        return rdiv!(powA, LinearAlgebra.lu!(V))
-    end
+    return _apply_eig!(powA, V, power!(D, p, D, diag_alg))
 end
 
 # Diagonal logic

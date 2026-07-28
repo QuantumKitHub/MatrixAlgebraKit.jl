@@ -1,3 +1,52 @@
+# Shared input and output handling
+# --------------------------------
+# `squareroot`, `logarithm` and `power` all map a square matrix to a matrix of the same size and
+# scalar type, so they agree on `copy_input`, `check_input` and `initialize_output`; only their
+# kernels differ. Each implementation file forwards to the helpers below, which keeps the
+# per-function definitions to the one line that names the function.
+
+_matrixfunction_copy_input(A::AbstractMatrix) = copy!(similar(A, float(eltype(A))), A)
+_matrixfunction_copy_input(A::Diagonal) = map_diagonal(float, A)
+
+function _matrixfunction_check_input(A::AbstractMatrix, out, ::AbstractAlgorithm)
+    m = LinearAlgebra.checksquare(A)
+    @check_size(out, (m, m))
+    @check_scalar(out, A)
+    return nothing
+end
+
+function _matrixfunction_check_input(A::AbstractMatrix, out, ::DiagonalAlgorithm)
+    m = LinearAlgebra.checksquare(A)
+    @assert isdiag(A)
+    @assert out isa Diagonal
+    @check_size(out, (m, m))
+    @check_scalar(out, A)
+    return nothing
+end
+
+# Shared reconstruction from an eigenvalue decomposition
+# ------------------------------------------------------
+# Both take the already-transformed eigenvalues `fD = f(D)` and rebuild `f(A)`.
+
+# `f(A) = V f(D) V⁻¹` for a general `A`. A real matrix has a complex decomposition but a real
+# `f(A)` whenever `f(D)` closes under conjugation, so the imaginary part is dropped after the
+# solve; the callers are responsible for rejecting the inputs where it would not be.
+function _apply_eig!(fA, V, fD)
+    if eltype(fA) <: Real
+        VfD = V * fD
+        fAc = rdiv!(VfD, LinearAlgebra.lu!(V))
+        return fA .= real.(fAc)
+    else
+        fA .= V .* transpose(diagview(fD))
+        return rdiv!(fA, LinearAlgebra.lu!(V))
+    end
+end
+
+# `f(A) = V f(D) V'` for a hermitian `A`. The product is hermitian only up to roundoff, so it is
+# projected afterwards; where `f` admits a square root, prefer building `f(A)` as a symmetric
+# product via `_mul_herm!`, which is hermitian by construction.
+_apply_eigh!(fA, V, fD) = project_hermitian!(mul!(fA, V * fD, V'))
+
 # Shared helpers for matrix functions with a restricted domain
 # -------------------------------------------------------------
 

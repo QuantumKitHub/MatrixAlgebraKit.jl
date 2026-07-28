@@ -1,24 +1,9 @@
 # Inputs
 # ------
-function copy_input(::typeof(logarithm), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
-copy_input(::typeof(logarithm), A::Diagonal) = map_diagonal(float, A)
+copy_input(::typeof(logarithm), A::AbstractMatrix) = _matrixfunction_copy_input(A)
 
 function check_input(::typeof(logarithm!), A::AbstractMatrix, logA, alg::AbstractAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    @check_size(logA, (m, m))
-    @check_scalar(logA, A)
-    return nothing
-end
-
-function check_input(::typeof(logarithm!), A::AbstractMatrix, logA, ::DiagonalAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    @assert isdiag(A)
-    @assert logA isa Diagonal
-    @check_size(logA, (m, m))
-    @check_scalar(logA, A)
-    return nothing
+    return _matrixfunction_check_input(A, logA, alg)
 end
 
 # Algorithm selection
@@ -48,24 +33,17 @@ end
 function logarithm!(A::AbstractMatrix, logA, alg::MatrixFunctionViaEigh)
     check_input(logarithm!, A, logA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
-    VD = V * logarithm!(D, D, DiagonalAlgorithm(; domain_atol = alg.domain_atol))
-    mul!(logA, VD, V')
-    return project_hermitian!(logA)
+    diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
+    return _apply_eigh!(logA, V, logarithm!(D, D, diag_alg))
 end
 
 function logarithm!(A::AbstractMatrix, logA, alg::MatrixFunctionViaEig)
     check_input(logarithm!, A, logA, alg)
     D, V = eig_full!(A, alg.eig_alg)
+    # a real result requires the spectrum to stay off the negative real axis
+    eltype(A) <: Real && _clamp_domain_eigenvalues!(D, alg.domain_atol)
     diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
-    if eltype(A) <: Real
-        _clamp_domain_eigenvalues!(D, alg.domain_atol)
-        VlogD = V * logarithm!(D, D, diag_alg)
-        logAc = rdiv!(VlogD, LinearAlgebra.lu!(V))
-        return logA .= real.(logAc)
-    else
-        logA .= V .* transpose(diagview(logarithm!(D, D, diag_alg)))
-        return rdiv!(logA, LinearAlgebra.lu!(V))
-    end
+    return _apply_eig!(logA, V, logarithm!(D, D, diag_alg))
 end
 
 # Diagonal logic

@@ -1,24 +1,9 @@
 # Inputs
 # ------
-function copy_input(::typeof(squareroot), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
-copy_input(::typeof(squareroot), A::Diagonal) = map_diagonal(float, A)
+copy_input(::typeof(squareroot), A::AbstractMatrix) = _matrixfunction_copy_input(A)
 
 function check_input(::typeof(squareroot!), A::AbstractMatrix, sqrtA, alg::AbstractAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    @check_size(sqrtA, (m, m))
-    @check_scalar(sqrtA, A)
-    return nothing
-end
-
-function check_input(::typeof(squareroot!), A::AbstractMatrix, sqrtA, ::DiagonalAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    @assert isdiag(A)
-    @assert sqrtA isa Diagonal
-    @check_size(sqrtA, (m, m))
-    @check_scalar(sqrtA, A)
-    return nothing
+    return _matrixfunction_check_input(A, sqrtA, alg)
 end
 
 # Algorithm selection
@@ -56,16 +41,10 @@ end
 function squareroot!(A::AbstractMatrix, sqrtA, alg::MatrixFunctionViaEig)
     check_input(squareroot!, A, sqrtA, alg)
     D, V = eig_full!(A, alg.eig_alg)
+    # a real result requires the spectrum to stay off the negative real axis
+    eltype(A) <: Real && _clamp_domain_eigenvalues!(D, alg.domain_atol)
     diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
-    if eltype(A) <: Real
-        _clamp_domain_eigenvalues!(D, alg.domain_atol)
-        VsqrtD = V * squareroot!(D, D, diag_alg)
-        sqrtAc = rdiv!(VsqrtD, LinearAlgebra.lu!(V))
-        return sqrtA .= real.(sqrtAc)
-    else
-        sqrtA .= V .* transpose(diagview(squareroot!(D, D, diag_alg)))
-        return rdiv!(sqrtA, LinearAlgebra.lu!(V))
-    end
+    return _apply_eig!(sqrtA, V, squareroot!(D, D, diag_alg))
 end
 
 # Diagonal logic
