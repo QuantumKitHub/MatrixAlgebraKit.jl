@@ -3,7 +3,7 @@
 function copy_input(::typeof(squareroot), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
-copy_input(::typeof(squareroot), A::Diagonal) = Diagonal(float.(diagview(A)))
+copy_input(::typeof(squareroot), A::Diagonal) = map_diagonal(float, A)
 
 function check_input(::typeof(squareroot!), A::AbstractMatrix, sqrtA, alg::AbstractAlgorithm)
     m = LinearAlgebra.checksquare(A)

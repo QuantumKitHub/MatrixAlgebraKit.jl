@@ -3,7 +3,7 @@
 function copy_input(::typeof(power), A::AbstractMatrix, p::Real)
     return copy!(similar(A, float(eltype(A))), A), p
 end
-copy_input(::typeof(power), A::Diagonal, p::Real) = Diagonal(float.(diagview(A))), p
+copy_input(::typeof(power), A::Diagonal, p::Real) = map_diagonal(float, A), p
 
 function check_input(::typeof(power!), A::AbstractMatrix, p::Real, powA, alg::AbstractAlgorithm)
     m = LinearAlgebra.checksquare(A)
