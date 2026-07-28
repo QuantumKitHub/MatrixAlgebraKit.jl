@@ -11,6 +11,9 @@ Compute the matrix power `powA = A^p` of the square matrix `A`.
 For integer `p` this is defined for any square matrix (invertible if `p < 0`);
 for fractional `p` the principal power `exp(p * log(A))` is computed.
 
+The exponents `p = 0` and `p = 1` are resolved directly as `I` and `A`, without computing any
+decomposition, so they apply to every square matrix regardless of the algorithm selected.
+
 The scalar type of the output matches that of the input.
 As a consequence, for fractional `p`, a real matrix with eigenvalues on the negative
 real axis, for which the principal power is complex, leads to a `DomainError`; pass a

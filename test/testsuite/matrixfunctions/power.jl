@@ -1,6 +1,6 @@
 using TestExtras
 using LinearAlgebra: LinearAlgebra, I, SingularException
-using MatrixAlgebraKit: ishermitian
+using MatrixAlgebraKit: ishermitian, one!
 
 # `power` takes the exponent as a second positional argument, and splits into an integer branch
 # (repeated multiplication, defined for any square matrix) and a fractional branch (the principal
@@ -68,6 +68,42 @@ function test_power_algs(T::Type, sz, algs; ps = (2, -1), qs = (1 // 2, -1 // 4)
         @test power(A, 2, alg) ≈ A * A
         @test power(A, -1, alg) * A ≈ I
         @test power(A, one(R) / 2, alg) ≈ squareroot(A, alg)
+    end
+end
+
+# `A^0 = I` and `A^1 = A` hold for every square matrix, and both are short-circuited before any
+# decomposition is computed, so the results are exact rather than merely approximate.
+#
+# `test_rejected_input = true` for algorithms that cannot handle a general matrix at all (the
+# `eigh`-based ones): feeding them input they would reject proves the decomposition really is
+# skipped, rather than being computed and happening to give the right answer.
+function test_power_trivial(T::Type, sz, algs; test_rejected_input = false, kwargs...)
+    R = real(eltype(T))
+    summary_str = testargs_summary(T, sz)
+    return @testset "power trivial exponents algorithm $alg $summary_str" for alg in algs
+        A = instantiate_offaxis_matrix(T, sz)
+        Id = one!(deepcopy(A))
+
+        @testset "integer p = $p" for p in (0, 1)
+            powA = @testinferred power(A, p, alg)
+            @test powA == (iszero(p) ? Id : A)
+            # in-place, where the output aliases the input
+            @test power!(deepcopy(A), p, alg) == (iszero(p) ? Id : A)
+        end
+        @testset "float p = $p" for p in (zero(R), one(R))
+            powA = @testinferred power(A, p, alg)
+            @test powA == (iszero(p) ? Id : A)
+        end
+
+        if test_rejected_input
+            B = instantiate_smallnorm_matrix(T, sz)
+            IdB = one!(deepcopy(B))
+            # confirm the premise: this algorithm cannot decompose `B`
+            @test_throws DomainError power(B, 2, alg)
+            # yet the trivial exponents never reach the decomposition
+            @test power(B, 0, alg) == IdB
+            @test power(B, 1, alg) == B
+        end
     end
 end
 

@@ -30,11 +30,14 @@ power!(A::AbstractMatrix, p::Real, out, alg::DefaultAlgorithm) = power!(A, p, ou
 # -------
 initialize_output(::typeof(power!), A::AbstractMatrix, p::Real, ::AbstractAlgorithm) = A
 
+
 # Implementation
 # --------------
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaLA)
     check_input(power!, A, p, powA, alg)
     isempty(alg.kwargs) || throw(ArgumentError("`MatrixFunctionViaLA` does not accept keyword arguments for `power`"))
+    iszero(p) && return one!(powA)
+    isone(p) && ((powA === A || copy!(powA, A)); return powA)
     powAc = A^p
     if eltype(powAc) <: Complex && !(eltype(powA) <: Complex)
         # `LinearAlgebra` computes fractional powers of real matrices in complex
@@ -53,6 +56,8 @@ end
 
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEigh)
     check_input(power!, A, p, powA, alg)
+    iszero(p) && return one!(powA)
+    isone(p) && ((powA === A || copy!(powA, A)); return powA)
     D, V = eigh_full!(A, alg.eigh_alg)
     diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
     if isinteger(p)
@@ -68,6 +73,8 @@ end
 
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEig)
     check_input(power!, A, p, powA, alg)
+    iszero(p) && return one!(powA)
+    isone(p) && ((powA === A || copy!(powA, A)); return powA)
     D, V = eig_full!(A, alg.eig_alg)
     diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
     if eltype(A) <: Real
@@ -85,6 +92,8 @@ end
 # --------------
 function power!(A::AbstractMatrix, p::Real, powA, alg::DiagonalAlgorithm)
     check_input(power!, A, p, powA, alg)
+    iszero(p) && return one!(powA)
+    isone(p) && ((powA === A || copy!(powA, A)); return powA)
     λ = diagview(powA)
     copyto!(λ, diagview(A))
     if isinteger(p)
