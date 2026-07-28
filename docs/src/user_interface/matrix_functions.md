@@ -42,7 +42,8 @@ MatrixAlgebraKit.MatrixFunctionViaEigh
 
 The functions below ([`squareroot`](@ref), [`logarithm`](@ref) and [`power`](@ref) with fractional powers) are only defined for matrices whose eigenvalues avoid (part of) the negative real axis, and their principal values are complex whenever eigenvalues on that axis are present.
 In MatrixAlgebraKit, we aim to keep type stability, and thus the scalar type of the output always matches that of the input.
-As such, a real matrix with eigenvalues on the negative real axis leads to a `DomainError`, you should pass a complex matrix instead to obtain the complex principal value.
+As such, a real matrix with eigenvalues on the negative real axis leads to a `DomainError`.
+You should pass a complex matrix instead to obtain the complex principal value.
 To avoid spurious errors for eigenvalues that lie on the negative real axis only because of rounding errors (e.g. a positive semidefinite matrix with a tiny negative eigenvalue), eigenvalues within an absolute tolerance `domain_atol` of the domain boundary are clamped onto it.
 This tolerance defaults to [`default_domain_atol`](@ref) and can be specified explicitly for the algorithms that support it, e.g. `MatrixFunctionViaEigh(eigh_alg; domain_atol=...)`.
 
