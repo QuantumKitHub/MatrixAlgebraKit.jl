@@ -80,16 +80,22 @@ function test_exponential_hermitian(
         @test logarithm(expA, alg) ≈ A
         @test A == Ac
 
-        # `exponential` forms the real case as a symmetric product `VexpD * transpose(VexpD)`,
-        # which is hermitian to the last bit, but the complex case as a plain `VexpD * V'` with
-        # no closing projection, so there it is only approximately hermitian. This differs from
-        # `squareroot`, `logarithm` and `power`, which are exact for both scalar types.
-        if exact_hermiticity && eltype(T) <: Real
+        # `exp(A)` is built as a product of a factor with its own adjoint (transpose, in the real
+        # case), so it comes out hermitian to the last bit for both scalar types.
+        if exact_hermiticity
             @test ishermitian(expA)
             test_spectrum && @test eigh_vals(expA) ≈ exp.(eigh_vals(A))
         else
             @test ishermitian(expA; rtol = precision(T))
         end
+
+        # the scaled entry point keeps that guarantee for a real `τ`, since `exp(τD/2)` is then
+        # still self-adjoint. A complex `τ` makes `exp(τA)` normal but not hermitian, which
+        # `test_exponential_scaled` covers, so only correctness is asserted there.
+        τ = randn(rng, real(eltype(T)))
+        expτA = @testinferred exponential((τ, A), alg)
+        @test expτA ≈ exponential(τ * A, alg)
+        exact_hermiticity && @test ishermitian(expτA)
     end
 end
 

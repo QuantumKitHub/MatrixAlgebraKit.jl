@@ -62,8 +62,10 @@ function exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaLA)
     return expA
 end
 
-exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaEigh) = exponential!((one(eltype(A)), A), expA, alg)
-exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaEig) = exponential!((one(eltype(A)), A), expA, alg)
+# the implicit scalar is real even for a complex matrix, which keeps `exp(A)` of a hermitian `A`
+# on the branch that produces a hermitian result
+exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaEigh) = exponential!((one(real(eltype(A))), A), expA, alg)
+exponential!(A::AbstractMatrix, expA, alg::MatrixFunctionViaEig) = exponential!((one(real(eltype(A))), A), expA, alg)
 
 function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::AbstractAlgorithm)
     expA .= A .* τ
@@ -74,18 +76,21 @@ function exponential!((τ, A)::Tuple{Number, AbstractMatrix}, expA, alg::MatrixF
     check_input(exponential!, (τ, A), expA, alg)
     D, V = eigh_full!(A, alg.eigh_alg)
     if eltype(A) <: Real
+        # `exp(τA) = (V exp(τD/2)) * transpose(V exp(τD/2))` is symmetric by construction;
+        # `transpose` rather than `'` keeps this valid for a complex `τ` as well
         if eltype(τ) <: Real
             VexpD = rmul!(V, exponential!((τ / 2, D), D))
         else
             VexpD = V * exponential((τ / 2, D))
         end
         return mul!(expA, VexpD, transpose(VexpD))
+    elseif eltype(τ) <: Real
+        # `D` is real, so `exp(τD/2)` is self-adjoint for a real `τ` and
+        # `exp(τA) = (V exp(τD/2)) * (V exp(τD/2))'` is hermitian by construction
+        return _mul_herm!(expA, rmul!(V, exponential!((τ / 2, D), D)))
     else
-        if eltype(τ) <: Real
-            VexpD = V * exponential!((τ, D), D)
-        else
-            VexpD = V * exponential((τ, D))
-        end
+        # a complex `τ` makes `exp(τA)` normal but not hermitian, so there is nothing to project
+        VexpD = V * exponential((τ, D))
         return mul!(expA, VexpD, V')
     end
 end
