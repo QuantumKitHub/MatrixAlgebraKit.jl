@@ -65,3 +65,6 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
 test = ["Aqua", "SafeTestsets", "Test", "TestExtras", "ChainRulesCore", "ChainRulesTestUtils", "Random", "StableRNGs", "Zygote", "CUDA", "AMDGPU", "GenericLinearAlgebra", "GenericSchur", "Mooncake", "Enzyme", "EnzymeTestUtils", "ParallelTestRunner"]
+
+[sources]
+Enzyme = {url = "https://github.com/EnzymeAD/Enzyme.jl/", rev = "ksh/bf"}
