@@ -1,3 +1,11 @@
+name = "MatrixAlgebraKitDocs"
+
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 MatrixAlgebraKit = "6c742aac-3347-4629-af66-fc926824e5e4"
+
+[sources]
+MatrixAlgebraKit = {path = ".."}
+
+[compat]
+Documenter = "1"

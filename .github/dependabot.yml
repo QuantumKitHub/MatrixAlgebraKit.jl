@@ -5,7 +5,10 @@ updates:
     schedule:
       interval: "weekly"
   - package-ecosystem: "julia"
-    directory: "/"
+    directories: # workspace members each need their own entry
+      - "/"
+      - "/test"
+      - "/docs"
     schedule:
       interval: "weekly"
     groups: # uncomment to group all julia package updates into a single PR
