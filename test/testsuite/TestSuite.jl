@@ -122,6 +122,18 @@ function instantiate_posdef_matrix(T, sz)
     return project_hermitian!(A * A') + I
 end
 
+# Rebuild `alg` with an explicit `domain_atol`, so that the domain tests can exercise the tolerance
+# without every caller having to spell out the inner decomposition algorithm a second time.
+with_domain_atol(alg::MatrixFunctionViaEig, atol) = MatrixFunctionViaEig(alg.eig_alg; domain_atol = atol)
+with_domain_atol(alg::MatrixFunctionViaEigh, atol) = MatrixFunctionViaEigh(alg.eigh_alg; domain_atol = atol)
+with_domain_atol(::MatrixAlgebraKit.DiagonalAlgorithm, atol) = DiagonalAlgorithm(; domain_atol = atol)
+with_domain_atol(::MatrixFunctionViaLA, atol) = MatrixFunctionViaLA(; domain_atol = atol)
+
+# A tolerance generous enough to admit an eigenvalue at `-√eps`. For `MatrixFunctionViaLA` it bounds
+# the imaginary part of the result rather than the spectrum, which sits on a coarser scale.
+domain_test_atol(::MatrixAlgebraKit.AbstractAlgorithm, R) = cbrt(eps(R))
+domain_test_atol(::MatrixFunctionViaLA, R) = one(R) / 2
+
 # Hermitian with the prescribed (real) spectrum `λ`, for probing the domain boundary.
 function instantiate_hermitian_spectrum(T, sz, λ)
     A = instantiate_matrix(T, sz)

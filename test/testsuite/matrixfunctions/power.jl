@@ -1,5 +1,5 @@
 using TestExtras
-using LinearAlgebra: LinearAlgebra, I, SingularException
+using LinearAlgebra: LinearAlgebra, I
 using MatrixAlgebraKit: ishermitian, one!
 
 # `power` takes the exponent as a second positional argument, and splits into an integer branch
@@ -147,13 +147,13 @@ end
 # `logarithm`, clamping a roundoff-negative eigenvalue onto zero is harmless for a positive
 # fractional exponent, since `0^p` is well defined there.
 #
-# `hermitian_output = true` and `supports_domain_atol = false`: see `squareroot.jl` and
-# `logarithm.jl`. `test_singular = true` only where the zero eigenvalue is exactly representable
-# (the `Diagonal` path); the `eig`-based kernels test `any(iszero, λ)` on *computed* eigenvalues,
-# which a numerically singular matrix does not satisfy.
+# `hermitian_output = true`: see `squareroot.jl`. `supports_domain_atol = false`: see `logarithm.jl`.
+# A negative exponent excludes the origin from the domain whether or not it is an integer, so a
+# numerically singular matrix is a `DomainError` for `p = -1` just as it is for fractional `p < 0`,
+# on every algorithm that inspects the spectrum.
 function test_power_domain(
         T::Type, sz, algs;
-        hermitian_output = false, supports_domain_atol = true, test_singular = false, kwargs...
+        hermitian_output = false, supports_domain_atol = true, kwargs...
     )
     R = real(eltype(T))
     n = sz isa Tuple ? first(sz) : sz
@@ -180,18 +180,31 @@ function test_power_domain(
 
         # roundoff-scale negative eigenvalue: clamped onto the boundary, which is fine for p > 0
         λtiny = collect(R, 1:n)
-        λtiny[1] = -10 * eps(R)
+        λtiny[1] = -eps(R)
         Atiny = instantiate_hermitian_spectrum(T, sz, λtiny)
         powAtiny = @testinferred power(Atiny, half, alg)
         @test eltype(powAtiny) == eltype(Atiny)
         @test powAtiny * powAtiny ≈ Atiny atol = sqrt(eps(R))
 
-        # a negative fractional exponent additionally requires a nonzero spectrum
+        # a negative exponent additionally requires a nonzero spectrum, integer or not
         λzero = collect(R, 1:n)
         λzero[1] = zero(R)
         Azero = instantiate_hermitian_spectrum(T, sz, λzero)
         @test_throws DomainError power(Azero, -half, alg)
-        test_singular && @test_throws SingularException power(Azero, -1, alg)
+        @test_throws DomainError power(Azero, -1, alg)
+
+        # an explicit `domain_atol` widens the clamping radius for a positive fractional exponent,
+        # and the rejection radius for a negative one
+        λwide = collect(R, 1:n)
+        λwide[1] = -sqrt(eps(R))
+        Awide = instantiate_hermitian_spectrum(T, sz, λwide)
+        wide_alg = with_domain_atol(alg, domain_test_atol(alg, R))
+        if eltype(T) <: Real || hermitian_output
+            @test_throws DomainError power(Awide, half, alg)
+        end
+        powAwide = @testinferred power(Awide, half, wide_alg)
+        @test powAwide * powAwide ≈ Awide atol = sqrt(sqrt(eps(R)))
+        @test_throws DomainError power(Awide, -half, wide_alg)
     end
 end
 

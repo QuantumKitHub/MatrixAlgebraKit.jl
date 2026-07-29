@@ -70,7 +70,7 @@ if !is_buildkite
         TestSuite.test_power_trivial(AT, m, (DiagonalAlgorithm(),))
         TestSuite.test_power_hermitian(AT, m, (DiagonalAlgorithm(),); test_spectrum)
         TestSuite.test_power_reference(AT, m; test_hermitian = !(T in GenericFloats))
-        TestSuite.test_power_domain(AT, md, (DiagonalAlgorithm(),); test_singular = true)
+        TestSuite.test_power_domain(AT, md, (DiagonalAlgorithm(),))
     end
 end
 
@@ -95,7 +95,7 @@ if CUDA.functional()
         TestSuite.test_power_algs(AT, m, (DiagonalAlgorithm(),))
         TestSuite.test_power_trivial(AT, m, (DiagonalAlgorithm(),))
         TestSuite.test_power_hermitian(AT, m, (DiagonalAlgorithm(),))
-        TestSuite.test_power_domain(AT, md, (DiagonalAlgorithm(),); test_singular = true)
+        TestSuite.test_power_domain(AT, md, (DiagonalAlgorithm(),))
     end
 end
 
@@ -117,6 +117,6 @@ if AMDGPU.functional()
         TestSuite.test_power_algs(AT, m, (DiagonalAlgorithm(),))
         TestSuite.test_power_trivial(AT, m, (DiagonalAlgorithm(),))
         TestSuite.test_power_hermitian(AT, m, (DiagonalAlgorithm(),))
-        TestSuite.test_power_domain(AT, md, (DiagonalAlgorithm(),); test_singular = true)
+        TestSuite.test_power_domain(AT, md, (DiagonalAlgorithm(),))
     end
 end

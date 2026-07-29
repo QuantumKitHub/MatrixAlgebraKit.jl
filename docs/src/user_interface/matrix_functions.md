@@ -38,14 +38,56 @@ MatrixAlgebraKit.MatrixFunctionViaEig
 MatrixAlgebraKit.MatrixFunctionViaEigh
 ```
 
-## Domain considerations
+## [Domain considerations](@id sec_matrixfunction_domain)
 
 The functions below ([`squareroot`](@ref), [`logarithm`](@ref) and [`power`](@ref) with fractional powers) are only defined for matrices whose eigenvalues avoid (part of) the negative real axis, and their principal values are complex whenever eigenvalues on that axis are present.
 In MatrixAlgebraKit, we aim to keep type stability, and thus the scalar type of the output always matches that of the input.
 As such, a real matrix with eigenvalues on the negative real axis leads to a `DomainError`.
 You should pass a complex matrix instead to obtain the complex principal value.
-To avoid spurious errors for eigenvalues that lie on the negative real axis only because of rounding errors (e.g. a positive semidefinite matrix with a tiny negative eigenvalue), eigenvalues within an absolute tolerance `domain_atol` of the domain boundary are clamped onto it.
-This tolerance defaults to [`default_domain_atol`](@ref) and can be specified explicitly for the algorithms that support it, e.g. `MatrixFunctionViaEigh(eigh_alg; domain_atol=...)`.
+To avoid spurious errors for eigenvalues that lie on the negative real axis only because of rounding errors (e.g. a positive semidefinite matrix with a tiny negative eigenvalue), an absolute tolerance `domain_atol` decides which eigenvalues are treated as rounding artifacts.
+It can be specified for every algorithm, e.g. `MatrixFunctionViaEigh(eigh_alg; domain_atol=...)` or `squareroot(A; domain_atol=...)`, and defaults to [`default_domain_atol`](@ref).
+
+### The tolerance has two opposite roles
+
+Whether the boundary point `λ = 0` belongs to the domain differs per function, and this flips what raising `domain_atol` does.
+
+| Function | Domain for a real result | `domain_atol` is | Raising it |
+|:---------|:-------------------------|:-----------------|:-----------|
+| [`squareroot`](@ref) | `λ ∉ ℝ₋`, boundary included | a clamping radius: eigenvalues within `domain_atol` of the negative real axis are moved onto it | accepts more matrices |
+| [`power`](@ref), fractional `p > 0` | as `squareroot`, since `0^p = 0` | as `squareroot` | accepts more matrices |
+| [`logarithm`](@ref) | `λ ∉ ℝ₋ ∪ {0}`, boundary excluded | a rejection radius: eigenvalues within `domain_atol` of the origin are `DomainError`s, since `log(0)` does not exist | rejects more matrices |
+| [`power`](@ref), fractional `p < 0` | as `logarithm`, since `0^p` diverges | as `logarithm` | rejects more matrices |
+| [`power`](@ref), integer `p < 0` | invertible matrices | a rejection radius around the origin | rejects more matrices |
+| [`power`](@ref), integer `p ≥ 0` | unrestricted | unused | — |
+| [`exponential`](@ref) | unrestricted | unused | — |
+
+So for `logarithm` and negative `power`, raising `domain_atol` never rescues a matrix that was rejected: there is no boundary point to clamp onto, and the tolerance only widens the neighbourhood of the origin that is rejected.
+Raising it past a small negative eigenvalue merely turns a "negative eigenvalue" `DomainError` into a "numerically zero eigenvalue" one; *lowering* it is what admits an eigenvalue that is small but genuinely nonzero.
+
+Clamping is backward stable, but only to the size of the eigenvalue that was discarded, and the forward error it incurs is *not* of that size.
+For `squareroot`, clamping an eigenvalue at `-δ` perturbs the result by `O(√δ)`, so an accepted result computed at the default tolerance can differ from the exact principal value by considerably more than the tolerance itself.
+
+### What the tolerance is measured on
+
+For the eigenvalue-decomposition-based algorithms, `domain_atol` is the distance of an eigenvalue to the domain boundary, and its default reflects how accurately that algorithm obtains the spectrum.
+
+| Algorithm | `domain_atol` measures | Default |
+|:----------|:-----------------------|:--------|
+| [`DiagonalAlgorithm`](@ref) | the eigenvalue itself, which is exact input here | `n * eps * maximum(abs, λ)` |
+| [`MatrixFunctionViaEigh`](@ref) | the eigenvalue, accurate to the backward error of a stable hermitian eigensolver | `n * eps * maximum(abs, λ)` |
+| [`MatrixFunctionViaEig`](@ref) | the eigenvalue, whose accuracy is additionally limited by the conditioning of the eigenvectors | `defaulttol(λ) * maximum(abs, λ)` |
+| [`MatrixFunctionViaLA`](@ref) | the imaginary part of the *result* | `defaulttol * norm(f(A), Inf)` |
+
+The first two use the same rule as `LinearAlgebra.sqrt(::Hermitian; rtol = eps(T) * size(A, 1))`, so for hermitian input MatrixAlgebraKit and `LinearAlgebra` accept and reject the same matrices.
+`MatrixFunctionViaEig` is deliberately looser, since a defective eigenvalue of multiplicity `k` is only resolved to `eps^(1/k)`.
+
+`MatrixFunctionViaLA` is the exception, because `LinearAlgebra` never exposes the spectrum: it decides internally whether a real result exists and returns a complex matrix when it does not.
+The tolerance therefore bounds the imaginary part of the result instead, which is a different quantity on a different scale — for `squareroot`, an eigenvalue at `-δ` shows up as an imaginary part of order `√δ`.
+Such a tolerance is not optional there: `LinearAlgebra` casts a fractional power back to a real matrix only when its imaginary part vanishes identically, so `A^p` of a real matrix with complex-conjugate eigenvalues is complex even when the spectrum stays well clear of the negative real axis.
+
+!!! warning "`MatrixFunctionViaLA` cannot detect a singular matrix"
+    Because it inspects only the result, `MatrixFunctionViaLA` does not enforce the nonzero-eigenvalue condition of `logarithm` and of `power` with a negative exponent: `LinearAlgebra` treats a numerically zero eigenvalue as in-domain and returns a finite result whose entries are merely large.
+    Use [`MatrixFunctionViaEig`](@ref) or [`MatrixFunctionViaEigh`](@ref) if you need such input rejected.
 
 ```@docs; canonical=false
 MatrixAlgebraKit.default_domain_atol

@@ -20,19 +20,12 @@ initialize_output(::typeof(power!), A::AbstractMatrix, p::Real, ::AbstractAlgori
 # --------------
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaLA)
     check_input(power!, A, p, powA, alg)
-    isempty(alg.kwargs) || throw(ArgumentError("`MatrixFunctionViaLA` does not accept keyword arguments for `power`"))
+    domain_atol = _la_domain_atol(alg, power!)
     iszero(p) && return one!(powA)
     isone(p) && ((powA === A || copy!(powA, A)); return powA)
     powAc = A^p
     if eltype(powAc) <: Complex && !(eltype(powA) <: Complex)
-        # `LinearAlgebra` computes fractional powers of real matrices in complex
-        # arithmetic and only casts back to real when the result is exactly real,
-        # so rounding-level imaginary components do not signal a domain violation.
-        # The tolerance is based on the working precision, which may be lower than
-        # the result eltype suggests (e.g. `Float32` input promotes to `ComplexF64`).
-        atol = defaulttol(powA) * norm(powAc, Inf)
-        all(x -> abs(imag(x)) <= atol, powAc) || throw(_realness_domainerror(power!))
-        powA .= real.(powAc)
+        _la_project_real!(powA, powAc, domain_atol, power!)
     else
         copy!(powA, powAc)
     end
@@ -44,10 +37,14 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEigh)
     iszero(p) && return one!(powA)
     isone(p) && ((powA === A || copy!(powA, A)); return powA)
     D, V = eigh_full!(A, alg.eigh_alg)
-    diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
-    isinteger(p) && return _apply_eigh!(powA, V, power!(D, p, D, diag_alg))
-    # `A^p = (V * D^(p/2)) * (V * D^(p/2))'` is hermitian by construction
-    return _mul_herm!(powA, rmul!(V, power!(D, p / 2, D, diag_alg)))
+    diag_alg = DiagonalAlgorithm(; domain_atol = _resolve_domain_atol(diagview(D), alg))
+    if isinteger(p)
+        _apply_eigh!(powA, V, power!(D, p, D, diag_alg))
+    else
+        # `A^p = (V * D^(p/2)) * (V * D^(p/2))'` is hermitian by construction
+        _mul_herm!(powA, rmul!(V, power!(D, p / 2, D, diag_alg)))
+    end
+    return powA
 end
 
 function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEig)
@@ -55,9 +52,15 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaEig)
     iszero(p) && return one!(powA)
     isone(p) && ((powA === A || copy!(powA, A)); return powA)
     D, V = eig_full!(A, alg.eig_alg)
+    λ = diagview(D)
+    atol = _resolve_domain_atol(λ, alg)
+    # a negative exponent excludes the origin from the domain, whether or not it is an integer
+    p < 0 && _check_nonzero_eigenvalues(λ, atol)
     # only a fractional power of a real matrix needs the spectrum off the negative real axis
-    eltype(A) <: Real && !isinteger(p) && _clamp_domain_eigenvalues!(D, alg.domain_atol)
-    diag_alg = DiagonalAlgorithm(; domain_atol = alg.domain_atol)
+    if eltype(A) <: Real && !isinteger(p)
+        p < 0 ? _check_domain_eigenvalues(λ, atol, false) : _clamp_domain_eigenvalues!(λ, atol)
+    end
+    diag_alg = DiagonalAlgorithm(; domain_atol = atol)
     return _apply_eig!(powA, V, power!(D, p, D, diag_alg))
 end
 
@@ -69,12 +72,14 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::DiagonalAlgorithm)
     isone(p) && ((powA === A || copy!(powA, A)); return powA)
     λ = diagview(powA)
     copy!(λ, diagview(A))
-    if isinteger(p)
-        p < 0 && any(iszero, λ) && throw(LinearAlgebra.SingularException(0))
-    else
-        atol = something(get(alg.kwargs, :domain_atol, nothing), default_domain_atol(λ))
+    # a nonnegative integer exponent is defined for every square matrix and needs no tolerance
+    if p < 0 || !isinteger(p)
+        atol = _resolve_domain_atol(λ, alg)
+        # a negative exponent excludes the origin from the domain, whether or not it is an integer
         p < 0 && _check_nonzero_eigenvalues(λ, atol)
-        eltype(λ) <: Real && _clamp_domain_eigenvalues!(λ, atol)
+        if eltype(λ) <: Real && !isinteger(p)
+            p < 0 ? _check_domain_eigenvalues(λ, atol, false) : _clamp_domain_eigenvalues!(λ, atol)
+        end
     end
     λ .= λ .^ p
     return powA

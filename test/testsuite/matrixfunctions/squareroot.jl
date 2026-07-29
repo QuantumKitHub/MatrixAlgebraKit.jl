@@ -94,11 +94,25 @@ function test_squareroot_domain(T::Type, sz, algs; hermitian_output = false, kwa
 
         # roundoff-scale negative eigenvalue: clamped onto the boundary rather than rejected
         λclamp = collect(R, 1:n)
-        λclamp[1] = -10 * eps(R)
+        λclamp[1] = -eps(R)
         Aclamp = instantiate_hermitian_spectrum(T, sz, λclamp)
         sqrtAclamp = @testinferred squareroot(Aclamp, alg)
         @test eltype(sqrtAclamp) == eltype(Aclamp)
         @test sqrtAclamp * sqrtAclamp ≈ Aclamp atol = sqrt(eps(R))
+
+        # an eigenvalue beyond every default tolerance is out of domain, while an explicit
+        # `domain_atol` admits it after all
+        λwide = collect(R, 1:n)
+        λwide[1] = -sqrt(eps(R))
+        Awide = instantiate_hermitian_spectrum(T, sz, λwide)
+        if eltype(T) <: Real || hermitian_output
+            @test_throws DomainError squareroot(Awide, alg)
+        end
+        wide_alg = with_domain_atol(alg, domain_test_atol(alg, R))
+        sqrtAwide = @testinferred squareroot(Awide, wide_alg)
+        @test eltype(sqrtAwide) == eltype(Awide)
+        # accepting is backward stable, but only to the size of the eigenvalue that was discarded
+        @test sqrtAwide * sqrtAwide ≈ Awide atol = sqrt(sqrt(eps(R)))
     end
 end
 

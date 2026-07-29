@@ -103,7 +103,7 @@ The following algorithms for matrix functions are available.
 | Algorithm | Applicable matrix functions | Key keyword arguments |
 |:----------|:--------------------------|:----------------------|
 | [`MatrixFunctionViaTaylor`](@ref) | exponential | `tol`, `balance` |
-| [`MatrixFunctionViaLA`](@ref) | exponential, squareroot, logarithm, power | |
+| [`MatrixFunctionViaLA`](@ref) | exponential, squareroot, logarithm, power | `domain_atol` |
 | [`MatrixFunctionViaEig`](@ref) | exponential, squareroot, logarithm, power | `eig_alg`, `domain_atol` |
 | [`MatrixFunctionViaEigh`](@ref) | exponential, squareroot, logarithm, power | `eigh_alg`, `domain_atol` |
 

@@ -18,10 +18,12 @@ The scalar type of the output matches that of the input.
 As a consequence, for fractional `p`, a real matrix with eigenvalues on the negative
 real axis, for which the principal power is complex, leads to a `DomainError`; pass a
 complex matrix to obtain the principal value.
-Real eigenvalues that are negative within a tolerance `domain_atol` are treated as
-rounding artifacts and clamped to zero, where `domain_atol` can be specified for the
-algorithms that support it and defaults to [`default_domain_atol`](@ref).
-For negative fractional `p`, (numerically) zero eigenvalues also lead to a `DomainError`.
+For any `p < 0`, integer or fractional, (numerically) zero eigenvalues also lead to a `DomainError`.
+
+Both checks use a tolerance `domain_atol`, which defaults to [`default_domain_atol`](@ref). For
+`p > 0` it clamps eigenvalues that are negative within the tolerance onto zero, so that raising it
+accepts more matrices, whereas for `p < 0` it is a rejection radius around the origin and raising it
+rejects more; see [Domain considerations](@ref sec_matrixfunction_domain).
 
 !!! note
     The bang method `power!` optionally accepts the output structure and

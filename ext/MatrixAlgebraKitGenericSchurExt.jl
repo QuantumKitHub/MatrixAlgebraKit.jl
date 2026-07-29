@@ -26,7 +26,7 @@ for default_f_algorithm in (
         :default_power_algorithm,
     )
     @eval function MatrixAlgebraKit.$default_f_algorithm(
-            type::Type{T}; domain_atol::Union{Nothing, Real} = nothing, kwargs...
+            type::Type{T}; domain_atol::Real = -1.0, kwargs...
         ) where {T <: StridedMatrix{<:GSFloat}}
         eig_alg = MatrixAlgebraKit.default_eig_algorithm(type; kwargs...)
         return MatrixFunctionViaEig(eig_alg; domain_atol)

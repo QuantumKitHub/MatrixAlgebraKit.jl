@@ -94,10 +94,34 @@ function test_logarithm_domain(
         λzero[1] = zero(R)
         @test_throws DomainError logarithm(instantiate_hermitian_spectrum(T, sz, λzero), alg)
 
-        # roundoff-scale negative eigenvalue: clamped onto the boundary, which is still singular
+        # roundoff-scale negative eigenvalue: too close to the excluded boundary to be admissible
         λtiny = collect(R, 1:n)
-        λtiny[1] = -10 * eps(R)
-        @test_throws DomainError logarithm(instantiate_hermitian_spectrum(T, sz, λtiny), alg)
+        λtiny[1] = -eps(R)
+        Atiny = instantiate_hermitian_spectrum(T, sz, λtiny)
+        @test_throws DomainError logarithm(Atiny, alg)
+
+        # here `domain_atol` is a rejection radius rather than a clamping radius, so raising it
+        # cannot rescue such a matrix: it only widens the range of eigenvalues that are rejected.
+        # `λwide` is in domain at the default tolerance yet rejected at the wider one.
+        wide_alg = with_domain_atol(alg, domain_test_atol(alg, R))
+        @test_throws DomainError logarithm(Atiny, wide_alg)
+        λwide = collect(R, 1:n)
+        λwide[1] = -sqrt(eps(R))
+        Awide = instantiate_hermitian_spectrum(T, sz, λwide)
+        @test_throws DomainError logarithm(Awide, wide_alg)
+
+        if eltype(T) <: Real || hermitian_output
+            # at the default tolerance the same eigenvalue is out of domain for being negative
+            # rather than for being zero, and the reported value is the one the decomposition
+            # produced rather than a clamped stand-in
+            @test_throws DomainError logarithm(Awide, alg)
+            err = try
+                logarithm(Awide, alg)
+            catch e
+                e
+            end
+            @test err isa DomainError && !iszero(err.val)
+        end
     end
 end
 

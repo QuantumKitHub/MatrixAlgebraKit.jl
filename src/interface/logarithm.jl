@@ -13,8 +13,9 @@ whose eigenvalues have imaginary part in `(-π, π]`.
 The scalar type of the output matches that of the input.
 As a consequence, a real matrix with eigenvalues on the negative real axis, for which the principal logarithm is complex, leads to a `DomainError`; pass a complex matrix to obtain the principal value.
 A matrix with (numerically) zero eigenvalues has no logarithm and also leads to a `DomainError`.
-Both checks use a tolerance `domain_atol`, which can be specified for the algorithms
-that support it and defaults to [`default_domain_atol`](@ref).
+Both checks use a tolerance `domain_atol`, which defaults to [`default_domain_atol`](@ref). As the
+origin is excluded from the domain, there is no boundary to clamp onto and raising `domain_atol`
+rejects more matrices rather than fewer; see [Domain considerations](@ref sec_matrixfunction_domain).
 
 !!! note
     The bang method `logarithm!` optionally accepts the output structure and possibly destroys the input matrix `A`.
