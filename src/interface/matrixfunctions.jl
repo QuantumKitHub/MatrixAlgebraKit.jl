@@ -38,17 +38,16 @@ For matrix functions with a restricted domain (e.g. [`squareroot`](@ref) and [`l
 as rounding artifacts and clamped to the domain boundary, with `nothing` denoting the default
 tolerance [`default_domain_atol`](@ref).
 """
-struct MatrixFunctionViaEigh{A <: AbstractAlgorithm, T <: Union{Nothing, Real}} <: AbstractAlgorithm
+struct MatrixFunctionViaEigh{A <: AbstractAlgorithm} <: AbstractAlgorithm
     eigh_alg::A
-    domain_atol::T
+    domain_atol::Float64 # negative value for runtime defaults
 end
-function MatrixFunctionViaEigh(eigh_alg::AbstractAlgorithm; domain_atol::Union{Nothing, Real} = nothing)
-    return MatrixFunctionViaEigh(eigh_alg, domain_atol)
-end
+MatrixFunctionViaEigh(eigh_alg::AbstractAlgorithm; domain_atol::Real = -1.0) =
+    MatrixFunctionViaEigh(eigh_alg, Float64(domain_atol))
 function Base.show(io::IO, alg::MatrixFunctionViaEigh)
     print(io, "MatrixFunctionViaEigh(")
     _show_alg(io, alg.eigh_alg)
-    isnothing(alg.domain_atol) || print(io, "; domain_atol=", alg.domain_atol)
+    alg.domain_atol < 0 || print(io, "; domain_atol=", alg.domain_atol)
     return print(io, ")")
 end
 
@@ -62,16 +61,15 @@ For matrix functions with a restricted domain (e.g. [`squareroot`](@ref) and [`l
 as rounding artifacts and clamped to the domain boundary, with `nothing` denoting the default
 tolerance [`default_domain_atol`](@ref).
 """
-struct MatrixFunctionViaEig{A <: AbstractAlgorithm, T <: Union{Nothing, Real}} <: AbstractAlgorithm
+struct MatrixFunctionViaEig{A <: AbstractAlgorithm} <: AbstractAlgorithm
     eig_alg::A
-    domain_atol::T
+    domain_atol::Float64 # negative value for runtime defaults
 end
-function MatrixFunctionViaEig(eig_alg::AbstractAlgorithm; domain_atol::Union{Nothing, Real} = nothing)
-    return MatrixFunctionViaEig(eig_alg, domain_atol)
-end
+MatrixFunctionViaEig(eig_alg::AbstractAlgorithm; domain_atol::Real = -1.0) =
+    MatrixFunctionViaEig(eig_alg, Float64(domain_atol))
 function Base.show(io::IO, alg::MatrixFunctionViaEig)
     print(io, "MatrixFunctionViaEig(")
     _show_alg(io, alg.eig_alg)
-    isnothing(alg.domain_atol) || print(io, "; domain_atol=", alg.domain_atol)
+    alg.domain_atol < 0 || print(io, "; domain_atol=", alg.domain_atol)
     return print(io, ")")
 end

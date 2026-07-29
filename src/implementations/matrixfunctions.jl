@@ -71,22 +71,18 @@ end
     )
 end
 
+_clamp_domain_eigenvalues!(D::Diagonal, atol::Real) =
+    _clamp_domain_eigenvalues!(diagview(D), atol)
+
 # Clamp real eigenvalues that are negative within `atol` (rounding artifacts) to zero,
 # and throw a `DomainError` for eigenvalues that are genuinely negative, since then the
 # result cannot be expressed with the same (real) scalar type.
 function _clamp_domain_eigenvalues!(λ::AbstractVector{<:Real}, atol::Real)
     λmin = minimum(λ; init = zero(eltype(λ)))
+    atol = atol < 0 ? default_domain_atol(λ) : oftype(λmin, atol)
     λmin < -atol && throw_negative_eigenvalue(λmin, atol, "a negative real eigenvalue")
     λ .= max.(λ, zero(eltype(λ)))
     return λ
-end
-
-# Convenience method for the eigenvalues of a decomposition, deriving the default
-# tolerance from the eigenvalues themselves when `domain_atol` is `nothing`.
-function _clamp_domain_eigenvalues!(D::Diagonal, domain_atol::Union{Nothing, Real})
-    λ = diagview(D)
-    atol = something(domain_atol, default_domain_atol(λ))
-    return _clamp_domain_eigenvalues!(λ, atol)
 end
 
 # Complex eigenvalues of a real matrix: only eigenvalues (numerically) on the negative
@@ -94,6 +90,7 @@ end
 function _clamp_domain_eigenvalues!(λ::AbstractVector{<:Complex}, atol::Real)
     onaxis = x -> abs(imag(x)) <= atol && real(x) < 0
     λmin = mapreduce(x -> onaxis(x) ? real(x) : zero(real(x)), min, λ; init = zero(real(eltype(λ))))
+    atol = atol < 0 ? default_domain_atol(λ) : oftype(λmin, atol)
     λmin < -atol && throw_negative_eigenvalue(λmin, atol, "an eigenvalue on the negative real axis")
     λ .= ifelse.(onaxis.(λ), zero(eltype(λ)), λ)
     return λ
