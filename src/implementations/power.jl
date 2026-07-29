@@ -33,9 +33,9 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::MatrixFunctionViaLA)
         atol = defaulttol(powA) * norm(powAc, Inf)
         all(x -> abs(imag(x)) <= atol, powAc) || throw(_realness_domainerror(power!))
         powA .= real.(powAc)
-        return powA
+    else
+        copy!(powA, powAc)
     end
-    copy!(powA, powAc)
     return powA
 end
 
