@@ -51,7 +51,7 @@ end
 function logarithm!(A::AbstractMatrix, logA, alg::DiagonalAlgorithm)
     check_input(logarithm!, A, logA, alg)
     λ = diagview(logA)
-    copyto!(λ, diagview(A))
+    copy!(λ, diagview(A))
     atol = something(get(alg.kwargs, :domain_atol, nothing), default_domain_atol(λ))
     _check_nonzero_eigenvalues(λ, atol)
     if eltype(λ) <: Real

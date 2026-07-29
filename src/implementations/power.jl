@@ -68,7 +68,7 @@ function power!(A::AbstractMatrix, p::Real, powA, alg::DiagonalAlgorithm)
     iszero(p) && return one!(powA)
     isone(p) && ((powA === A || copy!(powA, A)); return powA)
     λ = diagview(powA)
-    copyto!(λ, diagview(A))
+    copy!(λ, diagview(A))
     if isinteger(p)
         p < 0 && any(iszero, λ) && throw(LinearAlgebra.SingularException(0))
     else

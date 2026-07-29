@@ -52,7 +52,7 @@ end
 function squareroot!(A::AbstractMatrix, sqrtA, alg::DiagonalAlgorithm)
     check_input(squareroot!, A, sqrtA, alg)
     λ = diagview(sqrtA)
-    copyto!(λ, diagview(A))
+    copy!(λ, diagview(A))
     if eltype(λ) <: Real
         atol = something(get(alg.kwargs, :domain_atol, nothing), default_domain_atol(λ))
         _clamp_domain_eigenvalues!(λ, atol)
