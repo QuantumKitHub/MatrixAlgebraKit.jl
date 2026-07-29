@@ -24,9 +24,14 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 MatrixAlgebraKit = {path = ".."}
 
 [compat]
+AMDGPU = "2.7.0"
 Aqua = "0.6, 0.7, 0.8"
+CUDA = "6.2.1"
+ChainRulesCore = "1.26.1"
 ChainRulesTestUtils = "1"
+Enzyme = "0.13.195"
 EnzymeTestUtils = "0.2.5"
+Mooncake = "0.5.41"
 ParallelTestRunner = "2"
 Random = "1"
 StableRNGs = "1"
