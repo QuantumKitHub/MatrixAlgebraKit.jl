@@ -8,7 +8,6 @@ testsuite = find_tests(@__DIR__)
 filter!(!(startswith("testsuite") ∘ first), testsuite)
 
 # remove utils
-delete!(testsuite, "utilities")
 delete!(testsuite, "linearmap")
 
 # Parse arguments
@@ -21,11 +20,11 @@ if filter_tests!(testsuite, args)
     # don't run all tests on GPU, only the GPU specific ones
     is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
     if is_buildkite
-        delete!(testsuite, "algorithms")
-        delete!(testsuite, "truncate")
-        delete!(testsuite, "gen_eig")
-        delete!(testsuite, "chainrules")
-        delete!(testsuite, "codequality")
+        delete!(testsuite, "common/algorithms")
+        delete!(testsuite, "common/codequality")
+        delete!(testsuite, "common/truncate")
+        delete!(testsuite, "decompositions/gen_eig")
+        filter!(p -> !startswith(first(p), "chainrules/"), testsuite)
     else
         is_apple_ci = Sys.isapple() && get(ENV, "CI", "false") == "true"
         is_windows_ci = Sys.iswindows() && get(ENV, "CI", "false") == "true"
