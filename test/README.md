@@ -4,7 +4,7 @@ Tests are driven by [ParallelTestRunner.jl](https://github.com/JuliaTesting/Para
 Every `.jl` file under `test/` is auto-discovered and executed in its own worker process, so test
 files share no state and must be self-contained.
 
-The test environment is a [Pkg workspace](https://pkgdocs.julialang.org/dev/workspaces/) member:
+The test environment is a [Pkg workspace](https://pkgdocs.julialang.org/v1/toml-files/#Workspaces) member:
 `test/Project.toml` declares the test dependencies and resolves the parent package through
 `[sources]`, while the whole workspace shares a single `Manifest.toml` at the repository root.
 
