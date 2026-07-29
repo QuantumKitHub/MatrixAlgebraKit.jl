@@ -22,6 +22,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- New matrix functions `squareroot`, `logarithm` and `power` (with both integer and fractional exponents), supporting the `MatrixFunctionViaLA`, `MatrixFunctionViaEig`, `MatrixFunctionViaEigh` and `DiagonalAlgorithm` algorithms ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
+
 ### Changed
 
 ### Deprecated
@@ -29,6 +31,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Removed
 
 ### Fixed
+
+- `exponential` of a complex hermitian matrix via `MatrixFunctionViaEigh` is now hermitian to the last bit, rather than only up to rounding errors, matching the guarantee the real case already provided ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
 
 ### Performance
 

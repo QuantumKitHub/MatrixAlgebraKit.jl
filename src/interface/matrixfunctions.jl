@@ -1,10 +1,16 @@
 # ================================
-# EXPONENTIAL ALGORITHMS
+# MATRIX FUNCTION ALGORITHMS
 # ================================
 """
-    MatrixFunctionViaLA()
+    MatrixFunctionViaLA(; domain_atol=-1)
 
-Algorithm type to denote finding the exponential of `A` via the implementation of `LinearAlgebra`.
+Algorithm type to denote computing a function of a matrix `A` via the implementation of `LinearAlgebra`.
+For matrix functions with a restricted domain (e.g. [`squareroot`](@ref) and [`logarithm`](@ref)),
+`domain_atol` specifies the absolute tolerance on the imaginary part of the result below which a
+complex result is attributed to rounding rather than to a domain violation, with a negative value
+denoting the default tolerance. Note that this differs from the eigenvalue tolerance of
+[`MatrixFunctionViaEig`](@ref) and [`MatrixFunctionViaEigh`](@ref), as `LinearAlgebra` does not
+expose the spectrum; see [Domain considerations](@ref sec_matrixfunction_domain).
 """
 @algdef MatrixFunctionViaLA
 
@@ -29,31 +35,49 @@ As this algorithm requires no LAPACK support, it also applies at arbitrary preci
 @algdef MatrixFunctionViaTaylor
 
 """
-    MatrixFunctionViaEigh(eigh_alg)
+    MatrixFunctionViaEigh(eigh_alg; domain_atol=-1)
 
 Algorithm type for computing a function of a matrix by computing its hermitian eigenvalue decomposition and applying the function to the eigenvalues.
 The `eigh_alg` specifies which hermitian eigendecomposition implementation to use.
+For matrix functions with a restricted domain (e.g. [`squareroot`](@ref) and [`logarithm`](@ref)),
+`domain_atol` specifies the absolute tolerance within which eigenvalues that violate the domain are
+treated as rounding artifacts, with a negative value denoting the default tolerance
+[`default_domain_atol`](@ref). Depending on the function, such eigenvalues are clamped onto the
+domain boundary or rejected; see [Domain considerations](@ref sec_matrixfunction_domain).
 """
 struct MatrixFunctionViaEigh{A <: AbstractAlgorithm} <: AbstractAlgorithm
     eigh_alg::A
+    domain_atol::Float64 # negative value for runtime defaults
 end
+MatrixFunctionViaEigh(eigh_alg::AbstractAlgorithm; domain_atol::Real = -1.0) =
+    MatrixFunctionViaEigh(eigh_alg, Float64(domain_atol))
 function Base.show(io::IO, alg::MatrixFunctionViaEigh)
     print(io, "MatrixFunctionViaEigh(")
     _show_alg(io, alg.eigh_alg)
+    alg.domain_atol < 0 || print(io, "; domain_atol=", alg.domain_atol)
     return print(io, ")")
 end
 
 """
-    MatrixFunctionViaEig(eig_alg)
+    MatrixFunctionViaEig(eig_alg; domain_atol=-1)
 
 Algorithm type for computing a function of a matrix by computing its eigenvalue decomposition and applying the function to the eigenvalues.
 The `eig_alg` specifies which eigendecomposition implementation to use.
+For matrix functions with a restricted domain (e.g. [`squareroot`](@ref) and [`logarithm`](@ref)),
+`domain_atol` specifies the absolute tolerance within which eigenvalues that violate the domain are
+treated as rounding artifacts, with a negative value denoting the default tolerance
+[`default_domain_atol`](@ref). Depending on the function, such eigenvalues are clamped onto the
+domain boundary or rejected; see [Domain considerations](@ref sec_matrixfunction_domain).
 """
 struct MatrixFunctionViaEig{A <: AbstractAlgorithm} <: AbstractAlgorithm
     eig_alg::A
+    domain_atol::Float64 # negative value for runtime defaults
 end
+MatrixFunctionViaEig(eig_alg::AbstractAlgorithm; domain_atol::Real = -1.0) =
+    MatrixFunctionViaEig(eig_alg, Float64(domain_atol))
 function Base.show(io::IO, alg::MatrixFunctionViaEig)
     print(io, "MatrixFunctionViaEig(")
     _show_alg(io, alg.eig_alg)
+    alg.domain_atol < 0 || print(io, "; domain_atol=", alg.domain_atol)
     return print(io, ")")
 end

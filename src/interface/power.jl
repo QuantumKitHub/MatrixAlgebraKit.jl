@@ -1,0 +1,47 @@
+# Power
+# -----
+
+"""
+    power(A, p::Real; kwargs...) -> powA
+    power(A, p::Real, alg::AbstractAlgorithm) -> powA
+    power!(A, p::Real, [powA]; kwargs...) -> powA
+    power!(A, p::Real, [powA], alg::AbstractAlgorithm) -> powA
+
+Compute the matrix power `powA = A^p` of the square matrix `A`.
+For integer `p` this is defined for any square matrix (invertible if `p < 0`);
+for fractional `p` the principal power `exp(p * log(A))` is computed.
+
+The exponents `p = 0` and `p = 1` are resolved directly as `I` and `A`, without computing any
+decomposition, so they apply to every square matrix regardless of the algorithm selected.
+
+The scalar type of the output matches that of the input.
+As a consequence, for fractional `p`, a real matrix with eigenvalues on the negative
+real axis, for which the principal power is complex, leads to a `DomainError`; pass a
+complex matrix to obtain the principal value.
+For any `p < 0`, integer or fractional, (numerically) zero eigenvalues also lead to a `DomainError`.
+
+Both checks use a tolerance `domain_atol`, which defaults to [`default_domain_atol`](@ref). For
+`p > 0` it clamps eigenvalues that are negative within the tolerance onto zero, so that raising it
+accepts more matrices, whereas for `p < 0` it is a rejection radius around the origin and raising it
+rejects more; see [Domain considerations](@ref sec_matrixfunction_domain).
+
+!!! note
+    The bang method `power!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `powA` as output.
+"""
+@functiondef n_args = 2 power
+
+# Algorithm selection
+# -------------------
+default_power_algorithm(A; kwargs...) = default_power_algorithm(typeof(A); kwargs...)
+function default_power_algorithm(T::Type; kwargs...)
+    return MatrixFunctionViaLA(; kwargs...)
+end
+function default_power_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
+    return DiagonalAlgorithm(; kwargs...)
+end
+
+function default_algorithm(::typeof(power!), ::Tuple{A, P}; kwargs...) where {A, P}
+    return default_power_algorithm(A; kwargs...)
+end
