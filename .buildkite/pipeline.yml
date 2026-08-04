@@ -14,7 +14,7 @@ steps:
     agents:
       queue: "cuda"
     if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 30
+    timeout_in_minutes: 90
 
   - label: "Julia LTS -- CUDA"
     plugins:
@@ -28,7 +28,7 @@ steps:
     agents:
       queue: "cuda"
     if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 30
+    timeout_in_minutes: 90
   
   - label: "Julia v1 -- AMDGPU"
     plugins:
