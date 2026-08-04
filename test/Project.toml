@@ -22,6 +22,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [sources]
 MatrixAlgebraKit = {path = ".."}
+EnzymeTestUtils = {url = "https://github.com/EnzymeAD/Enzyme.jl/", rev = "ksh/cu2vec", subdir = "lib/EnzymeTestUtils"}
 
 [compat]
 Aqua = "0.6, 0.7, 0.8"
@@ -33,3 +34,4 @@ StableRNGs = "1"
 Test = "1"
 TestExtras = "0.3.2"
 Zygote = "0.7"
+
