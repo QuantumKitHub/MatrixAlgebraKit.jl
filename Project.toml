@@ -18,6 +18,7 @@ Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
 GenericSchur = "c145ed77-6b09-5dd9-b285-bf645a82121e"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+StridedViews = "4db3bf67-4bd7-4b4e-b153-31dc3fb37143"
 
 [extensions]
 MatrixAlgebraKitAMDGPUExt = "AMDGPU"
@@ -27,6 +28,7 @@ MatrixAlgebraKitEnzymeExt = "Enzyme"
 MatrixAlgebraKitGenericLinearAlgebraExt = "GenericLinearAlgebra"
 MatrixAlgebraKitGenericSchurExt = "GenericSchur"
 MatrixAlgebraKitMooncakeExt = "Mooncake"
+MatrixAlgebraKitStridedViewsExt = "StridedViews"
 
 [compat]
 AMDGPU = "2"
@@ -38,4 +40,5 @@ GenericSchur = "0.5.6"
 LinearAlgebra = "1"
 PrecompileTools = "1"
 Mooncake = "0.5.27"
+StridedViews = "0.5"
 julia = "1.10"
