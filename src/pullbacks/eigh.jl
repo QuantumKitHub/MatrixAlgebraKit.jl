@@ -31,7 +31,7 @@ function check_and_prepare_eigh_cotangents(
     bc = Base.broadcasted(transpose(D), D, aVᴴΔV₁) do d₁, d₂, v
         return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
-    Δgauge = maximum(abs, bc; init = abs(zero(eltype(D))))
+    Δgauge = maximum(abs, Base.Broadcast.instantiate(bc); init = abs(zero(eltype(D))))
 
     Δgauge ≤ gauge_atol ||
         @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
