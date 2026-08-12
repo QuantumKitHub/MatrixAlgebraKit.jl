@@ -13,28 +13,6 @@ using CUDA.cuSOLVER: geqrf!, ormqr!, orgqr!
 const unmqr! = ormqr!
 const ungqr! = orgqr!
 
-# report a non-positive size when the 32-bit workspace query fails or overflows
-for (bname, elty) in (
-        (:cusolverDnSormqr_bufferSize, :Float32),
-        (:cusolverDnDormqr_bufferSize, :Float64),
-        (:cusolverDnCunmqr_bufferSize, :ComplexF32),
-        (:cusolverDnZunmqr_bufferSize, :ComplexF64),
-    )
-    unchecked = Symbol(:unchecked_, bname)
-    @eval function unmqr_worksize(
-            side::Char, trans::Char, A::StridedCuMatrix{$elty},
-            tau::CuVector{$elty}, C::StridedCuVecOrMat{$elty}
-        )
-        m, n = ndims(C) == 2 ? size(C) : (length(C), 1)
-        out = Ref{Cint}(0)
-        status = cuSOLVER.$unchecked(
-            cuSOLVER.dense_handle(), side, trans, m, n, length(tau),
-            A, max(1, stride(A, 2)), tau, C, max(1, stride(C, 2)), out
-        )
-        return status == cuSOLVER.CUSOLVER_STATUS_SUCCESS ? Int(out[]) : -1
-    end
-end
-
 # Wrapper for SVD via QR Iteration
 for (bname, fname, elty, relty) in
     (

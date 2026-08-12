@@ -34,8 +34,6 @@ for f in (:geqrf!, :ungqr!, :unmqr!)
 end
 
 MatrixAlgebraKit.prefers_ungqr(::CUSOLVER) = true
-MatrixAlgebraKit.supports_unmqr(::CUSOLVER, side, trans, A, τ, C) =
-    YACUSOLVER.unmqr_worksize(side, trans, A, τ, C) > 0
 
 MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
 

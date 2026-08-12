@@ -125,10 +125,8 @@ for f in (:geqrt!, :gemqrt!, :geqp3!, :geqrf!, :ungqr!, :unmqr!)
     end
 end
 
-# cuSOLVER's 32-bit ormqr workspace query breaks down for large matrices
-supports_unmqr(::Driver, side, trans, A, τ, C) = true
-
-# cuSOLVER generates Q faster with ungqr! than by applying the reflectors with unmqr!
+# cuSOLVER generates Q faster with ungqr! than by applying the reflectors with unmqr!,
+# and avoids the large workspace of ormqr, whose 32-bit size query fails for large matrices
 prefers_ungqr(::Driver) = false
 
 # copy R out of the packed factorization, leaving the reflectors in A intact
@@ -140,16 +138,14 @@ function _qr_copyR!(R::AbstractMatrix, A::AbstractMatrix, jpvt = nothing)
 end
 
 function _qr_buildQ!(driver::Driver, Q::AbstractMatrix, A::AbstractMatrix, τ, minmn::Int)
-    (prefers_ungqr(driver) || !supports_unmqr(driver, 'L', 'N', A, τ, Q)) &&
-        return _qr_buildQ_ungqr!(driver, Q, A, τ, minmn)
-    return unmqr!(driver, 'L', 'N', A, τ, one!(Q))
-end
-
-# build Q in its own space: copy in the reflectors, unit vectors elsewhere
-function _qr_buildQ_ungqr!(driver::Driver, Q::AbstractMatrix, A::AbstractMatrix, τ, minmn::Int)
-    size(Q, 2) > minmn && one!(Q)
-    copyto!(view(Q, :, 1:minmn), view(A, :, 1:minmn))
-    ungqr!(driver, Q, τ)
+    if prefers_ungqr(driver)
+        # build Q in its own space: copy in the reflectors, unit vectors elsewhere
+        size(Q, 2) > minmn && one!(Q)
+        copyto!(view(Q, :, 1:minmn), view(A, :, 1:minmn))
+        ungqr!(driver, Q, τ)
+    else
+        Q = unmqr!(driver, 'L', 'N', A, τ, one!(Q))
+    end
     return Q
 end
 
@@ -291,8 +287,6 @@ function qr_null_householder!(
         N = gemqrt!(driver, 'L', 'N', A, T, N)
     else
         A, τ = geqrf!(driver, A)
-        supports_unmqr(driver, 'L', 'N', A, τ, N) ||
-            throw(ArgumentError(lazy"$driver cannot construct the null space for these dimensions"))
         N = unmqr!(driver, 'L', 'N', A, τ, N)
     end
     return N
