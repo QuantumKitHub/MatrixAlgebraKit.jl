@@ -24,11 +24,20 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- `qr_compact!`, `qr_full!`, `lq_compact!` and `lq_full!` now extract `R` (or `L`) before
+  constructing `Q`, so that an inplace `Q` (supplying `A` itself as output for `Q`) can be combined
+  with computing `R` (or `L`) and with `positive = true`.
+- The CUSOLVER driver constructs `Q` with `ungqr!` instead of `unmqr!`, which is both faster and
+  avoids the large workspace of `ormqr`, whose 32-bit size query fails altogether for large
+  matrices.
+
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- LQ decompositions no longer gauge fix `Q` when `positive = false` and `L` is not computed.
 
 ### Performance
 

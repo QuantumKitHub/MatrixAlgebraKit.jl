@@ -57,7 +57,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             )
             TestSuite.test_lq_algs(T, (m, n), LAPACK_LQ_ALGS)
         elseif T ∈ GenericFloats
-            TestSuite.test_lq(T, (m, n); test_pivoted = false, test_blocksize = false)
+            TestSuite.test_lq(T, (m, n); test_pivoted = false, test_blocksize = false, test_inplaceQ = false)
             GENERIC_LQ_ALGS = (Householder(; driver = Native()), LQViaTransposedQR(Householder(; driver = GLA())))
             TestSuite.test_lq_algs(T, (m, n), GENERIC_LQ_ALGS)
         end

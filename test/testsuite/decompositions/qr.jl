@@ -6,6 +6,7 @@ function test_qr(T::Type, sz; kwargs...)
         test_qr_compact(T, sz; kwargs...)
         test_qr_full(T, sz; kwargs...)
         test_qr_null(T, sz; kwargs...)
+        test_qr_inplaceQ(T, sz; kwargs...)
     end
 end
 
@@ -108,6 +109,65 @@ function test_qr_compact_algs(
             if is_positive(alg)
                 @test has_positive_diagonal(R2)
             end
+        end
+    end
+end
+
+# test using `A` itself as output for `Q`
+function test_qr_inplaceQ(
+        T::Type, sz;
+        test_inplaceQ = true, test_positive = true, test_pivoted = true,
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    (sz isa Tuple && length(sz) == 2) || return nothing
+    m, n = sz
+    m >= n || return nothing # inplace Q requires a tall matrix
+    summary_str = testargs_summary(T, sz)
+    return @testset "qr_compact! inplace Q $summary_str" begin
+        A = instantiate_matrix(T, sz)
+        R = similar(A, (n, n))
+
+        if !test_inplaceQ
+            Ain = deepcopy(A)
+            @test_throws Exception qr_compact!(Ain, (Ain, R))
+        else
+            for positive in (test_positive ? (false, true) : (false,)),
+                    pivoted in (test_pivoted ? (false, true) : (false,))
+
+                Ain = deepcopy(A)
+                Q, R2 = qr_compact!(Ain, (Ain, R); positive, pivoted)
+                @test Q === Ain
+                @test Q * R2 ≈ A
+                @test isisometric(Q; atol, rtol)
+                if !pivoted
+                    @test istriu(R2)
+                    if positive
+                        @test has_positive_diagonal(R2)
+                    end
+                end
+
+                # R is not required
+                Ain2 = deepcopy(A)
+                Q2, = qr_compact!(Ain2, (Ain2, similar(A, (0, 0))); positive, pivoted)
+                @test Q2 === Ain2
+                @test Q2 ≈ Q
+            end
+
+            if m == n
+                Ain = deepcopy(A)
+                Q, Rf = qr_full!(Ain, (Ain, similar(A, (m, n))))
+                @test Q === Ain
+                @test Q * Rf ≈ A
+                @test isunitary(Q; atol, rtol)
+                @test has_positive_diagonal(Rf)
+            end
+
+            # blocked algorithm and aliased R are not supported
+            Ain = deepcopy(A)
+            @test_throws ArgumentError qr_compact!(Ain, (Ain, R); blocksize = 2)
+            Ain = deepcopy(A)
+            @test_throws ArgumentError qr_compact!(Ain, (Ain, view(Ain, 1:n, :)))
         end
     end
 end

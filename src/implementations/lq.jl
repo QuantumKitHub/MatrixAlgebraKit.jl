@@ -123,6 +123,13 @@ for f in (:gelqt!, :gemlqt!, :gelqf!, :unglq!, :unmlq!)
     end
 end
 
+# copy L out of the packed factorization, leaving the reflectors in A intact
+function _lq_copyL!(L::AbstractMatrix, A::AbstractMatrix)
+    copyto!(L, view(A, axes(L)...))
+    lowertriangular!(L)
+    return L
+end
+
 @inline lq_householder!(A, L, Q; driver::Driver = DefaultDriver(), kwargs...) =
     lq_householder!(driver, A, L, Q; kwargs...)
 lq_householder!(::DefaultDriver, A, L, Q; kwargs...) =
@@ -144,9 +151,16 @@ function lq_householder!(
     computeL = length(L) > 0
     inplaceQ = Q === A
 
-    (inplaceQ && (computeL || positive || blocksize > 1 || n < m)) &&
-        throw(ArgumentError("inplace Q only supported if matrix is wide (`m <= n`), L is not required, and using the unblocked algorithm (`blocksize = 1`) with `positive = false`"))
+    if inplaceQ
+        # unglq! builds Q in the space of A, so L has to be extracted first and cannot alias A
+        (blocksize == 1 && n >= m) ||
+            throw(ArgumentError("inplace Q only supported if matrix is wide (`m <= n`) and using the unblocked algorithm (`blocksize = 1`)"))
+        (computeL && Base.mightalias(L, A)) &&
+            throw(ArgumentError("inplace Q only supported if L does not share memory with A"))
+    end
+
     if blocksize > 1
+        # L doubles as workspace for T, so Q is constructed before L is extracted
         mb = min(minmn, blocksize)
         if computeL # first use L as space for T
             A, T = gelqt!(driver, A, view(L, 1:mb, 1:minmn))
@@ -154,22 +168,20 @@ function lq_householder!(
             A, T = gelqt!(driver, A, similar(A, mb, minmn))
         end
         Q = gemlqt!(driver, 'R', 'N', A, T, one!(Q))
+        computeL && _lq_copyL!(L, A)
+        positive && gaugefix!(lq_householder!, computeL ? L : nothing, Q, diagview(A))
     else
         A, τ = gelqf!(driver, A)
+        computeL && _lq_copyL!(L, A)
+        Lf = computeL ? L : nothing
         if inplaceQ
-            Q = unglq!(driver, A, τ)
+            Ld = positive ? copy(diagview(A)) : nothing # unglq! destroys the diagonal of A
+            unglq!(driver, A, τ) # Q === A, so no need to rebind Q
+            positive && gaugefix!(lq_householder!, Lf, Q, Ld)
         else
             Q = unmlq!(driver, 'R', 'N', A, τ, one!(Q))
+            positive && gaugefix!(lq_householder!, Lf, Q, diagview(A))
         end
-    end
-
-    if computeL
-        # we need to first copy then gaugefix - avoiding aliasing between L and Ld for broadcast
-        Ld = diagview(A)
-        copyto!(L, lowertriangular!(view(A, axes(L)...)))
-        positive && gaugefix!(lq_householder!, L, Q, Ld)
-    else
-        gaugefix!(lq_householder!, nothing, Q, diagview(A))
     end
 
     return L, Q
@@ -183,6 +195,8 @@ function lq_householder!(
         throw(ArgumentError(lazy"$driver does not provide a blocked LQ decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted LQ decomposition"))
+    Q === A &&
+        throw(ArgumentError(lazy"$driver does not provide an inplace Q"))
     # positive = true regardless of setting
 
     m, n = size(A)
@@ -303,6 +317,9 @@ end
 function lq_via_qr!(
         A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix, qr_alg::AbstractAlgorithm
     )
+    # Q is written before L, so an L that aliases A would corrupt an inplace Q
+    (A === Q && !isempty(L) && Base.mightalias(L, A)) &&
+        throw(ArgumentError("inplace Q only supported if L does not share memory with A"))
     At = adjoint!(similar(A'), A)::AbstractMatrix
     Qt = (A === Q) ? At : similar(Q')
     Lt = similar(L')

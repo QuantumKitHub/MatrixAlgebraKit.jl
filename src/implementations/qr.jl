@@ -125,6 +125,34 @@ for f in (:geqrt!, :gemqrt!, :geqp3!, :geqrf!, :ungqr!, :unmqr!)
     end
 end
 
+# cuSOLVER's 32-bit ormqr workspace query breaks down for large matrices
+supports_unmqr(::Driver, side, trans, A, τ, C) = true
+
+# cuSOLVER generates Q faster with ungqr! than by applying the reflectors with unmqr!
+prefers_ungqr(::Driver) = false
+
+# copy R out of the packed factorization, leaving the reflectors in A intact
+function _qr_copyR!(R::AbstractMatrix, A::AbstractMatrix, jpvt = nothing)
+    Rp = isnothing(jpvt) ? R : view(R, :, jpvt)
+    copyto!(Rp, view(A, axes(R)...))
+    uppertriangular!(Rp)
+    return R
+end
+
+function _qr_buildQ!(driver::Driver, Q::AbstractMatrix, A::AbstractMatrix, τ, minmn::Int)
+    (prefers_ungqr(driver) || !supports_unmqr(driver, 'L', 'N', A, τ, Q)) &&
+        return _qr_buildQ_ungqr!(driver, Q, A, τ, minmn)
+    return unmqr!(driver, 'L', 'N', A, τ, one!(Q))
+end
+
+# build Q in its own space: copy in the reflectors, unit vectors elsewhere
+function _qr_buildQ_ungqr!(driver::Driver, Q::AbstractMatrix, A::AbstractMatrix, τ, minmn::Int)
+    size(Q, 2) > minmn && one!(Q)
+    copyto!(view(Q, :, 1:minmn), view(A, :, 1:minmn))
+    ungqr!(driver, Q, τ)
+    return Q
+end
+
 @inline qr_householder!(A, Q, R; driver::Driver = DefaultDriver(), kwargs...) =
     qr_householder!(driver, A, Q, R; kwargs...)
 qr_householder!(::DefaultDriver, A, Q, R; kwargs...) =
@@ -149,11 +177,17 @@ function qr_householder!(
     computeR = length(R) > 0
     inplaceQ = Q === A
 
-    (inplaceQ && (computeR || positive || blocksize > 1 || m < n)) &&
-        throw(ArgumentError("inplace Q only supported if matrix is tall (`m >= n`), R is not required, and using the unblocked algorithm (`blocksize = 1`) with `positive = false`"))
+    if inplaceQ
+        # ungqr! builds Q in the space of A, so R has to be extracted first and cannot alias A
+        (blocksize == 1 && m >= n) ||
+            throw(ArgumentError("inplace Q only supported if matrix is tall (`m >= n`) and using the unblocked algorithm (`blocksize = 1`)"))
+        (computeR && Base.mightalias(R, A)) &&
+            throw(ArgumentError("inplace Q only supported if R does not share memory with A"))
+    end
 
     # Compute QR in packed form
     if blocksize > 1
+        # R doubles as workspace for T, so Q is constructed before R is extracted
         nb = min(minmn, blocksize)
         if computeR # first use R as space for T
             A, T = geqrt!(driver, A, view(R, 1:nb, 1:minmn))
@@ -161,27 +195,25 @@ function qr_householder!(
             A, T = geqrt!(driver, A, similar(A, nb, minmn))
         end
         Q = gemqrt!(driver, 'L', 'N', A, T, one!(Q))
+        computeR && _qr_copyR!(R, A)
+        positive && gaugefix!(qr_householder!, Q, computeR ? R : nothing, diagview(A))
     else
         if pivoted
             A, τ, jpvt = geqp3!(driver, A)
+            computeR && _qr_copyR!(R, A, jpvt)
         else
             A, τ = geqrf!(driver, A)
+            computeR && _qr_copyR!(R, A)
         end
+        Rf = computeR ? R : nothing # gaugefix! rescales rows, which commutes with the pivoting
         if inplaceQ
-            Q = ungqr!(driver, A, τ)
+            Rd = positive ? copy(diagview(A)) : nothing # ungqr! destroys the diagonal of A
+            ungqr!(driver, A, τ) # Q === A, so no need to rebind Q
+            positive && gaugefix!(qr_householder!, Q, Rf, Rd)
         else
-            Q = unmqr!(driver, 'L', 'N', A, τ, one!(Q))
+            Q = _qr_buildQ!(driver, Q, A, τ, minmn)
+            positive && gaugefix!(qr_householder!, Q, Rf, diagview(A))
         end
-    end
-
-    if computeR
-        # we need to first copy then gaugefix - avoiding aliasing between R and Rd for broadcast
-        Rd = diagview(A)
-        Rf = pivoted ? view(R, :, jpvt) : R
-        copyto!(Rf, uppertriangular!(view(A, axes(R)...)))
-        positive && gaugefix!(qr_householder!, Q, Rf, Rd)
-    elseif positive
-        gaugefix!(qr_householder!, Q, nothing, diagview(A))
     end
 
     return Q, R
@@ -195,6 +227,8 @@ function qr_householder!(
         throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
+    Q === A &&
+        throw(ArgumentError(lazy"$driver does not provide an inplace Q"))
     # positive = true regardless of setting
 
     m, n = size(A)
@@ -257,6 +291,8 @@ function qr_null_householder!(
         N = gemqrt!(driver, 'L', 'N', A, T, N)
     else
         A, τ = geqrf!(driver, A)
+        supports_unmqr(driver, 'L', 'N', A, τ, N) ||
+            throw(ArgumentError(lazy"$driver cannot construct the null space for these dimensions"))
         N = unmqr!(driver, 'L', 'N', A, τ, N)
     end
     return N
