@@ -6,6 +6,7 @@ function test_lq(T::Type, sz; test_null = true, kwargs...)
         test_lq_compact(T, sz; kwargs...)
         test_lq_full(T, sz; kwargs...)
         test_null && test_lq_null(T, sz; kwargs...)
+        test_lq_inplaceQ(T, sz; kwargs...)
     end
 end
 
@@ -71,6 +72,61 @@ function test_lq_compact(
             @test isisometric(Qblocked; side = :right, atol, rtol)
         else
             @test_throws Exception lq_compact(A; blocksize = 2)
+        end
+    end
+end
+
+# test using `A` itself as output for `Q`
+function test_lq_inplaceQ(
+        T::Type, sz;
+        test_inplaceQ = true, test_positive = true,
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    (sz isa Tuple && length(sz) == 2) || return nothing
+    m, n = sz
+    n >= m || return nothing # inplace Q requires a wide matrix
+    summary_str = testargs_summary(T, sz)
+    return @testset "lq_compact! inplace Q $summary_str" begin
+        A = instantiate_matrix(T, sz)
+        L = similar(A, (m, m))
+
+        if !test_inplaceQ
+            Ain = deepcopy(A)
+            @test_throws Exception lq_compact!(Ain, (L, Ain))
+        else
+            for positive in (test_positive ? (false, true) : (false,))
+                Ain = deepcopy(A)
+                L2, Q = lq_compact!(Ain, (L, Ain); positive)
+                @test Q === Ain
+                @test L2 * Q ≈ A
+                @test isisometric(Q; side = :right, atol, rtol)
+                @test istril(L2)
+                if positive
+                    @test has_positive_diagonal(L2)
+                end
+
+                # L is not required
+                Ain2 = deepcopy(A)
+                _, Q2 = lq_compact!(Ain2, (similar(A, (0, 0)), Ain2); positive)
+                @test Q2 === Ain2
+                @test Q2 ≈ Q
+            end
+
+            if m == n
+                Ain = deepcopy(A)
+                Lf, Q = lq_full!(Ain, (similar(A, (m, n)), Ain))
+                @test Q === Ain
+                @test Lf * Q ≈ A
+                @test isunitary(Q; atol, rtol)
+                @test has_positive_diagonal(Lf)
+            end
+
+            # blocked algorithm and aliased L are not supported
+            Ain = deepcopy(A)
+            @test_throws ArgumentError lq_compact!(Ain, (L, Ain); blocksize = 2)
+            Ain = deepcopy(A)
+            @test_throws ArgumentError lq_compact!(Ain, (view(Ain, :, 1:m), Ain))
         end
     end
 end

@@ -56,7 +56,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
             )
             TestSuite.test_qr_algs(T, (m, n), LAPACK_QR_ALGS)
         elseif T ∈ GenericFloats
-            TestSuite.test_qr(T, (m, n); test_pivoted = false, test_blocksize = false)
+            TestSuite.test_qr(T, (m, n); test_pivoted = false, test_blocksize = false, test_inplaceQ = false)
             GENERIC_QR_ALGS = (Householder(; driver = Native()), Householder(; driver = GLA()))
             TestSuite.test_qr_algs(T, (m, n), GENERIC_QR_ALGS)
         end

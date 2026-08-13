@@ -61,6 +61,8 @@ function qr_householder!(
         throw(ArgumentError(lazy"$driver does not provide a blocked QR decomposition"))
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
+    Q === A &&
+        throw(ArgumentError(lazy"$driver does not provide an inplace Q"))
 
     m, n = size(A)
     minmn = min(m, n)

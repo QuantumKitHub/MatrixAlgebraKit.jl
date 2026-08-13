@@ -76,6 +76,10 @@ Algorithm type to denote the algorithm for computing QR, RQ, QL or LQ decomposit
 
 Depending on the driver, various other keywords may be (un)available to customize the implementation.
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+
+`Q` may be computed in the space of the input matrix `A`, by supplying `A` itself as output for
+`Q`. This requires `blocksize = 1`, a tall `A` for QR (a wide `A` for LQ), and `R` (or `L`) to not
+share memory with `A`.
 """
 @algdef Householder
 function Householder(;
