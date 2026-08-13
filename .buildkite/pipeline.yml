@@ -27,3 +27,8 @@ steps:
         group:
           - "decompositions"
           - "mooncake"
+        adjustments:
+          - with:
+              queue: "rocm"
+              group: "mooncake"
+            skip: true
