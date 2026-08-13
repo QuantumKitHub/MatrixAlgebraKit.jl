@@ -31,4 +31,10 @@ steps:
           - with:
               queue: "rocm"
               group: "mooncake"
+              julia: "1.10"
+            skip: true
+          - with:
+              queue: "rocm"
+              group: "mooncake"
+              julia: "1.12"
             skip: true
