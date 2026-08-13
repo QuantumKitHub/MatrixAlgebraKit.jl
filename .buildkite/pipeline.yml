@@ -27,14 +27,14 @@ steps:
         group:
           - "decompositions"
           - "mooncake"
-        adjustments:
-          - with:
-              queue: "rocm"
-              group: "mooncake"
-              julia: "1.10"
-            skip: true
-          - with:
-              queue: "rocm"
-              group: "mooncake"
-              julia: "1.12"
-            skip: true
+      adjustments:
+        - with:
+            queue: "rocm"
+            group: "mooncake"
+            julia: "1.10"
+          skip: true
+        - with:
+            queue: "rocm"
+            group: "mooncake"
+            julia: "1.12"
+          skip: true
