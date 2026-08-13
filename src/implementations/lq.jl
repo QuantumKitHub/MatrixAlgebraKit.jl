@@ -154,9 +154,9 @@ function lq_householder!(
     if inplaceQ
         # unglq! builds Q in the space of A, so L has to be extracted first and cannot alias A
         (blocksize == 1 && n >= m) ||
-            throw(ArgumentError("inplace Q only supported if matrix is wide (`m <= n`) and using the unblocked algorithm (`blocksize = 1`)"))
+            throw(ArgumentError(lazy"in-place Q is only supported if matrix is wide (`$m ≤ $n`) and using the unblocked algorithm (`blocksize = $blocksize`)"))
         (computeL && Base.mightalias(L, A)) &&
-            throw(ArgumentError("inplace Q only supported if L does not share memory with A"))
+            throw(ArgumentError("in-place Q is only supported if L does not share memory with A"))
     end
 
     if blocksize > 1
@@ -319,7 +319,7 @@ function lq_via_qr!(
     )
     # Q is written before L, so an L that aliases A would corrupt an inplace Q
     (A === Q && !isempty(L) && Base.mightalias(L, A)) &&
-        throw(ArgumentError("inplace Q only supported if L does not share memory with A"))
+        throw(ArgumentError("in-place Q is only supported if L does not share memory with A"))
     At = adjoint!(similar(A'), A)::AbstractMatrix
     Qt = (A === Q) ? At : similar(Q')
     Lt = similar(L')

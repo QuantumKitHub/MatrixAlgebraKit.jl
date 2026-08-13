@@ -176,9 +176,9 @@ function qr_householder!(
     if inplaceQ
         # ungqr! builds Q in the space of A, so R has to be extracted first and cannot alias A
         (blocksize == 1 && m >= n) ||
-            throw(ArgumentError("inplace Q only supported if matrix is tall (`m >= n`) and using the unblocked algorithm (`blocksize = 1`)"))
+            throw(ArgumentError(lazy"in-place Q is only supported if matrix is tall (`$m >= $n`) and using the unblocked algorithm (`blocksize = $blocksize`)"))
         (computeR && Base.mightalias(R, A)) &&
-            throw(ArgumentError("inplace Q only supported if R does not share memory with A"))
+            throw(ArgumentError("in-place Q is only supported if R does not share memory with A"))
     end
 
     # Compute QR in packed form
@@ -224,7 +224,7 @@ function qr_householder!(
     pivoted &&
         throw(ArgumentError(lazy"$driver does not provide a pivoted QR decomposition"))
     Q === A &&
-        throw(ArgumentError(lazy"$driver does not provide an inplace Q"))
+        throw(ArgumentError(lazy"$driver does not provide an in-place Q"))
     # positive = true regardless of setting
 
     m, n = size(A)
