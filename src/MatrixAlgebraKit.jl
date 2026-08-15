@@ -31,6 +31,7 @@ export left_polar!, right_polar!
 export left_orth, right_orth, left_null, right_null
 export left_orth!, right_orth!, left_null!, right_null!
 export exponential, exponential!
+export squareroot, squareroot!
 
 export Householder, Native_HouseholderQR, Native_HouseholderLQ
 export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar
@@ -115,6 +116,7 @@ include("interface/schur.jl")
 include("interface/polar.jl")
 include("interface/orthnull.jl")
 include("interface/exponential.jl")
+include("interface/squareroot.jl")
 
 include("implementations/projections.jl")
 include("implementations/truncation.jl")
@@ -128,6 +130,8 @@ include("implementations/schur.jl")
 include("implementations/polar.jl")
 include("implementations/orthnull.jl")
 include("implementations/exponential.jl")
+include("implementations/matrixfunctions.jl")
+include("implementations/squareroot.jl")
 
 include("common/gauge.jl") # needs to be defined after the functions are
 

@@ -43,6 +43,27 @@ Default tolerance for deciding to warn if the provided `A` is not hermitian.
 """
 default_hermitian_tol(A) = eps(norm(A, Inf))^(3 / 4)
 
+"""
+    default_domain_atol(λ, alg)
+
+Default absolute tolerance for deciding when the eigenvalues `λ` should be considered
+to lie outside of the domain of a matrix function, e.g. on the negative real axis for
+[`squareroot`](@ref) of a real matrix.
+
+The tolerance has to absorb the error with which `alg` obtained `λ`, and that error differs by
+orders of magnitude between the algorithms, so the default is algorithm-dependent.
+It is both the default clamping radius of [`squareroot`](@ref), which exposes it as `domain_atol`,
+and the never user-settable tolerance with which a complex eigenvalue of a real matrix is decided to
+lie *on* the negative real axis.
+See [Domain considerations](@ref sec_matrixfunction_domain) for the resulting values.
+"""
+function default_domain_atol end
+
+# roundoff scales only with number of elements and spectrum - e.g. hermitian precision
+# conditioning is less strict
+_roundoff_domain_atol(λ) = length(λ) * eps(real(float(one(eltype(λ))))) * maximum(abs, λ; init = abs(zero(eltype(λ))))
+_conditioning_domain_atol(λ) = defaulttol(λ) * maximum(abs, λ; init = abs(zero(eltype(λ))))
+
 
 const DEFAULT_FIXGAUGE = Ref(true)
 
