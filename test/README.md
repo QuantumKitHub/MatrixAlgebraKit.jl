@@ -75,7 +75,7 @@ file placed directly in `test/` would belong to no group and never run in CI.
 |-------|----------|
 | `common` | Algorithm selection and defaults, truncation strategies, projections, Aqua code-quality checks |
 | `decompositions` | `qr`, `lq`, `svd`, `eig`, `eigh`, `gen_eig`, `schur`, `polar`, `orthnull` on CPU and GPU array types |
-| `matrixfunctions` | `exponential` on CPU and GPU array types |
+| `matrixfunctions` | `exponential`, `squareroot` on CPU and GPU array types |
 | `chainrules` | ChainRulesCore rules, exercised through ChainRulesTestUtils and Zygote |
 | `mooncake` | Mooncake AD rules |
 | `enzyme` | Enzyme AD rules, exercised through EnzymeTestUtils |
@@ -132,8 +132,11 @@ Supporting infrastructure in the module:
 - `precision(T)` — the default tolerance, `sqrt(eps(real(T)))`.
 - Predicates used throughout the assertions: `isleftnull`, `isrightnull`, `isleftcomplete`,
   `isrightcomplete`, `has_positive_diagonal`.
-- `instantiate_unitary`, `instantiate_rank_deficient_matrix`, `instantiate_smallnorm_matrix` — inputs
-  with prescribed structure or spectrum.
+- `instantiate_unitary`, `instantiate_rank_deficient_matrix` — inputs with prescribed structure.
+- `instantiate_smallnorm_matrix`, `instantiate_offaxis_matrix`, `instantiate_posdef_matrix`,
+  `instantiate_hermitian_spectrum` — inputs with a prescribed *spectrum*, which the matrix functions
+  need: `squareroot` is only defined away from the negative real axis, so the plain `randn` of
+  `instantiate_matrix` will not do.
 
 `test/linearmap.jl` is a further helper, defining a `LinearMap` wrapper that is deliberately *not* an
 `AbstractMatrix`, used to check the generic code paths. It is excluded from discovery and included

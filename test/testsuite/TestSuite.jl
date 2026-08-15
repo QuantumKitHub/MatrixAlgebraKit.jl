@@ -102,11 +102,49 @@ function instantiate_rank_deficient_matrix(::Type{T}, sz; trunc = truncrank(div(
     return Diagonal(diag(mul!(A, V, C)))
 end
 
+# `squareroot` is only defined away from the negative real axis, so the matrix functions need
+# matrices with a controlled spectrum rather than the plain `randn` of `instantiate_matrix`
+
 # spectral radius at most one, keeping `exponential` well inside the principal branch
 function instantiate_smallnorm_matrix(T, sz)
     A = instantiate_matrix(T, sz)
     return A / norm(A)
 end
+
+# spectrum inside the unit disk around 1, i.e. clear of the negative real axis and of zero
+instantiate_offaxis_matrix(T, sz) = instantiate_smallnorm_matrix(T, sz) + I
+
+# hermitian positive definite, so that the `eigh`-based algorithms apply
+function instantiate_posdef_matrix(T, sz)
+    A = instantiate_matrix(T, sz)
+    return project_hermitian!(A * A') + I
+end
+
+# hermitian with the prescribed (real) spectrum `λ`, for probing the domain boundary
+function instantiate_hermitian_spectrum(T, sz, λ)
+    A = instantiate_matrix(T, sz)
+    n = size(A, 1)
+    @assert length(λ) == n
+    dv = A isa Diagonal ? diagview(A) : A
+    Ddiag = similar(dv, eltype(A), n)
+    # convert on the host first: `copyto!` onto a device array does not convert eltypes
+    copyto!(Ddiag, convert(Vector{eltype(A)}, collect(λ)))
+    A isa Diagonal && return Diagonal(Ddiag)
+    V = instantiate_unitary(T, A, n)
+    return project_hermitian!(V * Diagonal(Ddiag) * V')
+end
+
+# rebuild `alg` with an explicit `domain_atol`, so that the domain tests need not spell out the
+# inner decomposition algorithm a second time
+with_domain_atol(alg::MatrixFunctionViaEig, atol) = MatrixFunctionViaEig(alg.eig_alg; domain_atol = atol)
+with_domain_atol(alg::MatrixFunctionViaEigh, atol) = MatrixFunctionViaEigh(alg.eigh_alg; domain_atol = atol)
+with_domain_atol(::MatrixAlgebraKit.DiagonalAlgorithm, atol) = DiagonalAlgorithm(; domain_atol = atol)
+with_domain_atol(::MatrixFunctionViaLA, atol) = MatrixFunctionViaLA(; domain_atol = atol)
+
+# a tolerance generous enough to admit an eigenvalue at `-√eps`. For `MatrixFunctionViaLA` it bounds
+# the imaginary part of the result rather than the spectrum, which sits on a coarser scale.
+domain_test_atol(::MatrixAlgebraKit.AbstractAlgorithm, R) = cbrt(eps(R))
+domain_test_atol(::MatrixFunctionViaLA, R) = one(R) / 2
 
 include("ad_utils.jl")
 
@@ -126,6 +164,7 @@ include("decompositions/svd.jl")
 # Matrix functions
 # ----------------
 include("matrixfunctions/exponential.jl")
+include("matrixfunctions/squareroot.jl")
 
 # Mooncake
 # --------
