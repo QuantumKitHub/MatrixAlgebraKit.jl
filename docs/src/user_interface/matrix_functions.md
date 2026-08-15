@@ -20,20 +20,83 @@ For a full description of how to select and configure algorithms, see [Algorithm
 Importantly, for generic code patterns it is recommended to always use the output `F` explicitly, since some implementations may not be able to reuse the provided memory.
 Additionally, the `f!` method typically assumes that it is allowed to destroy the input `A`, and making use of the contents of `A` afterwards should be deemed as undefined behavior.
 
-## Exponential
+## Algorithms
 
-The [exponential](https://en.wikipedia.org/wiki/Matrix_exponential) of a square matrix `A` is used in many scientific applications, as it arises in the solution of an autonomous linear differential equation.
-The default algorithm [`MatrixFunctionViaTaylor`](@ref) is a pure-Julia scaling-and-squaring evaluation of the Taylor series.
-As it requires no LAPACK support, it also applies to generic data types at arbitrary precision.
-Alternatively, an implementation based on a Padé approximation is available in `LinearAlgebra`, and can be accessed by the algorithm [`MatrixFunctionViaLA`](@ref).
-The exponential can also be calculated by first calculating the (hermitian) eigenvalue decomposition, and then computing the scalar exponential of the diagonal elements.
-This strategy is implemented via the algorithms [`MatrixFunctionViaEig`](@ref) and [`MatrixFunctionViaEigh`](@ref), and call `eig_full` and `eigh_full`, respectively.
-Additionally, in order to calculate `exp(τ * A)`, the function `exponential` can be called with `(τ, A)`, using the same algorithms as before.
+The matrix functions share a common set of algorithms, which differ in how they reduce the problem to a scalar function of the eigenvalues:
+
+- [`MatrixFunctionViaLA`](@ref) defers to the implementation of `LinearAlgebra`, which is Schur-based for [`squareroot`](@ref) and a Padé approximation for [`exponential`](@ref).
+- [`MatrixFunctionViaEig`](@ref) and [`MatrixFunctionViaEigh`](@ref) first compute an eigenvalue decomposition, through `eig_full` and `eigh_full` respectively, and then apply the scalar function to the eigenvalues. The latter requires a hermitian input, and in return its result is hermitian by construction.
+- [`MatrixFunctionViaTaylor`](@ref) applies to [`exponential`](@ref) only, and evaluates its Taylor series through scaling and squaring. As it requires no LAPACK support, it also applies to generic data types at arbitrary precision.
+- [`DiagonalAlgorithm`](@ref) is the fast path for a `Diagonal` input, and simply maps the scalar function over the diagonal.
 
 ```@docs; canonical=false
-exponential
 MatrixAlgebraKit.MatrixFunctionViaTaylor
 MatrixAlgebraKit.MatrixFunctionViaLA
 MatrixAlgebraKit.MatrixFunctionViaEig
 MatrixAlgebraKit.MatrixFunctionViaEigh
+```
+
+## [Domain considerations](@id sec_matrixfunction_domain)
+
+Not every matrix function is defined for every square matrix: [`squareroot`](@ref) requires the eigenvalues to avoid the negative real axis, and its principal value is complex whenever eigenvalues on that axis are present.
+In MatrixAlgebraKit, we aim to keep type stability, and thus the scalar type of the output always matches that of the input.
+As such, a real matrix with eigenvalues on the negative real axis leads to a `DomainError`.
+You should pass a complex matrix instead to obtain the complex principal value.
+
+The hard part is that eigenvalues are *computed*, not given, so deciding whether a matrix is in domain means comparing a number against a tolerance, which the keyword `domain_atol` controls.
+Since `sqrt(0) = 0`, the domain boundary belongs to the domain, and an eigenvalue that is negative only by roundoff can be clamped onto zero and the computation continues.
+Raising `domain_atol` therefore *accepts* more matrices.
+
+Clamping is not as cheap as its tolerance suggests, however.
+It is backward stable, but only to the size of the eigenvalue that was discarded, and the forward error it incurs is *not* of that size: clamping an eigenvalue at `-δ` perturbs the square root by `O(√δ)`, so an accepted result computed at the default tolerance can differ from the exact principal value by considerably more than the tolerance itself.
+
+Additionally, not all algorithms have acces to the spectrum.
+[`MatrixFunctionViaLA`](@ref) defers to `LinearAlgebra`, which decides internally whether a real result exists and hands back a complex matrix when it does not.
+There are no eigenvalues to compare against anything, so the only quantity available is the imaginary part of the *result* — a different quantity on a different scale, since an eigenvalue at `-δ` shows up as an imaginary part of order `√δ`.
+The two tolerances are not comparable, and a value tuned for one algorithm should not be carried over to the other.
+A tolerance is not optional there either, as `LinearAlgebra` casts a result back to a real matrix only when its imaginary part vanishes identically.
+
+| Algorithm | What `domain_atol` does | Default |
+|:----------|:------------------------|:--------|
+| [`DiagonalAlgorithm`](@ref) | eigenvalues negative within the tolerance are clamped to zero | `n * eps * maximum(abs, λ)` |
+| [`MatrixFunctionViaEigh`](@ref) | as above, on the eigenvalues from `eigh_full` | `n * eps * maximum(abs, λ)` |
+| [`MatrixFunctionViaEig`](@ref) | as above, on the eigenvalues from `eig_full` | `defaulttol(λ) * maximum(abs, λ)` |
+| [`MatrixFunctionViaLA`](@ref) | bounds `maximum(abs ∘ imag, sqrt(A))` instead | `defaulttol(A) * norm(sqrt(A), Inf)` |
+
+The first two use the same rule as `LinearAlgebra.sqrt(::Hermitian; rtol = eps(T) * size(A, 1))`, so for hermitian input MatrixAlgebraKit and `LinearAlgebra` accept and reject the same matrices.
+`MatrixFunctionViaEig` is deliberately looser, at `eps^(2/3)` rather than `eps`, since the accuracy of its eigenvalues is additionally limited by the conditioning of the eigenvectors.
+
+One tolerance is not a choice about the domain, and so it is not user-settable.
+When a real matrix is diagonalized by [`MatrixFunctionViaEig`](@ref), its eigenvalues come back complex, and deciding whether one lies *on* the negative real axis — as opposed to being one of a complex-conjugate pair, which obstructs nothing — is a question about the accuracy of the eigensolver rather than about the domain.
+That test always uses [`default_domain_atol`](@ref), however you set `domain_atol`.
+The other algorithms face no such question, since their eigenvalues are real to begin with.
+
+!!! warning "`MatrixFunctionViaEig` and defective matrices"
+    The eigenvalues of a Jordan block of size `k` are resolved only to `eps^(1/k)`, which exceeds every tolerance on this page.
+    A real matrix with a defective negative eigenvalue can therefore have its spectrum reported as a complex-conjugate pair well off the axis, be judged in domain, and yield a result whose imaginary part is silently discarded.
+    This is not specific to the domain test: `MatrixFunctionViaEig` reconstructs `f(A)` by inverting the eigenvector matrix, so for a defective or nearly defective matrix its result is unreliable whether the input is real or complex.
+    Use the Schur-based [`MatrixFunctionViaLA`](@ref) for such matrices.
+
+```@docs; canonical=false
+MatrixAlgebraKit.default_domain_atol
+```
+
+## Exponential
+
+The [exponential](https://en.wikipedia.org/wiki/Matrix_exponential) of a square matrix `A` is used in many scientific applications, as it arises in the solution of an autonomous linear differential equation.
+It is defined for every square matrix, so the domain considerations above do not apply to it.
+The default algorithm is [`MatrixFunctionViaTaylor`](@ref), which is the only one that also covers generic data types at arbitrary precision.
+Additionally, in order to calculate `exp(τ * A)`, the function `exponential` can be called with `(τ, A)`, using the same algorithms.
+
+```@docs; canonical=false
+exponential
+```
+
+## Square root
+
+The principal [square root](https://en.wikipedia.org/wiki/Square_root_of_a_matrix) of a square matrix `A` is the unique square root whose eigenvalues have nonnegative real part.
+It is computed by the function [`squareroot`](@ref), with [`MatrixFunctionViaLA`](@ref) as the default algorithm, and is subject to the domain considerations above.
+
+```@docs; canonical=false
+squareroot
 ```

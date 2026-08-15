@@ -22,8 +22,14 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- New matrix function `squareroot`, computing the principal square root, supporting the
+  `MatrixFunctionViaLA`, `MatrixFunctionViaEig`, `MatrixFunctionViaEigh` and `DiagonalAlgorithm`
+  algorithms ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
+
 ### Changed
 
+- `MatrixFunctionViaEig` and `MatrixFunctionViaEigh` gained a `domain_atol` field, settable through
+  the keyword argument of the same name. ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
 - `qr_compact!`, `qr_full!`, `lq_compact!` and `lq_full!` now extract `R` (or `L`) before
   constructing `Q`, so that an inplace `Q` (supplying `A` itself as output for `Q`) can be combined
   with computing `R` (or `L`) and with `positive = true`.
