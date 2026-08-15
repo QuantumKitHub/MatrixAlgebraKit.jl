@@ -1,14 +1,12 @@
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
   - package-ecosystem: "julia"
-    directories: # workspace members each need their own entry
-      - "/"
-      - "/test"
-      - "/docs"
+    directory: "/"
     schedule:
       interval: "weekly"
     groups: # uncomment to group all julia package updates into a single PR
