@@ -4,7 +4,7 @@ Tests are driven by [ParallelTestRunner.jl](https://github.com/JuliaTesting/Para
 Every `.jl` file under `test/` is auto-discovered and executed in its own worker process, so test
 files share no state and must be self-contained.
 
-The test environment is a [Pkg workspace](https://pkgdocs.julialang.org/dev/workspaces/) member:
+The test environment is a [Pkg workspace](https://pkgdocs.julialang.org/v1/toml-files/#Workspaces) member:
 `test/Project.toml` declares the test dependencies and resolves the parent package through
 `[sources]`, while the whole workspace shares a single `Manifest.toml` at the repository root.
 
@@ -73,13 +73,21 @@ file placed directly in `test/` would belong to no group and never run in CI.
 
 | Group | Contents |
 |-------|----------|
-| `common` | Algorithm selection and defaults, truncation strategies, projections, matrix exponential, Aqua code-quality checks |
+| `common` | Algorithm selection and defaults, truncation strategies, projections, Aqua code-quality checks |
 | `decompositions` | `qr`, `lq`, `svd`, `eig`, `eigh`, `gen_eig`, `schur`, `polar`, `orthnull` on CPU and GPU array types |
+| `matrixfunctions` | `exponential` on CPU and GPU array types |
 | `chainrules` | ChainRulesCore rules, exercised through ChainRulesTestUtils and Zygote |
 | `mooncake` | Mooncake AD rules |
 | `enzyme` | Enzyme AD rules, exercised through EnzymeTestUtils |
-| `genericlinearalgebra` | `MatrixAlgebraKitGenericLinearAlgebraExt` |
-| `genericschur` | `MatrixAlgebraKitGenericSchurExt` |
+
+The GPU runners select groups explicitly, through the `group` matrix of `.buildkite/pipeline.yml`, so
+a new group needs to be listed there to get GPU coverage.
+
+The generic element types (`BigFloat` and friends) are not a group of their own: each driver covers
+them alongside the BLAS floats, naming the `MatrixAlgebraKitGenericSchurExt` and
+`MatrixAlgebraKitGenericLinearAlgebraExt` algorithms explicitly. Both extensions are loaded at once,
+so a bare `QRIteration()` resolves its driver to GenericLinearAlgebra, which provides no `geev!`;
+`eig`-based algorithms therefore have to spell out `QRIteration(; driver = GS())`.
 
 Two directories are *not* groups: `testsuite/` holds the shared implementation described below and
 is excluded both from discovery (in `runtests.jl`) and from CI (`exclude: '["testsuite"]'`).
@@ -124,7 +132,8 @@ Supporting infrastructure in the module:
 - `precision(T)` — the default tolerance, `sqrt(eps(real(T)))`.
 - Predicates used throughout the assertions: `isleftnull`, `isrightnull`, `isleftcomplete`,
   `isrightcomplete`, `has_positive_diagonal`.
-- `instantiate_unitary`, `instantiate_rank_deficient_matrix` — inputs with prescribed structure.
+- `instantiate_unitary`, `instantiate_rank_deficient_matrix`, `instantiate_smallnorm_matrix` — inputs
+  with prescribed structure or spectrum.
 
 `test/linearmap.jl` is a further helper, defining a `LinearMap` wrapper that is deliberately *not* an
 `AbstractMatrix`, used to check the generic code paths. It is excluded from discovery and included

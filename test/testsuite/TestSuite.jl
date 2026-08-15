@@ -102,6 +102,12 @@ function instantiate_rank_deficient_matrix(::Type{T}, sz; trunc = truncrank(div(
     return Diagonal(diag(mul!(A, V, C)))
 end
 
+# spectral radius at most one, keeping `exponential` well inside the principal branch
+function instantiate_smallnorm_matrix(T, sz)
+    A = instantiate_matrix(T, sz)
+    return A / norm(A)
+end
+
 include("ad_utils.jl")
 
 include("projections.jl")
@@ -116,6 +122,10 @@ include("decompositions/eig.jl")
 include("decompositions/eigh.jl")
 include("decompositions/orthnull.jl")
 include("decompositions/svd.jl")
+
+# Matrix functions
+# ----------------
+include("matrixfunctions/exponential.jl")
 
 # Mooncake
 # --------
