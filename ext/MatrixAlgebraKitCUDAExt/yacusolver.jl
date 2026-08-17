@@ -26,7 +26,8 @@ for (bname, fname, elty, relty) in
                 A::StridedCuMatrix{$elty},
                 S::StridedCuVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::StridedCuMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
-                Vᴴ::StridedCuMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+                Vᴴ::StridedCuMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                check::Bool = false,
             )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -90,8 +91,10 @@ for (bname, fname, elty, relty) in
             end
             CUDA.unsafe_free!(rwork)
 
-            info = @allowscalar dh.info[1]
-            cuSOLVER.chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dh.info[1]
+                cuSOLVER.chkargsok(BlasInt(info))
+            end
 
             return (S, U, Vᴴ)
         end
@@ -103,7 +106,8 @@ function gesvdp!(
         S::StridedCuVector = similar(A, real(T), min(size(A)...)),
         U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
         Vᴴ::StridedCuMatrix{T} = similar(A, T, min(size(A)...), size(A, 2));
-        tol = norm(A) * eps(real(T))
+        tol = norm(A) * eps(real(T)),
+        check::Bool = false,
     ) where {T <: BlasFloat}
     chkstride1(A, U, S, Vᴴ)
     m, n = size(A)
@@ -166,8 +170,10 @@ function gesvdp!(
     err = h_err_sigma[]
     err > tol && @warn "gesvdp! did not attain the requested tolerance: error = $err > tolerance = $tol"
 
-    flag = @allowscalar dh.info[1]
-    cuSOLVER.chklapackerror(BlasInt(flag))
+    if check
+        flag = @allowscalar dh.info[1]
+        cuSOLVER.chklapackerror(BlasInt(flag))
+    end
     if Ũ !== U && length(U) > 0
         U .= view(Ũ, 1:m, 1:size(U, 2))
     end
@@ -196,6 +202,7 @@ for (bname, fname, elty, relty) in
                 U::StridedCuMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
                 Vᴴ::StridedCuMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
                 tol::$relty = eps($relty),
+                check::Bool = false,
                 max_sweeps::Int = 100,
                 kwargs...
             )
@@ -253,8 +260,10 @@ for (bname, fname, elty, relty) in
                 )
             end
 
-            info = @allowscalar dh.info[1]
-            cuSOLVER.chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dh.info[1]
+                cuSOLVER.chkargsok(BlasInt(info))
+            end
 
             cuSOLVER.cusolverDnDestroyGesvdjInfo(params[])
 
@@ -272,6 +281,7 @@ function gesvdr!(
         S::StridedCuVector = similar(A, real(T), min(size(A)...)),
         U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
         Vᴴ::StridedCuMatrix{T} = similar(A, T, min(size(A)...), size(A, 2));
+        check::Bool = false,
         k::Int = length(S),
         p::Int = min(size(A)...) - k - 1,
         niters::Int = 1
@@ -319,8 +329,10 @@ function gesvdr!(
         )
     end
 
-    flag = @allowscalar dh.info[1]
-    cuSOLVER.chklapackerror(BlasInt(flag))
+    if check
+        flag = @allowscalar dh.info[1]
+        cuSOLVER.chklapackerror(BlasInt(flag))
+    end
     if Ũ !== U && length(U) > 0
         U .= view(Ũ, 1:m, 1:size(U, 2))
     end
@@ -336,7 +348,7 @@ end
 # Wrapper for general eigensolver
 for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:ComplexF32, :ComplexF32), (:ComplexF64, :ComplexF64))
     @eval begin
-        function Xgeev!(A::StridedCuMatrix{$elty}, D::StridedCuVector{$celty}, V::StridedCuMatrix{$celty})
+        function Xgeev!(A::StridedCuMatrix{$elty}, D::StridedCuVector{$celty}, V::StridedCuMatrix{$celty}; check::Bool = false)
             require_one_based_indexing(A, V, D)
             chkstride1(A, V, D)
             n = checksquare(A)
@@ -391,8 +403,10 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
                     sizeof(buffer_gpu), buffer_cpu, sizeof(buffer_cpu), dh.info
                 )
             end
-            flag = @allowscalar dh.info[1]
-            cuSOLVER.chkargsok(BlasInt(flag))
+            if check
+                flag = @allowscalar dh.info[1]
+                cuSOLVER.chkargsok(BlasInt(flag))
+            end
             if eltype(A) <: Real
                 work = CuVector{$elty}(undef, n)
                 DR = view(D2, 1:n)
@@ -414,7 +428,8 @@ end
 #                         jobz::Char,
 #                         uplo::Char,
 #                         A::StridedCuMatrix{$elty},
-#                         B::StridedCuMatrix{$elty})
+#                         B::StridedCuMatrix{$elty};
+#                         check::Bool = false)
 #             chkuplo(uplo)
 #             nA, nB = checksquare(A, B)
 #             if nB != nA
@@ -436,9 +451,11 @@ end
 #                 return $fname(dh, itype, jobz, uplo, n, A, lda, B, ldb, W,
 #                               buffer, sizeof(buffer) ÷ sizeof($elty), dh.info)
 #             end
-
-#             info = @allowscalar dh.info[1]
-#             chkargsok(BlasInt(info))
+#
+#             if check
+#                 info = @allowscalar dh.info[1]
+#                 chkargsok(BlasInt(info))
+#             end
 
 #             if jobz == 'N'
 #                 return W
@@ -460,6 +477,7 @@ end
 #                         uplo::Char,
 #                         A::StridedCuMatrix{$elty},
 #                         B::StridedCuMatrix{$elty};
+#                         check::Bool = false,
 #                         tol::$relty=eps($relty),
 #                         max_sweeps::Int=100)
 #             chkuplo(uplo)
@@ -488,10 +506,10 @@ end
 #                 return $fname(dh, itype, jobz, uplo, n, A, lda, B, ldb, W,
 #                               buffer, sizeof(buffer) ÷ sizeof($elty), dh.info, params[])
 #             end
-
-#             info = @allowscalar dh.info[1]
-#             chkargsok(BlasInt(info))
-
+#             if check
+#                 info = @allowscalar dh.info[1]
+#                 chkargsok(BlasInt(info))
+#             end
 #             cusolverDnDestroySyevjInfo(params[])
 
 #             if jobz == 'N'
@@ -516,6 +534,7 @@ end
 #         function $jname(jobz::Char,
 #                         uplo::Char,
 #                         A::StridedCuArray{$elty};
+#                         check::Bool = false,
 #                         tol::$relty=eps($relty),
 #                         max_sweeps::Int=100)
 
@@ -548,14 +567,15 @@ end
 #                               sizeof(buffer) ÷ sizeof($elty), dh.info, params[], batchSize)
 #             end
 
-#             # Copy the solver info and delete the device memory
-#             info = @allowscalar collect(dh.info)
+#             if check
+#                 # Copy the solver info and delete the device memory
+#                 info = collect(dh.info)
 
-#             # Double check the solver's exit status
-#             for i in 1:batchSize
-#                 chkargsok(BlasInt(info[i]))
+#                 # Double check the solver's exit status
+#                 for i in 1:batchSize
+#                     chkargsok(BlasInt(info[i]))
+#                 end
 #             end
-
 #             cusolverDnDestroySyevjInfo(params[])
 
 #             # Return eigenvalues (in W) and possibly eigenvectors (in A)
@@ -575,7 +595,8 @@ end
 #     @eval begin
 #         function potrsBatched!(uplo::Char,
 #                                A::Vector{<:StridedCuMatrix{$elty}},
-#                                B::Vector{<:StridedCuVecOrMat{$elty}})
+#                                B::Vector{<:StridedCuVecOrMat{$elty}};
+#                                check::Bool = false,)
 #             if length(A) != length(B)
 #                 throw(DimensionMismatch(""))
 #             end
@@ -602,10 +623,11 @@ end
 #             # Run the solver
 #             $fname(dh, uplo, n, nrhs, Aptrs, lda, Bptrs, ldb, dh.info, batchSize)
 
-#             # Copy the solver info and delete the device memory
-#             info = @allowscalar dh.info[1]
-#             chklapackerror(BlasInt(info))
-
+#             if check
+#                  # Copy the solver info and delete the device memory
+#                  info = @allowscalar dh.info[1]
+#                  chklapackerror(BlasInt(info))
+#             end
 #             return B
 #         end
 #     end
@@ -616,7 +638,7 @@ end
 #                       (:cusolverDnCpotrfBatched, :ComplexF32),
 #                       (:cusolverDnZpotrfBatched, :ComplexF64))
 #     @eval begin
-#         function potrfBatched!(uplo::Char, A::Vector{<:StridedCuMatrix{$elty}})
+#         function potrfBatched!(uplo::Char, A::Vector{<:StridedCuMatrix{$elty}}; check::Bool = false)
 
 #             # Set up information for the solver arguments
 #             chkuplo(uplo)
@@ -632,14 +654,15 @@ end
 #             # Run the solver
 #             $fname(dh, uplo, n, Aptrs, lda, dh.info, batchSize)
 
-#             # Copy the solver info and delete the device memory
-#             info = @allowscalar collect(dh.info)
+#             if check
+#                 # Copy the solver info and delete the device memory
+#                 info = collect(dh.info)
 
-#             # Double check the solver's exit status
-#             for i in 1:batchSize
-#                 chkargsok(BlasInt(info[i]))
+#                 # Double check the solver's exit status
+#                 for i in 1:batchSize
+#                     chkargsok(BlasInt(info[i]))
+#                 end
 #             end
-
 #             # info[i] > 0 means the leading minor of order info[i] is not positive definite
 #             # LinearAlgebra.LAPACK does not throw Exception here
 #             # to simplify calls to isposdef! and factorize
@@ -649,7 +672,8 @@ end
 # end
 
 # # gesv
-# function gesv!(X::CuVecOrMat{T}, A::CuMatrix{T}, B::CuVecOrMat{T}; fallback::Bool=true,
+# function gesv!(X::CuVecOrMat{T}, A::CuMatrix{T}, B::CuVecOrMat{T};
+#                fallback::Bool=true, check::Bool = false,
 #                residual_history::Bool=false, irs_precision::String="AUTO",
 #                refinement_solver::String="CLASSICAL",
 #                maxiters::Int=0, maxiters_inner::Int=0, tol::Float64=0.0,
@@ -703,10 +727,11 @@ end
 #                                   X, ldx, buffer, sizeof(buffer), niters, dh.info)
 #     end
 
-#     # Copy the solver flag and delete the device memory
-#     flag = @allowscalar dh.info[1]
-#     chklapackerror(BlasInt(flag))
-
+#     if check
+#        # Copy the solver flag and delete the device memory
+#        flag = @allowscalar dh.info[1]
+#        chklapackerror(BlasInt(flag))
+#     end
 #     return X, info
 # end
 
@@ -721,6 +746,7 @@ for (bname, fname, elty, relty) in (
                 A::StridedCuMatrix{$elty},
                 W::StridedCuVector{$relty},
                 V::StridedCuMatrix{$elty};
+                check::Bool = false,
                 uplo::Char = 'U',
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100
@@ -752,8 +778,10 @@ for (bname, fname, elty, relty) in (
                 )
             end
 
-            info = @allowscalar dh.info[1]
-            chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dh.info[1]
+                chkargsok(BlasInt(info))
+            end
 
             if jobz == 'V' && V !== A
                 copy!(V, A)
@@ -767,6 +795,7 @@ function heevd!(
         A::StridedCuMatrix{T},
         W::StridedCuVector{Tr},
         V::StridedCuMatrix{T};
+        check::Bool = false,
         uplo::Char = 'U'
     ) where {T <: BlasFloat, Tr <: BlasReal}
     chkuplo(uplo)
@@ -800,8 +829,10 @@ function heevd!(
         )
     end
 
-    info = @allowscalar dh.info[1]
-    chkargsok(BlasInt(info))
+    if check
+        info = @allowscalar dh.info[1]
+        chkargsok(BlasInt(info))
+    end
 
     if jobz == 'V' && V !== A
         copy!(V, A)
