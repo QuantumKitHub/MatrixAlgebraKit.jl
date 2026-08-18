@@ -5,12 +5,12 @@ function check_and_prepare_eigh_cotangents(
     )
 
     n, p = size(V)
-    indD = axes(D, 1)[ind]
-    indV = axes(V, 2)[ind]
+    indD = select_indices(axes(D, 1), ind)
+    indV = select_indices(axes(V, 2), ind)
     if !iszerotangent(ΔV)
         n == size(ΔV, 1) || throw(DimensionMismatch())
         length(indV) == size(ΔV, 2) || throw(DimensionMismatch())
-        if indV == 1:p
+        if is_leading_index(indV, p)
             ΔV₁ = copy(ΔV)
         else
             ΔV₁ = zero(V)
@@ -42,8 +42,7 @@ function check_and_prepare_eigh_cotangents(
     if !iszerotangent(ΔDmat)
         ΔD = diagview(ΔDmat)
         length(indD) == length(ΔD) || throw(DimensionMismatch())
-        # needed to avoid GPUCompiler errors
-        VᴴAΔV[diagind(VᴴAΔV)[indD]] .+= real.(ΔD)
+        VᴴAΔV[select_indices(diagind(VᴴAΔV), indD)] .+= real.(ΔD)
     else
         ΔD = nothing
     end
