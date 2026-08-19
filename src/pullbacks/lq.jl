@@ -12,13 +12,15 @@ function check_and_prepare_lq_cotangents(
     if !iszerotangent(ΔQ)
         size(ΔQ) == size(Q) || throw(DimensionMismatch("ΔQ must have the same size as Q"))
         ΔQ₁ .= view(ΔQ, 1:p, 1:n)
-        if p == minmn # full rank case, ΔQ₃ contains gauge-invariant information along Q₁
-            ΔQ₃ = copy(view(ΔQ, (minmn + 1):size(Q, 1), :)) # extra columns in the case of qr_full
-            Q₃ = view(Q, (minmn + 1):size(Q, 1), :)
+        Q₃ = view(Q, (minmn + 1):size(Q, 1), :) # extra rows in the case of lq_full
+        if p == minmn && !isempty(Q₃) # full rank case, ΔQ₃ contains gauge-invariant information along Q₁
+            ΔQ₃ = copy(view(ΔQ, (minmn + 1):size(Q, 1), :))
             ΔQ₃Q₁ᴴ = ΔQ₃ * Q₁'
             mul!(ΔQ₃, ΔQ₃Q₁ᴴ, Q₁, -1, 1)
             Δgauge_Q = norm(ΔQ₃, Inf)
             mul!(ΔQ₁, ΔQ₃Q₁ᴴ', Q₃, -1, 1)
+        elseif p == minmn
+            Δgauge_Q = abs(zero(eltype(Q)))
         else
             ΔQ₂ = view(ΔQ, (p + 1):size(ΔQ, 1), :)
             Δgauge_Q = norm(ΔQ₂, Inf)
