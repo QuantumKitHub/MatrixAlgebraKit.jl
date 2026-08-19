@@ -241,7 +241,7 @@ function svd_trunc_pullback!(
         Y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
         US = mul!(ΔAV, U, Smat) # recycle ΔAV
         AP = mul!(copy(A), US, Vᴴ, -1, 1)
-        @view minS = S[end:end]
+        minS = @view S[end:end]
         AP ./= minS
         S⁻¹ = minS ./ S
         X₁ = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
