@@ -42,6 +42,20 @@ instantiate_matrix(::Type{AT}, size) where {AT <: Diagonal} = Diagonal(randn(rng
 instantiate_matrix(::Type{AT}, size) where {T, AT <: Diagonal{T, <:CuVector}} = Diagonal(CuArray(randn(rng, eltype(AT), size)))
 instantiate_matrix(::Type{AT}, size) where {T, AT <: Diagonal{T, <:ROCVector}} = Diagonal(ROCArray(randn(rng, eltype(AT), size)))
 
+# Collect a batch of separately-allocated matrices into a single contiguous batch, transferring
+# the array data itself rather than a list of pointers into it. For the GPU eltypes the copies
+# stay device-to-device.
+function _collect_batch(As::AbstractVector{<:AbstractMatrix})
+    B = similar(first(As), (size(first(As))..., length(As)))
+    for (i, A) in enumerate(As)
+        copyto!(view(B, :, :, i), A)
+    end
+    return B
+end
+device_batch(As::AbstractVector{<:Array}) = _collect_batch(As)
+device_batch(As::AbstractVector{<:CuArray}) = _collect_batch(As)
+device_batch(As::AbstractVector{<:ROCArray}) = _collect_batch(As)
+
 precision(::Type{T}) where {T <: Number} = sqrt(eps(real(T)))
 precision(::Type{T}) where {T} = precision(eltype(T))
 

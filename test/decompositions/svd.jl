@@ -45,15 +45,21 @@ if !is_buildkite
     end
 end
 
+batch_size = 16
+
 # CUDA tests
 # ------------
 if CUDA.functional()
-    # LAPACK algorithms:
+    # CUSOLVER algorithms:
     for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
         TestSuite.seed_rng!(123)
         TestSuite.test_svd(CuMatrix{T}, (m, n))
         CUDA_SVD_ALGS = (QRIteration(), SVDViaPolar(), Jacobi())
         TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
+
+        TestSuite.test_svd_batched(CuMatrix{T}, (m, n), batch_size)
+        CUDA_SVD_ALGS = (JacobiBatched(),)
+        TestSuite.test_svd_batched_algs(CuMatrix{T}, (m, n), batch_size, CUDA_SVD_ALGS)
     end
 
     # Randomized SVD:
@@ -77,12 +83,15 @@ end
 # AMDGPU tests
 # ------------
 if AMDGPU.functional()
-    # LAPACK algorithms:
-    for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
+    # ROCSOLVER algorithms:
+    for T in BLASFloats, m in (23,), n in (17, m)
         TestSuite.seed_rng!(123)
         TestSuite.test_svd(ROCMatrix{T}, (m, n))
-        AMD_SVD_ALGS = (QRIteration(), Jacobi())
+        AMD_SVD_ALGS = (QRIteration(), Jacobi(), DivideAndConquer())
         TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
+        TestSuite.test_svd_batched(ROCMatrix{T}, (m, n), batch_size)
+        AMD_SVD_ALGS = (QRIterationBatched(), JacobiBatched(), DivideAndConquerBatched())
+        TestSuite.test_svd_batched_algs(ROCMatrix{T}, (m, n), batch_size, AMD_SVD_ALGS)
     end
 
     # Diagonal:

@@ -266,6 +266,92 @@ for (bname, fname, elty, relty) in
     end
 end
 
+# Wrapper for batched SVD via Jacobi
+for (bname, fname, elty, relty) in
+    (
+        (:cusolverDnSgesvdjBatched_bufferSize, :cusolverDnSgesvdjBatched, :Float32, :Float32),
+        (:cusolverDnDgesvdjBatched_bufferSize, :cusolverDnDgesvdjBatched, :Float64, :Float64),
+        (:cusolverDnCgesvdjBatched_bufferSize, :cusolverDnCgesvdjBatched, :ComplexF32, :Float32),
+        (:cusolverDnZgesvdjBatched_bufferSize, :cusolverDnZgesvdjBatched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        #! format: off
+        function gesvdj_batched!(
+                A::StridedCuArray{$elty, 3},
+                S::StridedCuMatrix{$relty} = similar(A, $relty, min(size(A, 1), size(A, 2)), size(A, 3)),
+                U::StridedCuArray{$elty, 3} = similar(A, $elty, size(A, 1), min(size(A, 1), size(A, 2)), size(A, 3)),
+                Vᴴ::StridedCuArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100,
+                kwargs...
+            )
+            #! format: on
+            chkstride1(A, U, Vᴴ, S)
+            m, n, batch_size = size(A)
+            minmn = min(m, n)
+
+            if length(U) == 0 && length(Vᴴ) == 0
+                jobz = 'N'
+                econ = 0
+            else
+                jobz = 'V'
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(U, 2) == size(Vᴴ, 1) == minmn
+                    econ = 1
+                elseif size(U, 2) == m && size(Vᴴ, 1) == n
+                    econ = 0
+                else
+                    throw(DimensionMismatch("invalid column size of U or row size of Vᴴ"))
+                end
+            end
+            length(S) == minmn ||
+                throw(DimensionMismatch("length mismatch between A and S"))
+
+            Ṽ = (jobz == 'V') ? similar(Vᴴ') : similar(Vᴴ, (n, minmn))
+            Ũ = (jobz == 'V') ? U : similar(U, (m, minmn))
+            lda = max(1, stride(A, 2))
+            ldu = max(1, stride(Ũ, 2))
+            ldv = max(1, stride(Ṽ, 2))
+
+            params = Ref{cuSOLVER.gesvdjInfo_t}(C_NULL)
+            cuSOLVER.cusolverDnCreateGesvdjInfo(params)
+            cuSOLVER.cusolverDnXgesvdjSetTolerance(params[], tol)
+            cuSOLVER.cusolverDnXgesvdjSetMaxSweeps(params[], max_sweeps)
+            dh = cuSOLVER.dense_handle()
+
+            function bufferSize()
+                out = Ref{Cint}(0)
+                cuSOLVER.$bname(
+                    dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
+                    out, params[]
+                )
+                return out[] * sizeof($elty)
+            end
+
+            cuSOLVER.with_workspace(dh.workspace_gpu, bufferSize) do buffer
+                return cuSOLVER.$fname(
+                    dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
+                    buffer, sizeof(buffer) ÷ sizeof($elty), dh.info,
+                    params[], batch_size
+                )
+            end
+
+            info = collect(dh.info)
+            cuSOLVER.chkargsok.(BlasInt.(info))
+
+            cuSOLVER.cusolverDnDestroyGesvdjInfo(params[])
+
+            if jobz == 'V'
+                adjoint!(Vᴴ, Ṽ)
+            end
+            return S, U, Vᴴ
+        end
+    end
+end
+
 # Wrapper for randomized SVD
 function gesvdr!(
         A::StridedCuMatrix{T},

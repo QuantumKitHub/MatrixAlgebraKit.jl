@@ -6,7 +6,8 @@ using MatrixAlgebraKit: one!, zero!, uppertriangular!, lowertriangular!
 using MatrixAlgebraKit: diagview, sign_safe
 using MatrixAlgebraKit: ROCSOLVER, LQViaTransposedQR, TruncationStrategy, NoTruncation, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eigh_algorithm
-import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdj!
+import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesdd!, gesvdx!, gesvdj!
+import MatrixAlgebraKit: gesvdj_batched!, gesvdx_batched!, gesdd_batched!, gesvd_batched!
 import MatrixAlgebraKit: heevj!, heevd!, heev!, heevx!
 import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!
 using AMDGPU
@@ -15,10 +16,17 @@ using LinearAlgebra: BlasFloat
 
 include("yarocsolver.jl")
 
-MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedROCVecOrMat{<:BlasFloat}} = ROCSOLVER()
+MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedROCArray{<:BlasFloat}} = ROCSOLVER()
+MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}} = ROCSOLVER()
 
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
-    return QRIteration(; kwargs...)
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix{<:BlasFloat}}
+    return DivideAndConquer(; kwargs...)
+end
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCArray{<:BlasFloat, 3}}
+    return DivideAndConquerBatched(; kwargs...)
+end
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}
+    return DivideAndConquerBatched(; kwargs...)
 end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return DivideAndConquer(; kwargs...)
@@ -28,7 +36,7 @@ for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::ROCSOLVER, args...) = YArocSOLVER.$f(args...)
 end
 
-MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi)
+MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :divide_and_conquer, :qr_iteration_batched, :jacobi_batched, :divide_and_conquer_batched)
 
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     m, n = size(A)
@@ -41,6 +49,31 @@ function gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::Strid
     m >= n && return YArocSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
     return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
 end
+
+gesvd_batched!(::ROCSOLVER, As::Vector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.gesvd_batched!(As, Ss, Us, Vᴴs; kwargs...)
+gesvd_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.gesvd_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+
+gesdd_batched!(::ROCSOLVER, As::Vector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.gesdd_batched!(As, Ss, Us, Vᴴs; kwargs...)
+gesdd_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.gesdd_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+
+gesvdj_batched!(::ROCSOLVER, As::Vector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.gesvdj_batched!(As, Ss, Us, Vᴴs; kwargs...)
+gesvdj_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.gesvdj_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+
+gesvdx_batched!(::ROCSOLVER, As::Vector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.gesvdx_batched!(As, Ss, Us, Vᴴs; kwargs...)
+gesvdx_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.gesvdx_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+
+gesvdx!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
+    YArocSOLVER.gesvdx!(A, S, U, Vᴴ; kwargs...)
+gesdd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
+    YArocSOLVER.gesdd!(A, S, U, Vᴴ; kwargs...)
 
 heevj!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevj!(A, Dd, V; kwargs...)

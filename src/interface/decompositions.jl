@@ -101,6 +101,17 @@ The optional `driver` keyword can be used to choose between different implementa
 @algdef DivideAndConquer
 
 """
+    DivideAndConquerBatched(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the *batched* eigenvalue decompositions of a set of Hermitian matrices,
+or the singular value decompositions of a set of general matrices using the divide-and-conquer algorithm.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef DivideAndConquerBatched
+
+"""
     SafeDivideAndConquer(; [driver], fixgauge = default_fixgauge())
 
 Algorithm type to for computing the eigenvalue decomposition of a Hermitian matrix,
@@ -161,6 +172,49 @@ $_fixgauge_docs
 The optional `driver` keyword can be used to choose between different implementations of this algorithm.
 """
 @algdef Jacobi
+
+"""
+    QRIterationBatched(; [driver], fixgauge = default_fixgauge(), kwargs...)
+
+Algorithm type for computing the *batched* eigenvalue, Schur or singular value decompositions of a set of matrices via QR iteration.
+
+## Keyword arguments
+
+Various customizations are available, depending on the type of decomposition this algorithm is used for.
+
+Schur decompositions are not yet supported.
+
+For non-Hermitian eigenvalue decompositions there is `permute = true` and `scale = true` to control whether
+or not to balance the input matrix before starting the QR iterations.
+
+For the singular value and eigenvalue decompositions, there is residual freedom in the outputs that can be resolved.
+$_fixgauge_docs
+
+In all cases, the optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef QRIterationBatched
+
+"""
+    BisectionBatched(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the *batched* eigenvalue decompositions of a set of Hermitian matrices
+via the bisection algorithm, or the singular value decompositions of a set of general matrices.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef BisectionBatched
+
+"""
+    JacobiBatched(; [driver], fixgauge = default_fixgauge())
+
+Algorithm type for computing the *batched* eigenvalue decompositions of a set of Hermitian matrices,
+or the singular value decompositions of a set of general matrices using the Jacobi algorithm.
+
+$_fixgauge_docs
+The optional `driver` keyword can be used to choose between different implementations of this algorithm.
+"""
+@algdef JacobiBatched
 
 """
     RobustRepresentations(; [driver], fixgauge = default_fixgauge())
@@ -398,6 +452,15 @@ $_fixgauge_docs
 @algdef CUSOLVER_Jacobi
 
 """
+    CUSOLVER_JacobiBatched(; fixgauge = default_fixgauge())
+
+Algorithm type to denote the CUSOLVER driver for computing the *batched singular value decompositions
+of a set of general matrices using the Jacobi algorithm.
+$_fixgauge_docs
+"""
+@algdef CUSOLVER_JacobiBatched
+
+"""
     CUSOLVER_Randomized(; k, p, niters)
 
 Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
@@ -485,6 +548,45 @@ $_fixgauge_docs
 """
 @algdef ROCSOLVER_DivideAndConquer
 
+"""
+    ROCSOLVER_QRIterationBatched(; fixgauge = default_fixgauge())
+
+Algorithm type to denote the ROCSOLVER driver for computing the *batched* eigenvalue decompositions of a
+set of Hermitian matrices, or the singular value decompositions of a set of general matrices using the
+QR Iteration algorithm.
+$_fixgauge_docs
+"""
+@algdef ROCSOLVER_QRIterationBatched
+
+"""
+    ROCSOLVER_JacobiBatched(; fixgauge = default_fixgauge())
+
+Algorithm type to denote the ROCSOLVER driver for computing the *batched* singular value decompositions of
+a set of general matrices using the Jacobi algorithm.
+$_fixgauge_docs
+"""
+@algdef ROCSOLVER_JacobiBatched
+
+"""
+    ROCSOLVER_BisectionBatched(; fixgauge = default_fixgauge())
+
+Algorithm type to denote the ROCSOLVER driver for computing the *batched* eigenvalue decomposition of a
+set of Hermitian matrices, or the singular value decompositions of a set of general matrices using the
+Bisection algorithm.
+$_fixgauge_docs
+"""
+@algdef ROCSOLVER_BisectionBatched
+
+"""
+    ROCSOLVER_DivideAndConquerBatched(; fixgauge = default_fixgauge())
+
+Algorithm type to denote the ROCSOLVER driver for computing the *batched* eigenvalue decomposition of a
+set of Hermitian matrices, or the singular value decompositions of a set of general matrices using the
+Divide and Conquer algorithm.
+$_fixgauge_docs
+"""
+@algdef ROCSOLVER_DivideAndConquerBatched
+
 
 # Various consts and unions
 # -------------------------
@@ -509,7 +611,6 @@ const CUSOLVER_SVDAlgorithm = Union{
     CUSOLVER_QRIteration, CUSOLVER_SVDPolar, CUSOLVER_Jacobi, CUSOLVER_Randomized,
 }
 const GPU_SVDAlgorithm = Union{CUSOLVER_SVDAlgorithm, ROCSOLVER_SVDAlgorithm}
-
 const LAPACK_EighAlgorithm = Union{
     LAPACK_QRIteration,
     LAPACK_Bisection,
@@ -523,7 +624,6 @@ const GPU_EighAlgorithm = Union{
 const LAPACK_EigAlgorithm = Union{LAPACK_Simple, LAPACK_Expert}
 const CUSOLVER_EigAlgorithm = Union{CUSOLVER_Simple}
 const GPU_EigAlgorithm = Union{GPU_Simple}
-
 
 # List of available algorithms - for docs and convenience purposes
 const SVDAlgorithms = Union{
