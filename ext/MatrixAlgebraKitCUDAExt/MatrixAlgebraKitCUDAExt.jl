@@ -207,14 +207,6 @@ function svd_pullback!(ΔA::AnyCuMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyCuVector; 
     return svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
 end
 
-function eigh_pullback!(ΔA::AnyCuMatrix, A, DV, ΔDV, ind::AnyCuVector; kwargs...)
-    return eigh_pullback!(ΔA, A, DV, ΔDV, collect(ind); kwargs...)
-end
-
-function eig_pullback!(ΔA::AnyCuMatrix, A, DV, ΔDV, ind::AnyCuVector; kwargs...)
-    return eig_pullback!(ΔA, A, DV, ΔDV, collect(ind); kwargs...)
-end
-
 # have to override this as methods are missing in GPUArrays for the various
 # views of Diagonal of ΔA
 function svd_pushforward!(
