@@ -54,7 +54,7 @@ function gesvdj!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedC
 end
 
 gesvdj_batched!(::CUSOLVER, As::StridedCuArray{T, 3}, Ss::StridedCuMatrix, Us::StridedCuArray{T, 3}, Vᴴs::StridedCuArray{T, 3}; kwargs...) where {T <: BlasFloat} =
-    YACUSOLVER.gesvdj_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+    YACUSOLVER.gesvdj_batched!(As, Ss, Us, Vᴴs; kwargs...)
 
 gesvdp!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
     YACUSOLVER.gesvdp!(A, S, U, Vᴴ; kwargs...)
