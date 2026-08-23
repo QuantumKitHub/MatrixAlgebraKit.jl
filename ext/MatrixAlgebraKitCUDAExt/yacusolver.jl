@@ -307,7 +307,7 @@ for (bname, fname, elty, relty) in
                     throw(DimensionMismatch("invalid column size of U or row size of Vᴴ"))
                 end
             end
-            length(S) == minmn ||
+            length(S) == minmn * batch_size ||
                 throw(DimensionMismatch("length mismatch between A and S"))
 
             Ṽ = (jobz == 'V') ? similar(Vᴴ') : similar(Vᴴ, (n, minmn))
