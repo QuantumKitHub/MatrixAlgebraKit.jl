@@ -305,8 +305,8 @@ for (bname, fname, elty, relty) in
             length(S) == minmn * batch_size ||
                 throw(DimensionMismatch("length mismatch between A and S"))
 
-            Ṽ = (jobz == 'V') ? similar(Vᴴ') : similar(Vᴴ, (n, minmn))
-            Ũ = (jobz == 'V') ? U : similar(U, (m, minmn))
+            Ṽ = (jobz == 'V') ? similar(Vᴴ') : similar(Vᴴ, (n, minmn, batch_size))
+            Ũ = (jobz == 'V') ? U : similar(U, (m, minmn, batch_size))
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(Ũ, 2))
             ldv = max(1, stride(Ṽ, 2))
