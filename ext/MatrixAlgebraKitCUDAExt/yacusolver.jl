@@ -305,8 +305,9 @@ for (bname, fname, elty, relty) in
             length(S) == minmn * batch_size ||
                 throw(DimensionMismatch("length mismatch between A and S"))
 
-            Ṽ = (jobz == 'V') ? similar(Vᴴ') : similar(Vᴴ, (n, minmn, batch_size))
-            Ũ = (jobz == 'V') ? U : similar(U, (m, minmn, batch_size))
+            # these MUST be "full" sized
+            Ṽ = similar(Vᴴ, (n, n, batch_size))
+            Ũ = similar(U, (m, m, batch_size))
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(Ũ, 2))
             ldv = max(1, stride(Ṽ, 2))
@@ -316,6 +317,7 @@ for (bname, fname, elty, relty) in
             cuSOLVER.cusolverDnXgesvdjSetTolerance(params[], tol)
             cuSOLVER.cusolverDnXgesvdjSetMaxSweeps(params[], max_sweeps)
             dh = cuSOLVER.dense_handle()
+            resize!(dh.info, batch_size)
 
             function bufferSize()
                 out = Ref{Cint}(0)
@@ -340,7 +342,8 @@ for (bname, fname, elty, relty) in
             cuSOLVER.cusolverDnDestroyGesvdjInfo(params[])
 
             if jobz == 'V'
-                adjoint!(Vᴴ, Ṽ)
+                copyto!(U, view(Ũ, :, 1:size(U, 2), :))
+                Vᴴ .= conj.(PermutedDimsArray(view(Ṽ, :, 1:size(Vᴴ, 1), :), (2, 1, 3)))
             end
             return S, U, Vᴴ
         end
