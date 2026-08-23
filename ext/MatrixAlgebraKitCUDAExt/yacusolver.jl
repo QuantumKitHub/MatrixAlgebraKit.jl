@@ -292,18 +292,13 @@ for (bname, fname, elty, relty) in
 
             if length(U) == 0 && length(Vᴴ) == 0
                 jobz = 'N'
-                econ = 0
             else
                 jobz = 'V'
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
-                if size(U, 2) == size(Vᴴ, 1) == minmn
-                    econ = 1
-                elseif size(U, 2) == m && size(Vᴴ, 1) == n
-                    econ = 0
-                else
+                if !(size(U, 2) == size(Vᴴ, 1) == minmn) && !(size(U, 2) == m && size(Vᴴ, 1) == n)
                     throw(DimensionMismatch("invalid column size of U or row size of Vᴴ"))
                 end
             end
@@ -325,15 +320,15 @@ for (bname, fname, elty, relty) in
             function bufferSize()
                 out = Ref{Cint}(0)
                 cuSOLVER.$bname(
-                    dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
-                    out, params[]
+                    dh, jobz, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
+                    out, params[], batch_size
                 )
                 return out[] * sizeof($elty)
             end
 
             cuSOLVER.with_workspace(dh.workspace_gpu, bufferSize) do buffer
                 return cuSOLVER.$fname(
-                    dh, jobz, econ, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
+                    dh, jobz, m, n, A, lda, S, Ũ, ldu, Ṽ, ldv,
                     buffer, sizeof(buffer) ÷ sizeof($elty), dh.info,
                     params[], batch_size
                 )
