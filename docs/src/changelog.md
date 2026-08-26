@@ -37,6 +37,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `schur_full` and `schur_vals` now support `Diagonal` inputs through `DiagonalAlgorithm` ([#276](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/issues/276)).
 - LQ decompositions no longer gauge fix `Q` when `positive = false` and `L` is not computed.
 
 ### Performance

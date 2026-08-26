@@ -24,6 +24,28 @@ function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, ::AbstractA
     return nothing
 end
 
+function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::DiagonalAlgorithm)
+    m = LinearAlgebra.checksquare(A)
+    isdiag(A) || throw(DimensionMismatch("diagonal input matrix expected"))
+    T, Z, vals = TZv
+    @assert T isa AbstractMatrix && Z isa AbstractMatrix && vals isa AbstractVector
+    @check_size(T, (m, m))
+    @check_scalar(T, A)
+    @check_size(Z, (m, m))
+    @check_scalar(Z, A)
+    @check_size(vals, (m,))
+    @check_scalar(vals, A)
+    return nothing
+end
+function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, ::DiagonalAlgorithm)
+    m = LinearAlgebra.checksquare(A)
+    isdiag(A) || throw(DimensionMismatch("diagonal input matrix expected"))
+    @assert vals isa AbstractVector
+    @check_size(vals, (m,))
+    @check_scalar(vals, A)
+    return nothing
+end
+
 # Outputs
 # -------
 function initialize_output(::typeof(schur_full!), A::AbstractMatrix, ::AbstractAlgorithm)
@@ -37,6 +59,17 @@ function initialize_output(::typeof(schur_vals!), A::AbstractMatrix, ::AbstractA
     vals = similar(A, complex(eltype(A)), n)
     return vals
 end
+
+# a diagonal matrix is already in Schur form, so the eigenvalues need not be complex
+function initialize_output(::typeof(schur_full!), A::AbstractMatrix, ::DiagonalAlgorithm)
+    n = size(A, 1) # square check will happen later
+    return (A, similar(A), similar(A, eltype(A), n))
+end
+function initialize_output(::typeof(schur_vals!), A::AbstractMatrix, ::DiagonalAlgorithm)
+    n = size(A, 1) # square check will happen later
+    return similar(A, eltype(A), n)
+end
+initialize_output(::typeof(schur_vals!), A::Diagonal, ::DiagonalAlgorithm) = diagview(A)
 
 # DefaultAlgorithm intercepts
 # ---------------------------
@@ -97,6 +130,26 @@ end
 function schur_vals!(A::AbstractMatrix, vals, alg::QRIteration)
     check_input(schur_vals!, A, vals, alg)
     schur_vals_qr_iteration!(A, vals; alg.kwargs...)
+    return vals
+end
+
+# Diagonal logic
+# --------------
+# `A` is already in Schur form, so `T = A` and `Z = I`, without any reordering
+function schur_full!(A::AbstractMatrix, TZv, alg::DiagonalAlgorithm)
+    check_input(schur_full!, A, TZv, alg)
+    T, Z, vals = TZv
+    if !has_equal_storage(A, T)
+        zero!(T)
+        diagview(T) .= diagview(A)
+    end
+    one!(Z)
+    vals .= diagview(A)
+    return TZv
+end
+function schur_vals!(A::AbstractMatrix, vals, alg::DiagonalAlgorithm)
+    check_input(schur_vals!, A, vals, alg)
+    has_equal_storage(A, vals) || copy!(vals, diagview(A))
     return vals
 end
 

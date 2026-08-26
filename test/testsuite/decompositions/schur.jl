@@ -33,6 +33,8 @@ function test_schur_full(
         @test eltype(vals) == Tc
         @test isisometric(Z)
         @test A * Z ≈ Z * TA
+        # a diagonal matrix is already in Schur form and is not reordered
+        A isa Diagonal && @test TA ≈ A
 
         TA2, Z2, vals2 = @testinferred schur_full!(Ac, (TA, Z, vals))
         @test TA2 === TA
@@ -78,14 +80,17 @@ function test_schur_vals(
         Ac = deepcopy(A)
         Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
 
+        # a diagonal matrix is not reordered, unlike `eig_vals`
+        vals₀ = A isa Diagonal ? diagview(A) : eig_vals(A)
+
         valsc = @testinferred schur_vals(A)
         @test eltype(valsc) == Tc
-        @test valsc ≈ eig_vals(A)
+        @test valsc ≈ vals₀
 
         valsc = similar(A, Tc, size(A, 1))
         valsc = @testinferred schur_vals!(Ac, valsc)
         @test eltype(valsc) == Tc
-        @test valsc ≈ eig_vals(A)
+        @test valsc ≈ vals₀
     end
 end
 
@@ -100,13 +105,15 @@ function test_schur_vals_algs(
         Ac = deepcopy(A)
         Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
 
+        vals₀ = A isa Diagonal ? diagview(A) : eig_vals(A)
+
         valsc = @testinferred schur_vals(A; alg)
         @test eltype(valsc) == Tc
-        @test valsc ≈ eig_vals(A)
+        @test valsc ≈ vals₀
 
         valsc = similar(A, Tc, size(A, 1))
         valsc = @testinferred schur_vals!(Ac, valsc; alg)
         @test eltype(valsc) == Tc
-        @test valsc ≈ eig_vals(A)
+        @test valsc ≈ vals₀
     end
 end
