@@ -37,7 +37,9 @@ if !is_buildkite
         TestSuite.test_squareroot_hermitian(T, (m, m), LAPACK_EIG_ALGS; exact_hermiticity = false)
         TestSuite.test_squareroot_hermitian(T, (m, m), LAPACK_EIGH_ALGS)
         TestSuite.test_squareroot_reference(T, (m, m))
-        TestSuite.test_squareroot_domain(T, (md, md), LAPACK_EIG_ALGS)
+        # `MatrixFunctionViaLA` has no access to the spectrum, and thus no `domain_atol`
+        TestSuite.test_squareroot_domain(T, (md, md), (MatrixFunctionViaLA(),); test_domain_atol = false)
+        TestSuite.test_squareroot_domain(T, (md, md), (MatrixFunctionViaEig(QRIteration()),))
         TestSuite.test_squareroot_domain(T, (md, md), LAPACK_EIGH_ALGS; hermitian_output = true)
     end
 

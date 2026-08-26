@@ -64,8 +64,12 @@ end
 
 # a matrix whose spectrum reaches the negative real axis has a complex principal square root, which
 # a type-stable real output cannot represent. Pass `hermitian_output = true` for the algorithms that
-# promise a hermitian result: those must reject a negative eigenvalue whatever the scalar type.
-function test_squareroot_domain(T::Type, sz, algs; hermitian_output = false, kwargs...)
+# promise a hermitian result: those must reject a negative eigenvalue whatever the scalar type, and
+# `test_domain_atol = false` for the ones without access to the spectrum, which have no tolerance.
+function test_squareroot_domain(
+        T::Type, sz, algs;
+        hermitian_output = false, test_domain_atol = true, kwargs...
+    )
     R = real(eltype(T))
     n = sz isa Tuple ? first(sz) : sz
     summary_str = testargs_summary(T, sz)
@@ -90,19 +94,24 @@ function test_squareroot_domain(T::Type, sz, algs; hermitian_output = false, kwa
         @test eltype(sqrtAclamp) == eltype(Aclamp)
         @test sqrtAclamp * sqrtAclamp ≈ Aclamp atol = sqrt(eps(R))
 
-        # an eigenvalue beyond every default tolerance is out of domain, while an explicit
+        # an eigenvalue beyond the default tolerance is out of domain, while an explicit
         # `domain_atol` admits it after all
         λwide = collect(R, 1:n)
         λwide[1] = -sqrt(eps(R))
         Awide = instantiate_hermitian_spectrum(T, sz, λwide)
         if eltype(T) <: Real || hermitian_output
             @test_throws DomainError squareroot(Awide, alg)
+        else
+            sqrtAwide = @testinferred squareroot(Awide, alg)
+            @test sqrtAwide * sqrtAwide ≈ Awide
         end
-        wide_alg = with_domain_atol(alg, domain_test_atol(alg, R))
-        sqrtAwide = @testinferred squareroot(Awide, wide_alg)
-        @test eltype(sqrtAwide) == eltype(Awide)
-        # accepting is backward stable, but only to the size of the eigenvalue that was discarded
-        @test sqrtAwide * sqrtAwide ≈ Awide atol = sqrt(sqrt(eps(R)))
+        if test_domain_atol
+            wide_alg = with_domain_atol(alg, cbrt(eps(R)))
+            sqrtAwide = @testinferred squareroot(Awide, wide_alg)
+            @test eltype(sqrtAwide) == eltype(Awide)
+            # accepting is backward stable, but only to the size of the eigenvalue that was discarded
+            @test sqrtAwide * sqrtAwide ≈ Awide atol = sqrt(sqrt(eps(R)))
+        end
     end
 end
 

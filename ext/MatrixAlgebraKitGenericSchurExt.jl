@@ -22,10 +22,12 @@ function MatrixAlgebraKit.default_exponential_algorithm(
 end
 
 function MatrixAlgebraKit.default_squareroot_algorithm(
-        type::Type{T}; domain_atol::Real = -1.0, kwargs...
+        type::Type{T}; domain_atol = nothing, kwargs...
     ) where {T <: StridedMatrix{<:GSFloat}}
+    # the remaining keywords configure the eigensolver, `domain_atol` the domain check
     eig_alg = MatrixAlgebraKit.default_eig_algorithm(type; kwargs...)
-    return MatrixFunctionViaEig(eig_alg; domain_atol)
+    return isnothing(domain_atol) ? MatrixFunctionViaEig(eig_alg) :
+        MatrixFunctionViaEig(eig_alg; domain_atol)
 end
 
 function geev!(::GS, A::AbstractMatrix, Dd::AbstractVector, V::AbstractMatrix; kwargs...)

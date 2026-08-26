@@ -105,11 +105,11 @@ The following algorithms for matrix functions are available.
 | Algorithm | Applicable matrix functions | Key keyword arguments |
 |:----------|:--------------------------|:----------------------|
 | [`MatrixFunctionViaTaylor`](@ref) | exponential | `tol`, `balance`, `estimate_order` |
-| [`MatrixFunctionViaLA`](@ref) | exponential, squareroot | `domain_atol` (squareroot) |
-| [`MatrixFunctionViaEig`](@ref) | exponential, squareroot | positional `eig_alg` argument, `domain_atol` (squareroot) |
-| [`MatrixFunctionViaEigh`](@ref) | exponential, squareroot | positional `eigh_alg` argument, `domain_atol` (squareroot) |
+| [`MatrixFunctionViaLA`](@ref) | exponential, squareroot | — |
+| [`MatrixFunctionViaEig`](@ref) | exponential, squareroot | `eig_alg` (also positional), `domain_atol` (squareroot) |
+| [`MatrixFunctionViaEigh`](@ref) | exponential, squareroot | `eigh_alg` (also positional), `domain_atol` (squareroot) |
 
-Note that `domain_atol` means something different for `MatrixFunctionViaLA`, which bounds the imaginary part of the result rather than the distance of an eigenvalue to the domain boundary.
+Note that [`MatrixFunctionViaLA`](@ref) accepts no keyword arguments, since it has no access to the spectrum and thus cannot honor a `domain_atol`.
 For full docstring details on each algorithm type, and for how the tolerance is meant to be used, see [Matrix functions](@ref) and in particular [Domain considerations](@ref sec_matrixfunction_domain).
 
 ## [Driver Selection](@id sec_driverselection)

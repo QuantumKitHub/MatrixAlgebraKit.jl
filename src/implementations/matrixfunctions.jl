@@ -47,24 +47,22 @@ _apply_eigh!(fA, V, fD) = project_hermitian!(mul!(fA, V * fD, V'))
 # accuracy with which the algorithm resolves whether an eigenvalue lies *on* the negative real axis
 # at all, which is a property of the eigensolver rather than a user choice.
 
-# each algorithm obtains its eigenvalues with a different accuracy, so each brings its own default
-default_domain_atol(λ, ::DiagonalAlgorithm) = _roundoff_domain_atol(λ)
-default_domain_atol(λ, ::MatrixFunctionViaEigh) = _roundoff_domain_atol(λ)
-default_domain_atol(λ, ::MatrixFunctionViaEig) = _conditioning_domain_atol(λ)
-
-# a negative tolerance denotes the runtime default, which keeps the algorithm types concrete
-_domain_atol(alg::Union{MatrixFunctionViaEig, MatrixFunctionViaEigh}) = alg.domain_atol
-_domain_atol(alg::DiagonalAlgorithm) = get(alg.kwargs, :domain_atol, -1.0)
+# an unset keyword denotes the runtime default
+_domain_atol(alg) = get(alg.kwargs, :domain_atol, nothing)
 
 # callers resolve the default before delegating to an inner `DiagonalAlgorithm`, so that the
 # tolerance follows the algorithm that computed the eigenvalues
 function _resolve_domain_atol(λ, alg)
-    atol = _domain_atol(alg)
     R = real(float(eltype(λ)))
-    return atol < 0 ? convert(R, default_domain_atol(λ, alg)) : convert(R, atol)
+    atol = _domain_atol(alg)
+    return convert(R, isnothing(atol) ? default_domain_atol(λ) : atol)
 end
 
-_axis_atol(λ, alg) = convert(real(float(eltype(λ))), default_domain_atol(λ, alg))
+_axis_atol(λ) = convert(real(float(eltype(λ))), default_domain_atol(λ))
+
+# the wrapped decomposition algorithm is optional as well
+_eig_alg(alg) = get(alg.kwargs, :eig_alg, nothing)
+_eigh_alg(alg) = get(alg.kwargs, :eigh_alg, nothing)
 
 # the throwing branches live in `@noinline` helpers so that the reductions and broadcasts
 # below stay free of error-path code, which keeps them GPU friendly
@@ -110,29 +108,33 @@ end
 
 # Domain handling for `MatrixFunctionViaLA`
 # -----------------------------------------
-# `LinearAlgebra` never exposes the spectrum, so the check happens in result space and
-# `domain_atol` bounds the imaginary part of `f(A)` instead
+# `LinearAlgebra` never exposes the spectrum, so there is nothing to compare against a tolerance:
+# a complex result for a real input is a domain violation, full stop
 
 @noinline function throw_la_kwargs(f, ks)
     return throw(
-        ArgumentError("`MatrixFunctionViaLA` only accepts the `domain_atol` keyword argument for `$f`, got $ks")
+        ArgumentError(
+            "`MatrixFunctionViaLA` accepts no keyword arguments for `$f`, got $ks. In particular " *
+                "`domain_atol` is not supported, as `LinearAlgebra` does not expose the spectrum; " *
+                "use `MatrixFunctionViaEig` or `MatrixFunctionViaEigh` instead."
+        )
     )
 end
 
-# `MatrixFunctionViaLA` accepts generic keywords, so the kernels validate the ones they support
-function _la_domain_atol(alg::MatrixFunctionViaLA, f)
+# `MatrixFunctionViaLA` accepts generic keywords, so the kernels reject the ones they cannot honor
+function _check_la_kwargs(alg::MatrixFunctionViaLA, f)
     ks = keys(alg.kwargs)
-    (isempty(ks) || ks == (:domain_atol,)) || throw_la_kwargs(f, ks)
-    return get(alg.kwargs, :domain_atol, -1.0)
+    isempty(ks) || throw_la_kwargs(f, ks)
+    return nothing
 end
 
-@noinline function throw_complex_result(f, atol, imagmax)
+@noinline function throw_complex_result(f)
     return throw(
         DomainError(
             f,
-            "The result of this matrix function applied to the given real matrix is complex (eigenvalues on the negative real axis): " *
-                "its imaginary part reaches $imagmax, beyond `domain_atol = $atol`. Pass a complex matrix to obtain the principal " *
-                "value, or increase `domain_atol` if the imaginary part is a rounding artifact."
+            "The result of this matrix function applied to the given real matrix is complex (eigenvalues on the negative real axis). " *
+                "Pass a complex matrix to obtain the principal value, or use `MatrixFunctionViaEig`/`MatrixFunctionViaEigh` to have " *
+                "the spectrum itself checked against `domain_atol`."
         )
     )
 end
@@ -145,18 +147,4 @@ end
                 "Use `MatrixFunctionViaEig`/`MatrixFunctionViaEigh` to have the spectrum itself checked against `domain_atol`."
         )
     )
-end
-
-# a rounding-level imaginary part is not a domain violation: `LinearAlgebra` casts back to real only
-# when the imaginary part vanishes identically
-function _la_project_real!(fA, fAc, domain_atol::Real, f)
-    all(isfinite, fAc) || throw_nonfinite_result(f)
-    R = real(eltype(fA))
-    # the working precision is that of the output: `LinearAlgebra` computes in complex arithmetic
-    # throughout, so e.g. a `Float32` input promotes all the way to `ComplexF64`
-    atol = domain_atol < 0 ? defaulttol(fA) * convert(R, norm(fAc, Inf)) : convert(R, domain_atol)
-    imagmax = convert(R, maximum(abs ∘ imag, fAc; init = zero(real(eltype(fAc)))))
-    imagmax <= atol || throw_complex_result(f, atol, imagmax)
-    fA .= real.(fAc)
-    return fA
 end

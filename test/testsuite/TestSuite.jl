@@ -136,15 +136,9 @@ end
 
 # rebuild `alg` with an explicit `domain_atol`, so that the domain tests need not spell out the
 # inner decomposition algorithm a second time
-with_domain_atol(alg::MatrixFunctionViaEig, atol) = MatrixFunctionViaEig(alg.eig_alg; domain_atol = atol)
-with_domain_atol(alg::MatrixFunctionViaEigh, atol) = MatrixFunctionViaEigh(alg.eigh_alg; domain_atol = atol)
-with_domain_atol(::MatrixAlgebraKit.DiagonalAlgorithm, atol) = DiagonalAlgorithm(; domain_atol = atol)
-with_domain_atol(::MatrixFunctionViaLA, atol) = MatrixFunctionViaLA(; domain_atol = atol)
-
-# a tolerance generous enough to admit an eigenvalue at `-√eps`. For `MatrixFunctionViaLA` it bounds
-# the imaginary part of the result rather than the spectrum, which sits on a coarser scale.
-domain_test_atol(::MatrixAlgebraKit.AbstractAlgorithm, R) = cbrt(eps(R))
-domain_test_atol(::MatrixFunctionViaLA, R) = one(R) / 2
+function with_domain_atol(alg::MatrixAlgebraKit.Algorithm, atol)
+    return MatrixAlgebraKit.Algorithm{MatrixAlgebraKit.name(alg)}(; alg.kwargs..., domain_atol = atol)
+end
 
 include("ad_utils.jl")
 

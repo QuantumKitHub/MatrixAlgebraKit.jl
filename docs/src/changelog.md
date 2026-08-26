@@ -28,8 +28,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
-- `MatrixFunctionViaEig` and `MatrixFunctionViaEigh` gained a `domain_atol` field, settable through
-  the keyword argument of the same name. ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
+- `MatrixFunctionViaEig` and `MatrixFunctionViaEigh` are now defined through `@algdef`, so that both
+  the wrapped decomposition algorithm (`eig_alg` / `eigh_alg`, still accepted positionally) and the
+  new `domain_atol` are optional keyword arguments. ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
 - `qr_compact!`, `qr_full!`, `lq_compact!` and `lq_full!` now extract `R` (or `L`) before
   constructing `Q`, so that an inplace `Q` (supplying `A` itself as output for `Q`) can be combined
   with computing `R` (or `L`) and with `positive = true`.
