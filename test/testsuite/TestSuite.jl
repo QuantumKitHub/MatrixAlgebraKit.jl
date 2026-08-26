@@ -134,10 +134,29 @@ function instantiate_hermitian_spectrum(T, sz, λ)
     return project_hermitian!(V * Diagonal(Ddiag) * V')
 end
 
+# a matrix with a defective eigenvalue `λ`, i.e. a 2x2 Jordan block, and simple eigenvalues
+# elsewhere. The similarity transformation is unitary, so the conditioning of the problem comes
+# from the Jordan block alone rather than from the transformation.
+function instantiate_defective_matrix(T, sz, λ)
+    n = sz isa Tuple ? first(sz) : sz
+    @assert n >= 2
+    A = instantiate_matrix(T, (n, n))
+    J = fill!(similar(A), zero(eltype(A)))
+    copyto!(diagview(J), convert(Vector{eltype(A)}, [λ, λ, collect(3:n)...]))
+    J[1, 2] = one(eltype(A))
+    V = instantiate_unitary(T, A, n)
+    return V * J * V'
+end
+
 # rebuild `alg` with an explicit `domain_atol`, so that the domain tests need not spell out the
 # inner decomposition algorithm a second time
 function with_domain_atol(alg::MatrixAlgebraKit.Algorithm, atol)
     return MatrixAlgebraKit.Algorithm{MatrixAlgebraKit.name(alg)}(; alg.kwargs..., domain_atol = atol)
+end
+
+# likewise for the blocking threshold of `MatrixFunctionViaSchur`
+function with_blocksize(alg::MatrixAlgebraKit.Algorithm, blocksize)
+    return MatrixAlgebraKit.Algorithm{MatrixAlgebraKit.name(alg)}(; alg.kwargs..., blocksize = blocksize)
 end
 
 include("ad_utils.jl")

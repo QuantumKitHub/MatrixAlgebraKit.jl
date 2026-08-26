@@ -63,6 +63,10 @@ _axis_atol(λ) = convert(real(float(eltype(λ))), default_domain_atol(λ))
 # the wrapped decomposition algorithm is optional as well
 _eig_alg(alg) = get(alg.kwargs, :eig_alg, nothing)
 _eigh_alg(alg) = get(alg.kwargs, :eigh_alg, nothing)
+_schur_alg(alg) = get(alg.kwargs, :schur_alg, nothing)
+
+# `0` denotes the algorithm default, `1` the unblocked algorithm, following `qr_householder!`
+_blocksize(alg) = get(alg.kwargs, :blocksize, 0)
 
 # the throwing branches live in `@noinline` helpers so that the reductions and broadcasts
 # below stay free of error-path code, which keeps them GPU friendly
@@ -116,7 +120,7 @@ end
         ArgumentError(
             "`MatrixFunctionViaLA` accepts no keyword arguments for `$f`, got $ks. In particular " *
                 "`domain_atol` is not supported, as `LinearAlgebra` does not expose the spectrum; " *
-                "use `MatrixFunctionViaEig` or `MatrixFunctionViaEigh` instead."
+                "use `MatrixFunctionViaSchur`, `MatrixFunctionViaEig` or `MatrixFunctionViaEigh` instead."
         )
     )
 end
@@ -139,12 +143,19 @@ end
     )
 end
 
-@noinline function throw_nonfinite_result(f)
+@noinline function throw_nonfinite_result(f, advice)
     return throw(
         DomainError(
             f,
             "The result of this matrix function is not finite, which signals a (numerically) singular input for which it is undefined. " *
-                "Use `MatrixFunctionViaEig`/`MatrixFunctionViaEigh` to have the spectrum itself checked against `domain_atol`."
+                advice
         )
     )
 end
+
+const _NONFINITE_LA_ADVICE = "Use `MatrixFunctionViaEig`/`MatrixFunctionViaEigh` to have the spectrum itself checked against `domain_atol`."
+
+# the Schur form does expose the spectrum, so a singular result there is a property of the input
+# rather than of the tolerance: it means two of the eigenvalue square roots cancel, as a repeated
+# zero eigenvalue does, leaving one of the equations for the off-diagonal entries unsolvable
+const _NONFINITE_SCHUR_ADVICE = "Two of the eigenvalue square roots sum to zero, which leaves the result undefined whatever the tolerance."

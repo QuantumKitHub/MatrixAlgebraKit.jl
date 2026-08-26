@@ -16,9 +16,9 @@ the principal square root is complex, leads to a `DomainError`; pass a complex m
 to obtain the principal value.
 For the algorithms that have access to the spectrum, real eigenvalues that are negative within a
 tolerance `domain_atol` are treated as rounding artifacts and clamped to zero, so that raising
-`domain_atol` accepts more matrices. It defaults to [`default_domain_atol`](@ref), and is not
-supported by [`MatrixFunctionViaLA`](@ref);
-see [Domain considerations](@ref sec_matrixfunction_domain).
+`domain_atol` accepts more matrices. It defaults to [`default_domain_atol`](@ref), and is
+supported by every algorithm except [`MatrixFunctionViaLA`](@ref), which has no access to the
+spectrum; see [Domain considerations](@ref sec_matrixfunction_domain).
 
 !!! note
     The bang method `squareroot!` optionally accepts the output structure and
@@ -31,7 +31,7 @@ see [Domain considerations](@ref sec_matrixfunction_domain).
 # -------------------
 default_squareroot_algorithm(A; kwargs...) = default_squareroot_algorithm(typeof(A); kwargs...)
 function default_squareroot_algorithm(T::Type; kwargs...)
-    return MatrixFunctionViaLA(; kwargs...)
+    return MatrixFunctionViaSchur(; kwargs...)
 end
 function default_squareroot_algorithm(::Type{T}; kwargs...) where {T <: Diagonal}
     return DiagonalAlgorithm(; kwargs...)

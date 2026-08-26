@@ -105,6 +105,7 @@ The following algorithms for matrix functions are available.
 | Algorithm | Applicable matrix functions | Key keyword arguments |
 |:----------|:--------------------------|:----------------------|
 | [`MatrixFunctionViaTaylor`](@ref) | exponential | `tol`, `balance`, `estimate_order` |
+| [`MatrixFunctionViaSchur`](@ref) | squareroot | `schur_alg`, `blocksize`, `domain_atol` |
 | [`MatrixFunctionViaLA`](@ref) | exponential, squareroot | — |
 | [`MatrixFunctionViaEig`](@ref) | exponential, squareroot | `eig_alg` (also positional), `domain_atol` (squareroot) |
 | [`MatrixFunctionViaEigh`](@ref) | exponential, squareroot | `eigh_alg` (also positional), `domain_atol` (squareroot) |

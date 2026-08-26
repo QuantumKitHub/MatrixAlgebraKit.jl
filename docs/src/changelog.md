@@ -23,11 +23,22 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Added
 
 - New matrix function `squareroot`, computing the principal square root, supporting the
-  `MatrixFunctionViaLA`, `MatrixFunctionViaEig`, `MatrixFunctionViaEigh` and `DiagonalAlgorithm`
-  algorithms ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
+  `MatrixFunctionViaSchur`, `MatrixFunctionViaLA`, `MatrixFunctionViaEig`, `MatrixFunctionViaEigh`
+  and `DiagonalAlgorithm` algorithms
+  ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
+- New algorithm `MatrixFunctionViaSchur`, a native implementation of the Schur method for
+  `squareroot`: the recursion of Björck & Hammarling on the (quasi-)triangular Schur factor, in the
+  real quasi-triangular variant of Higham so that a real input stays in real arithmetic, with the
+  recursive blocking of Deadman, Higham & Ralha. Unlike `MatrixFunctionViaLA` it is backward stable
+  for every input, honors `domain_atol`, accepts a `schur_alg` and a `blocksize`, and computes a
+  real square root of a real matrix at arbitrary precision, including half precision.
 
 ### Changed
 
+- `MatrixFunctionViaSchur` is now the default algorithm for `squareroot` of a dense matrix, replacing
+  `MatrixFunctionViaLA`. As a consequence `domain_atol` is supported by default, a defective matrix
+  no longer requires selecting an algorithm by hand, and the `GenericSchur` extension no longer
+  overrides the default for `Float16`/`BigFloat` and friends.
 - `MatrixFunctionViaEig` and `MatrixFunctionViaEigh` are now defined through `@algdef`, so that both
   the wrapped decomposition algorithm (`eig_alg` / `eigh_alg`, still accepted positionally) and the
   new `domain_atol` are optional keyword arguments. ([#261](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/261)).
