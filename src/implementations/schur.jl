@@ -4,29 +4,19 @@ copy_input(::typeof(schur_full), A) = copy_input(eig_full, A)
 copy_input(::typeof(schur_vals), A) = copy_input(eig_vals, A)
 
 # check input
-function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::AbstractAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    T, Z, vals = TZv
-    @assert T isa AbstractMatrix && Z isa AbstractMatrix && vals isa AbstractVector
-    @check_size(T, (m, m))
-    @check_scalar(T, A)
-    @check_size(Z, (m, m))
-    @check_scalar(Z, A)
-    @check_size(vals, (m,))
-    @check_scalar(vals, A, complex)
-    return nothing
-end
-function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, ::AbstractAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    @assert vals isa AbstractVector
-    @check_size(vals, (m,))
-    @check_scalar(vals, A, complex)
-    return nothing
-end
+# the eigenvalues coincide with those of `eig_vals!`, so the checks are shared
+check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, alg::AbstractAlgorithm) =
+    check_input(eig_vals!, A, vals, alg)
 
+function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::AbstractAlgorithm)
+    return _check_schur_full_input(A, TZv)
+end
 function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::DiagonalAlgorithm)
-    m = LinearAlgebra.checksquare(A)
     isdiag(A) || throw(DimensionMismatch("diagonal input matrix expected"))
+    return _check_schur_full_input(A, TZv)
+end
+function _check_schur_full_input(A::AbstractMatrix, TZv)
+    m = LinearAlgebra.checksquare(A)
     T, Z, vals = TZv
     @assert T isa AbstractMatrix && Z isa AbstractMatrix && vals isa AbstractVector
     @check_size(T, (m, m))
@@ -34,42 +24,26 @@ function check_input(::typeof(schur_full!), A::AbstractMatrix, TZv, ::DiagonalAl
     @check_size(Z, (m, m))
     @check_scalar(Z, A)
     @check_size(vals, (m,))
-    @check_scalar(vals, A)
-    return nothing
-end
-function check_input(::typeof(schur_vals!), A::AbstractMatrix, vals, ::DiagonalAlgorithm)
-    m = LinearAlgebra.checksquare(A)
-    isdiag(A) || throw(DimensionMismatch("diagonal input matrix expected"))
-    @assert vals isa AbstractVector
-    @check_size(vals, (m,))
-    @check_scalar(vals, A)
+    @check_scalar(vals, A, complex)
     return nothing
 end
 
 # Outputs
 # -------
+initialize_output(::typeof(schur_vals!), A::AbstractMatrix, alg::AbstractAlgorithm) =
+    initialize_output(eig_vals!, A, alg)
+
 function initialize_output(::typeof(schur_full!), A::AbstractMatrix, ::AbstractAlgorithm)
     n = size(A, 1) # square check will happen later
     Z = similar(A, (n, n))
     vals = similar(A, complex(eltype(A)), n)
     return (A, Z, vals)
 end
-function initialize_output(::typeof(schur_vals!), A::AbstractMatrix, ::AbstractAlgorithm)
+# a diagonal matrix is already in Schur form, so `Z` can retain the diagonal structure
+function initialize_output(::typeof(schur_full!), A::Diagonal, ::DiagonalAlgorithm)
     n = size(A, 1) # square check will happen later
-    vals = similar(A, complex(eltype(A)), n)
-    return vals
+    return (A, similar(A), similar(A, complex(eltype(A)), n))
 end
-
-# a diagonal matrix is already in Schur form, so the eigenvalues need not be complex
-function initialize_output(::typeof(schur_full!), A::AbstractMatrix, ::DiagonalAlgorithm)
-    n = size(A, 1) # square check will happen later
-    return (A, similar(A), similar(A, eltype(A), n))
-end
-function initialize_output(::typeof(schur_vals!), A::AbstractMatrix, ::DiagonalAlgorithm)
-    n = size(A, 1) # square check will happen later
-    return similar(A, eltype(A), n)
-end
-initialize_output(::typeof(schur_vals!), A::Diagonal, ::DiagonalAlgorithm) = diagview(A)
 
 # DefaultAlgorithm intercepts
 # ---------------------------
@@ -149,7 +123,7 @@ function schur_full!(A::AbstractMatrix, TZv, alg::DiagonalAlgorithm)
 end
 function schur_vals!(A::AbstractMatrix, vals, alg::DiagonalAlgorithm)
     check_input(schur_vals!, A, vals, alg)
-    has_equal_storage(A, vals) || copy!(vals, diagview(A))
+    has_equal_storage(A, vals) || (vals .= diagview(A))
     return vals
 end
 

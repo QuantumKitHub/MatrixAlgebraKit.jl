@@ -26,7 +26,7 @@ function test_schur_full(
     return @testset "schur_full! $summary_str" begin
         A = instantiate_matrix(T, sz)
         Ac = deepcopy(A)
-        Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
+        Tc = complex(eltype(T))
 
         TA, Z, vals = @testinferred schur_full(A)
         @test eltype(TA) == eltype(Z) == eltype(T)
@@ -53,7 +53,7 @@ function test_schur_full_algs(
     return @testset "schur_full! algorithm $alg $summary_str" for alg in algs
         A = instantiate_matrix(T, sz)
         Ac = deepcopy(A)
-        Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
+        Tc = complex(eltype(T))
 
         TA, Z, vals = @testinferred schur_full(A; alg)
         @test eltype(TA) == eltype(Z) == eltype(T)
@@ -78,7 +78,7 @@ function test_schur_vals(
     return @testset "schur_vals! $summary_str" begin
         A = instantiate_matrix(T, sz)
         Ac = deepcopy(A)
-        Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
+        Tc = complex(eltype(T))
 
         # a diagonal matrix is not reordered, unlike `eig_vals`
         vals₀ = A isa Diagonal ? diagview(A) : eig_vals(A)
@@ -103,7 +103,7 @@ function test_schur_vals_algs(
     return @testset "schur_vals! algorithm $alg $summary_str" for alg in algs
         A = instantiate_matrix(T, sz)
         Ac = deepcopy(A)
-        Tc = isa(A, Diagonal) ? eltype(T) : complex(eltype(T))
+        Tc = complex(eltype(T))
 
         vals₀ = A isa Diagonal ? diagview(A) : eig_vals(A)
 
