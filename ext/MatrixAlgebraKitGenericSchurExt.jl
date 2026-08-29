@@ -2,7 +2,7 @@ module MatrixAlgebraKitGenericSchurExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: check_input, GS, Driver
-import MatrixAlgebraKit: geev!, geevx!, gees!, eig_full!, eig_vals!, schur_full!, schur_vals!
+import MatrixAlgebraKit: geev!, geevx!, gees!, eig_full!, eig_vals!, schur_full!
 using LinearAlgebra: Diagonal, sorteig!
 using GenericSchur
 
@@ -48,10 +48,6 @@ Base.@deprecate(
 Base.@deprecate(
     schur_full!(A, TZv, alg::GS_QRIteration),
     schur_full!(A, TZv, QRIteration(; driver = GS(), alg.kwargs...))
-)
-Base.@deprecate(
-    schur_vals!(A, vals, alg::GS_QRIteration),
-    schur_vals!(A, vals, QRIteration(; driver = GS(), alg.kwargs...))
 )
 
 end

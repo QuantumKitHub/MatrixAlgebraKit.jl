@@ -44,3 +44,9 @@ for T in (BLASFloats..., GenericFloats...)
         TestSuite.test_schur_algs(AT, m, (DiagonalAlgorithm(),))
     end
 end
+
+@testset "schur_vals is deprecated" begin
+    A = randn(StableRNG(123), 4, 4)
+    @test schur_vals(A) == eig_vals(A)
+    @test schur_vals!(copy(A)) == eig_vals!(copy(A))
+end

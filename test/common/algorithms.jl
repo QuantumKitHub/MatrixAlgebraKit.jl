@@ -25,7 +25,7 @@ using MatrixAlgebraKit: LAPACK_SVDAlgorithm, PolarViaSVD, TruncatedAlgorithm,
     for f in (qr_full!, qr_full, qr_compact!, qr_compact, qr_null!, qr_null)
         @test @constinferred(default_algorithm(f, A)) == Householder()
     end
-    for f in (schur_full!, schur_full, schur_vals!, schur_vals)
+    for f in (schur_full!, schur_full)
         @test @constinferred(default_algorithm(f, A)) === QRIteration()
     end
 

@@ -24,7 +24,6 @@ using PrecompileTools: @compile_workload
         svd_vals(A)
 
         schur_full(A)
-        schur_vals(A)
 
         eigh_full(A)
         eigh_vals(A)
