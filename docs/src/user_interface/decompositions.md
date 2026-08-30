@@ -113,11 +113,10 @@ The [Schur decomposition](https://en.wikipedia.org/wiki/Schur_decomposition) tra
 It rewrites an arbitrary complex square matrix as unitarily similar to an upper triangular matrix whose diagonal elements are the eigenvalues of `A`.
 For real matrices, the same decomposition can be achieved in real arithmetic by allowing `T` to be quasi-upper triangular, i.e. triangular with blocks of size `(1, 1)` and `(2, 2)` on the diagonal.
 
-This decomposition is also useful for computing the eigenvalues of a matrix, which is exposed through the [`schur_vals`](@ref) function.
+The eigenvalues of `A` are returned alongside `T` and `Z`; use [`eig_vals`](@ref) to compute them on their own.
 
 ```@docs; canonical=false
 schur_full
-schur_vals
 ```
 
 The following algorithms are available for the Schur decomposition:

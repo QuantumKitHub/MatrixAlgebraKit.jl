@@ -3,6 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: I, Diagonal
+using CUDA, AMDGPU
 
 if @isdefined(fast_tests) && fast_tests
     BLASFloats = (Float64, ComplexF64)
@@ -21,14 +22,16 @@ m = 54
 for T in (BLASFloats..., GenericFloats...)
     TestSuite.seed_rng!(123)
     if T ∈ BLASFloats
-        #=if CUDA.functional()
-            TestSuite.test_schur(CuMatrix{T}, (m, m); test_blocksize = false)
-            TestSuite.test_schur(Diagonal{T, CuVector{T}}, m; test_blocksize = false)
+        if CUDA.functional()
+            # dense GPU schur is not yet supported: there is no `gees!` for CUSOLVER
+            TestSuite.test_schur(Diagonal{T, CuVector{T}}, m)
+            TestSuite.test_schur_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
         end
+        #= not yet supported
         if AMDGPU.functional()
             TestSuite.test_schur(ROCMatrix{T}, (m, m); test_blocksize = false)
             TestSuite.test_schur(Diagonal{T, ROCVector{T}}, m; test_blocksize = false)
-        end=# # not yet supported
+        end=#
     end
     if !is_buildkite
         TestSuite.test_schur(T, (m, m))
@@ -36,7 +39,14 @@ for T in (BLASFloats..., GenericFloats...)
             LAPACK_SCHUR_ALGS = (QRIteration(), QRIteration(expert = true))
             TestSuite.test_schur_algs(T, (m, m), LAPACK_SCHUR_ALGS)
         end
-        #AT = Diagonal{T, Vector{T}}
-        #TestSuite.test_schur(AT, m) # not supported yet
+        AT = Diagonal{T, Vector{T}}
+        TestSuite.test_schur(AT, m)
+        TestSuite.test_schur_algs(AT, m, (DiagonalAlgorithm(),))
     end
+end
+
+@testset "schur_vals is deprecated" begin
+    A = randn(StableRNG(123), 4, 4)
+    @test schur_vals(A) == eig_vals(A)
+    @test schur_vals!(copy(A)) == eig_vals!(copy(A))
 end

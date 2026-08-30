@@ -33,10 +33,16 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Deprecated
 
+- `schur_vals` and `schur_vals!` in favour of `eig_vals` and `eig_vals!`. LAPACK's `gees` balances
+  without scaling, so the eigenvalues it returns are those of `eig_vals(A; scale = false)`, which is
+  considerably less accurate for badly scaled matrices and no faster. Note that `eig_vals` does not
+  accept the `expert` keyword argument.
+
 ### Removed
 
 ### Fixed
 
+- `schur_full` now supports `Diagonal` inputs through `DiagonalAlgorithm` ([#276](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/issues/276)).
 - LQ decompositions no longer gauge fix `Q` when `positive = false` and `L` is not computed.
 
 ### Performance
