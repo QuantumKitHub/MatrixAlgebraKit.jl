@@ -102,6 +102,63 @@ function instantiate_rank_deficient_matrix(::Type{T}, sz; trunc = truncrank(div(
     return Diagonal(diag(mul!(A, V, C)))
 end
 
+# `squareroot` is only defined away from the negative real axis, so the matrix functions need
+# matrices with a controlled spectrum rather than the plain `randn` of `instantiate_matrix`
+
+# spectral radius at most one, keeping `exponential` well inside the principal branch
+function instantiate_smallnorm_matrix(T, sz)
+    A = instantiate_matrix(T, sz)
+    return A / norm(A)
+end
+
+# spectrum inside the unit disk around 1, i.e. clear of the negative real axis and of zero
+instantiate_offaxis_matrix(T, sz) = instantiate_smallnorm_matrix(T, sz) + I
+
+# hermitian positive definite, so that the `eigh`-based algorithms apply
+function instantiate_posdef_matrix(T, sz)
+    A = instantiate_matrix(T, sz)
+    return project_hermitian!(A * A') + I
+end
+
+# hermitian with the prescribed (real) spectrum `λ`, for probing the domain boundary
+function instantiate_hermitian_spectrum(T, sz, λ)
+    A = instantiate_matrix(T, sz)
+    n = size(A, 1)
+    @assert length(λ) == n
+    dv = A isa Diagonal ? diagview(A) : A
+    Ddiag = similar(dv, eltype(A), n)
+    # convert on the host first: `copyto!` onto a device array does not convert eltypes
+    copyto!(Ddiag, convert(Vector{eltype(A)}, collect(λ)))
+    A isa Diagonal && return Diagonal(Ddiag)
+    V = instantiate_unitary(T, A, n)
+    return project_hermitian!(V * Diagonal(Ddiag) * V')
+end
+
+# a matrix with a defective eigenvalue `λ`, i.e. a 2x2 Jordan block, and simple eigenvalues
+# elsewhere. The similarity transformation is unitary, so the conditioning of the problem comes
+# from the Jordan block alone rather than from the transformation.
+function instantiate_defective_matrix(T, sz, λ)
+    n = sz isa Tuple ? first(sz) : sz
+    @assert n >= 2
+    A = instantiate_matrix(T, (n, n))
+    J = fill!(similar(A), zero(eltype(A)))
+    copyto!(diagview(J), convert(Vector{eltype(A)}, [λ, λ, collect(3:n)...]))
+    J[1, 2] = one(eltype(A))
+    V = instantiate_unitary(T, A, n)
+    return V * J * V'
+end
+
+# rebuild `alg` with an explicit `domain_atol`, so that the domain tests need not spell out the
+# inner decomposition algorithm a second time
+function with_domain_atol(alg::MatrixAlgebraKit.Algorithm, atol)
+    return MatrixAlgebraKit.Algorithm{MatrixAlgebraKit.name(alg)}(; alg.kwargs..., domain_atol = atol)
+end
+
+# likewise for the blocking threshold of `MatrixFunctionViaSchur`
+function with_blocksize(alg::MatrixAlgebraKit.Algorithm, blocksize)
+    return MatrixAlgebraKit.Algorithm{MatrixAlgebraKit.name(alg)}(; alg.kwargs..., blocksize = blocksize)
+end
+
 include("ad_utils.jl")
 
 include("projections.jl")
@@ -116,6 +173,11 @@ include("decompositions/eig.jl")
 include("decompositions/eigh.jl")
 include("decompositions/orthnull.jl")
 include("decompositions/svd.jl")
+
+# Matrix functions
+# ----------------
+include("matrixfunctions/exponential.jl")
+include("matrixfunctions/squareroot.jl")
 
 # Mooncake
 # --------

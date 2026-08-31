@@ -98,16 +98,20 @@ The following algorithms for matrix decompositions are available.
 | [`PolarViaSVD`](@ref) | polar | positional `svd_alg` argument |
 | [`PolarNewton`](@ref) | polar | `maxiter`, `tol` |
 
+For full docstring details on each algorithm type, see the corresponding section in [Decompositions](@ref).
+
 The following algorithms for matrix functions are available.
 
 | Algorithm | Applicable matrix functions | Key keyword arguments |
 |:----------|:--------------------------|:----------------------|
-| [`MatrixFunctionViaTaylor`](@ref) | exponential | `tol`, `balance` |
-| [`MatrixFunctionViaLA`](@ref) | exponential | |
-| [`MatrixFunctionViaEig`](@ref) | exponential | `eig_alg` |
-| [`MatrixFunctionViaEigh`](@ref) | exponential | `eigh_alg` |
+| [`MatrixFunctionViaTaylor`](@ref) | exponential | `tol`, `balance`, `estimate_order` |
+| [`MatrixFunctionViaSchur`](@ref) | squareroot | `schur_alg`, `blocksize`, `domain_atol` |
+| [`MatrixFunctionViaLA`](@ref) | exponential, squareroot | — |
+| [`MatrixFunctionViaEig`](@ref) | exponential, squareroot | `eig_alg` (also positional), `domain_atol` (squareroot) |
+| [`MatrixFunctionViaEigh`](@ref) | exponential, squareroot | `eigh_alg` (also positional), `domain_atol` (squareroot) |
 
-For full docstring details on each algorithm type, see the corresponding section in [Decompositions](@ref).
+Note that [`MatrixFunctionViaLA`](@ref) accepts no keyword arguments, since it has no access to the spectrum and thus cannot honor a `domain_atol`.
+For full docstring details on each algorithm type, and for how the tolerance is meant to be used, see [Matrix functions](@ref) and in particular [Domain considerations](@ref sec_matrixfunction_domain).
 
 ## [Driver Selection](@id sec_driverselection)
 

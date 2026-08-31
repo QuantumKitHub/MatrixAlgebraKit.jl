@@ -26,6 +26,7 @@ steps:
           - "rocm"
         group:
           - "decompositions"
+          - "matrixfunctions"
           - "mooncake"
       adjustments:
         - with:
