@@ -34,7 +34,7 @@ export exponential, exponential!
 
 export Householder, Native_HouseholderQR, Native_HouseholderLQ
 export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar
-export RobustRepresentations
+export RobustRepresentations, DivideAndConquerBatched, QRIterationBatched, BisectionBatched, JacobiBatched
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
     LAPACK_DivideAndConquer, LAPACK_Jacobi, LAPACK_SafeDivideAndConquer
@@ -46,9 +46,10 @@ export DefaultAlgorithm
 export DiagonalAlgorithm
 export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
-    CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer
+    CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer, CUSOLVER_JacobiBatched
 export ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi,
-    ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection
+    ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection, ROCSOLVER_QRIterationBatched, ROCSOLVER_JacobiBatched,
+    ROCSOLVER_DivideAndConquerBatched, ROCSOLVER_BisectionBatched
 
 export notrunc, truncrank, trunctol, truncerror, truncfilter
 
