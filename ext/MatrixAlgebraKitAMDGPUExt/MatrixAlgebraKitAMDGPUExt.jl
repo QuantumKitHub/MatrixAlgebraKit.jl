@@ -23,10 +23,10 @@ function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <
     return QRIteration(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCArray{<:BlasFloat, 3}}
-    return QRIterationBatched(; kwargs...)
+    return QRIteration(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}
-    return QRIterationBatched(; kwargs...)
+    return QRIteration(; kwargs...)
 end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return DivideAndConquer(; kwargs...)
