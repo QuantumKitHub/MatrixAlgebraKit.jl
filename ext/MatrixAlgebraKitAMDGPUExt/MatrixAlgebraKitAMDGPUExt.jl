@@ -32,11 +32,21 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return DivideAndConquer(; kwargs...)
 end
 
+function MatrixAlgebraKit.one!(A::StridedROCArray{T, 3}) where {T <: BlasFloat}
+    length(A) > 0 || return A
+    zero!(A)
+    # TODO use mapslices?
+    for a in eachslice(A, dims = 3)
+        diagview(a) .= one(eltype(a))
+    end
+    return A
+end
+
 for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::ROCSOLVER, args...) = YArocSOLVER.$f(args...)
 end
 
-MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :divide_and_conquer, :bisection, :qr_iteration_batched, :jacobi_batched, :divide_and_conquer_batched, :bisection_batched)
+MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :divide_and_conquer, :bisection)
 
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     m, n = size(A)
