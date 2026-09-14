@@ -241,13 +241,6 @@ for f! in (:gesdd!, :gesvd!, :gesvdj!, :gesvdp!, :gesvdx!, :gesvdr!, :gesdvd!, :
     @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $($(f!))"))
 end
 
-# declare these as dummies so the GPU extensions can import them safely
-function gesvd_batched! end
-function gesdd_batched! end
-function gesvdj_batched! end
-function gesvdx_batched! end
-
-
 """
     svd_via_adjoint!(f!, driver, A, S, U, Vᴴ; kwargs...)
 
