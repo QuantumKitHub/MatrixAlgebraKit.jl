@@ -86,7 +86,7 @@ function test_svd_compact_batched(
         Ac = deepcopy(Ad)
         m, n = size(first(As))
         minmn = min(m, n)
-        U, S, Vᴴ = @testinferred svd_compact(Ad)
+        U, S, Vᴴ = @testinferred batched_svd_compact(Ad)
         @test size(U) == (m, minmn, batch_size)
         @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
         @test size(Vᴴ) == (minmn, n, batch_size)
@@ -98,7 +98,7 @@ function test_svd_compact_batched(
         end
 
         Sc = similar(diagview(S))
-        U2, S2, V2ᴴ = @testinferred svd_compact!(Ac, (U, S, Vᴴ))
+        U2, S2, V2ᴴ = @testinferred batched_svd_compact!(Ac, (U, S, Vᴴ))
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 2), eachslice(V2ᴴ, dims = 3))
             @test u * Diagonal(s) * vᴴ ≈ a
             @test isisometric(u)
@@ -107,7 +107,7 @@ function test_svd_compact_batched(
         end
 
         if test_vals
-            Sd = @testinferred svd_vals(Ad)
+            Sd = @testinferred batched_svd_vals(Ad)
             for (s, sd) in zip(eachslice(S, dims = 2), eachslice(Sd, dims = 2))
                 @test s ≈ sd
             end
@@ -160,7 +160,7 @@ function test_svd_compact_algs_batched(
         Ac = deepcopy(Ad)
         m, n = size(first(As))
         minmn = min(m, n)
-        U, S, Vᴴ = @testinferred svd_compact(Ad; alg)
+        U, S, Vᴴ = @testinferred batched_svd_compact(Ad; alg)
         @test size(U) == (m, minmn, batch_size)
         @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
         @test size(Vᴴ) == (minmn, n, batch_size)
@@ -171,7 +171,7 @@ function test_svd_compact_algs_batched(
             @test isposdef(Diagonal(s))
         end
 
-        U2, S2, V2ᴴ = @testinferred svd_compact!(Ac, (U, S, Vᴴ); alg)
+        U2, S2, V2ᴴ = @testinferred batched_svd_compact!(Ac, (U, S, Vᴴ); alg)
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 2), eachslice(V2ᴴ, dims = 3))
             @test u * Diagonal(s) * vᴴ ≈ a
             @test isisometric(u)
@@ -180,7 +180,7 @@ function test_svd_compact_algs_batched(
         end
 
         if test_vals
-            Sd = @testinferred svd_vals(Ad; alg)
+            Sd = @testinferred batched_svd_vals(Ad; alg)
             for (s, sd) in zip(eachslice(S, dims = 2), eachslice(Sd, dims = 2))
                 @test s ≈ sd
             end
@@ -233,7 +233,7 @@ function test_svd_full_batched(
         Ac = deepcopy(Ad)
         m, n = size(first(As))
         minmn = min(m, n)
-        U, S, Vᴴ = @testinferred svd_full(Ad)
+        U, S, Vᴴ = @testinferred batched_svd_full(Ad)
         @test size(U) == (m, m, batch_size)
         @test S isa AbstractArray{real(eltype(T)), 3} && size(S) == (m, n, batch_size)
         @test size(Vᴴ) == (n, n, batch_size)
@@ -244,7 +244,7 @@ function test_svd_full_batched(
             @test all(isposdef, diagview(s))
         end
 
-        U2, S2, V2ᴴ = @testinferred svd_full!(Ac, (U, S, Vᴴ))
+        U2, S2, V2ᴴ = @testinferred batched_svd_full!(Ac, (U, S, Vᴴ))
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 3), eachslice(V2ᴴ, dims = 3))
             @test u * s * vᴴ ≈ a
             @test isunitary(u)
@@ -253,7 +253,7 @@ function test_svd_full_batched(
         end
 
         Sc = similar(first(As), real(eltype(T)), min(m, n), batch_size)
-        Sc2 = @testinferred svd_vals!(copy!(Ac, Ad), Sc)
+        Sc2 = @testinferred batched_svd_vals!(copy!(Ac, Ad), Sc)
         for (s, s2) in zip(eachslice(S, dims = 3), eachslice(Sc, dims = 2))
             @test collect(diagview(s)) ≈ collect(s2)
         end
@@ -305,7 +305,7 @@ function test_svd_full_algs_batched(
         Ac = deepcopy(Ad)
         m, n = size(first(As))
         minmn = min(m, n)
-        U, S, Vᴴ = @testinferred svd_full(Ad; alg)
+        U, S, Vᴴ = @testinferred batched_svd_full(Ad; alg)
         @test size(U) == (m, m, batch_size)
         @test S isa AbstractArray{real(eltype(T)), 3} && size(S) == (m, n, batch_size)
         @test size(Vᴴ) == (n, n, batch_size)
@@ -316,7 +316,7 @@ function test_svd_full_algs_batched(
             @test all(isposdef, diagview(s))
         end
 
-        U2, S2, V2ᴴ = @testinferred svd_full!(Ac, (U, S, Vᴴ); alg)
+        U2, S2, V2ᴴ = @testinferred batched_svd_full!(Ac, (U, S, Vᴴ); alg)
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 3), eachslice(V2ᴴ, dims = 3))
             @test u * s * vᴴ ≈ a
             @test isunitary(u)
@@ -325,7 +325,7 @@ function test_svd_full_algs_batched(
         end
 
         Sc = similar(first(As), real(eltype(T)), min(m, n), batch_size)
-        Sc2 = @testinferred svd_vals!(copy!(Ac, Ad), Sc; alg)
+        Sc2 = @testinferred batched_svd_vals!(copy!(Ac, Ad), Sc; alg)
         for (s, s2) in zip(eachslice(S, dims = 3), eachslice(Sc, dims = 2))
             @test collect(diagview(s)) ≈ collect(s2)
         end
