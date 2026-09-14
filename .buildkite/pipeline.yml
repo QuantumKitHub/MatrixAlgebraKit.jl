@@ -20,7 +20,7 @@ steps:
       setup:
         julia:
           - "1.10"
-          - "1.12"
+          - "1.13"
         queue:
           - "cuda"
           - "rocm"
@@ -36,5 +36,5 @@ steps:
         - with:
             queue: "rocm"
             group: "mooncake"
-            julia: "1.12"
+            julia: "1.13"
           skip: true
