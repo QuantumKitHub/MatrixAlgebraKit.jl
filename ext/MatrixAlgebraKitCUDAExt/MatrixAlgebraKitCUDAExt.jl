@@ -23,7 +23,7 @@ function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <
     return QRIteration(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedCuArray{<:BlasFloat, 3}}
-    return JacobiBatched(; kwargs...)
+    return Jacobi(; kwargs...)
 end
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
     return QRIteration(; kwargs...)
@@ -32,6 +32,15 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return DivideAndConquer(; kwargs...)
 end
 
+function MatrixAlgebraKit.one!(A::StridedCuArray{T, 3}) where {T <: BlasFloat}
+    length(A) > 0 || return A
+    zero!(A)
+    # TODO use mapslices?
+    for a in eachslice(A, dims = 3)
+        diagview(a) .= one(eltype(a))
+    end
+    return A
+end
 
 for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::CUSOLVER, args...) = YACUSOLVER.$f(args...)
@@ -39,7 +48,7 @@ end
 
 MatrixAlgebraKit.prefers_ungqr(::CUSOLVER) = true
 
-MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar, :jacobi_batched)
+MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
 
 function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
     m, n = size(A)

@@ -1,7 +1,9 @@
 # Input
 # ------
-copy_input(::typeof(svd_full), As::AbstractVector{<:AbstractMatrix}) = map(A -> copy!(similar(A, float(eltype(A))), A), As)
-copy_input(::typeof(svd_full), A::AbstractArray{T, 3}) where {T} = copy!(similar(A, float(T)), A)
+copy_input(::typeof(batched_svd_full), As::AbstractVector{<:AbstractMatrix}) = map(A -> copy!(similar(A, float(eltype(A))), A), As)
+copy_input(::typeof(batched_svd_full), A::AbstractArray{T, 3}) where {T} = copy!(similar(A, float(T)), A)
+copy_input(::typeof(batched_svd_compact), A) = copy_input(batched_svd_full, A)
+copy_input(::typeof(batched_svd_vals), A) = copy_input(batched_svd_full, A)
 copy_input(::typeof(svd_full), A::AbstractMatrix) = copy!(similar(A, float(eltype(A))), A)
 copy_input(::typeof(svd_compact), A) = copy_input(svd_full, A)
 copy_input(::typeof(svd_vals), A) = copy_input(svd_full, A)
@@ -45,7 +47,7 @@ function check_input(::typeof(svd_vals!), A::AbstractMatrix, S, ::AbstractAlgori
 end
 
 # batched varieties
-function check_input(::typeof(svd_full!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
+function check_input(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
     @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
     batch_size = length(A)
@@ -59,7 +61,7 @@ function check_input(::typeof(svd_full!), A::AbstractVector{<:AbstractMatrix}, U
     @check_scalar(Vᴴ, first(A))
     return nothing
 end
-function check_input(::typeof(svd_compact!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
+function check_input(::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
     @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
     batch_size = length(A)
@@ -74,7 +76,7 @@ function check_input(::typeof(svd_compact!), A::AbstractVector{<:AbstractMatrix}
     @check_scalar(Vᴴ, first(A))
     return nothing
 end
-function check_input(::typeof(svd_vals!), A::AbstractVector{<:AbstractMatrix}, S, ::AbstractAlgorithm)
+function check_input(::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix}, S, ::AbstractAlgorithm)
     @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
     batch_size = length(A)
@@ -84,7 +86,7 @@ function check_input(::typeof(svd_vals!), A::AbstractVector{<:AbstractMatrix}, S
     @check_scalar(S, first(A), real)
     return nothing
 end
-function check_input(::typeof(svd_full!), A::AbstractArray{T, 3}, USVᴴ, ::AbstractAlgorithm) where {T}
+function check_input(::typeof(batched_svd_full!), A::AbstractArray{T, 3}, USVᴴ, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
     U, S, Vᴴ = USVᴴ
     @assert U isa AbstractArray && S isa AbstractArray && Vᴴ isa AbstractArray
@@ -96,7 +98,7 @@ function check_input(::typeof(svd_full!), A::AbstractArray{T, 3}, USVᴴ, ::Abst
     @check_scalar(Vᴴ, A)
     return nothing
 end
-function check_input(::typeof(svd_compact!), A::AbstractArray{T, 3}, USVᴴ, ::AbstractAlgorithm) where {T}
+function check_input(::typeof(batched_svd_compact!), A::AbstractArray{T, 3}, USVᴴ, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
     minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
@@ -109,7 +111,7 @@ function check_input(::typeof(svd_compact!), A::AbstractArray{T, 3}, USVᴴ, ::A
     @check_scalar(Vᴴ, A)
     return nothing
 end
-function check_input(::typeof(svd_vals!), A::AbstractArray{T, 3}, S, ::AbstractAlgorithm) where {T}
+function check_input(::typeof(batched_svd_vals!), A::AbstractArray{T, 3}, S, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
     minmn = min(m, n)
     @assert S isa AbstractMatrix
@@ -169,21 +171,21 @@ function initialize_output(::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error
     return initialize_output(svd_compact!, A, alg.alg)
 end
 # batched versions
-function initialize_output(::typeof(svd_full!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
+function initialize_output(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
     m, n = size(first(A))
     U = similar(first(A), (m, m, length(A)))
     S = similar(first(A), real(eltype(first(A))), (m, n, length(A))) # TODO: Rectangular diagonal type?
     Vᴴ = similar(first(A), (n, n, length(A)))
     return (U, S, Vᴴ)
 end
-function initialize_output(::typeof(svd_full!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
+function initialize_output(::typeof(batched_svd_full!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
     U = similar(A, (m, m, batch_size))
     S = similar(A, real(eltype(A)), (m, n, batch_size))
     Vᴴ = similar(A, (n, n, batch_size))
     return (U, S, Vᴴ)
 end
-function initialize_output(::typeof(svd_compact!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
+function initialize_output(::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
     @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
     minmn = min(m, n)
@@ -192,7 +194,7 @@ function initialize_output(::typeof(svd_compact!), A::AbstractVector{<:AbstractM
     Vᴴ = similar(first(A), (minmn, n, length(A)))
     return (U, S, Vᴴ)
 end
-function initialize_output(::typeof(svd_compact!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
+function initialize_output(::typeof(batched_svd_compact!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
     minmn = min(m, n)
     U = similar(A, (m, minmn, batch_size))
@@ -200,12 +202,12 @@ function initialize_output(::typeof(svd_compact!), A::AbstractArray{T, 3}, ::Abs
     Vᴴ = similar(A, (minmn, n, batch_size))
     return (U, S, Vᴴ)
 end
-function initialize_output(::typeof(svd_vals!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
+function initialize_output(::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
     @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
     return similar(first(A), real(eltype(first(A))), (min(m, n), length(A)))
 end
-function initialize_output(::typeof(svd_vals!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
+function initialize_output(::typeof(batched_svd_vals!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
     return similar(A, real(eltype(A)), (min(m, n), batch_size))
 end
@@ -345,39 +347,39 @@ end
 
 # batched varieties
 for (f, f_lapack!, Alg) in (
-        (:divide_and_conquer_batched, :gesdd_batched!, :DivideAndConquerBatched),
-        (:qr_iteration_batched, :gesvd_batched!, :QRIterationBatched),
-        (:bisection_batched, :gesvdx_batched!, :BisectionBatched),
-        (:jacobi_batched, :gesvdj_batched!, :JacobiBatched),
+        (:divide_and_conquer, :gesdd_batched!, :DivideAndConquer),
+        (:qr_iteration, :gesvd_batched!, :QRIteration),
+        (:bisection, :gesvdx_batched!, :Bisection),
+        (:jacobi, :gesvdj_batched!, :Jacobi),
     )
-    svd_compact_f! = Symbol(:svd_compact_, f, :!)
-    svd_full_f! = Symbol(:svd_full_, f, :!)
-    svd_vals_f! = Symbol(:svd_vals_, f, :!)
+    svd_compact_f! = Symbol(:batched_svd_compact_, f, :!)
+    svd_full_f! = Symbol(:batched_svd_full_, f, :!)
+    svd_vals_f! = Symbol(:batched_svd_vals_, f, :!)
 
     # MatrixAlgebraKit wrappers
     @eval begin
-        function svd_compact!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
-            check_input(svd_compact!, A, USVᴴ, alg)
+        function batched_svd_compact!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
+            check_input(batched_svd_compact!, A, USVᴴ, alg)
             return $svd_compact_f!(A, USVᴴ...; alg.kwargs...)
         end
-        function svd_compact!(A::AbstractArray{T, 3}, USVᴴ, alg::$Alg) where {T}
-            check_input(svd_compact!, A, USVᴴ, alg)
+        function batched_svd_compact!(A::AbstractArray{T, 3}, USVᴴ, alg::$Alg) where {T}
+            check_input(batched_svd_compact!, A, USVᴴ, alg)
             return $svd_compact_f!(A, USVᴴ...; alg.kwargs...)
         end
-        function svd_full!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
-            check_input(svd_full!, A, USVᴴ, alg)
+        function batched_svd_full!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
+            check_input(batched_svd_full!, A, USVᴴ, alg)
             return $svd_full_f!(A, USVᴴ...; alg.kwargs...)
         end
-        function svd_full!(A::AbstractArray{T, 3}, USVᴴ, alg::$Alg) where {T}
-            check_input(svd_full!, A, USVᴴ, alg)
+        function batched_svd_full!(A::AbstractArray{T, 3}, USVᴴ, alg::$Alg) where {T}
+            check_input(batched_svd_full!, A, USVᴴ, alg)
             return $svd_full_f!(A, USVᴴ...; alg.kwargs...)
         end
-        function svd_vals!(A::AbstractVector{<:AbstractMatrix}, S, alg::$Alg)
-            check_input(svd_vals!, A, S, alg)
+        function batched_svd_vals!(A::AbstractVector{<:AbstractMatrix}, S, alg::$Alg)
+            check_input(batched_svd_vals!, A, S, alg)
             return $svd_vals_f!(A, S; alg.kwargs...)
         end
-        function svd_vals!(A::AbstractArray{T, 3}, S, alg::$Alg) where {T}
-            check_input(svd_vals!, A, S, alg)
+        function batched_svd_vals!(A::AbstractArray{T, 3}, S, alg::$Alg) where {T}
+            check_input(batched_svd_vals!, A, S, alg)
             return $svd_vals_f!(A, S; alg.kwargs...)
         end
     end

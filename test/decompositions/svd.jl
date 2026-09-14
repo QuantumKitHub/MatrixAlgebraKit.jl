@@ -58,7 +58,7 @@ if CUDA.functional()
         TestSuite.test_svd_algs(CuMatrix{T}, (m, n), CUDA_SVD_ALGS)
 
         TestSuite.test_svd_batched(CuMatrix{T}, (m, n), batch_size)
-        CUDA_SVD_ALGS = (JacobiBatched(),)
+        CUDA_SVD_ALGS = (Jacobi(),)
         TestSuite.test_svd_batched_algs(CuMatrix{T}, (m, n), batch_size, CUDA_SVD_ALGS)
     end
 
