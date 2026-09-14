@@ -18,6 +18,8 @@ export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
 export svd_compact, svd_full, svd_vals, svd_trunc, svd_trunc_no_error
 export svd_compact!, svd_full!, svd_vals!, svd_trunc!, svd_trunc_no_error!
+export batched_svd_compact, batched_svd_full, batched_svd_vals
+export batched_svd_compact!, batched_svd_full!, batched_svd_vals!
 export eigh_full, eigh_vals, eigh_trunc, eigh_trunc_no_error
 export eigh_full!, eigh_vals!, eigh_trunc!, eigh_trunc_no_error!
 export eig_full, eig_vals, eig_trunc, eig_trunc_no_error
@@ -34,7 +36,7 @@ export exponential, exponential!
 
 export Householder, Native_HouseholderQR, Native_HouseholderLQ
 export DivideAndConquer, SafeDivideAndConquer, QRIteration, Bisection, Jacobi, SVDViaPolar
-export RobustRepresentations, DivideAndConquerBatched, QRIterationBatched, BisectionBatched, JacobiBatched
+export RobustRepresentations
 export LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_Simple, LAPACK_Expert,
     LAPACK_QRIteration, LAPACK_Bisection, LAPACK_MultipleRelativelyRobustRepresentations,
     LAPACK_DivideAndConquer, LAPACK_Jacobi, LAPACK_SafeDivideAndConquer
@@ -46,10 +48,9 @@ export DefaultAlgorithm
 export DiagonalAlgorithm
 export NativeBlocked
 export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_SVDPolar,
-    CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer, CUSOLVER_JacobiBatched
+    CUSOLVER_Jacobi, CUSOLVER_Randomized, CUSOLVER_DivideAndConquer
 export ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi,
-    ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection, ROCSOLVER_QRIterationBatched, ROCSOLVER_JacobiBatched,
-    ROCSOLVER_DivideAndConquerBatched, ROCSOLVER_BisectionBatched
+    ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection
 
 export notrunc, truncrank, trunctol, truncerror, truncfilter
 
@@ -109,6 +110,7 @@ include("interface/matrixfunctions.jl")
 include("interface/qr.jl")
 include("interface/lq.jl")
 include("interface/svd.jl")
+include("interface/batched_svd.jl")
 include("interface/eig.jl")
 include("interface/eigh.jl")
 include("interface/gen_eig.jl")
