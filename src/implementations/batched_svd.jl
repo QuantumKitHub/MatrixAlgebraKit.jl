@@ -149,6 +149,36 @@ for f! in (:gesdd_batched!, :gesvd_batched!, :gesvdj_batched!, :gesvdx_batched!)
     @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $($(f!))"))
 end
 
+# Adjoint of every matrix in a batch, i.e. `dst[:, :, i] = adjoint(src[:, :, i])`.
+function batched_adjoint!(dst::AbstractArray{<:Any, 3}, src::AbstractArray{<:Any, 3})
+    isempty(dst) && return dst
+    permutedims!(dst, src, (2, 1, 3))
+    eltype(dst) <: Real || (dst .= conj.(dst))
+    return dst
+end
+function batched_adjoint(A::AbstractArray{<:Any, 3})
+    return batched_adjoint!(similar(A, (size(A, 2), size(A, 1), size(A, 3))), A)
+end
+batched_adjoint(A::AbstractVector{<:AbstractMatrix}) = map(a -> adjoint!(similar(a'), a), A)
+
+"""
+    batched_svd_via_adjoint!(f!, driver, A, S, U, Vᴴ; kwargs...)
+
+Compute the SVD of every matrix in the batch `A` (m × n, m < n) by computing the SVD of their
+adjoints using the provided function `f!(driver, A, S, U, Vᴴ; kwargs...)`. Use this as a
+building block for drivers whose batched SVD routines require m ≥ n, mirroring
+[`svd_via_adjoint!`](@ref).
+"""
+function batched_svd_via_adjoint!(f!::F, driver::Driver, A, S, U, Vᴴ; kwargs...) where {F}
+    Aᴴ = batched_adjoint(A)
+    V = similar(Vᴴ, (size(Vᴴ, 2), size(Vᴴ, 1), size(Vᴴ, 3)))
+    Uᴴ = similar(U, (size(U, 2), size(U, 1), size(U, 3)))
+    f!(driver, Aᴴ, S, V, Uᴴ; kwargs...)
+    length(U) > 0 && batched_adjoint!(U, Uᴴ)
+    length(Vᴴ) > 0 && batched_adjoint!(Vᴴ, V)
+    return S, U, Vᴴ
+end
+
 for (f, f_lapack!, Alg) in (
         (:divide_and_conquer, :gesdd_batched!, :DivideAndConquer),
         (:qr_iteration, :gesvd_batched!, :QRIteration),
