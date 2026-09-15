@@ -50,6 +50,9 @@ MatrixAlgebraKit.prefers_ungqr(::CUSOLVER) = true
 
 MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
 
+# `cusolverDnXgesvdjBatched` only accepts matrices up to 32x32
+MatrixAlgebraKit.max_batched_blocksize(::AbstractAlgorithm, ::Type{<:AnyCuArray}) = 32
+
 function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
     m, n = size(A)
     m >= n && return YACUSOLVER.gesvd!(A, S, U, Vᴴ)
