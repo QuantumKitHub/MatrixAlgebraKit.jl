@@ -59,6 +59,19 @@ function check_input(
     return nothing
 end
 function check_input(
+        ::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix},
+        USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractMatrix}},
+        alg::AbstractAlgorithm
+    )
+    Us, Ss, Vᴴs = USVᴴ
+    length(Us) == length(Ss) == length(Vᴴs) == length(A) ||
+        throw(DimensionMismatch("expected $(length(A)) outputs for each of U, S and Vᴴ"))
+    for (a, u, s, vᴴ) in zip(A, Us, Ss, Vᴴs)
+        check_input(svd_full!, a, (u, s, vᴴ), alg)
+    end
+    return nothing
+end
+function check_input(
         ::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix},
         S::AbstractVector{<:AbstractVector}, alg::AbstractAlgorithm
     )
@@ -104,12 +117,12 @@ end
 
 # Outputs
 # -------
+# a vector of matrices, which may have different sizes, gets one output per matrix
 function initialize_output(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
-    m, n = size(first(A))
-    U = similar(first(A), (m, m, length(A)))
-    S = similar(first(A), real(eltype(first(A))), (m, n, length(A))) # TODO: Rectangular diagonal type?
-    Vᴴ = similar(first(A), (n, n, length(A)))
-    return (U, S, Vᴴ)
+    Us = [similar(a, (size(a, 1), size(a, 1))) for a in A]
+    Ss = [similar(a, real(eltype(a)), size(a)) for a in A] # TODO: Rectangular diagonal type?
+    Vᴴs = [similar(a, (size(a, 2), size(a, 2))) for a in A]
+    return (Us, Ss, Vᴴs)
 end
 function initialize_output(::typeof(batched_svd_full!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
@@ -119,13 +132,10 @@ function initialize_output(::typeof(batched_svd_full!), A::AbstractArray{T, 3}, 
     return (U, S, Vᴴ)
 end
 function initialize_output(::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
-    @assert all(==(size(first(A))), size.(A))
-    m, n = size(first(A))
-    minmn = min(m, n)
-    U = similar(first(A), (m, minmn, length(A)))
-    S = similar(first(A), real(eltype(first(A))), minmn, length(A))
-    Vᴴ = similar(first(A), (minmn, n, length(A)))
-    return (U, S, Vᴴ)
+    Us = [similar(a, (size(a, 1), minimum(size(a)))) for a in A]
+    Ss = [similar(a, real(eltype(a)), minimum(size(a))) for a in A]
+    Vᴴs = [similar(a, (minimum(size(a)), size(a, 2))) for a in A]
+    return (Us, Ss, Vᴴs)
 end
 function initialize_output(::typeof(batched_svd_compact!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
@@ -136,9 +146,7 @@ function initialize_output(::typeof(batched_svd_compact!), A::AbstractArray{T, 3
     return (U, S, Vᴴ)
 end
 function initialize_output(::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
-    @assert all(==(size(first(A))), size.(A))
-    m, n = size(first(A))
-    return similar(first(A), real(eltype(first(A))), (min(m, n), length(A)))
+    return [similar(a, real(eltype(a)), minimum(size(a))) for a in A]
 end
 function initialize_output(::typeof(batched_svd_vals!), A::AbstractArray{T, 3}, ::AbstractAlgorithm) where {T}
     m, n, batch_size = size(A)
@@ -239,6 +247,30 @@ for (f, f_lapack!, Alg) in (
             end
             return USVᴴ
         end
+        function batched_svd_full!(
+                A::AbstractVector{<:AbstractMatrix},
+                USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractMatrix}},
+                alg::$Alg
+            )
+            check_input(batched_svd_full!, A, USVᴴ, alg)
+            Us, Ss, Vᴴs = USVᴴ
+            # zero padding mixes the padded dimensions into the complements of the full
+            # `U` and `Vᴴ`, so only matrices of equal size are batched
+            batches, rest = _ragged_batches(A, alg; pad = false)
+            for (inds, (m, n)) in batches
+                Ab = _ragged_pack(A, inds, m, n)
+                Ub, Sb, Vᴴb = batched_svd_full!(Ab, initialize_output(batched_svd_full!, Ab, alg), alg)
+                for (j, i) in enumerate(inds)
+                    copyto!(Us[i], view(Ub, :, :, j))
+                    copyto!(Ss[i], view(Sb, :, :, j))
+                    copyto!(Vᴴs[i], view(Vᴴb, :, :, j))
+                end
+            end
+            for i in rest
+                svd_full!(A[i], (Us[i], Ss[i], Vᴴs[i]), alg)
+            end
+            return USVᴴ
+        end
         function batched_svd_vals!(
                 A::AbstractVector{<:AbstractMatrix}, S::AbstractVector{<:AbstractVector}, alg::$Alg
             )
@@ -332,11 +364,11 @@ max_batched_blocksize(::AbstractAlgorithm, ::Type) = typemax(Int)
 const BATCHED_SVD_THRESHOLD::Int = 4
 
 # Split a ragged batch into batches the driver can handle: matrices of equal size are
-# batched together, and whatever is left over is zero-padded into one more batch. Returns the
-# batches as `(indices, (m, n))` pairs, and the indices of the matrices that have to be
-# decomposed one at a time.
+# batched together, and, if `pad`, whatever is left over is zero-padded into one more batch.
+# Returns the batches as `(indices, (m, n))` pairs, and the indices of the matrices that have
+# to be decomposed one at a time.
 # TODO: should everything be padded into ONE batch?
-function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgorithm)
+function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgorithm; pad::Bool = true)
     batches = Tuple{Vector{Int}, Tuple{Int, Int}}[]
     rest = Int[]
     isempty(A) && return batches, rest
@@ -353,6 +385,7 @@ function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgor
             append!(rest, inds)
         end
     end
+    pad || return batches, rest
     # Zero padding leaves the leading `min(m, n)` singular values and vectors of every input
     # untouched. Pad to a square only when the algorithm requires `m ≥ n`
     # (currently only `QRIteration`).
