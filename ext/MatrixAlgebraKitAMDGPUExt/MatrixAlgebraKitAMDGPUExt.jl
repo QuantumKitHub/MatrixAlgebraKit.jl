@@ -60,10 +60,17 @@ function gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::Strid
     return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
 end
 
-gesvd_batched!(::ROCSOLVER, As::Vector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
-    YArocSOLVER.gesvd_batched!(As, Ss, Us, Vᴴs; kwargs...)
-gesvd_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
-    YArocSOLVER.gesvd_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+# rocSOLVER's batched `gesvd` requires m ≥ n, so wide matrices go through the adjoint
+function gesvd_batched!(::ROCSOLVER, As::Vector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat}
+    m, n = size(first(As))
+    m >= n && return YArocSOLVER.gesvd_batched!(As, Ss, Us, Vᴴs; kwargs...)
+    return MatrixAlgebraKit.batched_svd_via_adjoint!(gesvd_batched!, ROCSOLVER(), As, Ss, Us, Vᴴs; kwargs...)
+end
+function gesvd_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat}
+    m, n, _ = size(As)
+    m >= n && return YArocSOLVER.gesvd_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+    return MatrixAlgebraKit.batched_svd_via_adjoint!(gesvd_batched!, ROCSOLVER(), As, Ss, Us, Vᴴs; kwargs...)
+end
 
 gesdd_batched!(::ROCSOLVER, As::Vector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
     YArocSOLVER.gesdd_batched!(As, Ss, Us, Vᴴs; kwargs...)
