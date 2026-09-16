@@ -872,7 +872,7 @@ for (fname, elty, relty) in
             batch_count = length(A)
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
-            jobu, jobvt = _gesvdx_jobs(A, U, Vᴴ, m, n, maxnsv)
+            jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
             length(S) == minmn * batch_count ||
                 throw(DimensionMismatch("length mismatch between A and S"))
 
@@ -927,7 +927,7 @@ for (fname, elty, relty) in
             minmn = min(m, n)
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
-            jobu, jobvt = _gesvdx_jobs(A, U, Vᴴ, m, n, maxnsv)
+            jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
             length(S) == minmn * batch_count ||
                 throw(DimensionMismatch("length mismatch between A and S"))
 
