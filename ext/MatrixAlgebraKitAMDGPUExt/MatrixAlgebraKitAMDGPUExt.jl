@@ -20,13 +20,21 @@ MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedROCArray{<:BlasF
 MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}} = ROCSOLVER()
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix{<:BlasFloat}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCArray{<:BlasFloat, 3}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
+end
+
+for f in (:svd_full!, :batched_svd_full!)
+    @eval function MatrixAlgebraKit.default_algorithm(
+            ::typeof(MatrixAlgebraKit.$f), ::Type{T}; kwargs...
+        ) where {T <: Union{StridedROCMatrix{<:BlasFloat}, StridedROCArray{<:BlasFloat, 3}, AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}}
+        return Bisection(; kwargs...)
+    end
 end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return DivideAndConquer(; kwargs...)
@@ -46,7 +54,7 @@ for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::ROCSOLVER, args...) = YArocSOLVER.$f(args...)
 end
 
-MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :divide_and_conquer)
+MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :divide_and_conquer, :bisection)
 
 # rocSOLVER's `gesvd*_batched` functions take the batch as an array
 # of device pointers, so a group of equally sized matrices

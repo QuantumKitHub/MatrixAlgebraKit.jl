@@ -768,7 +768,7 @@ function _gesvdx_maxnsv(srange, il::Integer, iu::Integer, minmn::Integer)
     return srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
 end
 
-function _gesvdx_jobs(A, U, Vᴴ, m::Integer, n::Integer, maxnsv::Integer)
+function _gesvdx_jobs(U, Vᴴ, m::Integer, n::Integer, maxnsv::Integer)
     if length(U) == 0
         jobu = rocSOLVER.rocblas_svect_none
     else
@@ -811,7 +811,7 @@ for (fname, elty, relty) in
             minmn = min(m, n)
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = _gesvdx_maxnsv(srange, il, iu, minmn)
-            jobu, jobvt = _gesvdx_jobs(A, U, Vᴴ, m, n, maxnsv)
+            jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
             length(S) == minmn ||
                 throw(DimensionMismatch("length mismatch between A ($minmn) and S ($(length(S)))"))
 
@@ -863,7 +863,7 @@ for (fname, elty, relty) in
             batch_count = length(A)
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = _gesvdx_maxnsv(srange, il, iu, minmn)
-            jobu, jobvt = _gesvdx_jobs(A, U, Vᴴ, m, n, maxnsv)
+            jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
             length(S) == minmn * batch_count ||
                 throw(DimensionMismatch("length mismatch between A and S"))
 
@@ -918,7 +918,7 @@ for (fname, elty, relty) in
             minmn = min(m, n)
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = _gesvdx_maxnsv(srange, il, iu, minmn)
-            jobu, jobvt = _gesvdx_jobs(A, U, Vᴴ, m, n, maxnsv)
+            jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
             length(S) == minmn * batch_count ||
                 throw(DimensionMismatch("length mismatch between A and S"))
 
