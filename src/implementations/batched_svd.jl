@@ -6,6 +6,7 @@ copy_input(::typeof(batched_svd_compact), A) = copy_input(batched_svd_full, A)
 copy_input(::typeof(batched_svd_vals), A) = copy_input(batched_svd_full, A)
 
 function check_input(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
+    isempty(A) && return nothing
     @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
     batch_size = length(A)
@@ -20,6 +21,7 @@ function check_input(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMa
     return nothing
 end
 function check_input(::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
+    isempty(A) && return nothing
     @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
     batch_size = length(A)
@@ -35,6 +37,7 @@ function check_input(::typeof(batched_svd_compact!), A::AbstractVector{<:Abstrac
     return nothing
 end
 function check_input(::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix}, S, ::AbstractAlgorithm)
+    isempty(A) && return nothing
     @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
     batch_size = length(A)
@@ -153,6 +156,9 @@ function initialize_output(::typeof(batched_svd_vals!), A::AbstractArray{T, 3}, 
     return similar(A, real(eltype(A)), (min(m, n), batch_size))
 end
 
+_isempty_batch(A::AbstractArray{<:Any, 3}) = isempty(A)
+_isempty_batch(A::AbstractVector{<:AbstractMatrix}) = all(isempty, A)
+
 for f! in (:gesdd_batched!, :gesvd_batched!, :gesvdj_batched!, :gesvdx_batched!)
     @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $($(f!))"))
 end
@@ -234,8 +240,8 @@ for (f, f_lapack!, Alg) in (
             Us, Ss, Vᴴs = USVᴴ
             batches, rest = _ragged_batches(A, alg)
             for (inds, (m, n)) in batches
-                Ab = _ragged_pack(A, inds, m, n)
-                Ub, Sb, Vᴴb = batched_svd_compact!(Ab, initialize_output(batched_svd_compact!, Ab, alg), alg)
+                Ab = _ragged_pack(A, inds, m, n, alg)
+                Ub, Sb, Vᴴb = batched_svd_compact!(Ab, _packed_output(batched_svd_compact!, Ab, alg), alg)
                 for (j, i) in enumerate(inds)
                     copyto!(Us[i], view(Ub, axes(Us[i])..., j))
                     copyto!(Ss[i], view(Sb, axes(Ss[i], 1), j))
@@ -258,8 +264,8 @@ for (f, f_lapack!, Alg) in (
             # `U` and `Vᴴ`, so only matrices of equal size are batched
             batches, rest = _ragged_batches(A, alg; pad = false)
             for (inds, (m, n)) in batches
-                Ab = _ragged_pack(A, inds, m, n)
-                Ub, Sb, Vᴴb = batched_svd_full!(Ab, initialize_output(batched_svd_full!, Ab, alg), alg)
+                Ab = _ragged_pack(A, inds, m, n, alg)
+                Ub, Sb, Vᴴb = batched_svd_full!(Ab, _packed_output(batched_svd_full!, Ab, alg), alg)
                 for (j, i) in enumerate(inds)
                     copyto!(Us[i], view(Ub, :, :, j))
                     copyto!(Ss[i], view(Sb, :, :, j))
@@ -277,8 +283,8 @@ for (f, f_lapack!, Alg) in (
             check_input(batched_svd_vals!, A, S, alg)
             batches, rest = _ragged_batches(A, alg)
             for (inds, (m, n)) in batches
-                Ab = _ragged_pack(A, inds, m, n)
-                Sb = batched_svd_vals!(Ab, initialize_output(batched_svd_vals!, Ab, alg), alg)
+                Ab = _ragged_pack(A, inds, m, n, alg)
+                Sb = batched_svd_vals!(Ab, _packed_output(batched_svd_vals!, Ab, alg), alg)
                 for (j, i) in enumerate(inds)
                     copyto!(S[i], view(Sb, axes(S[i], 1), j))
                 end
@@ -306,7 +312,7 @@ for (f, f_lapack!, Alg) in (
     # Implementation
     @eval begin
         function $svd_compact_f!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
-            isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
+            _isempty_batch(A) && return one!(U), zero!(S), one!(Vᴴ)
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             if fixgauge
                 for (u, vᴴ) in zip(eachslice(U, dims = 3), eachslice(Vᴴ, dims = 3))
@@ -318,7 +324,7 @@ for (f, f_lapack!, Alg) in (
         function $svd_full_f!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
             supports_svd_full(driver, $(QuoteNode(f))) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
-            isempty(A) && return one!(U), zero!(S), one!(Vᴴ)
+            _isempty_batch(A) && return one!(U), zero!(S), one!(Vᴴ)
             zero!(S)
             m, n, batch_size = size(S)
             minmn = min(m, n)
@@ -335,13 +341,13 @@ for (f, f_lapack!, Alg) in (
             return U, S, Vᴴ
         end
         function $svd_vals_f!(driver::Driver, A::AbstractArray{T, 3}, S::AbstractMatrix; fixgauge::Bool = true, kwargs...) where {T}
-            isempty(A) && return zero!(S)
+            _isempty_batch(A) && return zero!(S)
             U, Vᴴ = similar(A, (0, 0, 0)), similar(A, (0, 0, 0))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             return S
         end
         function $svd_vals_f!(driver::Driver, A::AbstractVector{<:AbstractMatrix}, S::AbstractMatrix; fixgauge::Bool = true, kwargs...)
-            isempty(A) && return zero!(S)
+            _isempty_batch(A) && return zero!(S)
             U, Vᴴ = similar(first(A), (0, 0, 0)), similar(first(A), (0, 0, 0))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             return S
@@ -358,6 +364,16 @@ Largest matrix dimension that the batched driver for `alg` accepts for arrays of
 Larger matrices in a ragged batch are decomposed one at a time instead. Unlimited by default.
 """
 max_batched_blocksize(::AbstractAlgorithm, ::Type) = typemax(Int)
+
+"""
+    supports_pointer_batch(alg, T::Type) -> Bool
+
+Whether the low-level batched driver version of `alg` accepts a batch of matrices of type `T`
+as an `AbstractVector` of separately allocated matrices. Such a group of matrices is handed
+to the driver as a vector of pointers, instead of being copied into one contiguous 3D array.
+`false` by default.
+"""
+supports_pointer_batch(::AbstractAlgorithm, ::Type) = false
 
 # Fewest matrices in a ragged batch that are worth a batched call
 # Should this be settable by the user?
@@ -399,9 +415,31 @@ function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgor
     return batches, rest
 end
 
-# Copy `A[inds]` into a single `(m, n, length(inds))` batch, zero-padding where needed.
-function _ragged_pack(A::AbstractVector{<:AbstractMatrix}, inds, m::Int, n::Int)
+# Outputs for a batch that `_ragged_pack` produced, which is either a contiguous `(m, n, b)`
+# array or, for a pointer-batch driver, a view of `b` equally sized matrices. Either way the
+# outputs are packed into the 3D arrays the batched drivers write into.
+_packed_output(f!, A::AbstractArray{<:Any, 3}, alg::AbstractAlgorithm) = initialize_output(f!, A, alg)
+function _packed_output(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
+    a = first(A)
+    m, n = size(a)
+    b = length(A)
+    return (similar(a, (m, m, b)), similar(a, real(eltype(a)), (m, n, b)), similar(a, (n, n, b)))
+end
+function _packed_output(::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
+    a = first(A)
+    m, n = size(a)
+    minmn, b = min(m, n), length(A)
+    return (similar(a, (m, minmn, b)), similar(a, real(eltype(a)), (minmn, b)), similar(a, (minmn, n, b)))
+end
+function _packed_output(::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
+    a = first(A)
+    return similar(a, real(eltype(a)), (min(size(a)...), length(A)))
+end
+
+# Gather `A[inds]` into a single `(m, n, length(inds))` batch, zero-padding where needed.
+function _ragged_pack(A::AbstractVector{<:AbstractMatrix}, inds, m::Int, n::Int, alg::AbstractAlgorithm)
     uniform = all(i -> size(A[i]) == (m, n), inds)
+    uniform && supports_pointer_batch(alg, typeof(A[first(inds)])) && return view(A, inds)
     # `stack` can't zero-pad
     # On the GPU it falls back to scalar indexing for matrices that are views
     uniform && A isa AbstractVector{<:Array} && return stack(view(A, inds))
