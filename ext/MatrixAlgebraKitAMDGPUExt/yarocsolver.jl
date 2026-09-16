@@ -107,7 +107,7 @@ for (fname, elty, relty) in
     )
     @eval begin
         function gesvd_batched!(
-                A::StridedROCVector{<:StridedROCMatrix{$elty}},
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
                 S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
                 U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
                 Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A)),
@@ -166,7 +166,7 @@ for (fname, elty, relty) in
             E = ROCArray{$relty}(undef, length(A) * strideE)
             dh = rocBLAS.handle()
             dev_info = ROCVector{Cint}(undef, length(A))
-            pA = map(pointer, A)
+            pA = ROCVector(map(pointer, A))
             rocSOLVER.$fname(
                 dh, jobu, jobvt, m, n, pA, lda,
                 S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
@@ -350,7 +350,7 @@ for (fname, elty, relty) in
     )
     @eval begin
         function gesdd_batched!(
-                A::StridedROCVector{<:StridedROCMatrix{$elty}},
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
                 S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
                 U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
                 Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A)),
@@ -406,7 +406,7 @@ for (fname, elty, relty) in
 
             dh = rocBLAS.handle()
             dev_info = ROCVector{Cint}(undef, length(A))
-            pA = map(pointer, A)
+            pA = ROCVector(map(pointer, A))
             rocSOLVER.$fname(
                 dh, jobu, jobvt, m, n, pA, lda,
                 S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
@@ -591,7 +591,7 @@ for (fname, elty, relty) in
     )
     @eval begin
         function gesvdj_batched!(
-                A::StridedROCVector{<:StridedROCMatrix{$elty}},
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
                 S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
                 U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
                 Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A)),
@@ -652,7 +652,7 @@ for (fname, elty, relty) in
             dev_n_sweeps = ROCVector{Cint}(undef, length(A))
 
             dh = rocBLAS.handle()
-            pA = map(pointer, A)
+            pA = ROCVector(map(pointer, A))
             rocSOLVER.$fname(
                 dh, jobu, jobvt, m, n, pA, lda, tol,
                 dev_residual, max_sweeps, dev_n_sweeps,
@@ -839,6 +839,119 @@ for (fname, elty, relty) in
             # Zero the entries of `S` that `gesvdx` did not write.
             nv = @allowscalar Int(nsv[1])
             nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
+
+            AMDGPU.unsafe_free!(nsv)
+            AMDGPU.unsafe_free!(ifail)
+            AMDGPU.unsafe_free!(dev_info)
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+# Wrappers for batched SVD via Bisection
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvdx_batched, :Float32, :Float32),
+        (:rocsolver_dgesvdx_batched, :Float64, :Float64),
+        (:rocsolver_cgesvdx_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesvdx_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvdx_batched!(
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
+                S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
+                U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                kwargs...
+            )
+            for A_ in A
+                chkstride1(A_, U, Vᴴ, S)
+            end
+            m, n = size(first(A))
+            minmn = min(m, n)
+            batch_count = length(A)
+            srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
+            maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
+            jobu, jobvt = _gesvdx_jobs(A, U, Vᴴ, m, n, maxnsv)
+            length(S) == minmn * batch_count ||
+                throw(DimensionMismatch("length mismatch between A and S"))
+
+            lda = max(1, stride(first(A), 2))
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+            strideF = minmn
+
+            dh = rocBLAS.handle()
+            nsv = ROCVector{Cint}(undef, batch_count)
+            ifail = ROCVector{Cint}(undef, minmn * batch_count)
+            dev_info = ROCVector{Cint}(undef, batch_count)
+            pA = ROCVector(map(pointer, A))
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, srange, m, n, pA, lda,
+                vl, vu, il, iu, nsv,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                ifail, strideF, dev_info, batch_count
+            )
+            AMDGPU.unsafe_free!(pA)
+
+            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+
+            AMDGPU.unsafe_free!(nsv)
+            AMDGPU.unsafe_free!(ifail)
+            AMDGPU.unsafe_free!(dev_info)
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvdx_strided_batched, :Float32, :Float32),
+        (:rocsolver_dgesvdx_strided_batched, :Float64, :Float64),
+        (:rocsolver_cgesvdx_strided_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesvdx_strided_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvdx_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                S::StridedROCMatrix{$relty} = similar(A, $relty, (min(size(A, 1), size(A, 2)), size(A, 3))),
+                U::StridedROCArray{$elty, 3} = similar(A, $elty, size(A, 1), min(size(A, 1), size(A, 2)), size(A, 3)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
+                kwargs...
+            )
+            chkstride1(A, U, Vᴴ, S)
+            m, n, batch_count = size(A)
+            minmn = min(m, n)
+            srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
+            maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
+            jobu, jobvt = _gesvdx_jobs(A, U, Vᴴ, m, n, maxnsv)
+            length(S) == minmn * batch_count ||
+                throw(DimensionMismatch("length mismatch between A and S"))
+
+            lda = max(1, stride(A, 2))
+            strideA = stride(A, 3)
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+            strideF = minmn
+
+            dh = rocBLAS.handle()
+            nsv = ROCVector{Cint}(undef, batch_count)
+            ifail = ROCVector{Cint}(undef, minmn * batch_count)
+            dev_info = ROCVector{Cint}(undef, batch_count)
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, srange, m, n, A, lda, strideA,
+                vl, vu, il, iu, nsv,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                ifail, strideF, dev_info, batch_count
+            )
+
+            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)
