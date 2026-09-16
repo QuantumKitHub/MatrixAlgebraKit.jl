@@ -20,13 +20,21 @@ MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedROCArray{<:BlasF
 MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}} = ROCSOLVER()
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix{<:BlasFloat}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCArray{<:BlasFloat, 3}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
+end
+
+for f in (:svd_full!, :batched_svd_full!)
+    @eval function MatrixAlgebraKit.default_algorithm(
+            ::typeof(MatrixAlgebraKit.$f), ::Type{T}; kwargs...
+        ) where {T <: Union{StridedROCMatrix{<:BlasFloat}, StridedROCArray{<:BlasFloat, 3}, AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}}
+        return Bisection(; kwargs...)
+    end
 end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return DivideAndConquer(; kwargs...)
