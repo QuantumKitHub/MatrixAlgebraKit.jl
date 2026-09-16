@@ -69,7 +69,7 @@ function check_and_prepare_svd_cotangents(
                     mul!(vtmp, wtmp, V₁ᴴ, -1, 1)
                     ΔgaugeV = max(ΔgaugeV, norm(vtmp))
                 else # remaining rows should be zero
-                    ΔgaugeV = max(ΔgaugeV, maximum(abs, view(ΔVᴴ, j, :); init = abs(zero(eltype(ΔVᴴ))))))
+                    ΔgaugeV = max(ΔgaugeV, maximum(abs, view(ΔVᴴ, j, :); init = abs(zero(eltype(ΔVᴴ)))))
                 end
             end
         end
