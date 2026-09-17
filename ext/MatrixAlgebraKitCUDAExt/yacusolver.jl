@@ -7,6 +7,7 @@ using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdia
 using CUDA
 using CUDA: @allowscalar, i32
 using CUDA.cuSOLVER
+using ..MatrixAlgebraKit: CHECK_LIBRARY_CALLS 
 
 # QR methods are implemented with full access to allocated arrays, so we do not need to redo this:
 using CUDA.cuSOLVER: geqrf!, ormqr!, orgqr!
