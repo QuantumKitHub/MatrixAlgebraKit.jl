@@ -27,7 +27,7 @@ for (bname, fname, elty, relty) in
                 S::StridedCuVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::StridedCuMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
                 Vᴴ::StridedCuMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
-                check::Bool = false,
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -107,7 +107,7 @@ function gesvdp!(
         U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
         Vᴴ::StridedCuMatrix{T} = similar(A, T, min(size(A)...), size(A, 2));
         tol = norm(A) * eps(real(T)),
-        check::Bool = false,
+        check::Bool = CHECK_LIBRARY_CALLS[],
     ) where {T <: BlasFloat}
     chkstride1(A, U, S, Vᴴ)
     m, n = size(A)
@@ -202,7 +202,7 @@ for (bname, fname, elty, relty) in
                 U::StridedCuMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
                 Vᴴ::StridedCuMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
                 tol::$relty = eps($relty),
-                check::Bool = false,
+                check::Bool = CHECK_LIBRARY_CALLS[],
                 max_sweeps::Int = 100,
                 kwargs...
             )
@@ -281,7 +281,7 @@ function gesvdr!(
         S::StridedCuVector = similar(A, real(T), min(size(A)...)),
         U::StridedCuMatrix{T} = similar(A, T, size(A, 1), min(size(A)...)),
         Vᴴ::StridedCuMatrix{T} = similar(A, T, min(size(A)...), size(A, 2));
-        check::Bool = false,
+        check::Bool = CHECK_LIBRARY_CALLS[],
         k::Int = length(S),
         p::Int = min(size(A)...) - k - 1,
         niters::Int = 1
@@ -348,7 +348,7 @@ end
 # Wrapper for general eigensolver
 for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:ComplexF32, :ComplexF32), (:ComplexF64, :ComplexF64))
     @eval begin
-        function Xgeev!(A::StridedCuMatrix{$elty}, D::StridedCuVector{$celty}, V::StridedCuMatrix{$celty}; check::Bool = false)
+        function Xgeev!(A::StridedCuMatrix{$elty}, D::StridedCuVector{$celty}, V::StridedCuMatrix{$celty}; check::Bool = CHECK_LIBRARY_CALLS[])
             require_one_based_indexing(A, V, D)
             chkstride1(A, V, D)
             n = checksquare(A)
@@ -429,7 +429,7 @@ end
 #                         uplo::Char,
 #                         A::StridedCuMatrix{$elty},
 #                         B::StridedCuMatrix{$elty};
-#                         check::Bool = false)
+#                         check::Bool = CHECK_LIBRARY_CALLS[])
 #             chkuplo(uplo)
 #             nA, nB = checksquare(A, B)
 #             if nB != nA
@@ -477,7 +477,7 @@ end
 #                         uplo::Char,
 #                         A::StridedCuMatrix{$elty},
 #                         B::StridedCuMatrix{$elty};
-#                         check::Bool = false,
+#                         check::Bool = CHECK_LIBRARY_CALLS[],
 #                         tol::$relty=eps($relty),
 #                         max_sweeps::Int=100)
 #             chkuplo(uplo)
@@ -534,7 +534,7 @@ end
 #         function $jname(jobz::Char,
 #                         uplo::Char,
 #                         A::StridedCuArray{$elty};
-#                         check::Bool = false,
+#                         check::Bool = CHECK_LIBRARY_CALLS[],
 #                         tol::$relty=eps($relty),
 #                         max_sweeps::Int=100)
 
@@ -596,7 +596,7 @@ end
 #         function potrsBatched!(uplo::Char,
 #                                A::Vector{<:StridedCuMatrix{$elty}},
 #                                B::Vector{<:StridedCuVecOrMat{$elty}};
-#                                check::Bool = false,)
+#                                check::Bool = CHECK_LIBRARY_CALLS[],)
 #             if length(A) != length(B)
 #                 throw(DimensionMismatch(""))
 #             end
@@ -638,7 +638,7 @@ end
 #                       (:cusolverDnCpotrfBatched, :ComplexF32),
 #                       (:cusolverDnZpotrfBatched, :ComplexF64))
 #     @eval begin
-#         function potrfBatched!(uplo::Char, A::Vector{<:StridedCuMatrix{$elty}}; check::Bool = false)
+#         function potrfBatched!(uplo::Char, A::Vector{<:StridedCuMatrix{$elty}}; check::Bool = CHECK_LIBRARY_CALLS[])
 
 #             # Set up information for the solver arguments
 #             chkuplo(uplo)
@@ -673,7 +673,7 @@ end
 
 # # gesv
 # function gesv!(X::CuVecOrMat{T}, A::CuMatrix{T}, B::CuVecOrMat{T};
-#                fallback::Bool=true, check::Bool = false,
+#                fallback::Bool=true, check::Bool = CHECK_LIBRARY_CALLS[],
 #                residual_history::Bool=false, irs_precision::String="AUTO",
 #                refinement_solver::String="CLASSICAL",
 #                maxiters::Int=0, maxiters_inner::Int=0, tol::Float64=0.0,
@@ -746,7 +746,7 @@ for (bname, fname, elty, relty) in (
                 A::StridedCuMatrix{$elty},
                 W::StridedCuVector{$relty},
                 V::StridedCuMatrix{$elty};
-                check::Bool = false,
+                check::Bool = CHECK_LIBRARY_CALLS[],
                 uplo::Char = 'U',
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100
@@ -795,7 +795,7 @@ function heevd!(
         A::StridedCuMatrix{T},
         W::StridedCuVector{Tr},
         V::StridedCuMatrix{T};
-        check::Bool = false,
+        check::Bool = CHECK_LIBRARY_CALLS[],
         uplo::Char = 'U'
     ) where {T <: BlasFloat, Tr <: BlasReal}
     chkuplo(uplo)
