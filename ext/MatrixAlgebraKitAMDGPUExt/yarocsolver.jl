@@ -790,6 +790,26 @@ function _gesvdx_jobs(U, Vᴴ, m::Integer, n::Integer, maxnsv::Integer)
     return jobu, jobvt
 end
 
+"""
+    _gesvdx_zero_unconverged!(S, nsv)
+
+Zero the entries of `S` that `gesvdx` did not write.
+"""
+function _gesvdx_zero_unconverged!(S::StridedROCVector, nsv::ROCVector{Cint})
+    nv = @allowscalar Int(nsv[1])
+    nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
+    return S
+end
+function _gesvdx_zero_unconverged!(S::StridedROCMatrix, nsv::ROCVector{Cint})
+    minmn = size(S, 1)
+    nvs = Array(nsv)
+    all(==(minmn), nvs) && return S          # nothing omitted, skip the per-batch fills
+    for (b, nv) in pairs(nvs)
+        nv < minmn && fill!(view(S, (nv + 1):minmn, b), zero(eltype(S)))
+    end
+    return S
+end
+
 # Wrapper for SVD via Bisection
 for (fname, elty, relty) in
     (
@@ -830,6 +850,7 @@ for (fname, elty, relty) in
             )
             info = @allowscalar dev_info[1]
             rocSOLVER.chkargsok(BlasInt(info))
+            _gesvdx_zero_unconverged!(S, nsv)
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)
@@ -889,6 +910,7 @@ for (fname, elty, relty) in
             AMDGPU.unsafe_free!(pA)
 
             rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            _gesvdx_zero_unconverged!(S, nsv)
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)
@@ -943,6 +965,7 @@ for (fname, elty, relty) in
             )
 
             rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            _gesvdx_zero_unconverged!(S, nsv)
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)
