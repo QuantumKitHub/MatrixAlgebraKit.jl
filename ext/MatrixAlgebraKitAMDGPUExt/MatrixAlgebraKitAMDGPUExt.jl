@@ -9,7 +9,7 @@ using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesdd!, gesvdx!, gesvdj!
 import MatrixAlgebraKit: gesvdj_batched!, gesvdx_batched!, gesdd_batched!, gesvd_batched!
 import MatrixAlgebraKit: heevj!, heevd!, heev!, heevx!
-import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!, _complete_svd_basis
+import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!, _complete_svd_basis!
 using AMDGPU
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
