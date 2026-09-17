@@ -142,8 +142,14 @@ function svd_via_adjoint!(f!::F, driver::Driver, A, S, U, Vᴴ; kwargs...) where
 end
 
 # LAPACK
-for f! in (:gesdd!, :gesvd!, :gesvdx!, :gesdvd!)
+for f! in (:gesdd!, :gesvd!, :gesdvd!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
+end
+
+function gesvdx!(::LAPACK, A, S, U, Vᴴ; kwargs...)
+    YALAPACK.gesvdx!(A, S, U, Vᴴ; kwargs...)
+    _complete_svd_basis!(U, Vᴴ, length(S))
+    return S, U, Vᴴ
 end
 
 function gesvdj!(::LAPACK, A, S, U, Vᴴ; kwargs...)
@@ -221,7 +227,7 @@ for (f, f_lapack!, Alg) in (
 end
 
 supports_svd_full(::Driver, ::Symbol) = false
-supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration)
+supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection)
 
 # Some methods (e.g. `gesvdx`) only compute the leading `min(m, n)` singular vectors.
 # If `U` or `Vᴴ` is square (`svd_full!`), the remaining columns (row) of
