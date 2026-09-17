@@ -145,4 +145,19 @@ include("pushforwards/svd.jl")
 
 include("precompile.jl")
 
+"""
+    CHECK_LIBRARY_CALLS::Ref{Bool}
+
+Library setting which controls whether GPU solver libraries (CUSOLVER, rocSOLVER)
+perform expensive checking operations after library calls. These libraries implement
+the check by doing an `@allowscalar` read of a GPU array, which forces device
+synchronization. Default is `Ref(true)` (checks are performed), but this can be
+changed by setting `MatrixAlgebraKit.CHECK_LIBRARY_CALLS[] = false`.
+
+!!! warning
+  Disabling the checks means you may encounter errors later in program execution,
+  far from their original source, which will make debugging substantially more difficult.
+"""
+const CHECK_LIBRARY_CALLS = Ref(true)
+
 end
