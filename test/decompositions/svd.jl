@@ -81,7 +81,7 @@ if AMDGPU.functional()
     for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
         TestSuite.seed_rng!(123)
         TestSuite.test_svd(ROCMatrix{T}, (m, n))
-        AMD_SVD_ALGS = (QRIteration(), Jacobi())
+        AMD_SVD_ALGS = (QRIteration(), Jacobi(), Bisection())
         TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
     end
 
