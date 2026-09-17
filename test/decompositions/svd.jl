@@ -90,7 +90,6 @@ if AMDGPU.functional()
         AMD_SVD_ALGS = (QRIteration(), Jacobi(), DivideAndConquer(), Bisection())
         TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
         TestSuite.test_svd_batched(ROCMatrix{T}, (m, n), batch_size)
-        AMD_SVD_ALGS = (QRIterationBatched(), JacobiBatched(), DivideAndConquerBatched(), BisectionBatched())
         TestSuite.test_svd_batched_algs(ROCMatrix{T}, (m, n), batch_size, AMD_SVD_ALGS)
     end
 

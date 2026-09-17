@@ -110,7 +110,8 @@ for (fname, elty, relty) in
                 A::AbstractVector{<:StridedROCMatrix{$elty}},
                 S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
                 U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
-                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             for A_ in A
                 chkstride1(A_, U, Vᴴ, S)
@@ -175,8 +176,9 @@ for (fname, elty, relty) in
             )
             AMDGPU.unsafe_free!(pA)
             AMDGPU.unsafe_free!(E)
-
-            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
 
             return (S, U, Vᴴ)
         end
@@ -195,7 +197,8 @@ for (fname, elty, relty) in
                 A::StridedROCArray{$elty, 3},
                 S::StridedROCMatrix{$relty} = similar(A, $relty, min(size(A, 1, size(A, 2))), size(A, 3)),
                 U::StridedROCArray{$elty, 3} = similar(A, $elty, size(A, 1), min(size(A, 1), size(A, 2)), size(A, 3)),
-                Vᴴ::StridedROCArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
@@ -258,7 +261,9 @@ for (fname, elty, relty) in
             )
             AMDGPU.unsafe_free!(E)
 
-            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
 
             return (S, U, Vᴴ)
         end
@@ -278,7 +283,8 @@ for (fname, elty, relty) in
                 A::StridedROCMatrix{$elty},
                 S::StridedROCVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::StridedROCMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
-                Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+                Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -332,9 +338,10 @@ for (fname, elty, relty) in
                 dev_info
             )
 
-            info = @allowscalar dev_info[1]
-            rocSOLVER.chkargsok(BlasInt(info))
-
+            if check
+                info = @allowscalar dev_info[1]
+                rocSOLVER.chkargsok(BlasInt(info))
+            end
             return (S, U, Vᴴ)
         end
     end
@@ -353,7 +360,8 @@ for (fname, elty, relty) in
                 A::AbstractVector{<:StridedROCMatrix{$elty}},
                 S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
                 U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
-                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             for A_ in A
                 chkstride1(A_, U, Vᴴ, S)
@@ -413,7 +421,9 @@ for (fname, elty, relty) in
                 dev_info, length(A)
             )
             AMDGPU.unsafe_free!(pA)
-            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
 
             return (S, U, Vᴴ)
         end
@@ -432,7 +442,8 @@ for (fname, elty, relty) in
                 A::StridedROCArray{$elty, 3},
                 S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
                 U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
-                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
@@ -489,8 +500,9 @@ for (fname, elty, relty) in
                 S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
                 dev_info, batch_size
             )
-            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
-
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
             return (S, U, Vᴴ)
         end
     end
@@ -597,6 +609,7 @@ for (fname, elty, relty) in
                 Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A)),
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100,
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             for A_ in A
                 chkstride1(A_, U, Vᴴ, S)
@@ -659,9 +672,9 @@ for (fname, elty, relty) in
                 S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
                 dev_info, length(A)
             )
-
-            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
-
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
             AMDGPU.unsafe_free!(pA)
             AMDGPU.unsafe_free!(dev_residual)
             AMDGPU.unsafe_free!(dev_n_sweeps)
@@ -685,6 +698,7 @@ for (fname, elty, relty) in
                 Vᴴ::StridedROCArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100,
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
@@ -746,8 +760,9 @@ for (fname, elty, relty) in
                 dev_info, batch_size
             )
 
-            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
-
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
             AMDGPU.unsafe_free!(dev_residual)
             AMDGPU.unsafe_free!(dev_n_sweeps)
             return (S, U, Vᴴ)
@@ -791,6 +806,26 @@ function _gesvdx_jobs(U, Vᴴ, m::Integer, n::Integer, maxnsv::Integer)
         jobvt = rocSOLVER.rocblas_svect_singular
     end
     return jobu, jobvt
+end
+
+"""
+    _gesvdx_zero_unconverged!(S, nsv)
+
+Zero the entries of `S` that `gesvdx` did not write.
+"""
+function _gesvdx_zero_unconverged!(S::StridedROCVector, nsv::ROCVector{Cint})
+    nv = @allowscalar Int(nsv[1])
+    nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
+    return S
+end
+function _gesvdx_zero_unconverged!(S::StridedROCMatrix, nsv::ROCVector{Cint})
+    minmn = size(S, 1)
+    nvs = Array(nsv)
+    all(==(minmn), nvs) && return S          # nothing omitted, skip the per-batch fills
+    for (b, nv) in pairs(nvs)
+        nv < minmn && fill!(view(S, (nv + 1):minmn, b), zero(eltype(S)))
+    end
+    return S
 end
 
 # Wrapper for SVD via Bisection
@@ -837,8 +872,7 @@ for (fname, elty, relty) in
                 rocSOLVER.chkargsok(BlasInt(info))
             end
             # Zero the entries of `S` that `gesvdx` did not write.
-            nv = @allowscalar Int(nsv[1])
-            nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
+            _gesvdx_zero_unconverged!(S, nsv)
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)
@@ -862,6 +896,7 @@ for (fname, elty, relty) in
                 S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
                 U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
                 Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                check::Bool = CHECK_LIBRARY_CALLS[],
                 kwargs...
             )
             for A_ in A
@@ -897,7 +932,10 @@ for (fname, elty, relty) in
             )
             AMDGPU.unsafe_free!(pA)
 
-            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
+            _gesvdx_zero_unconverged!(S, nsv)
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)
@@ -920,6 +958,7 @@ for (fname, elty, relty) in
                 S::StridedROCMatrix{$relty} = similar(A, $relty, (min(size(A, 1), size(A, 2)), size(A, 3))),
                 U::StridedROCArray{$elty, 3} = similar(A, $elty, size(A, 1), min(size(A, 1), size(A, 2)), size(A, 3)),
                 Vᴴ::StridedROCArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
+                check::Bool = CHECK_LIBRARY_CALLS[],
                 kwargs...
             )
             chkstride1(A, U, Vᴴ, S)
@@ -950,8 +989,10 @@ for (fname, elty, relty) in
                 S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
                 ifail, strideF, dev_info, batch_count
             )
-
-            rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
+            _gesvdx_zero_unconverged!(S, nsv)
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)
