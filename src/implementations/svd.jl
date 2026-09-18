@@ -148,7 +148,7 @@ end
 
 function gesvdx!(::LAPACK, A, S, U, Vᴴ; kwargs...)
     YALAPACK.gesvdx!(A, S, U, Vᴴ; kwargs...)
-    _complete_svd_basis!(U, Vᴴ, length(S))
+    complete_svd_basis!(U, Vᴴ, length(S))
     return S, U, Vᴴ
 end
 
