@@ -239,9 +239,8 @@ function complete_svd_basis!(U::AbstractMatrix, Vᴴ::AbstractMatrix, minmn::Int
         copyto!(view(U, :, (minmn + 1):size(U, 2)), N)
     end
     if size(Vᴴ, 1) > minmn
-        V = view(Vᴴ, 1:minmn, :)
-        N = lq_null!(similar(V, reverse(size(V))), V)
-        adjoint!(view(Vᴴ, (minmn + 1):size(Vᴴ, 1), :), N)
+        N = lq_null(view(Vᴴ, 1:minmn, :))
+        copy!(view(Vᴴ, (minmn + 1):size(Vᴴ, 1), :), N)
     end
     return U, Vᴴ
 end
