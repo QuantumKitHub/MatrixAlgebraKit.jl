@@ -223,6 +223,16 @@ end
 supports_svd_full(::Driver, ::Symbol) = false
 supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration)
 
+"""
+    requires_tall(alg) -> Bool
+
+Whether `alg` only accepts matrices with `m ≥ n`, as cuSOLVER's and rocSOLVER's `gesvd` do
+for `QRIteration`. Single matrices work around this through the adjoint (see
+`svd_via_adjoint!`), whereas ragged batches zero-pad wide matrices to a square.
+"""
+requires_tall(::AbstractAlgorithm) = false
+requires_tall(::QRIteration) = true
+
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)

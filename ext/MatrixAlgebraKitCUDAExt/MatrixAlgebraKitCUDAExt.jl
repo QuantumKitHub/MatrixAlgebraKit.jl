@@ -7,6 +7,7 @@ using MatrixAlgebraKit: diagview, sign_safe
 using MatrixAlgebraKit: CUSOLVER, LQViaTransposedQR, TruncationByValue, AbstractAlgorithm
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eig_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
+import MatrixAlgebraKit: gesvdj_batched!
 import MatrixAlgebraKit: heevj!, heevd!, geev!
 import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester, svd_rank, svd_pullback!, eigh_pullback!, eig_pullback!, svd_pushforward!
 using CUDA, CUDA.cuBLAS
@@ -16,10 +17,13 @@ using LinearAlgebra: BlasFloat
 
 include("yacusolver.jl")
 
-MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedCuVecOrMat{<:BlasFloat}} = CUSOLVER()
+MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedCuArray{<:BlasFloat}} = CUSOLVER()
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
     return QRIteration(; kwargs...)
+end
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedCuArray{<:BlasFloat, 3}}
+    return Jacobi(; kwargs...)
 end
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
     return QRIteration(; kwargs...)
@@ -28,6 +32,15 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return DivideAndConquer(; kwargs...)
 end
 
+function MatrixAlgebraKit.one!(A::StridedCuArray{T, 3}) where {T <: BlasFloat}
+    length(A) > 0 || return A
+    zero!(A)
+    # TODO use mapslices?
+    for a in eachslice(A, dims = 3)
+        diagview(a) .= one(eltype(a))
+    end
+    return A
+end
 
 for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::CUSOLVER, args...) = YACUSOLVER.$f(args...)
@@ -36,6 +49,9 @@ end
 MatrixAlgebraKit.prefers_ungqr(::CUSOLVER) = true
 
 MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
+
+# `cusolverDnXgesvdjBatched` only accepts matrices up to 32x32
+MatrixAlgebraKit.max_batched_blocksize(::AbstractAlgorithm, ::Type{<:AnyCuArray}) = 32
 
 function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
     m, n = size(A)
@@ -48,6 +64,9 @@ function gesvdj!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedC
     m >= n && return YACUSOLVER.gesvdj!(A, S, U, Vᴴ; kwargs...)
     return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, CUSOLVER(), A, S, U, Vᴴ; kwargs...)
 end
+
+gesvdj_batched!(::CUSOLVER, As::StridedCuArray{T, 3}, Ss::StridedCuMatrix, Us::StridedCuArray{T, 3}, Vᴴs::StridedCuArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YACUSOLVER.gesvdj_batched!(As, Ss, Us, Vᴴs; kwargs...)
 
 gesvdp!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...) =
     YACUSOLVER.gesvdp!(A, S, U, Vᴴ; kwargs...)
