@@ -191,10 +191,6 @@ function _gesvdx_range(::Type{T}, kwargs) where {T <: Real}
     end
 end
 
-function _gesvdx_maxnsv(srange, il::Integer, iu::Integer, minmn::Integer)
-    return srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
-end
-
 function _gesvdx_jobs(U, Vᴴ, m::Integer, n::Integer, maxnsv::Integer)
     if length(U) == 0
         jobu = rocSOLVER.rocblas_svect_none
@@ -217,17 +213,6 @@ function _gesvdx_jobs(U, Vᴴ, m::Integer, n::Integer, maxnsv::Integer)
     return jobu, jobvt
 end
 
-"""
-    _gesvdx_zero_unconverged!(S, nsv)
-
-Zero the entries of `S` that `gesvdx` did not write.
-"""
-function _gesvdx_zero_unconverged!(S::StridedROCVector, nsv::ROCVector{Cint})
-    nv = @allowscalar Int(nsv[1])
-    nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
-    return S
-end
-
 # Wrapper for SVD via Bisection
 for (fname, elty, relty) in
     (
@@ -248,7 +233,7 @@ for (fname, elty, relty) in
             m, n = size(A)
             minmn = min(m, n)
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
-            maxnsv = _gesvdx_maxnsv(srange, il, iu, minmn)
+            maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
             jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
             length(S) == minmn ||
                 throw(DimensionMismatch("length mismatch between A ($minmn) and S ($(length(S)))"))
@@ -268,7 +253,9 @@ for (fname, elty, relty) in
             )
             info = @allowscalar dev_info[1]
             rocSOLVER.chkargsok(BlasInt(info))
-            _gesvdx_zero_unconverged!(S, nsv)
+            # Zero the entries of `S` that `gesvdx` did not write.
+            nv = @allowscalar Int(nsv[1])
+            nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)

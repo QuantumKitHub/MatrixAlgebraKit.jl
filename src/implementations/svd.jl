@@ -233,14 +233,14 @@ supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide
 # If `U` or `Vᴴ` is square (`svd_full!`), the remaining columns (row) of
 # `U` (`Vᴴ`) need to be filled with an orthonormal basis for the complement of the
 # computed singular vectors.
-function _complete_svd_basis!(U::AbstractMatrix, Vᴴ::AbstractMatrix, minmn::Int)
+function complete_svd_basis!(U::AbstractMatrix, Vᴴ::AbstractMatrix, minmn::Int)
     if size(U, 2) > minmn
-        N = qr_null!(copy(view(U, :, 1:minmn)))
+        N = qr_null(view(U, :, 1:minmn))
         copyto!(view(U, :, (minmn + 1):size(U, 2)), N)
     end
     if size(Vᴴ, 1) > minmn
         V = view(Vᴴ, 1:minmn, :)
-        N = qr_null!(adjoint!(similar(V, reverse(size(V))), V))
+        N = lq_null!(similar(V, reverse(size(V))), V)
         adjoint!(view(Vᴴ, (minmn + 1):size(Vᴴ, 1), :), N)
     end
     return U, Vᴴ

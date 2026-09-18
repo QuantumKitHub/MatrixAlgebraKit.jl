@@ -8,7 +8,7 @@ using MatrixAlgebraKit: ROCSOLVER, LQViaTransposedQR, TruncationStrategy, NoTrun
 using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_algorithm, default_eigh_algorithm
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdx!, gesvdj!
 import MatrixAlgebraKit: heevj!, heevd!, heev!, heevx!
-import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!, _complete_svd_basis!
+import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!, complete_svd_basis!
 using AMDGPU
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
@@ -44,7 +44,7 @@ end
 
 function gesvdx!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     YArocSOLVER.gesvdx!(A, S, U, Vᴴ; kwargs...)
-    _complete_svd_basis!(U, Vᴴ, length(S))
+    complete_svd_basis!(U, Vᴴ, length(S))
     return S, U, Vᴴ
 end
 
