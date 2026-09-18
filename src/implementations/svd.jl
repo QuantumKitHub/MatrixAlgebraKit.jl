@@ -142,8 +142,14 @@ function svd_via_adjoint!(f!::F, driver::Driver, A, S, U, Vᴴ; kwargs...) where
 end
 
 # LAPACK
-for f! in (:gesdd!, :gesvd!, :gesvdx!, :gesdvd!)
+for f! in (:gesdd!, :gesvd!, :gesdvd!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
+end
+
+function gesvdx!(::LAPACK, A, S, U, Vᴴ; kwargs...)
+    YALAPACK.gesvdx!(A, S, U, Vᴴ; kwargs...)
+    complete_svd_basis!(U, Vᴴ, length(S))
+    return S, U, Vᴴ
 end
 
 function gesvdj!(::LAPACK, A, S, U, Vᴴ; kwargs...)
@@ -221,7 +227,23 @@ for (f, f_lapack!, Alg) in (
 end
 
 supports_svd_full(::Driver, ::Symbol) = false
-supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration)
+supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide_and_conquer, :qr_iteration, :bisection)
+
+# Some methods (e.g. `gesvdx`) only compute the leading `min(m, n)` singular vectors.
+# If `U` or `Vᴴ` is square (`svd_full!`), the remaining columns (row) of
+# `U` (`Vᴴ`) need to be filled with an orthonormal basis for the complement of the
+# computed singular vectors.
+function complete_svd_basis!(U::AbstractMatrix, Vᴴ::AbstractMatrix, minmn::Int)
+    if size(U, 2) > minmn
+        N = qr_null(view(U, :, 1:minmn))
+        copyto!(view(U, :, (minmn + 1):size(U, 2)), N)
+    end
+    if size(Vᴴ, 1) > minmn
+        N = lq_null(view(Vᴴ, 1:minmn, :))
+        copy!(view(Vᴴ, (minmn + 1):size(Vᴴ, 1), :), N)
+    end
+    return U, Vᴴ
+end
 
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
