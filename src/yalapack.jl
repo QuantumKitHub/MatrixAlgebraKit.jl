@@ -2235,8 +2235,11 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             else
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A ($m) and U ($(size(U, 1)))"))
-                (size(U, 2) >= (range == 'I' ? iu - il + 1 : minmn) && size(U, 2) <= m) ||
-                    throw(DimensionMismatch("invalid column size of U"))
+                if range == 'I'
+                    (size(U, 2) >= iu - il + 1 && size(U, 2) <= m) || throw(DimensionMismatch("invalid column size of U"))
+                else
+                    (size(U, 2) == minmn || size(U, 2) == m) || throw(DimensionMismatch("invalid column size of U"))
+                end
                 jobu = 'V'
             end
             if length(Vᴴ) == 0
@@ -2244,8 +2247,11 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             else
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A ($n) and Vᴴ ($(size(Vᴴ, 2)))"))
-                (size(Vᴴ, 1) >= (range == 'I' ? iu - il + 1 : minmn) && size(Vᴴ, 1) <= n) ||
-                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                if range == 'I'
+                    (size(Vᴴ, 1) >= iu - il + 1 && size(Vᴴ, 1) <= n) || throw(DimensionMismatch("invalid row size of Vᴴ"))
+                else
+                    (size(Vᴴ, 1) == minmn || size(Vᴴ, 1) == n) || throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
                 jobvt = 'V'
             end
             length(S) == minmn ||
