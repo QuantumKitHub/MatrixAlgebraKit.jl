@@ -2235,7 +2235,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             else
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A ($m) and U ($(size(U, 1)))"))
-                size(U, 2) >= (range == 'I' ? iu - il + 1 : minmn) ||
+                (size(U, 2) >= (range == 'I' ? iu - il + 1 : minmn) && size(U, 2) <= m) ||
                     throw(DimensionMismatch("invalid column size of U"))
                 jobu = 'V'
             end
@@ -2244,7 +2244,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
             else
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A ($n) and Vᴴ ($(size(Vᴴ, 2)))"))
-                size(Vᴴ, 1) >= (range == 'I' ? iu - il + 1 : minmn) ||
+                (size(Vᴴ, 1) >= (range == 'I' ? iu - il + 1 : minmn) && size(Vᴴ, 1) <= n) ||
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 jobvt = 'V'
             end
