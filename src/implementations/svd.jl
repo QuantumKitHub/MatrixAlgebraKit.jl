@@ -235,12 +235,16 @@ supports_svd_full(::LAPACK, f::Symbol) = f in (:safe_divide_and_conquer, :divide
 # computed singular vectors.
 function complete_svd_basis!(U::AbstractMatrix, Vᴴ::AbstractMatrix, minmn::Int)
     if size(U, 2) > minmn
-        N = qr_null(view(U, :, 1:minmn))
-        copyto!(view(U, :, (minmn + 1):size(U, 2)), N)
+        Uc = copy_input(qr_null, view(U, :, 1:minmn))
+        N = view(U, :, (minmn + 1):size(U, 2))
+        N′ = qr_null!(Uc, N)
+        N′ === N || copyto!(N, N′)
     end
     if size(Vᴴ, 1) > minmn
-        N = lq_null(view(Vᴴ, 1:minmn, :))
-        copy!(view(Vᴴ, (minmn + 1):size(Vᴴ, 1), :), N)
+        Vc = copy_input(lq_null, view(Vᴴ, 1:minmn, :))
+        Nᴴ = view(Vᴴ, (minmn + 1):size(Vᴴ, 1), :)
+        Nᴴ′ = lq_null!(Vc, Nᴴ)
+        Nᴴ′ === Nᴴ || copyto!(Nᴴ, Nᴴ′)
     end
     return U, Vᴴ
 end
