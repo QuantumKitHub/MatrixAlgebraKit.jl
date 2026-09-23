@@ -234,6 +234,7 @@ for (fname, elty, relty) in
                 S::StridedROCVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::StridedROCMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
                 Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                check::Bool = CHECK_LIBRARY_CALLS[],
                 kwargs...
             )
             chkstride1(A, U, Vᴴ, S)
@@ -258,8 +259,10 @@ for (fname, elty, relty) in
                 S, U, ldu, Vᴴ, ldv, ifail,
                 dev_info
             )
-            info = @allowscalar dev_info[1]
-            rocSOLVER.chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dev_info[1]
+                rocSOLVER.chkargsok(BlasInt(info))
+            end
             # Zero the entries of `S` that `gesvdx` did not write.
             nv = @allowscalar Int(nsv[1])
             nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
