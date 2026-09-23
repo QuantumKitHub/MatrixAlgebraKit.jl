@@ -4,21 +4,17 @@ using Test
 using StableRNGs
 using LinearAlgebra: Diagonal, norm, qr
 
-# The Sylvester doubling iteration in `eigh_trunc_pullback!` squares `APₖ` and `D⁻¹ₖ`
-# separately although only their product is used. The product is bounded by
-# ρ = |λ_discarded|max / |λ_retained|min < 1, but the factors are not, so if the series
-# needs more doublings to converge than it takes them to leave the floating-point range,
-# `APₖ` underflows to 0 while `D⁻¹ₖ` overflows to Inf and the next iterate is NaN.
-#
-# That needs ρ close to 1 — a well-separated truncation converges in a few doublings — so
-# the spectrum below is chosen with
-#
-#     |λ|max / |λ_kept|min = 30   ->  D⁻¹^(2^k) overflows Float64 at 2^k > 208  (k = 8)
-#     ρ = 0.95                    ->  ρ^m < 1e-13 needs m > 583                 (k = 10)
+# Regression test for the Sylvester doubling iteration in `eigh_trunc_pullback!`,
+# which previously gave rise to overflow and underflow issues when the gap between the
+# absolute values of the largest discarded and the smallest retained eigenvalues
+# was small, but the gap between the absolute values of the largest and smallest retained
+# eigenvalues was large.
 
-@testset "eigh_trunc_pullback! with rho close to 1 ($T)" for T in (Float64, ComplexF64)
+@testset "Regression test for eigh_trunc_pullback! with rho close to 1 ($T)" for T in (Float64, ComplexF64)
     rng = StableRNG(12345)
     n, p = 24, 6
+    # construct artifical spectrum with |λ_discarded|max / |λ_kept|min close to 1, but
+    # |λ_kept|max / |λ_kept|min large
     λ = vcat([30.0, -30.0, 5.0, -5.0, 1.0, -1.0], collect(range(0.95, 0.1; length = n - p)))
     Q = Matrix(qr(randn(rng, T, n, n)).Q)
     A = Q * Diagonal(T.(λ)) * Q'
