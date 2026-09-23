@@ -8,6 +8,7 @@ using AMDGPU
 using AMDGPU: @allowscalar
 using AMDGPU.rocSOLVER
 using AMDGPU.rocBLAS
+using ..MatrixAlgebraKit: CHECK_LIBRARY_CALLS
 
 # QR methods are implemented with full access to allocated arrays, so we do not need to redo this:
 using AMDGPU.rocSOLVER: geqrf!, ormqr!, orgqr!
@@ -27,7 +28,8 @@ for (fname, elty, relty) in
                 A::StridedROCMatrix{$elty},
                 S::StridedROCVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::StridedROCMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
-                Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2))
+                Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -85,8 +87,10 @@ for (fname, elty, relty) in
             )
             AMDGPU.unsafe_free!(rwork)
 
-            info = @allowscalar dev_info[1]
-            rocSOLVER.chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dev_info[1]
+                rocSOLVER.chkargsok(BlasInt(info))
+            end
 
             return (S, U, Vᴴ)
         end
@@ -109,6 +113,7 @@ for (fname, elty, relty) in
                 Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100,
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
@@ -165,8 +170,10 @@ for (fname, elty, relty) in
                 S, U, ldu, Vᴴ, ldv, dev_info,
             )
 
-            info = @allowscalar dev_info[1]
-            rocSOLVER.chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dev_info[1]
+                rocSOLVER.chkargsok(BlasInt(info))
+            end
 
             AMDGPU.unsafe_free!(dev_residual)
             AMDGPU.unsafe_free!(dev_n_sweeps)
@@ -227,6 +234,7 @@ for (fname, elty, relty) in
                 S::StridedROCVector{$relty} = similar(A, $relty, min(size(A)...)),
                 U::StridedROCMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
                 Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                check::Bool = CHECK_LIBRARY_CALLS[],
                 kwargs...
             )
             chkstride1(A, U, Vᴴ, S)
@@ -251,8 +259,10 @@ for (fname, elty, relty) in
                 S, U, ldu, Vᴴ, ldv, ifail,
                 dev_info
             )
-            info = @allowscalar dev_info[1]
-            rocSOLVER.chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dev_info[1]
+                rocSOLVER.chkargsok(BlasInt(info))
+            end
             # Zero the entries of `S` that `gesvdx` did not write.
             nv = @allowscalar Int(nsv[1])
             nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
@@ -275,7 +285,9 @@ end
 #                         jobz::Char,
 #                         uplo::Char,
 #                         A::StridedROCMatrix{$elty},
-#                         B::StridedROCMatrix{$elty})
+#                         B::StridedROCMatrix{$elty};
+#                         check::Bool = CHECK_LIBRARY_CALLS[],
+#                        )
 #             chkuplo(uplo)
 #             nA, nB = checksquare(A, B)
 #             if nB != nA
@@ -298,9 +310,10 @@ end
 #                               buffer, sizeof(buffer) ÷ sizeof($elty), dh.info)
 #             end
 
-#             info = @allowscalar dh.info[1]
-#             chkargsok(BlasInt(info))
-
+#             if check
+#                 info = @allowscalar dh.info[1]
+#                 chkargsok(BlasInt(info))
+#             end
 #             if jobz == 'N'
 #                 return W
 #             elseif jobz == 'V'
@@ -322,7 +335,9 @@ end
 #                         A::StridedROCMatrix{$elty},
 #                         B::StridedROCMatrix{$elty};
 #                         tol::$relty=eps($relty),
-#                         max_sweeps::Int=100)
+#                         max_sweeps::Int=100;
+#                         check::Bool = CHECK_LIBRARY_CALLS[],
+#                        )
 #             chkuplo(uplo)
 #             nA, nB = checksquare(A, B)
 #             if nB != nA
@@ -349,9 +364,10 @@ end
 #                 return $fname(dh, itype, jobz, uplo, n, A, lda, B, ldb, W,
 #                               buffer, sizeof(buffer) ÷ sizeof($elty), dh.info, params[])
 #             end
-
-#             info = @allowscalar dh.info[1]
-#             chkargsok(BlasInt(info))
+#             if check
+#                 info = @allowscalar dh.info[1]
+#                 chkargsok(BlasInt(info))
+#             end
 
 #             rocsolverDnDestroySyevjInfo(params[])
 
@@ -378,7 +394,9 @@ end
 #                         uplo::Char,
 #                         A::StridedROCArray{$elty};
 #                         tol::$relty=eps($relty),
-#                         max_sweeps::Int=100)
+#                         max_sweeps::Int=100;
+#                         check::Bool = CHECK_LIBRARY_CALLS[],
+#                        )
 
 #             # Set up information for the solver arguments
 #             chkuplo(uplo)
@@ -409,14 +427,15 @@ end
 #                               sizeof(buffer) ÷ sizeof($elty), dh.info, params[], batchSize)
 #             end
 
-#             # Copy the solver info and delete the device memory
-#             info = @allowscalar collect(dh.info)
-
-#             # Double check the solver's exit status
-#             for i in 1:batchSize
-#                 chkargsok(BlasInt(info[i]))
-#             end
-
+#             if check
+#                 # Copy the solver info and delete the device memory
+#                 info = collect(dh.info)
+#
+#                 # Double check the solver's exit status
+#                 for i in 1:batchSize
+#                     chkargsok(BlasInt(info[i]))
+#                end
+#            end
 #             rocsolverDnDestroySyevjInfo(params[])
 
 #             # Return eigenvalues (in W) and possibly eigenvectors (in A)
@@ -436,7 +455,9 @@ end
 #     @eval begin
 #         function potrsBatched!(uplo::Char,
 #                                A::Vector{<:StridedROCMatrix{$elty}},
-#                                B::Vector{<:StridedROCVecOrMat{$elty}})
+#                                B::Vector{<:StridedROCVecOrMat{$elty}};
+#                                check::Bool = CHECK_LIBRARY_CALLS[],
+#                               )
 #             if length(A) != length(B)
 #                 throw(DimensionMismatch(""))
 #             end
@@ -462,11 +483,11 @@ end
 
 #             # Run the solver
 #             $fname(dh, uplo, n, nrhs, Aptrs, lda, Bptrs, ldb, dh.info, batchSize)
-
-#             # Copy the solver info and delete the device memory
-#             info = @allowscalar dh.info[1]
-#             chklapackerror(BlasInt(info))
-
+#             if check
+#                 # Copy the solver info and delete the device memory
+#                 info = @allowscalar dh.info[1]
+#                 chklapackerror(BlasInt(info))
+#             end
 #             return B
 #         end
 #     end
@@ -477,7 +498,7 @@ end
 #                       (:rocsolverDnCpotrfBatched, :ComplexF32),
 #                       (:rocsolverDnZpotrfBatched, :ComplexF64))
 #     @eval begin
-#         function potrfBatched!(uplo::Char, A::Vector{<:StridedROCMatrix{$elty}})
+#         function potrfBatched!(uplo::Char, A::Vector{<:StridedROCMatrix{$elty}}; check::Bool = CHECK_LIBRARY_CALLS[],)
 
 #             # Set up information for the solver arguments
 #             chkuplo(uplo)
@@ -493,14 +514,15 @@ end
 #             # Run the solver
 #             $fname(dh, uplo, n, Aptrs, lda, dh.info, batchSize)
 
-#             # Copy the solver info and delete the device memory
-#             info = @allowscalar collect(dh.info)
+#             if check
+#                 # Copy the solver info and delete the device memory
+#                 info = collect(dh.info)
 
-#             # Double check the solver's exit status
-#             for i in 1:batchSize
-#                 chkargsok(BlasInt(info[i]))
+#                 # Double check the solver's exit status
+#                 for i in 1:batchSize
+#                     chkargsok(BlasInt(info[i]))
+#                 end
 #             end
-
 #             # info[i] > 0 means the leading minor of order info[i] is not positive definite
 #             # LinearAlgebra.LAPACK does not throw Exception here
 #             # to simplify calls to isposdef! and factorize
@@ -510,11 +532,13 @@ end
 # end
 
 # # gesv
-# function gesv!(X::CuVecOrMat{T}, A::CuMatrix{T}, B::CuVecOrMat{T}; fallback::Bool=true,
+# function gesv!(X::ROCVecOrMat{T}, A::ROCMatrix{T}, B::ROCVecOrMat{T}; fallback::Bool=true,
 #                residual_history::Bool=false, irs_precision::String="AUTO",
 #                refinement_solver::String="CLASSICAL",
 #                maxiters::Int=0, maxiters_inner::Int=0, tol::Float64=0.0,
-#                tol_inner=Float64 = 0.0) where {T<:BlasFloat}
+#                tol_inner=Float64 = 0.0,
+#                check::Bool = CHECK_LIBRARY_CALLS[],
+#                ) where {T<:BlasFloat}
 #     params = CuSolverIRSParameters()
 #     info = CuSolverIRSInformation()
 #     n = checksquare(A)
@@ -583,7 +607,8 @@ for (heevd, heev, heevx, heevj, elty, relty) in
                 A::StridedROCMatrix{$elty},
                 W::StridedROCVector{$relty},
                 V::StridedROCMatrix{$elty};
-                uplo::Char = 'U'
+                uplo::Char = 'U',
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkuplo(uplo)
             n = checksquare(A)
@@ -601,8 +626,10 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             $heevd(dh, jobz, roc_uplo, n, A, lda, W, work, dev_info)
 
-            info = @allowscalar dev_info[1]
-            chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dev_info[1]
+                chkargsok(BlasInt(info))
+            end
 
             if jobz == rocSOLVER.rocblas_evect_original && V !== A
                 copy!(V, A)
@@ -613,7 +640,8 @@ for (heevd, heev, heevx, heevj, elty, relty) in
                 A::StridedROCMatrix{$elty},
                 W::StridedROCVector{$relty},
                 V::StridedROCMatrix{$elty};
-                uplo::Char = 'U'
+                uplo::Char = 'U',
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkuplo(uplo)
             n = checksquare(A)
@@ -631,8 +659,10 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             $heev(dh, jobz, roc_uplo, n, A, lda, W, work, dev_info)
 
-            info = @allowscalar dev_info[1]
-            chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dev_info[1]
+                chkargsok(BlasInt(info))
+            end
 
             if jobz == rocSOLVER.rocblas_evect_original && V !== A
                 copy!(V, A)
@@ -644,6 +674,7 @@ for (heevd, heev, heevx, heevj, elty, relty) in
                 W::StridedROCVector{$relty},
                 V::StridedROCMatrix{$elty};
                 uplo::Char = 'U',
+                check::Bool = CHECK_LIBRARY_CALLS[],
                 kwargs...
             )
             chkuplo(uplo)
@@ -680,8 +711,10 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             $heevx(dh, jobz, range, roc_uplo, n, A, lda, vl, vu, il, iu, abstol, nev, W, V, ldv, ifail, dev_info)
 
-            info = @allowscalar dev_info[1]
-            chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dev_info[1]
+                chkargsok(BlasInt(info))
+            end
             m = @allowscalar nev[1]
             return W, V, m
         end
@@ -692,7 +725,8 @@ for (heevd, heev, heevx, heevj, elty, relty) in
                 uplo::Char = 'U',
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100,
-                sort::Char = 'N'
+                sort::Char = 'N',
+                check::Bool = CHECK_LIBRARY_CALLS[],
             )
             chkuplo(uplo)
             n = checksquare(A)
@@ -712,8 +746,10 @@ for (heevd, heev, heevx, heevj, elty, relty) in
             roc_sort = sort == 'N' ? rocSOLVER.rocblas_esort_none : rocSOLVER.rocblas_esort_ascending
             $heevj(dh, roc_sort, jobz, roc_uplo, n, A, lda, tol, residual, max_sweeps, n_sweeps, W, dev_info)
 
-            info = @allowscalar dev_info[1]
-            chkargsok(BlasInt(info))
+            if check
+                info = @allowscalar dev_info[1]
+                chkargsok(BlasInt(info))
+            end
 
             if jobz == rocSOLVER.rocblas_evect_original && V !== A
                 copy!(V, A)
