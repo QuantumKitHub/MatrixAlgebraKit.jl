@@ -175,6 +175,96 @@ for (fname, elty, relty) in
     end
 end
 
+# `gesvdx` computes all singular values, those in the half-open interval `[vl, vu)`, or those
+# with an index in `irange`. Unlike the other algorithms, it never forms the full `U` and `Vᴴ`,
+# so the only job modes are `singular` and `none`.
+function _gesvdx_range(::Type{T}, kwargs) where {T <: Real}
+    if haskey(kwargs, :irange)
+        irange = convert(UnitRange{Int}, kwargs[:irange])
+        return rocSOLVER.rocblas_srange_index, zero(T), zero(T), first(irange), last(irange)
+    elseif haskey(kwargs, :vl) || haskey(kwargs, :vu)
+        vl = convert(T, get(kwargs, :vl, -Inf))
+        vu = convert(T, get(kwargs, :vu, +Inf))
+        return rocSOLVER.rocblas_srange_value, vl, vu, 0, 0
+    else
+        return rocSOLVER.rocblas_srange_all, zero(T), zero(T), 0, 0
+    end
+end
+
+function _gesvdx_jobs(U, Vᴴ, m::Integer, n::Integer, maxnsv::Integer)
+    if length(U) == 0
+        jobu = rocSOLVER.rocblas_svect_none
+    else
+        size(U, 1) == m ||
+            throw(DimensionMismatch("row size mismatch between A ($m) and U ($(size(U, 1)))"))
+        size(U, 2) >= maxnsv ||
+            throw(DimensionMismatch("invalid column size of U"))
+        jobu = rocSOLVER.rocblas_svect_singular
+    end
+    if length(Vᴴ) == 0
+        jobvt = rocSOLVER.rocblas_svect_none
+    else
+        size(Vᴴ, 2) == n ||
+            throw(DimensionMismatch("column size mismatch between A ($n) and Vᴴ ($(size(Vᴴ, 2)))"))
+        size(Vᴴ, 1) >= maxnsv ||
+            throw(DimensionMismatch("invalid row size of Vᴴ"))
+        jobvt = rocSOLVER.rocblas_svect_singular
+    end
+    return jobu, jobvt
+end
+
+# Wrapper for SVD via Bisection
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvdx, :Float32, :Float32),
+        (:rocsolver_dgesvdx, :Float64, :Float64),
+        (:rocsolver_cgesvdx, :ComplexF32, :Float32),
+        (:rocsolver_zgesvdx, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvdx!(
+                A::StridedROCMatrix{$elty},
+                S::StridedROCVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::StridedROCMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                kwargs...
+            )
+            chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            minmn = min(m, n)
+            srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
+            maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
+            jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
+            length(S) == minmn ||
+                throw(DimensionMismatch("length mismatch between A ($minmn) and S ($(length(S)))"))
+
+            lda = max(1, stride(A, 2))
+            ldu = max(1, stride(U, 2))
+            ldv = max(1, stride(Vᴴ, 2))
+            ifail = ROCVector{Cint}(undef, minmn)
+            nsv = ROCVector{Cint}(undef, 1)
+            dh = rocBLAS.handle()
+            dev_info = ROCVector{Cint}(undef, 1)
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, srange, m, n,
+                A, lda, vl, vu, il, iu, nsv,
+                S, U, ldu, Vᴴ, ldv, ifail,
+                dev_info
+            )
+            info = @allowscalar dev_info[1]
+            rocSOLVER.chkargsok(BlasInt(info))
+            # Zero the entries of `S` that `gesvdx` did not write.
+            nv = @allowscalar Int(nsv[1])
+            nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
+
+            AMDGPU.unsafe_free!(nsv)
+            AMDGPU.unsafe_free!(ifail)
+            AMDGPU.unsafe_free!(dev_info)
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
 # for (jname, bname, fname, elty, relty) in
 #     ((:sygvd!, :rocsolverDnSsygvd_bufferSize, :rocsolverDnSsygvd, :Float32, :Float32),
 #      (:sygvd!, :rocsolverDnDsygvd_bufferSize, :rocsolverDnDsygvd, :Float64, :Float64),
