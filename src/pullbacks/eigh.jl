@@ -185,7 +185,7 @@ function eigh_trunc_pullback!(
         # the current contents of ΔA
         # TODO: add an `add_project_hermitian!`
         # recycle AP's storage, but overwrite it: the loop leaves APₖ in that buffer
-        ΔA′ = project_hermitian!(mul!(AP, Z, V', 1, 0))
+        ΔA′ = project_hermitian!(mul!(AP, Z, V'))
         ΔA .+= ΔA′
     else
         # in this case, Z * V' is automatically Hermitian, so we can directly add it to ΔA
