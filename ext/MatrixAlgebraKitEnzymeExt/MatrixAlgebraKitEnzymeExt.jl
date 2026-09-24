@@ -4,7 +4,9 @@ using MatrixAlgebraKit
 using MatrixAlgebraKit: copy_input, initialize_output, zero!, has_equal_storage
 using MatrixAlgebraKit: diagview, inv_safe, truncate
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
+using MatrixAlgebraKit: qr_pushforward!, lq_pushforward!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
+using MatrixAlgebraKit: qr_null_pushforward!, lq_null_pushforward!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!, eigh_vals_pullback!
 using MatrixAlgebraKit: eig_pushforward!, eigh_pushforward!, eig_vals_pushforward!, eigh_vals_pushforward!
 using MatrixAlgebraKit: svd_pullback!, svd_vals_pullback!
@@ -121,6 +123,10 @@ for (f, pf) in (
         (:left_polar!, :left_polar_pushforward!),
         (:eigh_full!, :eigh_pushforward!),
         (:eig_full!, :eig_pushforward!),
+        (:qr_full!, :qr_pushforward!),
+        (:lq_full!, :lq_pushforward!),
+        (:qr_compact!, :qr_pushforward!),
+        (:lq_compact!, :lq_pushforward!),
     )
     @eval begin
         function EnzymeRules.forward(
@@ -152,9 +158,9 @@ for (f, pf) in (
     end
 end
 
-for (f, pb) in (
-        (qr_null!, qr_null_pullback!),
-        (lq_null!, lq_null_pullback!),
+for (f, pb, pf) in (
+        (qr_null!, qr_null_pullback!, qr_null_pushforward!),
+        (lq_null!, lq_null_pullback!, lq_null_pushforward!),
     )
     @eval begin
         function EnzymeRules.augmented_primal(
@@ -202,6 +208,32 @@ for (f, pb) in (
             end
             !isa(arg, Const) && make_zero!(arg.dval)
             return (nothing, nothing, nothing)
+        end
+        function EnzymeRules.forward(
+                config::EnzymeRules.FwdConfigWidth{1},
+                func::Const{typeof($f)},
+                ::Type{RT},
+                A::Annotation,
+                arg::Annotation,
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+            ) where {RT}
+            # here, A IS directly used in the pushforward, and overwritten
+            # in the primal call, so we MUST copy its value
+            Ac = copy(A.val)
+            $f(A.val, arg.val, alg.val)
+            if !isa(A, Const) && !isa(arg, Const)
+                $pf(A.dval, Ac, arg.val, arg.dval)
+            end
+            !isa(A, Const) && make_zero!(A.dval)
+            if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+                return arg
+            elseif EnzymeRules.needs_primal(config)
+                return arg.val
+            elseif EnzymeRules.needs_shadow(config)
+                return arg.dval
+            else
+                return nothing
+            end
         end
     end
 end

@@ -15,7 +15,7 @@ end
 """
     test_mooncake_qr_compact(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `qr_compact` and its in-place variant.
+Test the Mooncake forward- and reverse-mode AD rule for `qr_compact` and its in-place variant.
 """
 function test_mooncake_qr_compact(
         T, sz;
@@ -29,11 +29,11 @@ function test_mooncake_qr_compact(
 
         Mooncake.TestUtils.test_rule(
             rng, qr_compact, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol
+            output_tangent, atol, rtol
         )
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, qr_compact!, A, alg;
-            mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+            output_tangent, atol, rtol, is_primitive = false
         )
 
         A = instantiate_rank_deficient_matrix(T, sz)
@@ -49,13 +49,25 @@ function test_mooncake_qr_compact(
             rng, call_and_zero!, qr_compact!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
+        # only the first r columns of Q and rows of R are differentiable
+        if !(T <: Diagonal) # rank-deficient Diagonal does not have its first r columns independent
+            r = MatrixAlgebraKit.qr_rank(QR[2])
+            Mooncake.TestUtils.test_rule(
+                rng, qr_gauge_invariant_wrapper, qr_compact, A, alg, r;
+                mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, qr!_gauge_invariant_wrapper, qr_compact!, A, alg, r;
+                mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
+            )
+        end
     end
 end
 
 """
     test_mooncake_qr_full(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `qr_full` and its in-place variant.
+Test the Mooncake forward- and reverse-mode AD rule for `qr_full` and its in-place variant.
 """
 function test_mooncake_qr_full(
         T, sz;
@@ -75,13 +87,23 @@ function test_mooncake_qr_full(
             rng, call_and_zero!, qr_full!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
         )
+        # the extra columns of Q are only determined up to a unitary rotation
+        r = min(size(A)...)
+        Mooncake.TestUtils.test_rule(
+            rng, qr_gauge_invariant_wrapper, qr_full, A, alg, r;
+            mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, qr!_gauge_invariant_wrapper, qr_full!, A, alg, r;
+            mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
+        )
     end
 end
 
 """
     test_mooncake_qr_null(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `qr_null` and its in-place variant.
+Test the Mooncake forward- and reverse-mode AD rule for `qr_null` and its in-place variant.
 """
 function test_mooncake_qr_null(
         T, sz;
@@ -100,6 +122,15 @@ function test_mooncake_qr_null(
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, qr_null!, A, alg;
             mode = Mooncake.ReverseMode, output_tangent, atol, rtol, is_primitive = false
+        )
+        # the nullspace basis is only determined up to a unitary rotation
+        Mooncake.TestUtils.test_rule(
+            rng, qr_null_gauge_invariant_wrapper, qr_null, A, alg;
+            mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, qr_null!_gauge_invariant_wrapper, qr_null!, A, alg;
+            mode = Mooncake.ForwardMode, atol, rtol, is_primitive = false
         )
     end
 end
