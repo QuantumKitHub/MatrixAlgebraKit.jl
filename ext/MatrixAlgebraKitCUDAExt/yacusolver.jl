@@ -293,6 +293,7 @@ for (bname, fname, elty, relty) in
                 Vᴴ::StridedCuArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100,
+                check::Bool = CHECK_LIBRARY_CALLS[],
                 kwargs...
             )
             #! format: on
@@ -346,8 +347,10 @@ for (bname, fname, elty, relty) in
                 )
             end
 
-            info = collect(dh.info)
-            cuSOLVER.chkargsok.(BlasInt.(info))
+            if check
+                info = collect(dh.info)
+                foreach(cuSOLVER.chkargsok ∘ BlasInt, info)
+            end
 
             cuSOLVER.cusolverDnDestroyGesvdjInfo(params[])
 
