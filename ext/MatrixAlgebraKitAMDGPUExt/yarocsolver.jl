@@ -177,7 +177,7 @@ for (fname, elty, relty) in
             AMDGPU.unsafe_free!(pA)
             AMDGPU.unsafe_free!(E)
             if check
-                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
             end
 
             return (S, U, Vᴴ)
@@ -262,7 +262,7 @@ for (fname, elty, relty) in
             AMDGPU.unsafe_free!(E)
 
             if check
-                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
             end
 
             return (S, U, Vᴴ)
@@ -422,7 +422,7 @@ for (fname, elty, relty) in
             )
             AMDGPU.unsafe_free!(pA)
             if check
-                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
             end
 
             return (S, U, Vᴴ)
@@ -501,7 +501,7 @@ for (fname, elty, relty) in
                 dev_info, batch_size
             )
             if check
-                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
             end
             return (S, U, Vᴴ)
         end
@@ -673,7 +673,7 @@ for (fname, elty, relty) in
                 dev_info, length(A)
             )
             if check
-                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
             end
             AMDGPU.unsafe_free!(pA)
             AMDGPU.unsafe_free!(dev_residual)
@@ -761,7 +761,7 @@ for (fname, elty, relty) in
             )
 
             if check
-                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
             end
             AMDGPU.unsafe_free!(dev_residual)
             AMDGPU.unsafe_free!(dev_n_sweeps)
