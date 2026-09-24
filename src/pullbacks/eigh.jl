@@ -153,9 +153,11 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV₊)
         X₀ = rdiv!(ΔV₊, Diagonal(D))
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
-        dabsmax = maximum(abs, D)
-        AP ./= dabsmax
-        D⁻¹ = dabsmax ./ D
+        # Normalize by the smallest retained |eigenvalue|, as `svd_trunc_pullback!` does
+        # with `S[end]`. That caps `max|D⁻¹|` at 1, so squaring can only shrink it.
+        dabsmin = minimum(abs, D)
+        AP ./= dabsmin
+        D⁻¹ = dabsmin ./ D
         X₁ = rmul!(AP * X₀, Diagonal(D⁻¹))
         X₁ .+= X₀
         Xₖ, Xₖ₊₁ = X₁, X₀
@@ -182,7 +184,8 @@ function eigh_trunc_pullback!(
         # take the Hermitian part, and cannot apply project_hermitian! to
         # the current contents of ΔA
         # TODO: add an `add_project_hermitian!`
-        ΔA′ = project_hermitian!(mul!(AP, Z, V', 1, 1)) # recycle AP
+        # recycle AP's storage, but overwrite it: the loop leaves APₖ in that buffer
+        ΔA′ = project_hermitian!(mul!(AP, Z, V'))
         ΔA .+= ΔA′
     else
         # in this case, Z * V' is automatically Hermitian, so we can directly add it to ΔA
