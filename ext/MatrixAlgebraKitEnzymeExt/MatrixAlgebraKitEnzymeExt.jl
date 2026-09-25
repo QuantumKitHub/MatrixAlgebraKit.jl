@@ -18,6 +18,7 @@ using Enzyme.EnzymeCore
 using Enzyme.EnzymeCore: EnzymeRules
 using LinearAlgebra
 
+@inline EnzymeRules.inactive_type(::Type{Alg}) where {Alg <: MatrixAlgebraKit.Householder} = true
 @inline EnzymeRules.inactive_type(::Type{Alg}) where {Alg <: MatrixAlgebraKit.AbstractAlgorithm} = true
 @inline EnzymeRules.inactive_type(::Type{TS}) where {TS <: MatrixAlgebraKit.TruncationStrategy} = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.select_algorithm), func::F, A::AbstractMatrix, alg::Alg) where {F, Alg} = true
@@ -135,7 +136,7 @@ for (f, pf) in (
                 ::Type{RT},
                 A::Annotation,
                 arg::Annotation,
-                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+                alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm},
             ) where {RT}
             A_is_arg1 = !isa(A, Const) && has_equal_storage(A.val, arg.val[1])
             A_is_arg2 = !isa(A, Const) && has_equal_storage(A.val, arg.val[2])
@@ -215,7 +216,7 @@ for (f, pb, pf) in (
                 ::Type{RT},
                 A::Annotation,
                 arg::Annotation,
-                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+                alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm},
             ) where {RT}
             # here, A IS directly used in the pushforward, and overwritten
             # in the primal call, so we MUST copy its value
