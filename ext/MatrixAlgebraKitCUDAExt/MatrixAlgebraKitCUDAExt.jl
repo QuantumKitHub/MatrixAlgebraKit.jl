@@ -32,16 +32,6 @@ function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T 
     return DivideAndConquer(; kwargs...)
 end
 
-function MatrixAlgebraKit.one!(A::StridedCuArray{T, 3}) where {T <: BlasFloat}
-    length(A) > 0 || return A
-    zero!(A)
-    # TODO use mapslices?
-    for a in eachslice(A, dims = 3)
-        diagview(a) .= one(eltype(a))
-    end
-    return A
-end
-
 for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::CUSOLVER, args...) = YACUSOLVER.$f(args...)
 end

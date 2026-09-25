@@ -300,7 +300,8 @@ for (bname, fname, elty, relty) in
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
             minmn = min(m, n)
-
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0 && length(Vᴴ) == 0
                 jobz = 'N'
             else
@@ -313,8 +314,8 @@ for (bname, fname, elty, relty) in
                     throw(DimensionMismatch("invalid column size of U or row size of Vᴴ"))
                 end
             end
-            length(S) == minmn * batch_size ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             # these MUST be "full" sized
             Ṽ = similar(Vᴴ, (n, n, batch_size))
