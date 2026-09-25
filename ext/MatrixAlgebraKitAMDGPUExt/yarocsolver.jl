@@ -97,6 +97,425 @@ for (fname, elty, relty) in
     end
 end
 
+# Wrappers for batched SVD via QR Iteration
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvd_batched, :Float32, :Float32),
+        (:rocsolver_dgesvd_batched, :Float64, :Float64),
+        (:rocsolver_cgesvd_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesvd_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvd_batched!(
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
+                S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
+                U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            for A_ in A
+                chkstride1(A_, U, Vᴴ, S)
+            end
+            m, n = size(first(A))
+            (m < n) && throw(ArgumentError("rocSOLVER's gesvd_batched requires m ≥ n"))
+            minmn = min(m, n)
+            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
+            if length(U) == 0
+                jobu = rocSOLVER.rocblas_svect_none
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A # seems impossible?
+                        jobu = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobu = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(U, 2) == m
+                    jobu = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = rocSOLVER.rocblas_svect_none
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A # seems impossible?
+                        jobvt = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobvt = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            size(S) == (minmn, length(A)) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
+
+            lda = max(1, stride(first(A), 2))
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+
+            strideE = minmn - 1
+            E = ROCArray{$relty}(undef, length(A) * strideE)
+            dh = rocBLAS.handle()
+            dev_info = ROCVector{Cint}(undef, length(A))
+            pA = ROCVector(map(pointer, A))
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n, pA, lda,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                E, strideE, convert(rocSOLVER.rocblas_workmode, 'I'),
+                dev_info, length(A)
+            )
+            AMDGPU.unsafe_free!(pA)
+            AMDGPU.unsafe_free!(E)
+            if check
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
+            end
+
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvd_strided_batched, :Float32, :Float32),
+        (:rocsolver_dgesvd_strided_batched, :Float64, :Float64),
+        (:rocsolver_cgesvd_strided_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesvd_strided_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvd_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                S::StridedROCMatrix{$relty} = similar(A, $relty, min(size(A, 1, size(A, 2))), size(A, 3)),
+                U::StridedROCArray{$elty, 3} = similar(A, $elty, size(A, 1), min(size(A, 1), size(A, 2)), size(A, 3)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            chkstride1(A, U, Vᴴ, S)
+            m, n, batch_size = size(A)
+            (m < n) && throw(ArgumentError("rocSOLVER's gesvd_strided_batched requires m ≥ n"))
+            minmn = min(m, n)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
+            if length(U) == 0
+                jobu = rocSOLVER.rocblas_svect_none
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A
+                        jobu = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobu = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(U, 2) == m
+                    jobu = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = rocSOLVER.rocblas_svect_none
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A
+                        jobvt = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobvt = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
+
+            lda = max(1, stride(A, 2))
+            strideA = lda * n
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+
+            strideE = minmn - 1
+            E = ROCArray{$relty}(undef, batch_size * strideE)
+            dh = rocBLAS.handle()
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n, A, lda, strideA,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                E, strideE, convert(rocSOLVER.rocblas_workmode, 'I'),
+                dev_info, batch_size
+            )
+            AMDGPU.unsafe_free!(E)
+
+            if check
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
+            end
+
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+# Wrapper for SVD via DivideAndConquer
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesdd, :Float32, :Float32),
+        (:rocsolver_dgesdd, :Float64, :Float64),
+        (:rocsolver_cgesdd, :ComplexF32, :Float32),
+        (:rocsolver_zgesdd, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesdd!(
+                A::StridedROCMatrix{$elty},
+                S::StridedROCVector{$relty} = similar(A, $relty, min(size(A)...)),
+                U::StridedROCMatrix{$elty} = similar(A, $elty, size(A, 1), min(size(A)...)),
+                Vᴴ::StridedROCMatrix{$elty} = similar(A, $elty, min(size(A)...), size(A, 2));
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            minmn = min(m, n)
+            if length(U) == 0
+                jobu = rocSOLVER.rocblas_svect_none
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A
+                        jobu = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobu = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(U, 2) == m
+                    jobu = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = rocSOLVER.rocblas_svect_none
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A
+                        jobvt = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobvt = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            length(S) == minmn ||
+                throw(DimensionMismatch("length mismatch between A and S"))
+
+            lda = max(1, stride(A, 2))
+            ldu = max(1, stride(U, 2))
+            ldv = max(1, stride(Vᴴ, 2))
+
+            dh = rocBLAS.handle()
+            dev_info = ROCVector{Cint}(undef, 1)
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n,
+                A, lda, S, U, ldu, Vᴴ, ldv,
+                dev_info
+            )
+
+            if check
+                info = @allowscalar dev_info[1]
+                rocSOLVER.chkargsok(BlasInt(info))
+            end
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+# Wrapper for batched SVD via DivideAndConquer
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesdd_batched, :Float32, :Float32),
+        (:rocsolver_dgesdd_batched, :Float64, :Float64),
+        (:rocsolver_cgesdd_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesdd_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesdd_batched!(
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
+                S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
+                U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            for A_ in A
+                chkstride1(A_, U, Vᴴ, S)
+            end
+            m, n = size(first(A))
+            minmn = min(m, n)
+            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
+            if length(U) == 0
+                jobu = rocSOLVER.rocblas_svect_none
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A # seems impossible?
+                        jobu = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobu = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(U, 2) == m
+                    jobu = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = rocSOLVER.rocblas_svect_none
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A # seems impossible?
+                        jobvt = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobvt = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            size(S) == (minmn, length(A)) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
+
+            lda = max(1, stride(first(A), 2))
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+
+            dh = rocBLAS.handle()
+            dev_info = ROCVector{Cint}(undef, length(A))
+            pA = ROCVector(map(pointer, A))
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n, pA, lda,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                dev_info, length(A)
+            )
+            AMDGPU.unsafe_free!(pA)
+            if check
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
+            end
+
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesdd_strided_batched, :Float32, :Float32),
+        (:rocsolver_dgesdd_strided_batched, :Float64, :Float64),
+        (:rocsolver_cgesdd_strided_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesdd_strided_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesdd_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
+                U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            chkstride1(A, U, Vᴴ, S)
+            m, n, batch_size = size(A)
+            minmn = min(m, n)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
+            if length(U) == 0
+                jobu = rocSOLVER.rocblas_svect_none
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A
+                        jobu = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobu = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(U, 2) == m
+                    jobu = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = rocSOLVER.rocblas_svect_none
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A
+                        jobvt = rocSOLVER.rocblas_svect_overwrite
+                    else
+                        jobvt = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
+
+            lda = max(1, stride(A, 2))
+            strideA = lda * n
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+
+            dh = rocBLAS.handle()
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n, A, lda, strideA,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                dev_info, batch_size
+            )
+            if check
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
+            end
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
 # Wrapper for SVD via Jacobi
 for (fname, elty, relty) in
     (
@@ -182,6 +601,185 @@ for (fname, elty, relty) in
     end
 end
 
+# Wrapper for batched SVD via Jacobi
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvdj_batched, :Float32, :Float32),
+        (:rocsolver_dgesvdj_batched, :Float64, :Float64),
+        (:rocsolver_cgesvdj_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesvdj_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvdj_batched!(
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
+                S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
+                U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A)),
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100,
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            for A_ in A
+                chkstride1(A_, U, Vᴴ, S)
+            end
+            m, n = size(first(A))
+            minmn = min(m, n)
+            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
+            if length(U) == 0
+                jobu = rocSOLVER.rocblas_svect_none
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A
+                        throw(ArgumentError("overwrite mode is not supported for gesvdj"))
+                    else
+                        jobu = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(U, 2) == m
+                    jobu = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = rocSOLVER.rocblas_svect_none
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A
+                        throw(ArgumentError("overwrite mode is not supported for gesvdj"))
+                    else
+                        jobvt = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            size(S) == (minmn, length(A)) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
+
+            lda = max(1, stride(first(A), 2))
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+            dev_info = ROCVector{Cint}(undef, length(A))
+            dev_residual = ROCVector{$relty}(undef, length(A))
+            dev_n_sweeps = ROCVector{Cint}(undef, length(A))
+
+            dh = rocBLAS.handle()
+            pA = ROCVector(map(pointer, A))
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n, pA, lda, tol,
+                dev_residual, max_sweeps, dev_n_sweeps,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                dev_info, length(A)
+            )
+            if check
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
+            end
+            AMDGPU.unsafe_free!(pA)
+            AMDGPU.unsafe_free!(dev_residual)
+            AMDGPU.unsafe_free!(dev_n_sweeps)
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvdj_strided_batched, :Float32, :Float32),
+        (:rocsolver_dgesvdj_strided_batched, :Float64, :Float64),
+        (:rocsolver_cgesvdj_strided_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesvdj_strided_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvdj_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                S::StridedROCMatrix{$relty} = similar(A, $relty, min(size(A, 1, size(A, 2))), size(A, 3)),
+                U::StridedROCArray{$elty, 3} = similar(A, $elty, size(A, 1), min(size(A, 1), size(A, 2)), size(A, 3)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100,
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            chkstride1(A, U, Vᴴ, S)
+            m, n, batch_size = size(A)
+            minmn = min(m, n)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
+            if length(U) == 0
+                jobu = rocSOLVER.rocblas_svect_none
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A
+                        throw(ArgumentError("overwrite mode is not supported for gesvdj"))
+                    else
+                        jobu = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(U, 2) == m
+                    jobu = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = rocSOLVER.rocblas_svect_none
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A
+                        throw(ArgumentError("overwrite mode is not supported for gesvdj"))
+                    else
+                        jobvt = rocSOLVER.rocblas_svect_singular
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = rocSOLVER.rocblas_svect_all
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
+
+            lda = max(1, stride(A, 2))
+            strideA = lda * n
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            dev_residual = ROCVector{$relty}(undef, batch_size)
+            dev_n_sweeps = ROCVector{Cint}(undef, batch_size)
+
+            dh = rocBLAS.handle()
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, m, n, A, lda, strideA, tol,
+                dev_residual, max_sweeps, dev_n_sweeps,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                dev_info, batch_size
+            )
+
+            if check
+                foreach(rocSOLVER.chkargsok ∘ BlasInt, collect(dev_info))
+            end
+            AMDGPU.unsafe_free!(dev_residual)
+            AMDGPU.unsafe_free!(dev_n_sweeps)
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
 # `gesvdx` computes all singular values, those in the half-open interval `[vl, vu)`, or those
 # with an index in `irange`. Unlike the other algorithms, it never forms the full `U` and `Vᴴ`,
 # so the only job modes are `singular` and `none`.
@@ -218,6 +816,26 @@ function _gesvdx_jobs(U, Vᴴ, m::Integer, n::Integer, maxnsv::Integer)
         jobvt = rocSOLVER.rocblas_svect_singular
     end
     return jobu, jobvt
+end
+
+"""
+    _gesvdx_zero_unconverged!(S, nsv)
+
+Zero the entries of `S` that `gesvdx` did not write.
+"""
+function _gesvdx_zero_unconverged!(S::StridedROCVector, nsv::ROCVector{Cint})
+    nv = @allowscalar Int(nsv[1])
+    nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
+    return S
+end
+function _gesvdx_zero_unconverged!(S::StridedROCMatrix, nsv::ROCVector{Cint})
+    minmn = size(S, 1)
+    nvs = Array(nsv)
+    all(==(minmn), nvs) && return S          # nothing omitted, skip the per-batch fills
+    for (b, nv) in pairs(nvs)
+        nv < minmn && fill!(view(S, (nv + 1):minmn, b), zero(eltype(S)))
+    end
+    return S
 end
 
 # Wrapper for SVD via Bisection
@@ -264,8 +882,131 @@ for (fname, elty, relty) in
                 rocSOLVER.chkargsok(BlasInt(info))
             end
             # Zero the entries of `S` that `gesvdx` did not write.
-            nv = @allowscalar Int(nsv[1])
-            nv < length(S) && fill!(view(S, (nv + 1):length(S)), zero(eltype(S)))
+            _gesvdx_zero_unconverged!(S, nsv)
+
+            AMDGPU.unsafe_free!(nsv)
+            AMDGPU.unsafe_free!(ifail)
+            AMDGPU.unsafe_free!(dev_info)
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+# Wrappers for batched SVD via Bisection
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvdx_batched, :Float32, :Float32),
+        (:rocsolver_dgesvdx_batched, :Float64, :Float64),
+        (:rocsolver_cgesvdx_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesvdx_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvdx_batched!(
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
+                S::StridedROCMatrix{$relty} = similar(first(A), $relty, (min(size(first(A))...), length(A))),
+                U::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A), 1), min(size(first(A))...), length(A)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(first(A), $elty, min(size(first(A))...), size(first(A), 2), length(A));
+                check::Bool = CHECK_LIBRARY_CALLS[],
+                kwargs...
+            )
+            for A_ in A
+                chkstride1(A_, U, Vᴴ, S)
+            end
+            m, n = size(first(A))
+            minmn = min(m, n)
+            batch_size = length(A)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
+            srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
+            maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
+            jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
+
+            lda = max(1, stride(first(A), 2))
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+            strideF = minmn
+
+            dh = rocBLAS.handle()
+            nsv = ROCVector{Cint}(undef, batch_size)
+            ifail = ROCVector{Cint}(undef, minmn * batch_size)
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            pA = ROCVector(map(pointer, A))
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, srange, m, n, pA, lda,
+                vl, vu, il, iu, nsv,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                ifail, strideF, dev_info, batch_size
+            )
+            AMDGPU.unsafe_free!(pA)
+
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
+            _gesvdx_zero_unconverged!(S, nsv)
+
+            AMDGPU.unsafe_free!(nsv)
+            AMDGPU.unsafe_free!(ifail)
+            AMDGPU.unsafe_free!(dev_info)
+            return (S, U, Vᴴ)
+        end
+    end
+end
+
+for (fname, elty, relty) in
+    (
+        (:rocsolver_sgesvdx_strided_batched, :Float32, :Float32),
+        (:rocsolver_dgesvdx_strided_batched, :Float64, :Float64),
+        (:rocsolver_cgesvdx_strided_batched, :ComplexF32, :Float32),
+        (:rocsolver_zgesvdx_strided_batched, :ComplexF64, :Float64),
+    )
+    @eval begin
+        function gesvdx_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                S::StridedROCMatrix{$relty} = similar(A, $relty, (min(size(A, 1), size(A, 2)), size(A, 3))),
+                U::StridedROCArray{$elty, 3} = similar(A, $elty, size(A, 1), min(size(A, 1), size(A, 2)), size(A, 3)),
+                Vᴴ::StridedROCArray{$elty, 3} = similar(A, $elty, min(size(A, 1), size(A, 2)), size(A, 2), size(A, 3));
+                check::Bool = CHECK_LIBRARY_CALLS[],
+                kwargs...
+            )
+            chkstride1(A, U, Vᴴ, S)
+            m, n, batch_size = size(A)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
+            minmn = min(m, n)
+            srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
+            maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
+            jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
+            length(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
+
+            lda = max(1, stride(A, 2))
+            strideA = stride(A, 3)
+            ldu = max(1, stride(U, 2))
+            strideU = ldu * size(U, 2)
+            ldv = max(1, stride(Vᴴ, 2))
+            strideV = ldv * n
+            strideS = minmn
+            strideF = minmn
+
+            dh = rocBLAS.handle()
+            nsv = ROCVector{Cint}(undef, batch_size)
+            ifail = ROCVector{Cint}(undef, minmn * batch_size)
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            rocSOLVER.$fname(
+                dh, jobu, jobvt, srange, m, n, A, lda, strideA,
+                vl, vu, il, iu, nsv,
+                S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
+                ifail, strideF, dev_info, batch_size
+            )
+            if check
+                rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))
+            end
+            _gesvdx_zero_unconverged!(S, nsv)
 
             AMDGPU.unsafe_free!(nsv)
             AMDGPU.unsafe_free!(ifail)

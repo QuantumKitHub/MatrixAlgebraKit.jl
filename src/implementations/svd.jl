@@ -249,6 +249,16 @@ function complete_svd_basis!(U::AbstractMatrix, Vᴴ::AbstractMatrix, minmn::Int
     return U, Vᴴ
 end
 
+"""
+    requires_tall(alg) -> Bool
+
+Whether `alg` only accepts matrices with `m ≥ n`, as cuSOLVER's and rocSOLVER's `gesvd` do
+for `QRIteration`. Single matrices work around this through the adjoint (see
+`svd_via_adjoint!`), whereas ragged batches zero-pad wide matrices to a square.
+"""
+requires_tall(::AbstractAlgorithm) = false
+requires_tall(::QRIteration) = true
+
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
     USVᴴtrunc, ind = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
