@@ -119,6 +119,8 @@ for (fname, elty, relty) in
             m, n = size(first(A))
             (m < n) && throw(ArgumentError("rocSOLVER's gesvd_batched requires m ≥ n"))
             minmn = min(m, n)
+            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
@@ -153,8 +155,8 @@ for (fname, elty, relty) in
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 end
             end
-            length(S) == minmn * length(A) ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            size(S) == (minmn, length(A)) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(first(A), 2))
             ldu = max(1, stride(U, 2))
@@ -204,6 +206,8 @@ for (fname, elty, relty) in
             m, n, batch_size = size(A)
             (m < n) && throw(ArgumentError("rocSOLVER's gesvd_strided_batched requires m ≥ n"))
             minmn = min(m, n)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
@@ -238,8 +242,8 @@ for (fname, elty, relty) in
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 end
             end
-            length(S) == minmn * batch_size ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
             strideA = lda * n
@@ -368,6 +372,8 @@ for (fname, elty, relty) in
             end
             m, n = size(first(A))
             minmn = min(m, n)
+            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
@@ -402,8 +408,8 @@ for (fname, elty, relty) in
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 end
             end
-            length(S) == minmn * length(A) ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            size(S) == (minmn, length(A)) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(first(A), 2))
             ldu = max(1, stride(U, 2))
@@ -448,6 +454,8 @@ for (fname, elty, relty) in
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
             minmn = min(m, n)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
@@ -482,8 +490,8 @@ for (fname, elty, relty) in
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 end
             end
-            length(S) == minmn * batch_size ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
             strideA = lda * n
@@ -616,7 +624,8 @@ for (fname, elty, relty) in
             end
             m, n = size(first(A))
             minmn = min(m, n)
-
+            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
@@ -651,8 +660,8 @@ for (fname, elty, relty) in
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 end
             end
-            length(S) == minmn * length(A) ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            size(S) == (minmn, length(A)) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(first(A), 2))
             ldu = max(1, stride(U, 2))
@@ -703,7 +712,8 @@ for (fname, elty, relty) in
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
             minmn = min(m, n)
-
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
@@ -738,8 +748,8 @@ for (fname, elty, relty) in
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 end
             end
-            length(S) == minmn * batch_size ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
             strideA = lda * n
@@ -904,12 +914,14 @@ for (fname, elty, relty) in
             end
             m, n = size(first(A))
             minmn = min(m, n)
-            batch_count = length(A)
+            batch_size = length(A)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
             jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
-            length(S) == minmn * batch_count ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            size(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(first(A), 2))
             ldu = max(1, stride(U, 2))
@@ -920,15 +932,15 @@ for (fname, elty, relty) in
             strideF = minmn
 
             dh = rocBLAS.handle()
-            nsv = ROCVector{Cint}(undef, batch_count)
-            ifail = ROCVector{Cint}(undef, minmn * batch_count)
-            dev_info = ROCVector{Cint}(undef, batch_count)
+            nsv = ROCVector{Cint}(undef, batch_size)
+            ifail = ROCVector{Cint}(undef, minmn * batch_size)
+            dev_info = ROCVector{Cint}(undef, batch_size)
             pA = ROCVector(map(pointer, A))
             rocSOLVER.$fname(
                 dh, jobu, jobvt, srange, m, n, pA, lda,
                 vl, vu, il, iu, nsv,
                 S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
-                ifail, strideF, dev_info, batch_count
+                ifail, strideF, dev_info, batch_size
             )
             AMDGPU.unsafe_free!(pA)
 
@@ -962,13 +974,15 @@ for (fname, elty, relty) in
                 kwargs...
             )
             chkstride1(A, U, Vᴴ, S)
-            m, n, batch_count = size(A)
+            m, n, batch_size = size(A)
+            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             minmn = min(m, n)
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
             jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
-            length(S) == minmn * batch_count ||
-                throw(DimensionMismatch("length mismatch between A and S"))
+            length(S) == (minmn, batch_size) ||
+                throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
             strideA = stride(A, 3)
@@ -980,14 +994,14 @@ for (fname, elty, relty) in
             strideF = minmn
 
             dh = rocBLAS.handle()
-            nsv = ROCVector{Cint}(undef, batch_count)
-            ifail = ROCVector{Cint}(undef, minmn * batch_count)
-            dev_info = ROCVector{Cint}(undef, batch_count)
+            nsv = ROCVector{Cint}(undef, batch_size)
+            ifail = ROCVector{Cint}(undef, minmn * batch_size)
+            dev_info = ROCVector{Cint}(undef, batch_size)
             rocSOLVER.$fname(
                 dh, jobu, jobvt, srange, m, n, A, lda, strideA,
                 vl, vu, il, iu, nsv,
                 S, strideS, U, ldu, strideU, Vᴴ, ldv, strideV,
-                ifail, strideF, dev_info, batch_count
+                ifail, strideF, dev_info, batch_size
             )
             if check
                 rocSOLVER.chkargsok.(BlasInt.(collect(dev_info)))

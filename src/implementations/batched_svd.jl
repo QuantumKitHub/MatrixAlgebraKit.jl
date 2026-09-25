@@ -312,7 +312,7 @@ for (f, f_lapack!, Alg) in (
     # Implementation
     @eval begin
         function $svd_compact_f!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
-            _isempty_batch(A) && return one!(U), zero!(S), one!(Vᴴ)
+            _isempty_batch(A) && return foreach(one!, eachslice(U, dims = 3)), zero!(S), foreach(one!, eachslice(Vᴴ, dims = 3))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             if fixgauge
                 for (u, vᴴ) in zip(eachslice(U, dims = 3), eachslice(Vᴴ, dims = 3))
@@ -324,7 +324,7 @@ for (f, f_lapack!, Alg) in (
         function $svd_full_f!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
             supports_svd_full(driver, $(QuoteNode(f))) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not provide `$($(QuoteNode(f_lapack!)))`")))
-            _isempty_batch(A) && return one!(U), zero!(S), one!(Vᴴ)
+            _isempty_batch(A) && return foreach(one!, eachslice(U, dims = 3)), zero!(S), foreach(one!, eachslice(Vᴴ, dims = 3))
             zero!(S)
             m, n, batch_size = size(S)
             minmn = min(m, n)
