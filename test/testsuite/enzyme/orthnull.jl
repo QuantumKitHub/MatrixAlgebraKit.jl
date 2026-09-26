@@ -34,7 +34,9 @@ function test_enzyme_left_orth(
             alg = MatrixAlgebraKit.select_algorithm(left_orth!, A, :qr)
             VC, ΔVC = ad_left_orth_setup(A)
             test_reverse(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
-            test_reverse(call_and_zero!, RT, (left_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
+            test_reverse(call_and_zero!, RT, (left_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
+            test_forward(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (left_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
         end
 
         if m >= n && !(T <: Diagonal)
@@ -43,10 +45,10 @@ function test_enzyme_left_orth(
                 alg = MatrixAlgebraKit.select_algorithm(left_orth!, A, :polar)
                 VC, ΔVC = ad_left_orth_setup(A)
                 test_reverse(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
-                test_reverse(call_and_zero!, RT, (left_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
+                test_reverse(call_and_zero!, RT, (left_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
                 A = instantiate_matrix(T, sz)
                 test_forward(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
-                test_forward(call_and_zero!, RT, (left_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+                test_forward(call_and_zero!, RT, (left_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
             end
         end
     end
@@ -71,7 +73,9 @@ function test_enzyme_right_orth(
             alg = MatrixAlgebraKit.select_algorithm(right_orth!, A, :lq)
             CVᴴ, ΔCVᴴ = ad_right_orth_setup(A)
             test_reverse(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
-            test_reverse(call_and_zero!, RT, (right_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
+            test_reverse(call_and_zero!, RT, (right_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
+            test_forward(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (right_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
         end
 
         if m <= n && !(T <: Diagonal)
@@ -80,10 +84,10 @@ function test_enzyme_right_orth(
                 alg = MatrixAlgebraKit.select_algorithm(right_orth!, A, :polar)
                 CVᴴ, ΔCVᴴ = ad_right_orth_setup(A)
                 test_reverse(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
-                test_reverse(call_and_zero!, RT, (right_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
+                test_reverse(call_and_zero!, RT, (right_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
                 A = instantiate_matrix(T, sz)
                 test_forward(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
-                test_forward(call_and_zero!, RT, (right_orth!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+                test_forward(call_and_zero!, RT, (right_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
             end
         end
     end
@@ -92,7 +96,7 @@ end
 """
     test_enzyme_left_null(T, sz; rng, atol, rtol)
 
-Test the Enzyme reverse-mode AD rule for `left_null` with the QR algorithm and its
+Test the Enzyme forward- and reverse-mode AD rule for `left_null` with the QR algorithm and its
 in-place variant.
 """
 function test_enzyme_left_null(
@@ -100,13 +104,16 @@ function test_enzyme_left_null(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "left_null reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "left_null: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         @testset "qr" begin
             alg = MatrixAlgebraKit.select_algorithm(left_null!, A, :qr)
             N, ΔN = ad_left_null_setup(A)
             test_reverse(left_null, RT, (A, TA), (alg, Const); output_tangent = ΔN, atol, rtol)
-            test_reverse(call_and_zero!, RT, (left_null!, Const), (A, TA), (alg, Const); output_tangent = ΔN, atol, rtol)
+            test_reverse(call_and_zero!, RT, (left_null!, Const), (copy(A), TA), (alg, Const); output_tangent = ΔN, atol, rtol)
+            # the nullspace basis is only determined up to a unitary rotation
+            test_forward(qr_null_gauge_invariant_wrapper, RT, (left_null, Const), (A, TA), (alg, Const); atol, rtol)
+            test_forward(qr_null!_gauge_invariant_wrapper, RT, (left_null!, Const), (copy(A), TA), (alg, Const); atol, rtol)
         end
     end
 end
@@ -114,7 +121,7 @@ end
 """
     test_enzyme_right_null(T, sz; rng, atol, rtol)
 
-Test the Enzyme reverse-mode AD rule for `right_null` with the LQ algorithm and its
+Test the Enzyme forward- and reverse-mode AD rule for `right_null` with the LQ algorithm and its
 in-place variant.
 """
 function test_enzyme_right_null(
@@ -122,13 +129,16 @@ function test_enzyme_right_null(
         rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
-    return @testset "right_null reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
+    return @testset "right_null: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
         @testset "lq" begin
             alg = MatrixAlgebraKit.select_algorithm(right_null!, A, :lq)
             Nᴴ, ΔNᴴ = ad_right_null_setup(A)
             test_reverse(right_null, RT, (A, TA), (alg, Const); output_tangent = ΔNᴴ, atol, rtol)
-            test_reverse(call_and_zero!, RT, (right_null!, Const), (A, TA), (alg, Const); output_tangent = ΔNᴴ, atol, rtol)
+            test_reverse(call_and_zero!, RT, (right_null!, Const), (copy(A), TA), (alg, Const); output_tangent = ΔNᴴ, atol, rtol)
+            # the nullspace basis is only determined up to a unitary rotation
+            test_forward(lq_null_gauge_invariant_wrapper, RT, (right_null, Const), (A, TA), (alg, Const); atol, rtol)
+            test_forward(lq_null!_gauge_invariant_wrapper, RT, (right_null!, Const), (copy(A), TA), (alg, Const); atol, rtol)
         end
     end
 end

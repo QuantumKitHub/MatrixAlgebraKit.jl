@@ -22,6 +22,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [sources]
 MatrixAlgebraKit = {path = ".."}
+Mooncake = {url = "https://github.com/chalk-lab/Mooncake.jl.git", rev = "ksh/cu_range_getindex"}
 
 [compat]
 Aqua = "0.6, 0.7, 0.8"

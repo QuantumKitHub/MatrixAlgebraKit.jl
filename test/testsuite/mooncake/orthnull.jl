@@ -35,11 +35,11 @@ function test_mooncake_left_orth(
 
             Mooncake.TestUtils.test_rule(
                 rng, left_orth, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+                output_tangent, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
                 rng, call_and_zero!, left_orth!, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+                output_tangent, is_primitive = false, atol, rtol
             )
         end
 
@@ -83,11 +83,11 @@ function test_mooncake_right_orth(
 
             Mooncake.TestUtils.test_rule(
                 rng, right_orth, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+                output_tangent, is_primitive = false, atol, rtol
             )
             Mooncake.TestUtils.test_rule(
                 rng, call_and_zero!, right_orth!, A, alg;
-                mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+                output_tangent, is_primitive = false, atol, rtol
             )
         end
 
@@ -113,7 +113,7 @@ end
 """
     test_mooncake_left_null(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `left_null` with the QR algorithm and its
+Test the Mooncake forward- and reverse-mode AD rule for `left_null` with the QR algorithm and its
 in-place variant.
 """
 function test_mooncake_left_null(
@@ -136,6 +136,15 @@ function test_mooncake_left_null(
                 rng, call_and_zero!, left_null!, A, alg;
                 mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
             )
+            # the nullspace basis is only determined up to a unitary rotation
+            Mooncake.TestUtils.test_rule(
+                rng, qr_null_gauge_invariant_wrapper, left_null, A, alg;
+                mode = Mooncake.ForwardMode, is_primitive = false, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, qr_null!_gauge_invariant_wrapper, left_null!, A, alg;
+                mode = Mooncake.ForwardMode, is_primitive = false, atol, rtol
+            )
         end
     end
 end
@@ -143,7 +152,7 @@ end
 """
     test_mooncake_right_null(T, sz; rng, atol, rtol)
 
-Test the Mooncake reverse-mode AD rule for `right_null` with the LQ algorithm and its
+Test the Mooncake forward- and reverse-mode AD rule for `right_null` with the LQ algorithm and its
 in-place variant.
 """
 function test_mooncake_right_null(
@@ -165,6 +174,15 @@ function test_mooncake_right_null(
             Mooncake.TestUtils.test_rule(
                 rng, call_and_zero!, right_null!, A, alg;
                 mode = Mooncake.ReverseMode, output_tangent, is_primitive = false, atol, rtol
+            )
+            # the nullspace basis is only determined up to a unitary rotation
+            Mooncake.TestUtils.test_rule(
+                rng, lq_null_gauge_invariant_wrapper, right_null, A, alg;
+                mode = Mooncake.ForwardMode, is_primitive = false, atol, rtol
+            )
+            Mooncake.TestUtils.test_rule(
+                rng, lq_null!_gauge_invariant_wrapper, right_null!, A, alg;
+                mode = Mooncake.ForwardMode, is_primitive = false, atol, rtol
             )
         end
     end
