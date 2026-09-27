@@ -28,32 +28,31 @@ function lq_pushforward!(
     (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of L*Q ($m, $n)"))
 
     Q₁ = view(Q, 1:p, :)
-    ΔQ₁ = view(ΔQ, 1:p, :)
     # Julia 1.13 `ldiv!` checks `istriu` on the parent, which
     # falls back to scalar indexing for a view of a GPU array
     L₁₁ = LowerTriangular(L[1:p, 1:p])
-    ΔL₁₁ = LowerTriangular(ΔL[1:p, 1:p])
     L₂₁ = view(L, (p + 1):m, 1:p)
-    ΔL₂₁ = view(ΔL, (p + 1):m, 1:p)
 
     ΔA₁ = view(ΔA, 1:p, :)
     ΔA₂ = view(ΔA, (p + 1):m, :)
+
+    # compute everything from ΔA before writing to ΔL and ΔQ, which may alias it
+    # (e.g. `lq_compact!` of a `Diagonal` returns `Q === A`)
+    ΔQ₁ = L₁₁ \ ΔA₁
+    ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
+    M = ΔQ₁Q₁ᴴ + ΔQ₁Q₁ᴴ'
+    diagview(M) ./= 2
+    view(M, uppertriangularind(M)) .= zero(eltype(M))
+    ΔL₁₁ = L₁₁ * M
+    ΔQ₁ = mul!(ΔQ₁, M, Q₁, -1, 1)
+    ΔL₂₁ = ΔA₂ * Q₁'
+    ΔL₂₁ = mul!(ΔL₂₁, L₂₁, ΔQ₁ * Q₁', -1, 1)
 
     zero!(ΔL)
     zero!(ΔQ)
     view(ΔQ, 1:p, :) .= ΔQ₁
     view(ΔL, 1:p, 1:p) .= ΔL₁₁
     view(ΔL, (p + 1):m, 1:p) .= ΔL₂₁
-
-    ΔQ₁ = ldiv!(L₁₁, copy!(ΔQ₁, ΔA₁))
-    ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
-    M = ΔQ₁Q₁ᴴ + ΔQ₁Q₁ᴴ'
-    diagview(M) ./= 2
-    view(M, uppertriangularind(M)) .= zero(eltype(M))
-    ΔL₁₁ = mul!(ΔL₁₁, L₁₁, M)
-    ΔQ₁ = mul!(ΔQ₁, M, Q₁, -1, 1)
-    ΔL₂₁ = mul!(ΔL₂₁, ΔA₂, Q₁')
-    ΔL₂₁ = mul!(ΔL₂₁, L₂₁, ΔQ₁ * Q₁', -1, 1)
     if p == minmn && size(Q, 1) > minmn
         Q₃ = view(Q, (minmn + 1):size(Q, 1), :)
         ΔQ₃ = view(ΔQ, (minmn + 1):size(Q, 1), :)
