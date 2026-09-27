@@ -40,7 +40,7 @@ function qr_pushforward!(
     ΔR₁₁ = M * R₁₁
     ΔQ₁ = mul!(ΔQ₁, Q₁, M, -1, 1)
     ΔR₁₂ = Q₁' * ΔA₂
-    ΔR₁₂ = mul!(ΔR₁₂, ΔQ₁' * Q₁, R₁₂, 1, 1)
+    ΔR₁₂ = mul!(ΔR₁₂, Q₁' * ΔQ₁, R₁₂, -1, 1)
 
     zero!(ΔQ)
     zero!(ΔR)
@@ -70,6 +70,6 @@ function qr_null_pushforward!(ΔA, A, N, ΔN; kwargs...)
         return ΔN
     end
     Q, R = qr_compact(A; positive = true)
-    X = ldiv!(UpperTriangular(R)', ΔA' * N)
-    return mul!(ΔN, Q, X, -1, 0)
+    NᴴΔQ = rdiv!(N' * ΔA, UpperTriangular(R))
+    return mul!(ΔN, Q, NᴴΔQ', -1, 0)
 end

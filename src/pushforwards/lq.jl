@@ -36,21 +36,21 @@ function lq_pushforward!(
     ΔA₁ = view(ΔA, 1:p, :)
     ΔA₂ = view(ΔA, (p + 1):m, :)
 
-    ΔQ₁ = L₁₁ \ ΔA₁
-    ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
-    M = ΔQ₁Q₁ᴴ + ΔQ₁Q₁ᴴ'
-    diagview(M) ./= 2
-    view(M, uppertriangularind(M)) .= zero(eltype(M))
-    ΔL₁₁ = L₁₁ * M
-    ΔQ₁ = mul!(ΔQ₁, M, Q₁, -1, 1)
-    ΔL₂₁ = ΔA₂ * Q₁'
-    ΔL₂₁ = mul!(ΔL₂₁, L₂₁, Q₁ * ΔQ₁', 1, 1)
-
     zero!(ΔL)
     zero!(ΔQ)
     view(ΔQ, 1:p, :) .= ΔQ₁
     view(ΔL, 1:p, 1:p) .= ΔL₁₁
     view(ΔL, (p + 1):m, 1:p) .= ΔL₂₁
+    
+    ΔQ₁ = ldiv!(L₁₁, copy!(ΔQ₁, ΔA₁))
+    ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
+    M = ΔQ₁Q₁ᴴ + ΔQ₁Q₁ᴴ'
+    diagview(M) ./= 2
+    view(M, uppertriangularind(M)) .= zero(eltype(M))
+    ΔL₁₁ = mul!!(ΔL₁₁, L₁₁, M)
+    ΔQ₁ = mul!(ΔQ₁, M, Q₁, -1, 1)
+    ΔL₂₁ = mul!(ΔL₂₁, ΔA₂, Q₁')
+    ΔL₂₁ = mul!(ΔL₂₁, L₂₁, ΔQ₁ * Q₁', -1, 1)
     if p == minmn && size(Q, 1) > minmn
         Q₃ = view(Q, (minmn + 1):size(Q, 1), :)
         ΔQ₃ = view(ΔQ, (minmn + 1):size(Q, 1), :)
@@ -73,6 +73,6 @@ function lq_null_pushforward!(ΔA, A, Nᴴ, ΔNᴴ; kwargs...)
         return ΔNᴴ
     end
     L, Q = lq_compact(A; positive = true)
-    X = ldiv!(LowerTriangular(L), ΔA * Nᴴ')
-    return mul!(ΔNᴴ, X', Q, -1, 0)
+    ΔQNᴴ = ldiv!(LowerTriangular(L), ΔA * Nᴴ')
+    return mul!(ΔNᴴ, ΔQNᴴ', Q, -1, 0)
 end
