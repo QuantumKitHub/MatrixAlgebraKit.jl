@@ -41,7 +41,7 @@ function lq_pushforward!(
     view(ΔQ, 1:p, :) .= ΔQ₁
     view(ΔL, 1:p, 1:p) .= ΔL₁₁
     view(ΔL, (p + 1):m, 1:p) .= ΔL₂₁
-    
+
     ΔQ₁ = ldiv!(L₁₁, copy!(ΔQ₁, ΔA₁))
     ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
     M = ΔQ₁Q₁ᴴ + ΔQ₁Q₁ᴴ'
