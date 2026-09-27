@@ -28,7 +28,9 @@ function lq_pushforward!(
     (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of L*Q ($m, $n)"))
 
     Q₁ = view(Q, 1:p, :)
-    L₁₁ = LowerTriangular(view(L, 1:p, 1:p))
+    # Julia 1.13 `ldiv!` checks `istriu` on the parent, which
+    # falls back to scalar indexing for a view of a GPU array
+    L₁₁ = LowerTriangular(L[1:p, 1:p])
     L₂₁ = view(L, (p + 1):m, 1:p)
 
     ΔA₁ = view(ΔA, 1:p, :)
