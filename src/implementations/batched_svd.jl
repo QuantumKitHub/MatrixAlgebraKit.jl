@@ -1,14 +1,14 @@
 # Inputs
 # ------
-copy_input(::typeof(batched_svd_full), As::AbstractVector{<:AbstractMatrix}) = map(A -> copy!(similar(A, float(eltype(A))), A), As)
+copy_input(::typeof(batched_svd_full), As::AbstractVector{<:AbstractMatrix}) = map(Base.Fix1(copy_input, svd_full), As)
 copy_input(::typeof(batched_svd_full), A::AbstractArray{T, 3}) where {T} = copy!(similar(A, float(T)), A)
 copy_input(::typeof(batched_svd_compact), A) = copy_input(batched_svd_full, A)
 copy_input(::typeof(batched_svd_vals), A) = copy_input(batched_svd_full, A)
 
 function check_input(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
     isempty(A) && return nothing
-    @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
+    @assert all(==((m, n)) ∘ size, A)
     batch_size = length(A)
     U, S, Vᴴ = USVᴴ
     @assert U isa AbstractArray && S isa AbstractArray && Vᴴ isa AbstractArray
@@ -22,8 +22,8 @@ function check_input(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMa
 end
 function check_input(::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
     isempty(A) && return nothing
-    @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
+    @assert all(==((m, n)) ∘ size, A)
     batch_size = length(A)
     minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
@@ -38,8 +38,8 @@ function check_input(::typeof(batched_svd_compact!), A::AbstractVector{<:Abstrac
 end
 function check_input(::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix}, S, ::AbstractAlgorithm)
     isempty(A) && return nothing
-    @assert all(==(size(first(A))), size.(A))
     m, n = size(first(A))
+    @assert all(==((m, n)) ∘ size, A)
     batch_size = length(A)
     minmn = min(m, n)
     @assert S isa AbstractMatrix
