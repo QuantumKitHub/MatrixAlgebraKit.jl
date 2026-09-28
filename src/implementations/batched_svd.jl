@@ -342,13 +342,13 @@ for (f, f_lapack!, Alg) in (
         end
         function $svd_vals_f!(driver::Driver, A::AbstractArray{T, 3}, S::AbstractMatrix; fixgauge::Bool = true, kwargs...) where {T}
             _isempty_batch(A) && return zero!(S)
-            U, Vᴴ = similar(A, (0, 0, 0)), similar(A, (0, 0, 0))
+            U, Vᴴ = similar(A, (0, 0, size(A, 3))), similar(A, (0, 0, size(A, 3)))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             return S
         end
         function $svd_vals_f!(driver::Driver, A::AbstractVector{<:AbstractMatrix}, S::AbstractMatrix; fixgauge::Bool = true, kwargs...)
             _isempty_batch(A) && return zero!(S)
-            U, Vᴴ = similar(first(A), (0, 0, 0)), similar(first(A), (0, 0, 0))
+            U, Vᴴ = similar(first(A), (0, 0, length(A))), similar(first(A), (0, 0, length(A)))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             return S
         end
