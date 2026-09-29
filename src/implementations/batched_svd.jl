@@ -199,7 +199,7 @@ end
 Whether the driver accepts a *ragged* batch of matrices of type `T` which do not have
 uniform size. `true` by default.
 """
-supports_ragged_batch(::AbstractAlgorithm, ::Type) = true
+supports_ragged_batch(::Driver, ::Type) = true
 
 
 for (f, f_lapack!, Alg) in (
@@ -216,7 +216,8 @@ for (f, f_lapack!, Alg) in (
     @eval begin
         function batched_svd_compact!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
             check_input(batched_svd_compact!, A, USVᴴ, alg)
-            supports_ragged_batch(get(alg.kwargs, :driver, DefaultDriver()), eltype(A)) ||
+            driver = get(alg.kwargs, :driver, DefaultDriver())
+            supports_ragged_batch(driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_compact_f!(A, USVᴴ...; alg.kwargs...)
         end
@@ -226,7 +227,8 @@ for (f, f_lapack!, Alg) in (
         end
         function batched_svd_full!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
             check_input(batched_svd_full!, A, USVᴴ, alg)
-            supports_ragged_batch(get(alg.kwargs, :driver, DefaultDriver()), eltype(A)) ||
+            driver = get(alg.kwargs, :driver, DefaultDriver())
+            supports_ragged_batch(driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_full_f!(A, USVᴴ...; alg.kwargs...)
         end
@@ -236,7 +238,8 @@ for (f, f_lapack!, Alg) in (
         end
         function batched_svd_vals!(A::AbstractVector{<:AbstractMatrix}, S, alg::$Alg)
             check_input(batched_svd_vals!, A, S, alg)
-            supports_ragged_batch(get(alg.kwargs, :driver, DefaultDriver()), eltype(A)) ||
+            driver = get(alg.kwargs, :driver, DefaultDriver())
+            supports_ragged_batch(driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_vals_f!(A, S; alg.kwargs...)
         end
