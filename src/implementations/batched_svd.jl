@@ -318,6 +318,8 @@ for (f, f_lapack!, Alg) in (
                 foreach(one!, eachslice(Vᴴ, dims = 3))
                 return U, S, Vᴴ
             end
+            supports_ragged_batches(driver) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             fixgauge && gaugefix!(batched_svd_compact!, U, Vᴴ)
             return U, S, Vᴴ
@@ -331,6 +333,8 @@ for (f, f_lapack!, Alg) in (
                 foreach(one!, eachslice(Vᴴ, dims = 3))
                 return U, S, Vᴴ
             end
+            supports_ragged_batches(driver) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             zero!(S)
             m, n, batch_size = size(S)
             minmn = min(m, n)
@@ -344,12 +348,16 @@ for (f, f_lapack!, Alg) in (
         end
         function $svd_vals_f!(driver::Driver, A::AbstractArray{T, 3}, S::AbstractMatrix; fixgauge::Bool = true, kwargs...) where {T}
             _isempty_batch(A) && return zero!(S)
+            supports_ragged_batches(driver) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             U, Vᴴ = similar(A, (0, 0, size(A, 3))), similar(A, (0, 0, size(A, 3)))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             return S
         end
         function $svd_vals_f!(driver::Driver, A::AbstractVector{<:AbstractMatrix}, S::AbstractMatrix; fixgauge::Bool = true, kwargs...)
             _isempty_batch(A) && return zero!(S)
+            supports_ragged_batches(driver) ||
+                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             U, Vᴴ = similar(first(A), (0, 0, length(A))), similar(first(A), (0, 0, length(A)))
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
             return S
@@ -376,6 +384,14 @@ to the driver as a vector of pointers, instead of being copied into one contiguo
 `false` by default.
 """
 supports_pointer_batch(::AbstractAlgorithm, ::Type) = false
+
+"""
+    supports_ragged_batch(alg, T::Type) -> Bool
+
+Whether the driver accepts a *ragged* batch of matrices of type `T` which do not have
+uniform size. `true` by default.
+"""
+supports_ragged_batch(::AbstractAlgorithm, ::Type) = true
 
 # Fewest matrices in a ragged batch that are worth a batched call
 # Should this be settable by the user?
