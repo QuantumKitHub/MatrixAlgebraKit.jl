@@ -981,7 +981,7 @@ for (fname, elty, relty) in
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
             jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
-            length(S) == (minmn, batch_size) ||
+            size(S) == (minmn, batch_size) ||
                 throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
