@@ -1,5 +1,6 @@
 using MatrixAlgebraKit
-using LinearAlgebra: Diagonal
+using Test
+using LinearAlgebra: Diagonal, isposdef
 using CUDA, AMDGPU
 
 if @isdefined(fast_tests) && fast_tests
@@ -12,6 +13,7 @@ end
 
 @isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
 using .TestSuite
+using .TestSuite: testargs_summary
 
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
@@ -88,13 +90,28 @@ end
 # ------------
 if AMDGPU.functional()
     # ROCSOLVER algorithms:
-    for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
+    for T in BLASFloats, m in (0, 1, 23), n in (0, 1, 17, m, 27)
         TestSuite.seed_rng!(123)
         TestSuite.test_svd(ROCMatrix{T}, (m, n))
         AMD_SVD_ALGS = (QRIteration(), Jacobi(), DivideAndConquer(), Bisection())
         TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
         TestSuite.test_svd_batched(ROCMatrix{T}, (m, n), batch_size)
         TestSuite.test_svd_batched_algs(ROCMatrix{T}, (m, n), batch_size, AMD_SVD_ALGS)
+    end
+
+    @testset "Bisection with min(m, n) == 1 $(testargs_summary(T, sz))" for T in BLASFloats,
+            sz in ((1, 1), (2, 1), (5, 1), (1, 2), (1, 5))
+
+        TestSuite.seed_rng!(123)
+        for _ in 1:16
+            A = TestSuite.instantiate_matrix(ROCMatrix{T}, sz)
+            U, S, Vᴴ = svd_compact(A; alg = Bisection())
+            @test U * S * Vᴴ ≈ A
+            @test isisometric(U)
+            @test isisometric(Vᴴ; side = :right)
+            @test isposdef(S)
+            @test Array(S) ≈ Diagonal(svd_vals(Array(A)))
+        end
     end
 
     # Diagonal:
