@@ -319,11 +319,7 @@ for (f, f_lapack!, Alg) in (
                 return U, S, Vᴴ
             end
             $f_lapack!(driver, A, S, U, Vᴴ; kwargs...)
-            if fixgauge
-                for (u, vᴴ) in zip(eachslice(U, dims = 3), eachslice(Vᴴ, dims = 3))
-                    gaugefix!(svd_compact!, u, vᴴ)
-                end
-            end
+            fixgauge && gaugefix!(batched_svd_compact!, U, Vᴴ)
             return U, S, Vᴴ
         end
         function $svd_full_f!(driver::Driver, A, U, S, Vᴴ; fixgauge::Bool = true, kwargs...)
@@ -343,11 +339,7 @@ for (f, f_lapack!, Alg) in (
             for (s, sd) in zip(eachslice(S, dims = 3), eachslice(Sd, dims = 2))
                 diagview(s) .= sd
             end
-            if fixgauge
-                for (u, vᴴ) in zip(eachslice(U, dims = 3), eachslice(Vᴴ, dims = 3))
-                    gaugefix!(svd_full!, u, vᴴ)
-                end
-            end
+            fixgauge && gaugefix!(batched_svd_full!, U, Vᴴ)
             return U, S, Vᴴ
         end
         function $svd_vals_f!(driver::Driver, A::AbstractArray{T, 3}, S::AbstractMatrix; fixgauge::Bool = true, kwargs...) where {T}
