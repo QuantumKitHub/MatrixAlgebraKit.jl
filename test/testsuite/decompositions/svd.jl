@@ -192,18 +192,20 @@ function test_svd_compact_algs_batched(
         @testset "ragged with $nextra extra sizes" for nextra in (2, 5)
             Ar = [As; [instantiate_matrix(T, (max(m - i % 3, 0), max(n - i % 4, 0))) for i in 1:nextra]]
             Us = [similar(a, size(a, 1), minimum(size(a))) for a in Ar]
-            Ss = [similar(a, real(eltype(T)), minimum(size(a))) for a in Ar]
+            Ss = [Diagonal(similar(a, real(eltype(T)), minimum(size(a)))) for a in Ar]
             Vᴴs = [similar(a, minimum(size(a)), size(a, 2)) for a in Ar]
             U3, S3, V3ᴴ = @testinferred batched_svd_compact!(deepcopy(Ar), (Us, Ss, Vᴴs); alg)
+            @test S3 === Ss
             for (a, u, s, vᴴ) in zip(Ar, U3, S3, V3ᴴ)
-                @test u * Diagonal(s) * vᴴ ≈ a
+                @test u * s * vᴴ ≈ a
                 @test isisometric(u)
                 @test isisometric(vᴴ; side = :right)
             end
 
             U4, S4, V4ᴴ = @testinferred batched_svd_compact(Ar; alg)
+            @test S4 isa AbstractVector{<:Diagonal}
             for (a, u, s, vᴴ) in zip(Ar, U4, S4, V4ᴴ)
-                @test u * Diagonal(s) * vᴴ ≈ a
+                @test u * s * vᴴ ≈ a
                 @test isisometric(u)
                 @test isisometric(vᴴ; side = :right)
             end
@@ -212,11 +214,11 @@ function test_svd_compact_algs_batched(
                 Sv = [similar(a, real(eltype(T)), minimum(size(a))) for a in Ar]
                 Sv2 = @testinferred batched_svd_vals!(deepcopy(Ar), Sv; alg)
                 for (s, s2) in zip(S3, Sv2)
-                    @test collect(s) ≈ collect(s2)
+                    @test collect(diagview(s)) ≈ collect(s2)
                 end
                 Sv3 = @testinferred batched_svd_vals(Ar; alg)
                 for (s, s3) in zip(S3, Sv3)
-                    @test collect(s) ≈ collect(s3)
+                    @test collect(diagview(s)) ≈ collect(s3)
                 end
             end
         end

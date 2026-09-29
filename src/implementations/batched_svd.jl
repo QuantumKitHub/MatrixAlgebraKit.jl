@@ -50,14 +50,14 @@ end
 # ragged batches: matrices of different sizes, each with its own outputs
 function check_input(
         ::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix},
-        USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractVector}, AbstractVector{<:AbstractMatrix}},
+        USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:Diagonal}, AbstractVector{<:AbstractMatrix}},
         alg::AbstractAlgorithm
     )
     Us, Ss, Vᴴs = USVᴴ
     length(Us) == length(Ss) == length(Vᴴs) == length(A) ||
         throw(DimensionMismatch("expected $(length(A)) outputs for each of U, S and Vᴴ"))
     for (a, u, s, vᴴ) in zip(A, Us, Ss, Vᴴs)
-        check_input(svd_compact!, a, (u, Diagonal(s), vᴴ), alg)
+        check_input(svd_compact!, a, (u, s, vᴴ), alg)
     end
     return nothing
 end
@@ -136,7 +136,7 @@ function initialize_output(::typeof(batched_svd_full!), A::AbstractArray{T, 3}, 
 end
 function initialize_output(::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
     Us = [similar(a, (size(a, 1), minimum(size(a)))) for a in A]
-    Ss = [similar(a, real(eltype(a)), minimum(size(a))) for a in A]
+    Ss = [Diagonal(similar(a, real(eltype(a)), minimum(size(a)))) for a in A]
     Vᴴs = [similar(a, (minimum(size(a)), size(a, 2))) for a in A]
     return (Us, Ss, Vᴴs)
 end
@@ -248,7 +248,7 @@ for (f, f_lapack!, Alg) in (
         # ragged batches: pack into 3D batches, see `_ragged_batches`
         function batched_svd_compact!(
                 A::AbstractVector{<:AbstractMatrix},
-                USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractVector}, AbstractVector{<:AbstractMatrix}},
+                USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:Diagonal}, AbstractVector{<:AbstractMatrix}},
                 alg::$Alg
             )
             check_input(batched_svd_compact!, A, USVᴴ, alg)
@@ -259,12 +259,12 @@ for (f, f_lapack!, Alg) in (
                 Ub, Sb, Vᴴb = batched_svd_compact!(Ab, _packed_output(batched_svd_compact!, Ab, alg), alg)
                 for (j, i) in enumerate(inds)
                     copyto!(Us[i], view(Ub, axes(Us[i])..., j))
-                    copyto!(Ss[i], view(Sb, axes(Ss[i], 1), j))
+                    copyto!(diagview(Ss[i]), view(Sb, axes(Ss[i], 1), j))
                     copyto!(Vᴴs[i], view(Vᴴb, axes(Vᴴs[i])..., j))
                 end
             end
             for i in rest
-                svd_compact!(A[i], (Us[i], Diagonal(Ss[i]), Vᴴs[i]), alg)
+                svd_compact!(A[i], (Us[i], Ss[i], Vᴴs[i]), alg)
             end
             return USVᴴ
         end
