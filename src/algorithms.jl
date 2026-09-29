@@ -237,6 +237,14 @@ default_driver(::Type{TA}) where {TA <: YALAPACK.MaybeBlasVecOrMat} = LAPACK()
 @inline default_driver(::Type{<:SubArray{T, N, A}}) where {T, N, A} = default_driver(A)
 @inline default_driver(::Type{<:Base.ReshapedArray{T, N, A}}) where {T, N, A} = default_driver(A)
 
+"""
+    supports_ragged_batch(f!, driver::Driver, T::Type) -> Bool
+
+Whether the driver accepts a *ragged* batch of matrices of type `T` which do not have
+uniform size for function `f!`. `true` by default.
+"""
+supports_ragged_batch(f!, driver::Driver, ::Type) = true
+
 # Truncation strategy
 # -------------------
 """

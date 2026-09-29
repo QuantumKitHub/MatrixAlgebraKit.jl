@@ -13,14 +13,6 @@ function batched_adjoint(A::AbstractArray{<:Any, 3})
 end
 batched_adjoint(A::AbstractVector{<:AbstractMatrix}) = map(a -> adjoint!(similar(a'), a), A)
 
-"""
-    supports_ragged_batch(alg, T::Type) -> Bool
-
-Whether the driver accepts a *ragged* batch of matrices of type `T` which do not have
-uniform size. `true` by default.
-"""
-supports_ragged_batch(::Driver, ::Type) = true
-
 # Ragged batches
 # --------------
 """

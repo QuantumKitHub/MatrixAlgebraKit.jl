@@ -193,7 +193,7 @@ for (f, f_lapack!, Alg) in (
         function batched_svd_compact!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
             check_input(batched_svd_compact!, A, USVᴴ, alg)
             driver = get(alg.kwargs, :driver, DefaultDriver())
-            supports_ragged_batch(driver, eltype(A)) ||
+            supports_ragged_batch(batched_svd_compact!, driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_compact_f!(A, USVᴴ...; alg.kwargs...)
         end
@@ -204,7 +204,7 @@ for (f, f_lapack!, Alg) in (
         function batched_svd_full!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
             check_input(batched_svd_full!, A, USVᴴ, alg)
             driver = get(alg.kwargs, :driver, DefaultDriver())
-            supports_ragged_batch(driver, eltype(A)) ||
+            supports_ragged_batch(batched_svd_full!, driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_full_f!(A, USVᴴ...; alg.kwargs...)
         end
@@ -215,7 +215,7 @@ for (f, f_lapack!, Alg) in (
         function batched_svd_vals!(A::AbstractVector{<:AbstractMatrix}, S, alg::$Alg)
             check_input(batched_svd_vals!, A, S, alg)
             driver = get(alg.kwargs, :driver, DefaultDriver())
-            supports_ragged_batch(driver, eltype(A)) ||
+            supports_ragged_batch(batched_svd_vals!, driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_vals_f!(A, S; alg.kwargs...)
         end
