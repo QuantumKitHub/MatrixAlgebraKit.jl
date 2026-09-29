@@ -97,11 +97,11 @@ include("common/view.jl")
 include("common/regularinv.jl")
 include("common/matrixproperties.jl")
 include("common/balancing.jl")
-include("common/batches.jl")
 include("common/utility.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
+include("batches.jl")
 
 include("interface/projections.jl")
 include("interface/decompositions.jl")

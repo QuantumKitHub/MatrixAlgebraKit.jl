@@ -15,6 +15,15 @@ batched_adjoint(A::AbstractVector{<:AbstractMatrix}) = map(a -> adjoint!(similar
 
 # Ragged batches
 # --------------
+
+"""
+    supports_ragged_batch(f!, driver::Driver, T::Type) -> Bool
+
+Whether the driver accepts a *ragged* batch of matrices of type `T` which do not have
+uniform size for function `f!`. `true` by default.
+"""
+supports_ragged_batch(f!, driver::Driver, ::Type) = true
+
 """
     max_batched_blocksize(alg, T::Type) -> Int
 
