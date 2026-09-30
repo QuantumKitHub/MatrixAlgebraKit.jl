@@ -160,10 +160,10 @@ for (fname, elty, relty) in
 
             lda = max(1, stride(first(A), 2))
             ldu = max(1, stride(U, 2))
-            strideU = ldu * size(U, 2)
+            strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
-            strideV = ldv * n
-            strideS = minmn
+            strideV = max(1, stride(Vᴴ, 3))
+            strideS = max(1, stride(S, 2))
 
             strideE = minmn - 1
             E = ROCArray{$relty}(undef, length(A) * strideE)
@@ -246,12 +246,12 @@ for (fname, elty, relty) in
                 throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
-            strideA = lda * n
+            strideA = max(1, stride(A, 3))
             ldu = max(1, stride(U, 2))
-            strideU = ldu * size(U, 2)
+            strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
-            strideV = ldv * n
-            strideS = minmn
+            strideV = max(1, stride(Vᴴ, 3))
+            strideS = max(1, stride(S, 2)) 
 
             strideE = minmn - 1
             E = ROCArray{$relty}(undef, batch_size * strideE)
@@ -413,10 +413,10 @@ for (fname, elty, relty) in
 
             lda = max(1, stride(first(A), 2))
             ldu = max(1, stride(U, 2))
-            strideU = ldu * size(U, 2)
+            strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
-            strideV = ldv * n
-            strideS = minmn
+            strideV = max(1, stride(Vᴴ, 3))
+            strideS = max(1, stride(S, 2))
 
             dh = rocBLAS.handle()
             dev_info = ROCVector{Cint}(undef, length(A))
@@ -494,12 +494,12 @@ for (fname, elty, relty) in
                 throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
-            strideA = lda * n
+            strideA = max(1, stride(A, 3))
             ldu = max(1, stride(U, 2))
-            strideU = ldu * size(U, 2)
+            strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
-            strideV = ldv * n
-            strideS = minmn
+            strideV = max(1, stride(Vᴴ, 3))
+            strideS = max(1, stride(S, 2))
 
             dh = rocBLAS.handle()
             dev_info = ROCVector{Cint}(undef, batch_size)
@@ -665,10 +665,10 @@ for (fname, elty, relty) in
 
             lda = max(1, stride(first(A), 2))
             ldu = max(1, stride(U, 2))
-            strideU = ldu * size(U, 2)
+            strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
-            strideV = ldv * n
-            strideS = minmn
+            strideV = max(1, stride(Vᴴ, 3))
+            strideS = max(1, stride(S, 2))
             dev_info = ROCVector{Cint}(undef, length(A))
             dev_residual = ROCVector{$relty}(undef, length(A))
             dev_n_sweeps = ROCVector{Cint}(undef, length(A))
@@ -752,12 +752,12 @@ for (fname, elty, relty) in
                 throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
-            strideA = lda * n
+            strideA = max(1, stride(A, 3))
             ldu = max(1, stride(U, 2))
-            strideU = ldu * size(U, 2)
+            strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
-            strideV = ldv * n
-            strideS = minmn
+            strideV = max(1, stride(Vᴴ, 3))
+            strideS = max(1, stride(S, 2))
             dev_info = ROCVector{Cint}(undef, batch_size)
             dev_residual = ROCVector{$relty}(undef, batch_size)
             dev_n_sweeps = ROCVector{Cint}(undef, batch_size)
@@ -925,15 +925,15 @@ for (fname, elty, relty) in
 
             lda = max(1, stride(first(A), 2))
             ldu = max(1, stride(U, 2))
-            strideU = ldu * size(U, 2)
+            strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
-            strideV = ldv * n
-            strideS = minmn
+            strideV = max(1, stride(Vᴴ, 3))
+            strideS = max(1, stride(S, 2))
             strideF = minmn
 
             dh = rocBLAS.handle()
             nsv = ROCVector{Cint}(undef, batch_size)
-            ifail = ROCVector{Cint}(undef, minmn * batch_size)
+            ifail = ROCVector{Cint}(undef, strideF * batch_size)
             dev_info = ROCVector{Cint}(undef, batch_size)
             pA = ROCVector(map(pointer, A))
             rocSOLVER.$fname(
@@ -995,7 +995,7 @@ for (fname, elty, relty) in
 
             dh = rocBLAS.handle()
             nsv = ROCVector{Cint}(undef, batch_size)
-            ifail = ROCVector{Cint}(undef, minmn * batch_size)
+            ifail = ROCVector{Cint}(undef, strideF * batch_size)
             dev_info = ROCVector{Cint}(undef, batch_size)
             rocSOLVER.$fname(
                 dh, jobu, jobvt, srange, m, n, A, lda, strideA,
