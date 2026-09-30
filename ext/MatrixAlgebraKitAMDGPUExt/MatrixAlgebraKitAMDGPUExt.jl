@@ -41,7 +41,7 @@ MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration
 # rocSOLVER's `gesvd*_batched` functions take the batch as an array
 # of device pointers, so a group of equally sized matrices
 # doesn't need a copy into a 3D ROCArray.
-MatrixAlgebraKit.supports_pointer_batch(::AbstractAlgorithm, ::Type{<:StridedROCMatrix{<:BlasFloat}}) = true
+MatrixAlgebraKit.supports_pointer_batch(::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:StridedROCMatrix{<:BlasFloat}}) = true
 
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     m, n = size(A)

@@ -17,31 +17,31 @@ batched_adjoint(A::AbstractVector{<:AbstractMatrix}) = map(a -> adjoint!(similar
 # --------------
 
 """
-    supports_ragged_batch(f!, driver::Driver, T::Type) -> Bool
+    supports_ragged_batch(f!, alg::AbstractAlgorithm, driver::Driver, T::Type) -> Bool
 
-Whether the driver accepts a *ragged* batch of matrices of type `T` which do not have
-uniform size for function `f!`. `true` by default.
+Whether the algorithm `alg` running on `driver` accepts a *ragged* batch of matrices
+of type `T` which do not have uniform size for function `f!`. `true` by default.
 """
-supports_ragged_batch(f!, driver::Driver, ::Type) = true
+supports_ragged_batch(f!, alg::AbstractAlgorithm, driver::Driver, ::Type) = true
 
 """
-    max_batched_blocksize(alg, T::Type) -> Int
+    max_batched_blocksize(alg, driver::Driver, T::Type) -> Int
 
-Largest matrix dimension that the driver for the batched versoin of `alg` accepts for arrays
+Largest matrix dimension that the `driver` for the batched version of `alg` accepts for arrays
 of type `T`. Larger matrices in a ragged batch are decomposed one at a time instead.
 Unlimited by default.
 """
-max_batched_blocksize(::AbstractAlgorithm, ::Type) = typemax(Int)
+max_batched_blocksize(alg::AbstractAlgorithm, driver::Driver, ::Type) = typemax(Int)
 
 """
-    supports_pointer_batch(alg, T::Type) -> Bool
+    supports_pointer_batch(alg, driver::Driver, T::Type) -> Bool
 
-Whether the low-level batched driver version of `alg` accepts a batch of matrices of type `T`
+Whether the low-level batched `driver` for `alg` accepts a batch of matrices of type `T`
 as an `AbstractVector` of separately allocated matrices. Such a group of matrices is handed
 to the driver as a vector of pointers, instead of being copied into one contiguous 3D array.
 `false` by default.
 """
-supports_pointer_batch(::AbstractAlgorithm, ::Type) = false
+supports_pointer_batch(::AbstractAlgorithm, driver::Driver, ::Type) = false
 
 # Split a ragged batch into batches the driver can handle: matrices of equal size are
 # batched together, and, if `pad`, whatever is left over is zero-padded into one more batch.
@@ -52,7 +52,8 @@ function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgor
     batches = Tuple{Vector{Int}, Tuple{Int, Int}}[]
     rest = Int[]
     isempty(A) && return batches, rest
-    batch_size_limit = max_batched_blocksize(alg, typeof(first(A)))
+    driver = get(alg.kwargs, :driver, DefaultDriver())
+    batch_size_limit = max_batched_blocksize(alg, driver, typeof(first(A)))
     needs_tall = requires_tall(alg)
     groups = Dict{Tuple{Int, Int}, Vector{Int}}()
     for i in eachindex(A)
@@ -86,8 +87,9 @@ _packed_output(f!, A::AbstractArray{<:Any, 3}, alg::AbstractAlgorithm) = initial
 
 # Gather `A[inds]` into a single `(m, n, length(inds))` batch, zero-padding where needed.
 function _ragged_pack(A::AbstractVector{<:AbstractMatrix}, inds, m::Int, n::Int, alg::AbstractAlgorithm)
+    driver = get(alg.kwargs, :driver, DefaultDriver())
     uniform = all(i -> size(A[i]) == (m, n), inds)
-    uniform && supports_pointer_batch(alg, typeof(A[first(inds)])) && return view(A, inds)
+    uniform && supports_pointer_batch(alg, driver, typeof(A[first(inds)])) && return view(A, inds)
     # `stack` can't zero-pad
     # On the GPU it falls back to scalar indexing for matrices that are views
     uniform && A isa AbstractVector{<:Array} && return stack(view(A, inds))

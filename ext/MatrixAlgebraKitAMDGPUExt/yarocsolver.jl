@@ -251,7 +251,7 @@ for (fname, elty, relty) in
             strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
             strideV = max(1, stride(Vᴴ, 3))
-            strideS = max(1, stride(S, 2)) 
+            strideS = max(1, stride(S, 2))
 
             strideE = minmn - 1
             E = ROCArray{$relty}(undef, batch_size * strideE)
