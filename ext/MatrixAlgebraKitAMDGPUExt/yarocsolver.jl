@@ -119,11 +119,10 @@ for (fname, elty, relty) in
             m, n = size(first(A))
             (m < n) && throw(ArgumentError("rocSOLVER's gesvd_batched requires m ≥ n"))
             minmn = min(m, n)
-            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
+                length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
                 if size(U, 2) == minmn
@@ -141,6 +140,7 @@ for (fname, elty, relty) in
             if length(Vᴴ) == 0
                 jobvt = rocSOLVER.rocblas_svect_none
             else
+                length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
                 if size(Vᴴ, 1) == minmn
@@ -206,11 +206,10 @@ for (fname, elty, relty) in
             m, n, batch_size = size(A)
             (m < n) && throw(ArgumentError("rocSOLVER's gesvd_strided_batched requires m ≥ n"))
             minmn = min(m, n)
-            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
+                batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
                 if size(U, 2) == minmn
@@ -228,6 +227,7 @@ for (fname, elty, relty) in
             if length(Vᴴ) == 0
                 jobvt = rocSOLVER.rocblas_svect_none
             else
+                batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
                 if size(Vᴴ, 1) == minmn
@@ -372,11 +372,10 @@ for (fname, elty, relty) in
             end
             m, n = size(first(A))
             minmn = min(m, n)
-            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
+                length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
                 if size(U, 2) == minmn
@@ -394,6 +393,7 @@ for (fname, elty, relty) in
             if length(Vᴴ) == 0
                 jobvt = rocSOLVER.rocblas_svect_none
             else
+                length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
                 if size(Vᴴ, 1) == minmn
@@ -454,11 +454,10 @@ for (fname, elty, relty) in
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
             minmn = min(m, n)
-            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
+                batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
                 if size(U, 2) == minmn
@@ -476,6 +475,7 @@ for (fname, elty, relty) in
             if length(Vᴴ) == 0
                 jobvt = rocSOLVER.rocblas_svect_none
             else
+                batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
                 if size(Vᴴ, 1) == minmn
@@ -624,11 +624,10 @@ for (fname, elty, relty) in
             end
             m, n = size(first(A))
             minmn = min(m, n)
-            length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
+                length(A) != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
                 if size(U, 2) == minmn
@@ -646,6 +645,7 @@ for (fname, elty, relty) in
             if length(Vᴴ) == 0
                 jobvt = rocSOLVER.rocblas_svect_none
             else
+                length(A) != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
                 if size(Vᴴ, 1) == minmn
@@ -712,11 +712,10 @@ for (fname, elty, relty) in
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
             minmn = min(m, n)
-            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0
                 jobu = rocSOLVER.rocblas_svect_none
             else
+                batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
                 if size(U, 2) == minmn
@@ -734,6 +733,7 @@ for (fname, elty, relty) in
             if length(Vᴴ) == 0
                 jobvt = rocSOLVER.rocblas_svect_none
             else
+                batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
                 if size(Vᴴ, 1) == minmn
