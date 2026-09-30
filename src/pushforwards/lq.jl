@@ -38,6 +38,8 @@ function lq_pushforward!(
 
     # compute everything from ΔA before writing to ΔL and ΔQ, which may alias it
     # (e.g. `lq_compact!` of a `Diagonal` returns `Q === A`)
+    # TODO rework this into two versions, one for `Q === A` and one for
+    # `Q !== A`, to minimize allocations
     ΔQ₁ = L₁₁ \ ΔA₁
     ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
     M = ΔQ₁Q₁ᴴ + ΔQ₁Q₁ᴴ'
