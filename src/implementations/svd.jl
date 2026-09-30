@@ -142,14 +142,8 @@ function svd_via_adjoint!(f!::F, driver::Driver, A, S, U, Vᴴ; kwargs...) where
 end
 
 # LAPACK
-for f! in (:gesdd!, :gesvd!, :gesdvd!)
+for f! in (:gesdd!, :gesvd!, :gesdvd!, :gesvdx!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
-end
-
-function gesvdx!(::LAPACK, A, S, U, Vᴴ; kwargs...)
-    YALAPACK.gesvdx!(A, S, U, Vᴴ; kwargs...)
-    complete_svd_basis!(U, Vᴴ, length(S))
-    return S, U, Vᴴ
 end
 
 function gesvdj!(::LAPACK, A, S, U, Vᴴ; kwargs...)
@@ -212,6 +206,8 @@ for (f, f_lapack!, Alg) in (
             zero!(S)
             minmn = min(size(A)...)
             $f_lapack!(driver, A, view(S, 1:minmn, 1), U, Vᴴ; kwargs...)
+            # `gesvdx` only computes the leading `minmn` singular vectors
+            $(f === :bisection) && complete_svd_basis!(U, Vᴴ, minmn)
             diagview(S) .= view(S, 1:minmn, 1)
             zero!(view(S, 2:minmn, 1))
             fixgauge && gaugefix!(svd_full!, U, Vᴴ)

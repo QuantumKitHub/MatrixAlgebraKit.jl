@@ -330,6 +330,12 @@ for (f, f_lapack!, Alg) in (
             minmn = min(m, n)
             Sd = similar(S, (minmn, batch_size))
             $f_lapack!(driver, A, Sd, U, Vᴴ; kwargs...)
+            # `gesvdx` only computes the leading `minmn` singular vectors
+            if $(f === :bisection)
+                for (u, vᴴ) in zip(eachslice(U, dims = 3), eachslice(Vᴴ, dims = 3))
+                    complete_svd_basis!(u, vᴴ, minmn)
+                end
+            end
             for (s, sd) in zip(eachslice(S, dims = 3), eachslice(Sd, dims = 2))
                 diagview(s) .= sd
             end

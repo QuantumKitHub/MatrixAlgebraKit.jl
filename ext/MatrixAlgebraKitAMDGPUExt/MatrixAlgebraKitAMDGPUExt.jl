@@ -9,7 +9,7 @@ using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesdd!, gesvdx!, gesvdj!
 import MatrixAlgebraKit: gesvdj_batched!, gesdd_batched!, gesvd_batched!, gesvdx_batched!
 import MatrixAlgebraKit: heevj!, heevd!, heev!, heevx!
-import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!, complete_svd_basis!
+import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!
 using AMDGPU
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
@@ -55,11 +55,8 @@ function gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::Strid
     return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
 end
 
-function gesvdx!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
+gesvdx!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
     YArocSOLVER.gesvdx!(A, S, U, Vᴴ; kwargs...)
-    complete_svd_basis!(U, Vᴴ, length(S))
-    return S, U, Vᴴ
-end
 
 # rocSOLVER's batched `gesvd` requires m ≥ n, so wide matrices go through the adjoint
 function gesvd_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat}
