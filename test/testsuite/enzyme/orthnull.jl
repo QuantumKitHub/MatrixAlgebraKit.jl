@@ -46,7 +46,6 @@ function test_enzyme_left_orth(
                 VC, ΔVC = ad_left_orth_setup(A)
                 test_reverse(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
                 test_reverse(call_and_zero!, RT, (left_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔVC)
-                A = instantiate_matrix(T, sz)
                 test_forward(left_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
                 test_forward(call_and_zero!, RT, (left_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
             end
@@ -85,7 +84,6 @@ function test_enzyme_right_orth(
                 CVᴴ, ΔCVᴴ = ad_right_orth_setup(A)
                 test_reverse(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
                 test_reverse(call_and_zero!, RT, (right_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm, output_tangent = ΔCVᴴ)
-                A = instantiate_matrix(T, sz)
                 test_forward(right_orth, RT, (A, TA), (alg, Const); atol, rtol, fdm)
                 test_forward(call_and_zero!, RT, (right_orth!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
             end
