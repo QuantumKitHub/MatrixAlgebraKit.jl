@@ -342,11 +342,11 @@ function remove_svd_gauge_dependence!(
     Sdiag = diagview(S)
     gaugepart = mul!(U₁' * ΔU₁, Vᴴ₁, ΔVᴴ₁', true, true)
     gaugepart = project_antihermitian!(gaugepart)
-    gaugepart[abs.(transpose(Sdiag) .- Sdiag) .>= degeneracy_atol] .= 0
+    gaugepart[abs.(transpose(Sdiag[1:r]) .- Sdiag[1:r]) .>= degeneracy_atol] .= 0
     mul!(ΔU₁, U₁, gaugepart, -1, 1)
     if size(ΔU, 2) > r
         if r < length(Sdiag) # rank-deficient case, no stable information can be extracted from extra columns of U
-            zero!(ΔU[:, (r + 1):end])
+            zero!(@view ΔU[:, (r + 1):end])
         else # the component of ΔU₂ along U₁ contains gauge-invariant information
             p = size(ΔU, 2)
             ΔU₂ = view(ΔU, :, (r + 1):p)
@@ -356,7 +356,7 @@ function remove_svd_gauge_dependence!(
     end
     if size(ΔVᴴ, 1) > r
         if r < length(Sdiag) # rank-deficient case, no stable information can be extracted from extra rows of Vᴴ
-            zero!(ΔVᴴ[(r + 1):end, :])
+            zero!(@view ΔVᴴ[(r + 1):end, :])
         else # the component of ΔVᴴ₂ along Vᴴ₁ contains gauge-invariant information
             p = size(ΔVᴴ, 1)
             ΔVᴴ₂ = view(ΔVᴴ, (r + 1):p, :)
