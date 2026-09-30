@@ -985,12 +985,12 @@ for (fname, elty, relty) in
                 throw(DimensionMismatch("size mismatch between A and S"))
 
             lda = max(1, stride(A, 2))
-            strideA = stride(A, 3)
+            strideA = max(1, stride(A, 3))
             ldu = max(1, stride(U, 2))
-            strideU = ldu * size(U, 2)
+            strideU = max(1, stride(U, 3))
             ldv = max(1, stride(Vᴴ, 2))
-            strideV = ldv * n
-            strideS = minmn
+            strideV = max(1, stride(Vᴴ, 3))
+            strideS = max(1, stride(S, 2))
             strideF = minmn
 
             dh = rocBLAS.handle()
