@@ -25,6 +25,8 @@ function qr_pushforward!(
     p = qr_rank(R; rank_atol)
     (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of Q*R ($m, $n)"))
 
+    # TODO rework this into two versions, one for `Q === A` and one for
+    # `Q !== A`, to minimize allocations
     Q₁ = view(Q, :, 1:p)
     R₁₁ = UpperTriangular(view(R, 1:p, 1:p))
     R₁₂ = view(R, 1:p, (p + 1):n)
