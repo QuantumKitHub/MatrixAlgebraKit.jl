@@ -59,6 +59,84 @@ test in-place Hermitian eigendecomposition rules via Mooncake's non-primitive AD
 """
 eigh!_wrapper(f!, A, alg) = (F = f!(project_hermitian!(A), alg); MatrixAlgebraKit.zero!(A); F)
 
+"""
+    qr_gauge_invariant_wrapper(f, A, alg, r)
+
+Wrapper that calls `Q, R = f(A, alg)` and returns only the parts of the decomposition that
+are differentiable functions of `A` if `A` has rank `r`: the first `r` columns of `Q`, the
+first `r` rows of `R`, and the projector onto the extra columns of `Q` (for `qr_full`).
+Used to test forward-mode QR rules with finite differences, which cannot be restricted to
+the gauge-invariant subspace through an `output_tangent`.
+"""
+qr_gauge_invariant_wrapper(f, A, alg, r) = qr_gauge_invariant_part(f(A, alg), r)
+
+"""
+    qr!_gauge_invariant_wrapper(f!, A, alg, r)
+
+In-place variant of [`qr_gauge_invariant_wrapper`](@ref), which zeros `A` after calling `f!`.
+"""
+qr!_gauge_invariant_wrapper(f!, A, alg, r) = qr_gauge_invariant_part(call_and_zero!(f!, A, alg), r)
+
+function qr_gauge_invariant_part((Q, R), r)
+    minmn = min(size(Q, 1), size(R, 2))
+    Q₃ = Q[:, (minmn + 1):end]
+    return Q[:, 1:r], R[1:r, :], Q₃ * Q₃'
+end
+
+"""
+    qr_null_gauge_invariant_wrapper(f, A, alg)
+
+Wrapper that calls `N = f(A, alg)` and returns the projector `N * N'` onto the nullspace,
+which, unlike `N` itself, is a differentiable function of `A`.
+"""
+qr_null_gauge_invariant_wrapper(f, A, alg) = (N = f(A, alg); N * N')
+
+"""
+    qr_null!_gauge_invariant_wrapper(f!, A, alg)
+
+In-place variant of [`qr_null_gauge_invariant_wrapper`](@ref), which zeros `A` after calling `f!`.
+"""
+qr_null!_gauge_invariant_wrapper(f!, A, alg) = (N = call_and_zero!(f!, A, alg); N * N')
+
+"""
+    lq_gauge_invariant_wrapper(f, A, alg, r)
+
+Wrapper that calls `L, Q = f(A, alg)` and returns only the parts of the decomposition that
+are differentiable functions of `A` if `A` has rank `r`: the first `r` columns of `L`, the
+first `r` rows of `Q`, and the projector onto the extra rows of `Q` (for `lq_full`).
+Used to test forward-mode LQ rules with finite differences, which cannot be restricted to
+the gauge-invariant subspace through an `output_tangent`.
+"""
+lq_gauge_invariant_wrapper(f, A, alg, r) = lq_gauge_invariant_part(f(A, alg), r)
+
+"""
+    lq!_gauge_invariant_wrapper(f!, A, alg, r)
+
+In-place variant of [`lq_gauge_invariant_wrapper`](@ref), which zeros `A` after calling `f!`.
+"""
+lq!_gauge_invariant_wrapper(f!, A, alg, r) = lq_gauge_invariant_part(call_and_zero!(f!, A, alg), r)
+
+function lq_gauge_invariant_part((L, Q), r)
+    minmn = min(size(L, 1), size(Q, 2))
+    Q₃ = Q[(minmn + 1):end, :]
+    return L[:, 1:r], Q[1:r, :], Q₃' * Q₃
+end
+
+"""
+    lq_null_gauge_invariant_wrapper(f, A, alg)
+
+Wrapper that calls `Nᴴ = f(A, alg)` and returns the projector `Nᴴ' * Nᴴ` onto the nullspace,
+which, unlike `Nᴴ` itself, is a differentiable function of `A`.
+"""
+lq_null_gauge_invariant_wrapper(f, A, alg) = (Nᴴ = f(A, alg); Nᴴ' * Nᴴ)
+
+"""
+    lq_null!_gauge_invariant_wrapper(f!, A, alg)
+
+In-place variant of [`lq_null_gauge_invariant_wrapper`](@ref), which zeros `A` after calling `f!`.
+"""
+lq_null!_gauge_invariant_wrapper(f!, A, alg) = (Nᴴ = call_and_zero!(f!, A, alg); Nᴴ' * Nᴴ)
+
 function stabilize_eigvals!(D::AbstractVector)
     absD = collect(abs.(D))
     p = invperm(sortperm(collect(absD))) # rank of abs(D)

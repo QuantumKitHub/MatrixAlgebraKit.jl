@@ -142,6 +142,8 @@ include("pushforwards/polar.jl")
 include("pushforwards/eig.jl")
 include("pushforwards/eigh.jl")
 include("pushforwards/svd.jl")
+include("pushforwards/qr.jl")
+include("pushforwards/lq.jl")
 
 include("precompile.jl")
 
