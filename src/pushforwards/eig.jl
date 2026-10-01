@@ -12,6 +12,7 @@ function eig_pushforward!(
     if !iszerotangent(ΔV)
         ∂K .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
         mul!(ΔV, V, ∂K)
+        ΔV .-= V .* real.(sum(conj.(V) .* ΔV; dims = 1))
         if eltype(V) <: Complex # fix gauge for `gaugefix!` compatibility
             _, I = findmax(abs, V; dims = 1)
             infinitesimal_phases = imag.(ΔV[I] ./ V[I])
