@@ -17,21 +17,31 @@ function check_and_prepare_svd_cotangents(
     indS = axes(S, 1)[ind]
     Δgauge = zero(eltype(S))
 
+    # Only the columns K ⊆ 1:r of UᴴΔAV are computed, its rows K follow by antihermiticity. These
+    # are the columns of the cotangents within the rank, or all of 1:r in the full rank case
+    # if there are cotangents beyond it, since those have components along all of U₁ or V₁ᴴ.
+    jK = all(<=(r), indS) ? eachindex(indS) : findall(<=(r), indS)
+    fold = r == minmn && max(length(indU), length(indV)) > length(jK)
+    K = fold ? (1:r) : indS[jK]
+    lK = fold ? indS[jK] : eachindex(jK) # columns of the cotangents jK among K
+    k = length(K)
+
     if !iszerotangent(ΔU)
         ΔgaugeU = zero(eltype(S))
         m == size(ΔU, 1) || throw(DimensionMismatch(lazy"first dimension of ΔU ($(size(ΔU, 1))) does not match first dimension of U ($m)"))
         length(indU) == size(ΔU, 2) || throw(DimensionMismatch(lazy"length of selected U columns ($(length(indU))) does not match second dimension of ΔU ($(size(ΔU, 2)))"))
-        if indU == 1:r
+        if indU == K
             ΔU₁ = copy(ΔU)
         else
-            ΔU₁ = zero(U₁)
+            ΔU₁ = zero!(similar(U, (m, k)))
+            ΔU₁[:, lK] .= view(ΔU, :, jK)
             wtmp = similar(U₁, (r,))
             utmp = similar(U₁, (m,))
             zeroj = Int[]
             for (j, i) in enumerate(indU)
                 if i <= r
-                    ΔU₁[:, i] .= view(ΔU, :, j)
-                elseif r == minmn # full rank case, ΔU₃ contains gauge-invariant information along U₁
+                    continue
+                elseif fold # full rank case, ΔU₃ contains gauge-invariant information along U₁
                     mul!(wtmp, U₁', view(ΔU, :, j))
                     mul!(ΔU₁, view(U, :, i), wtmp', -1, 1)
                     utmp .= view(ΔU, :, j)
@@ -47,27 +57,28 @@ function check_and_prepare_svd_cotangents(
         end
         UᴴΔU₁ = U₁' * ΔU₁
         ΔU₊ = mul!(ΔU₁, U₁, UᴴΔU₁, -1, 1)
-        aUᴴΔU₁ = project_antihermitian!(UᴴΔU₁)
+        aUᴴΔU₁ = antihermitian_columns!(UᴴΔU₁, K)
         Δgauge = max(Δgauge, ΔgaugeU)
     else
         ΔU₊ = nothing
-        aUᴴΔU₁ = zero!(similar(U₁, (r, r)))
+        aUᴴΔU₁ = zero!(similar(U₁, (r, k)))
     end
     if !iszerotangent(ΔVᴴ)
         ΔgaugeV = zero(eltype(S))
         n == size(ΔVᴴ, 2) || throw(DimensionMismatch(lazy"second dimension of ΔVᴴ ($(size(ΔVᴴ, 2))) does not match second dimension of Vᴴ ($n)"))
         length(indV) == size(ΔVᴴ, 1) || throw(DimensionMismatch(lazy"length of selected Vᴴ rows ($(length(indV))) does not match first dimension of ΔVᴴ ($(size(ΔVᴴ, 1)))"))
-        if indV == 1:r
+        if indV == K
             ΔV₁ᴴ = copy(ΔVᴴ)
         else
-            ΔV₁ᴴ = zero(V₁ᴴ)
+            ΔV₁ᴴ = zero!(similar(Vᴴ, (k, n)))
+            ΔV₁ᴴ[lK, :] .= view(ΔVᴴ, jK, :)
             wtmp = similar(V₁ᴴ, (1, r))
             vtmp = similar(V₁ᴴ, (1, n))
             zeroj = Int[]
             for (j, i) in enumerate(indV)
                 if i <= r
-                    ΔV₁ᴴ[i, :] .= view(ΔVᴴ, j, :)
-                elseif r == minmn # full rank case, ΔV₃ contains gauge-invariant information along Vᴴ₁
+                    continue
+                elseif fold # full rank case, ΔV₃ contains gauge-invariant information along Vᴴ₁
                     mul!(wtmp, view(ΔVᴴ, j:j, :), V₁ᴴ')
                     mul!(ΔV₁ᴴ, wtmp', view(Vᴴ, i:i, :), -1, 1)
                     vtmp .= view(ΔVᴴ, j:j, :)
@@ -81,41 +92,41 @@ function check_and_prepare_svd_cotangents(
         end
         VᴴΔV₁ = V₁ᴴ * ΔV₁ᴴ'
         ΔV₊ᴴ = mul!(ΔV₁ᴴ, VᴴΔV₁', V₁ᴴ, -1, 1)
-        aVᴴΔV₁ = project_antihermitian!(VᴴΔV₁)
+        aVᴴΔV₁ = antihermitian_columns!(VᴴΔV₁, K)
         Δgauge = max(Δgauge, ΔgaugeV)
     else
         ΔV₊ᴴ = nothing
-        aVᴴΔV₁ = zero!(similar(V₁ᴴ, (r, r)))
+        aVᴴΔV₁ = zero!(similar(V₁ᴴ, (r, k)))
     end
 
-    bc = Base.broadcasted(S₁', S₁, aUᴴΔU₁, aVᴴΔV₁) do s₁, s₂, u, v
+    Sₖ = S[K]
+    bc = Base.broadcasted(transpose(Sₖ), S₁, aUᴴΔU₁, aVᴴΔV₁) do s₁, s₂, u, v
         return abs(s₁ - s₂) < degeneracy_atol ? u + v : zero(u) + zero(v)
     end
-    Δgauge = max(Δgauge, maximum(abs, Base.Broadcast.instantiate(bc)))
+    Δgauge = max(Δgauge, maximum(abs, Base.Broadcast.instantiate(bc); init = abs(zero(eltype(S)))))
 
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
-        bad_indS = _ind_intersect((r + 1):length(ΔS), indS)
-        good_indS = _ind_intersect(1:r, indS)
-        ΔS₁ = zero(S₁)
-        ΔS₁[1:length(good_indS)] .= real.(ΔS[good_indS])
-        badΔS₁ = view(ΔS, bad_indS)
-        Δgauge = max(Δgauge, maximum(abs, badΔS₁; init = abs(zero(eltype(ΔS)))))
-    else
-        ΔS₁ = nothing
+        badΔS = view(ΔS, findall(>(r), indS))
+        Δgauge = max(Δgauge, maximum(abs, badΔS; init = abs(zero(eltype(ΔS)))))
     end
 
     Δgauge ≤ gauge_atol ||
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-    UᴴΔAV = (aUᴴΔU₁ .+ aVᴴΔV₁) .* inv_safe.(S₁' .- S₁, degeneracy_atol) .+
-        (aUᴴΔU₁ .- aVᴴΔV₁) .* inv_safe.(S₁' .+ S₁, degeneracy_atol)
-    if !iszerotangent(ΔS₁)
-        diagview(UᴴΔAV) .+= real.(ΔS₁)
+    # columns K of UᴴΔAV, and the adjoint of its rows K (not needed if K contains all rows)
+    # NOTE: for all columns (k == r) only UᴴΔAV is computed, as in the original full-matrix path
+    UᴴΔAV = (aUᴴΔU₁ .+ aVᴴΔV₁) .* inv_safe.(transpose(Sₖ) .- S₁, degeneracy_atol) .+
+        (aUᴴΔU₁ .- aVᴴΔV₁) .* inv_safe.(transpose(Sₖ) .+ S₁, degeneracy_atol)
+    UᴴΔAVʳ = k == r ? nothing :
+        (aUᴴΔU₁ .+ aVᴴΔV₁) .* inv_safe.(transpose(Sₖ) .- S₁, degeneracy_atol) .-
+        (aUᴴΔU₁ .- aVᴴΔV₁) .* inv_safe.(transpose(Sₖ) .+ S₁, degeneracy_atol)
+    if !iszerotangent(ΔSmat)
+        UᴴΔAV[indS[jK] .+ r .* (lK .- 1)] .+= real.(view(ΔS, jK)) # the entries (K[lK], lK)
     end
 
-    return UᴴΔAV, ΔU₊, ΔV₊ᴴ
+    return UᴴΔAV, ΔU₊, ΔV₊ᴴ, UᴴΔAVʳ, K
 end
 
 """
@@ -161,19 +172,35 @@ function svd_pullback!(
     S₁ = view(S, 1:r)
 
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    UᴴΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
+    UᴴΔAVₖ, ΔU₊, ΔV₊ᴴ, UᴴΔAVʳ, K = check_and_prepare_svd_cotangents(
         U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
     )
-    ΔA = mul!(ΔA, U₁, UᴴΔAV * V₁ᴴ, 1, 1) # add the contribution to ΔA
+
+    # UᴴΔAV is nonzero only in its rows and columns K, which are UᴴΔAVₖ and UᴴΔAVʳ'. For k ≤ r / 2,
+    # applying these two blocks directly, in O(m n k), is faster than forming UᴴΔAV.
+    if 2 * length(K) <= r
+        UᴴΔAVʳ[K, :] .= zero(eltype(UᴴΔAVʳ)) # these entries are part of the columns K
+        ΔA = mul!(ΔA, U₁ * UᴴΔAVₖ, Vᴴ[K, :], 1, 1)
+        ΔA = mul!(ΔA, U[:, K], UᴴΔAVʳ' * V₁ᴴ, 1, 1)
+    else
+        if is_leading_index(K, r) # NOTE: all columns in order (e.g. `ind = Colon()`): the original path
+            UᴴΔAV = UᴴΔAVₖ
+        else
+            UᴴΔAV = zero!(similar(UᴴΔAVₖ, (r, r)))
+            isnothing(UᴴΔAVʳ) || (UᴴΔAV[K, :] .= UᴴΔAVʳ')
+            UᴴΔAV[:, K] .= UᴴΔAVₖ # after the rows: only the columns hold ΔS
+        end
+        ΔA = mul!(ΔA, U₁, UᴴΔAV * V₁ᴴ, 1, 1) # add the contribution to ΔA
+    end
 
     # Add the remaining contributions
     if m > r && !iszerotangent(ΔU₊) # ΔU₁ is already orthogonal to U₁
-        ΔU₊ ./= S₁'
-        ΔA = mul!(ΔA, ΔU₊, V₁ᴴ, 1, 1)
+        ΔU₊ ./= transpose(S[K])
+        ΔA = mul!(ΔA, ΔU₊, Vᴴ[K, :], 1, 1)
     end
     if n > r && !iszerotangent(ΔV₊ᴴ) # ΔV₁ᴴ is already orthogonal to V₁ᴴ
-        ΔV₊ᴴ .= S₁ .\ ΔV₊ᴴ
-        ΔA = mul!(ΔA, U₁, ΔV₊ᴴ, 1, 1)
+        ΔV₊ᴴ .= S[K] .\ ΔV₊ᴴ
+        ΔA = mul!(ΔA, U[:, K], ΔV₊ᴴ, 1, 1)
     end
     return ΔA
 end
