@@ -266,7 +266,7 @@ function svd_trunc_pullback!(
             end
             Xₖ₊₁ .+= Xₖ
             if k == maxiter
-                @warn "Sylvester iteration did not converge after $k iterations, final norm of X: $(norm(Xₖ₊₁, Inf)))"
+                @warn "Sylvester iteration did not converge after $k iterations, final norm of X: $(maximum(abs, Xₖ₊₁))"
                 break
             end
             S⁻¹ₖ₊₁ .= S⁻¹ₖ .^ 2
