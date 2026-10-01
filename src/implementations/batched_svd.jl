@@ -5,6 +5,43 @@ copy_input(::typeof(batched_svd_full), A::AbstractArray{T, 3}) where {T} = copy!
 copy_input(::typeof(batched_svd_compact), A) = copy_input(batched_svd_full, A)
 copy_input(::typeof(batched_svd_vals), A) = copy_input(batched_svd_full, A)
 
+# ragged batches: matrices of different sizes, each with its own outputs
+function check_input(
+        ::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix},
+        USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:Diagonal}, AbstractVector{<:AbstractMatrix}},
+        alg::AbstractAlgorithm
+    )
+    Us, Ss, Vᴴs = USVᴴ
+    length(Us) == length(Ss) == length(Vᴴs) == length(A) ||
+        throw(DimensionMismatch("expected $(length(A)) outputs for each of U, S and Vᴴ"))
+    for (a, u, s, vᴴ) in zip(A, Us, Ss, Vᴴs)
+        check_input(svd_compact!, a, (u, s, vᴴ), alg)
+    end
+    return nothing
+end
+function check_input(
+        ::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix},
+        USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractMatrix}},
+        alg::AbstractAlgorithm
+    )
+    Us, Ss, Vᴴs = USVᴴ
+    length(Us) == length(Ss) == length(Vᴴs) == length(A) ||
+        throw(DimensionMismatch("expected $(length(A)) outputs for each of U, S and Vᴴ"))
+    for (a, u, s, vᴴ) in zip(A, Us, Ss, Vᴴs)
+        check_input(svd_full!, a, (u, s, vᴴ), alg)
+    end
+    return nothing
+end
+function check_input(
+        ::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix},
+        S::AbstractVector{<:AbstractVector}, alg::AbstractAlgorithm
+    )
+    length(S) == length(A) || throw(DimensionMismatch("expected $(length(A)) outputs for S"))
+    for (a, s) in zip(A, S)
+        check_input(svd_vals!, a, s, alg)
+    end
+    return nothing
+end
 function check_input(::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix}, USVᴴ, ::AbstractAlgorithm)
     isempty(A) && return nothing
     m, n = size(first(A))
@@ -45,43 +82,6 @@ function check_input(::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMa
     @assert S isa AbstractMatrix
     @check_size(S, (minmn, batch_size))
     @check_scalar(S, first(A), real)
-    return nothing
-end
-# ragged batches: matrices of different sizes, each with its own outputs
-function check_input(
-        ::typeof(batched_svd_compact!), A::AbstractVector{<:AbstractMatrix},
-        USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:Diagonal}, AbstractVector{<:AbstractMatrix}},
-        alg::AbstractAlgorithm
-    )
-    Us, Ss, Vᴴs = USVᴴ
-    length(Us) == length(Ss) == length(Vᴴs) == length(A) ||
-        throw(DimensionMismatch("expected $(length(A)) outputs for each of U, S and Vᴴ"))
-    for (a, u, s, vᴴ) in zip(A, Us, Ss, Vᴴs)
-        check_input(svd_compact!, a, (u, s, vᴴ), alg)
-    end
-    return nothing
-end
-function check_input(
-        ::typeof(batched_svd_full!), A::AbstractVector{<:AbstractMatrix},
-        USVᴴ::Tuple{AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractMatrix}, AbstractVector{<:AbstractMatrix}},
-        alg::AbstractAlgorithm
-    )
-    Us, Ss, Vᴴs = USVᴴ
-    length(Us) == length(Ss) == length(Vᴴs) == length(A) ||
-        throw(DimensionMismatch("expected $(length(A)) outputs for each of U, S and Vᴴ"))
-    for (a, u, s, vᴴ) in zip(A, Us, Ss, Vᴴs)
-        check_input(svd_full!, a, (u, s, vᴴ), alg)
-    end
-    return nothing
-end
-function check_input(
-        ::typeof(batched_svd_vals!), A::AbstractVector{<:AbstractMatrix},
-        S::AbstractVector{<:AbstractVector}, alg::AbstractAlgorithm
-    )
-    length(S) == length(A) || throw(DimensionMismatch("expected $(length(A)) outputs for S"))
-    for (a, s) in zip(A, S)
-        check_input(svd_vals!, a, s, alg)
-    end
     return nothing
 end
 function check_input(::typeof(batched_svd_full!), A::AbstractArray{T, 3}, USVᴴ, ::AbstractAlgorithm) where {T}
