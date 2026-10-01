@@ -915,11 +915,11 @@ for (fname, elty, relty) in
             m, n = size(first(A))
             minmn = min(m, n)
             batch_size = length(A)
-            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
             jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
+            jobu != rocSOLVER.rocblas_svect_none && batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            jobu != rocSOLVER.rocblas_svect_none && batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             size(S) == (minmn, batch_size) ||
                 throw(DimensionMismatch("size mismatch between A and S"))
 
@@ -975,12 +975,12 @@ for (fname, elty, relty) in
             )
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
-            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             minmn = min(m, n)
             srange, vl, vu, il, iu = _gesvdx_range($relty, kwargs)
             maxnsv = srange == rocSOLVER.rocblas_srange_index ? iu - il + 1 : minmn
             jobu, jobvt = _gesvdx_jobs(U, Vᴴ, m, n, maxnsv)
+            jobu != rocSOLVER.rocblas_svect_none && batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+            jobu != rocSOLVER.rocblas_svect_none && batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             size(S) == (minmn, batch_size) ||
                 throw(DimensionMismatch("size mismatch between A and S"))
 
