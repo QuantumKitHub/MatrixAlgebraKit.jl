@@ -23,6 +23,8 @@ Whether the algorithm `alg` running on `driver` accepts a *ragged* batch of matr
 of type `T` which do not have uniform size for function `f!`. `true` by default.
 """
 supports_ragged_batch(f!, alg::AbstractAlgorithm, driver::Driver, ::Type) = true
+supports_ragged_batch(f!, alg::AbstractAlgorithm, ::DefaultDriver, ::Type{TA}) where {TA} =
+    supports_ragged_batch(f!, alg, default_driver(alg, TA), TA)
 
 """
     max_batched_blocksize(alg, driver::Driver, T::Type) -> Int
@@ -32,6 +34,8 @@ of type `T`. Larger matrices in a ragged batch are decomposed one at a time inst
 Unlimited by default.
 """
 max_batched_blocksize(alg::AbstractAlgorithm, driver::Driver, ::Type) = typemax(Int)
+max_batched_blocksize(alg::AbstractAlgorithm, ::DefaultDriver, ::Type{TA}) where {TA} =
+    max_batched_blocksize(alg, default_driver(alg, TA), TA)
 
 """
     supports_pointer_batch(alg, driver::Driver, T::Type) -> Bool
@@ -42,6 +46,8 @@ to the driver as a vector of pointers, instead of being copied into one contiguo
 `false` by default.
 """
 supports_pointer_batch(::AbstractAlgorithm, driver::Driver, ::Type) = false
+supports_pointer_batch(f!, alg::AbstractAlgorithm, ::DefaultDriver, ::Type{TA}) where {TA} =
+    supports_pointer_batch(f!, alg, default_driver(alg, TA), TA)
 
 # Split a ragged batch into batches the driver can handle: matrices of equal size are
 # batched together, and, if `pad`, whatever is left over is zero-padded into one more batch.
