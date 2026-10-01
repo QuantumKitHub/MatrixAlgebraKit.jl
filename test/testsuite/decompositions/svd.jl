@@ -410,7 +410,7 @@ function test_svd_algs_batched_oversized(
     )
     summary_str = testargs_summary(T)
     return @testset "batched svd over the size limit, algorithm $alg $summary_str" for alg in algs
-        limit = MatrixAlgebraKit.max_batched_blocksize(alg, MatrixAlgebraKit.default_driver(alg, T), T) 
+        limit = MatrixAlgebraKit.max_batched_blocksize(alg, MatrixAlgebraKit.default_driver(alg, T), T)
         if limit < typemax(Int) # nothing to do if the driver + algo combo has no limit
             sizes = ((limit + 5, limit + 3), (limit + 1, 5), (limit - 2, limit - 4))
             Ar = [instantiate_matrix(T, sz) for sz in sizes for _ in 1:batch_size]
