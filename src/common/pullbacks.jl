@@ -71,3 +71,18 @@ function accelerative_smith_iteration!(X, Xₙ, G, w, atol, maxiter)
     end
     return X
 end
+
+"""
+    antihermitian_columns!(X, K)
+
+Given the columns `K` of a square matrix that is nonzero only in its columns `K`, overwrite `X`
+with the same columns of the antihermitian part of that matrix.
+"""
+function antihermitian_columns!(X, K)
+    # NOTE: all columns in order (e.g. `ind = Colon()`): the original in-place projection
+    is_leading_index(K, size(X, 1)) && return project_antihermitian!(X)
+    XKK = project_antihermitian!(X[K, :])
+    X ./= 2
+    X[K, :] .= XKK
+    return X
+end
