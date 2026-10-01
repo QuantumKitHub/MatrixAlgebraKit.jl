@@ -401,6 +401,44 @@ function test_svd_full_algs_batched(
     end
 end
 
+# Ragged batches containing matrices larger than the driver's batched size limit must
+# be split off and decomposed one at a time rather than handed to the driver.
+function test_svd_algs_batched_oversized(
+        T::Type, algs, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        kwargs...
+    )
+    summary_str = testargs_summary(T)
+    return @testset "batched svd over the size limit, algorithm $alg $summary_str" for alg in algs
+        if limit < typemax(Int) # nothing to do if the driver + algo combo has no limit
+            sizes = ((limit + 5, limit + 3), (limit + 1, 5), (limit - 2, limit - 4))
+            Ar = [instantiate_matrix(T, sz) for sz in sizes for _ in 1:batch_size]
+            batches, _ = MatrixAlgebraKit._ragged_batches(Ar, alg)
+            @test all(((inds, mn),) -> maximum(mn) <= limit, batches)
+            @test !isempty(batches)
+
+            U, S, Vᴴ = @testinferred batched_svd_compact(Ar; alg)
+            for (a, u, s, vᴴ) in zip(Ar, U, S, Vᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isisometric(u)
+                @test isisometric(vᴴ; side = :right)
+            end
+
+            Uf, Sf, Vfᴴ = @testinferred batched_svd_full(Ar; alg)
+            for (a, u, s, vᴴ) in zip(Ar, Uf, Sf, Vfᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isunitary(u)
+                @test isunitary(vᴴ)
+            end
+
+            Sv = @testinferred batched_svd_vals(Ar; alg)
+            for (s, sv) in zip(S, Sv)
+                @test collect(diagview(s)) ≈ collect(sv)
+            end
+        end
+    end
+end
+
 function test_svd_trunc(
         T::Type, sz;
         atol::Real = 0, rtol::Real = precision(eltype(T)),

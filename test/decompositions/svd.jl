@@ -61,6 +61,10 @@ if CUDA.functional()
         CUDA_SVD_ALGS = (Jacobi(),)
         TestSuite.test_svd_batched_algs(CuMatrix{T}, (m, n), batch_size, CUDA_SVD_ALGS)
     end
+    for T in BLASFloats
+        TestSuite.seed_rng!(123)
+        TestSuite.test_svd_algs_batched_oversized(CuMatrix{T}, (Jacobi(),), batch_size)
+    end
 
     # Randomized SVD:
     for T in BLASFloats, m in (0, 23), n in (0, 17, m, 27)
