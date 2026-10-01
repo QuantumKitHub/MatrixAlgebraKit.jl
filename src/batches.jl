@@ -46,8 +46,8 @@ to the driver as a vector of pointers, instead of being copied into one contiguo
 `false` by default.
 """
 supports_pointer_batch(::AbstractAlgorithm, driver::Driver, ::Type) = false
-supports_pointer_batch(f!, alg::AbstractAlgorithm, ::DefaultDriver, ::Type{TA}) where {TA} =
-    supports_pointer_batch(f!, alg, default_driver(alg, TA), TA)
+supports_pointer_batch(alg::AbstractAlgorithm, ::DefaultDriver, ::Type{TA}) where {TA} =
+    supports_pointer_batch(alg, default_driver(alg, TA), TA)
 
 # Split a ragged batch into batches the driver can handle: matrices of equal size are
 # batched together, and, if `pad`, whatever is left over is zero-padded into one more batch.
