@@ -99,6 +99,9 @@ function test_svd_compact_batched(
 
         Sc = similar(diagview(S))
         U2, S2, V2ᴴ = @testinferred batched_svd_compact!(Ac, (U, S, Vᴴ))
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 2), eachslice(V2ᴴ, dims = 3))
             @test u * Diagonal(s) * vᴴ ≈ a
             @test isisometric(u)
@@ -172,6 +175,9 @@ function test_svd_compact_algs_batched(
         end
 
         U2, S2, V2ᴴ = @testinferred batched_svd_compact!(Ac, (U, S, Vᴴ); alg)
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 2), eachslice(V2ᴴ, dims = 3))
             @test u * Diagonal(s) * vᴴ ≈ a
             @test isisometric(u)
@@ -195,7 +201,9 @@ function test_svd_compact_algs_batched(
             Ss = [Diagonal(similar(a, real(eltype(T)), minimum(size(a)))) for a in Ar]
             Vᴴs = [similar(a, minimum(size(a)), size(a, 2)) for a in Ar]
             U3, S3, V3ᴴ = @testinferred batched_svd_compact!(deepcopy(Ar), (Us, Ss, Vᴴs); alg)
+            @test U3 === Us
             @test S3 === Ss
+            @test V3ᴴ === Vᴴs
             for (a, u, s, vᴴ) in zip(Ar, U3, S3, V3ᴴ)
                 @test u * s * vᴴ ≈ a
                 @test isisometric(u)
@@ -282,6 +290,9 @@ function test_svd_full_batched(
         end
 
         U2, S2, V2ᴴ = @testinferred batched_svd_full!(Ac, (U, S, Vᴴ))
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 3), eachslice(V2ᴴ, dims = 3))
             @test u * s * vᴴ ≈ a
             @test isunitary(u)
@@ -319,6 +330,9 @@ function test_svd_full_algs(
         @test all(isposdef, diagview(S))
 
         U2, S2, V2ᴴ = @testinferred svd_full!(Ac, (U, S, Vᴴ); alg)
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
         @test U2 * S2 * V2ᴴ ≈ A
         @test isunitary(U2)
         @test isunitary(V2ᴴ)
