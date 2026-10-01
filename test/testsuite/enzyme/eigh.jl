@@ -27,12 +27,9 @@ function test_enzyme_eigh_full(
         alg = MatrixAlgebraKit.select_algorithm(eigh_full, A)
         DV, ΔDV = ad_eigh_full_setup(A)
         test_reverse(eigh_wrapper, RT, (eigh_full, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
-        test_reverse(eigh!_wrapper, RT, (eigh_full!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
-        if eltype(T) <: Real
-            A = make_eigh_matrix(T, sz)
-            test_forward(eigh_wrapper, RT, (eigh_full, Const), (A, TA), (alg, Const); atol, rtol, fdm)
-            test_forward(eigh!_wrapper, RT, (eigh_full!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
-        end
+        test_reverse(eigh!_wrapper, RT, (eigh_full!, Const), (copy(A), TA), (alg, Const); atol, rtol, output_tangent = ΔDV, fdm)
+        test_forward(eigh_wrapper, RT, (eigh_full, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(eigh!_wrapper, RT, (eigh_full!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
     end
 end
 
@@ -51,10 +48,9 @@ function test_enzyme_eigh_vals(
         alg = MatrixAlgebraKit.select_algorithm(eigh_vals, A)
         D, ΔD = ad_eigh_vals_setup(A)
         test_reverse(eigh_wrapper, RT, (eigh_vals, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
-        test_reverse(eigh!_wrapper, RT, (eigh_vals!, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
-        A = make_eigh_matrix(T, sz)
+        test_reverse(eigh!_wrapper, RT, (eigh_vals!, Const), (copy(A), TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
         test_forward(eigh_wrapper, RT, (eigh_vals, Const), (A, TA), (alg, Const); atol, rtol, fdm)
-        test_forward(eigh!_wrapper, RT, (eigh_vals!, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(eigh!_wrapper, RT, (eigh_vals!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
     end
 end
 
