@@ -82,8 +82,8 @@ function test_enzyme_eigh_trunc(
         end
         @testset "trunctol" begin
             A = make_eigh_matrix(T, sz)
-            D = eigh_vals(A / 2, alg)
-            trunc = trunctol(; atol = maximum(abs, D) / 2)
+            D = eigh_vals(A, alg)
+            trunc = trunctol(; atol = midgap_tol(D))
             truncalg = TruncatedAlgorithm(alg, trunc)
             DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
             test_reverse(eigh_wrapper, RT, (eigh_trunc_no_error, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)

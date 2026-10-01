@@ -134,7 +134,7 @@ function test_mooncake_eigh_trunc(
 
         @testset "trunctol" begin
             D = eigh_vals(A)
-            trunc = trunctol(atol = maximum(abs, D) / 2; by = abs)
+            trunc = trunctol(atol = midgap_tol(D); by = abs)
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
             DV, DVtrunc, ΔDV_arrays, ΔDVtrunc_arrays = ad_eigh_trunc_setup(A, alg_trunc)

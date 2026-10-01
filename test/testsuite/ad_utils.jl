@@ -60,6 +60,25 @@ test in-place Hermitian eigendecomposition rules via Mooncake's non-primitive AD
 eigh!_wrapper(f!, A, alg) = (F = f!(project_hermitian!(A), alg); MatrixAlgebraKit.zero!(A); F)
 
 """
+    eig_vals_wrapper(f, A, alg)
+
+Wrapper that sorts the eigenvalues returned by `f(A, alg)` by modulus and then by imaginary part.
+LAPACK's ordering of the eigenvalues can change discontinuously under small perturbations of
+`A`, which breaks finite-difference checks. The ordering imposed here is smooth for matrices
+built with `make_eig_matrix`, whose eigenvalues have distinct moduli up to conjugate pairs.
+"""
+eig_vals_wrapper(f, A, alg) = sort_eigvals(f(A, alg))
+
+"""
+    eig_vals!_wrapper(f!, A, alg)
+
+In-place variant of [`eig_vals_wrapper`](@ref), which zeros `A` after calling `f!`.
+"""
+eig_vals!_wrapper(f!, A, alg) = sort_eigvals(call_and_zero!(f!, A, alg))
+
+sort_eigvals(D) = D[sortperm(collect(D); by = λ -> (abs(λ), imag(λ)))]
+
+"""
     qr_gauge_invariant_wrapper(f, A, alg, r)
 
 Wrapper that calls `Q, R = f(A, alg)` and returns only the parts of the decomposition that
@@ -154,6 +173,22 @@ function stabilize_eigvals!(D::AbstractVector)
     copyto!(D, hD)
     return D
 end
+"""
+    midgap_tol(vals)
+
+Return a truncation tolerance halfway across the widest gap between consecutive values of
+`abs.(vals)`, restricted to the middle half so that truncation keeps a nontrivial subset.
+This keeps the number of retained values fixed under the perturbations used by
+finite-difference checks.
+"""
+function midgap_tol(vals)
+    s = sort!(collect(abs.(vals)))
+    n = length(s)
+    gaps = (max(1, n ÷ 4)):(min(n - 1, (3n) ÷ 4))
+    _, i = findmax(i -> s[i + 1] - s[i], gaps)
+    return (s[gaps[i]] + s[gaps[i] + 1]) / 2
+end
+
 function make_eig_matrix(T, sz)
     A = instantiate_matrix(T, sz)
     D, V = eig_full(A)
