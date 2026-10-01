@@ -22,7 +22,7 @@ algorithms, and their in-place variants.
 """
 function test_enzyme_left_orth(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "left_orth reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -61,7 +61,7 @@ algorithms, and their in-place variants.
 """
 function test_enzyme_right_orth(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "right_orth reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -99,7 +99,7 @@ in-place variant.
 """
 function test_enzyme_left_null(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "left_null: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -124,7 +124,7 @@ in-place variant.
 """
 function test_enzyme_right_null(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "right_null: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)

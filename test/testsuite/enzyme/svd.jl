@@ -15,7 +15,7 @@ Test the Enzyme forward- and reverse-mode AD rule for `svd_compact` and its in-p
 """
 function test_enzyme_svd_compact(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "svd_compact: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -37,7 +37,7 @@ gauge-dependent extra columns of `U` and rows of `Vᴴ` are zeroed out in the co
 """
 function test_enzyme_svd_full(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "svd_full: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -60,7 +60,7 @@ Test the Enzyme forward- and reverse-mode AD rule for `svd_vals` and its in-plac
 """
 function test_enzyme_svd_vals(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "svd_vals: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -82,7 +82,7 @@ in-place variants, over a range of truncation ranks and a tolerance-based trunca
 """
 function test_enzyme_svd_trunc(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "svd_trunc reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)

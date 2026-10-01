@@ -19,7 +19,7 @@ Test the Enzyme forward- and reverse-mode AD rule for `project_hermitian` and it
 """
 function test_enzyme_project_hermitian(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "project_hermitian: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -42,7 +42,7 @@ Test the Enzyme forward- and reverse-mode AD rule for `project_antihermitian` an
 """
 function test_enzyme_project_antihermitian(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "project_antihermitian: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)

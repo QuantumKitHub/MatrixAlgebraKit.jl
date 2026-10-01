@@ -22,7 +22,7 @@ algorithms, and their in-place variants.
 """
 function test_mooncake_left_orth(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "left_orth" begin
         A = instantiate_matrix(T, sz)
@@ -70,7 +70,7 @@ algorithms, and their in-place variants.
 """
 function test_mooncake_right_orth(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "right_orth" begin
         A = instantiate_matrix(T, sz)
@@ -118,7 +118,7 @@ in-place variant.
 """
 function test_mooncake_left_null(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "left_null" begin
         A = instantiate_matrix(T, sz)
@@ -157,7 +157,7 @@ in-place variant.
 """
 function test_mooncake_right_null(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "right_null" begin
         A = instantiate_matrix(T, sz)

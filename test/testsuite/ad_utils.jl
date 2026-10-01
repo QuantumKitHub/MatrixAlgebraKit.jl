@@ -149,7 +149,7 @@ function stabilize_eigvals!(D::AbstractVector)
     n = maximum(p)
     # rescale eigenvalues so that they lie on distinct radii in the complex plane
     # that are chosen randomly in non-overlapping intervals [10 * k/n, 10 * (k+0.5)/n)] for k=1,...,n
-    radii = 10 .* ((1:n) .+ rand(real(eltype(D)), n) ./ 2) ./ n
+    radii = 10 .* ((1:n) .+ rand(rng, real(eltype(D)), n) ./ 2) ./ n
     hD = sign.(collect(D)) .* radii[p]
     copyto!(D, hD)
     return D
