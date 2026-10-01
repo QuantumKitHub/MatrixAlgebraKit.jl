@@ -76,6 +76,8 @@ In-place variant of [`eig_vals_wrapper`](@ref), which zeros `A` after calling `f
 """
 eig_vals!_wrapper(f!, A, alg) = sort_eigvals(call_and_zero!(f!, A, alg))
 
+# sortperm is used here because Mooncake CAN differentiate that on CUDA,
+# but CANNOT differentiate sort
 sort_eigvals(D) = D[sortperm(collect(D); by = λ -> (abs(λ), imag(λ)))]
 
 """
