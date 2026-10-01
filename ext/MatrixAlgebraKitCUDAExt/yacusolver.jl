@@ -318,6 +318,8 @@ for (bname, fname, elty, relty) in
                 throw(DimensionMismatch("size mismatch between A and S"))
 
             # these MUST be "full" sized
+            # TODO: check if U and Vᴴ already have the correct size to avoid
+            # some allocations
             Ṽ = similar(Vᴴ, (n, n, batch_size))
             Ũ = similar(U, (m, m, batch_size))
             lda = max(1, stride(A, 2))
