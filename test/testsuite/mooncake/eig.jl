@@ -19,7 +19,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `eig_full` and its in-pl
 """
 function test_mooncake_eig_full(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eig_full" begin
         A = make_eig_matrix(T, sz)
@@ -65,7 +65,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `eig_vals` and its in-pl
 """
 function test_mooncake_eig_vals(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eig_vals" begin
         A = make_eig_matrix(T, sz)
@@ -104,7 +104,7 @@ in-place variants, over a range of truncation ranks and a tolerance-based trunca
 """
 function test_mooncake_eig_trunc(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eig_trunc" begin
         A = make_eig_matrix(T, sz)

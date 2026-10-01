@@ -19,7 +19,7 @@ Test the Enzyme foward- and reverse-mode AD rule for `eig_full` and its in-place
 """
 function test_enzyme_eig_full(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "eig_full: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -40,7 +40,7 @@ Test the Enzyme forward- and reverse-mode AD rule for `eig_vals` and its in-plac
 """
 function test_enzyme_eig_vals(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "eig_vals: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -62,7 +62,7 @@ in-place variants, over a range of truncation ranks and a tolerance-based trunca
 """
 function test_enzyme_eig_trunc(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "eig_trunc reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)

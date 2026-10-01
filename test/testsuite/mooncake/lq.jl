@@ -19,7 +19,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `lq_compact` and its in-
 """
 function test_mooncake_lq_compact(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "lq_compact" begin
         A = instantiate_matrix(T, sz)
@@ -71,7 +71,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `lq_full` and its in-pla
 """
 function test_mooncake_lq_full(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "lq_full" begin
         A = instantiate_matrix(T, sz)
@@ -107,7 +107,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `lq_null` and its in-pla
 """
 function test_mooncake_lq_null(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "lq_null" begin
         A = instantiate_matrix(T, sz)

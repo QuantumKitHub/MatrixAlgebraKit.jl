@@ -19,7 +19,7 @@ Test the Mooncake reverse-mode AD rule for `eigh_full` and its in-place variant.
 """
 function test_mooncake_eigh_full(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eigh_full" begin
         A = make_eigh_matrix(T, sz)
@@ -55,7 +55,7 @@ Test the Mooncake reverse-mode AD rule for `eigh_vals` and its in-place variant.
 """
 function test_mooncake_eigh_vals(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eigh_vals" begin
         A = make_eigh_matrix(T, sz)
@@ -94,7 +94,7 @@ in-place variants, over a range of truncation ranks and a tolerance-based trunca
 """
 function test_mooncake_eigh_trunc(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eigh_trunc" begin
         A = make_eigh_matrix(T, sz)

@@ -15,7 +15,7 @@ end
 
 function test_enzyme_lq_compact(
         T::Type, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "lq_compact: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -31,7 +31,7 @@ end
 
 function test_enzyme_lq_compact_rank_deficient(
         T::Type, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "lq_compact rank deficient A: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -52,7 +52,7 @@ end
 
 function test_enzyme_lq_full(
         T::Type, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "lq_full reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
@@ -70,7 +70,7 @@ end
 
 function test_enzyme_lq_null(
         T::Type, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T),
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T),
         fdm = enzyme_fdm(T)
     )
     return @testset "lq_null reverse: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
