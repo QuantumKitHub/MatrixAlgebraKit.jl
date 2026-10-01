@@ -192,8 +192,8 @@ for (f, f_lapack!, Alg) in (
     @eval begin
         function batched_svd_compact!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
             check_input(batched_svd_compact!, A, USVᴴ, alg)
-            driver = get(alg.kwargs, :driver, DefaultDriver())
-            supports_ragged_batch(batched_svd_compact!, alg, driver, eltype(A)) ||
+            driver = get(alg.kwargs, :driver, default_driver(alg, eltype(A)))
+            supports_pointer_batch(alg, driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_compact_f!(A, USVᴴ...; alg.kwargs...)
         end
@@ -203,8 +203,8 @@ for (f, f_lapack!, Alg) in (
         end
         function batched_svd_full!(A::AbstractVector{<:AbstractMatrix}, USVᴴ, alg::$Alg)
             check_input(batched_svd_full!, A, USVᴴ, alg)
-            driver = get(alg.kwargs, :driver, DefaultDriver())
-            supports_ragged_batch(batched_svd_full!, alg, driver, eltype(A)) ||
+            driver = get(alg.kwargs, :driver, default_driver(alg, eltype(A)))
+            supports_pointer_batch(alg, driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_full_f!(A, USVᴴ...; alg.kwargs...)
         end
@@ -214,8 +214,8 @@ for (f, f_lapack!, Alg) in (
         end
         function batched_svd_vals!(A::AbstractVector{<:AbstractMatrix}, S, alg::$Alg)
             check_input(batched_svd_vals!, A, S, alg)
-            driver = get(alg.kwargs, :driver, DefaultDriver())
-            supports_ragged_batch(batched_svd_vals!, alg, driver, eltype(A)) ||
+            driver = get(alg.kwargs, :driver, default_driver(alg, eltype(A)))
+            supports_pointer_batch(alg, driver, eltype(A)) ||
                 throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
             return $svd_vals_f!(A, S; alg.kwargs...)
         end

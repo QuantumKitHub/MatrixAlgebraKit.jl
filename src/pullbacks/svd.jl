@@ -27,6 +27,7 @@ function check_and_prepare_svd_cotangents(
             ΔU₁ = zero(U₁)
             wtmp = similar(U₁, (r,))
             utmp = similar(U₁, (m,))
+            zeroj = Int[]
             for (j, i) in enumerate(indU)
                 if i <= r
                     ΔU₁[:, i] .= view(ΔU, :, j)
@@ -37,9 +38,12 @@ function check_and_prepare_svd_cotangents(
                     mul!(utmp, U₁, wtmp, -1, 1)
                     ΔgaugeU = max(ΔgaugeU, norm(utmp))
                 else # remaining columns should be zero
-                    ΔgaugeU = max(ΔgaugeU, maximum(abs, view(ΔU, :, j); init = abs(zero(eltype(ΔU)))))
+                    push!(zeroj, j)
                 end
             end
+            # index with a vector rather than looping over views, so wrapped GPU arrays
+            # (e.g. `Adjoint{<:CuArray}`) don't fall back to scalar iteration
+            ΔgaugeU = max(ΔgaugeU, maximum(abs, ΔU[:, zeroj]; init = abs(zero(eltype(ΔU)))))
         end
         UᴴΔU₁ = U₁' * ΔU₁
         ΔU₊ = mul!(ΔU₁, U₁, UᴴΔU₁, -1, 1)
@@ -59,6 +63,7 @@ function check_and_prepare_svd_cotangents(
             ΔV₁ᴴ = zero(V₁ᴴ)
             wtmp = similar(V₁ᴴ, (1, r))
             vtmp = similar(V₁ᴴ, (1, n))
+            zeroj = Int[]
             for (j, i) in enumerate(indV)
                 if i <= r
                     ΔV₁ᴴ[i, :] .= view(ΔVᴴ, j, :)
@@ -69,9 +74,10 @@ function check_and_prepare_svd_cotangents(
                     mul!(vtmp, wtmp, V₁ᴴ, -1, 1)
                     ΔgaugeV = max(ΔgaugeV, norm(vtmp))
                 else # remaining rows should be zero
-                    ΔgaugeV = max(ΔgaugeV, maximum(abs, view(ΔVᴴ, j, :); init = abs(zero(eltype(ΔVᴴ)))))
+                    push!(zeroj, j)
                 end
             end
+            ΔgaugeV = max(ΔgaugeV, maximum(abs, ΔVᴴ[zeroj, :]; init = abs(zero(eltype(ΔVᴴ)))))
         end
         VᴴΔV₁ = V₁ᴴ * ΔV₁ᴴ'
         ΔV₊ᴴ = mul!(ΔV₁ᴴ, VᴴΔV₁', V₁ᴴ, -1, 1)
