@@ -255,7 +255,7 @@ function svd_trunc_pullback!(
         m > n && ((AP, X₀, Y₀ᴴ) = (AP', Y₀ᴴ', X₀'))
         X₁ = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
         X₁ .+= X₀
-        Xₖ, Xₖ₊₁ = X₁, zero(X₁)
+        Xₖ, Xₖ₊₁ = X₁, X₀
         APAᴴₖ = AP * AP'
         APAᴴₖ₊₁ = zero(APAᴴₖ)
         S⁻¹ₖ, S⁻¹ₖ₊₁ = S⁻¹ .^ 2, zero(S⁻¹)
