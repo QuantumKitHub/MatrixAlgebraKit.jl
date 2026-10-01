@@ -76,7 +76,9 @@ function test_enzyme_eigh_trunc(
             A = make_eigh_matrix(T, sz)
             DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
             test_reverse(eigh_wrapper, RT, (eigh_trunc_no_error, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
-            test_reverse(eigh!_wrapper, RT, (eigh_trunc_no_error!, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_reverse(eigh!_wrapper, RT, (eigh_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_forward(eigh_wrapper, RT, (eigh_trunc_no_error, Const), (A, TA), (truncalg, Const); atol, rtol, fdm)
+            test_forward(eigh!_wrapper, RT, (eigh_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, fdm)
         end
         @testset "trunctol" begin
             A = make_eigh_matrix(T, sz)
@@ -85,7 +87,9 @@ function test_enzyme_eigh_trunc(
             truncalg = TruncatedAlgorithm(alg, trunc)
             DV, _, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
             test_reverse(eigh_wrapper, RT, (eigh_trunc_no_error, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
-            test_reverse(eigh!_wrapper, RT, (eigh_trunc_no_error!, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_reverse(eigh!_wrapper, RT, (eigh_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_forward(eigh_wrapper, RT, (eigh_trunc_no_error, Const), (A, TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
+            test_forward(eigh!_wrapper, RT, (eigh_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
         end
     end
 end

@@ -76,7 +76,9 @@ function test_enzyme_eig_trunc(
             A = make_eig_matrix(T, sz)
             DV, _, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
             test_reverse(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
-            test_reverse(call_and_zero!, RT, (eig_trunc_no_error!, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_reverse(call_and_zero!, RT, (eig_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_forward(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (eig_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, fdm)
         end
         @testset "trunctol" begin
             A = make_eig_matrix(T, sz)
@@ -85,7 +87,9 @@ function test_enzyme_eig_trunc(
             truncalg = TruncatedAlgorithm(alg, trunc)
             DV, _, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
             test_reverse(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
-            test_reverse(call_and_zero!, RT, (eig_trunc_no_error!, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_reverse(call_and_zero!, RT, (eig_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_forward(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
+            test_forward(call_and_zero!, RT, (eig_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
         end
     end
 end
