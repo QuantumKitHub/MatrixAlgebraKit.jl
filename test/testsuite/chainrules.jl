@@ -442,7 +442,7 @@ function test_chainrules_eigh(
                 @test isequal(ΔDVtrunc, ΔDVtrunc_copy)
             end
             D, ΔD = ad_eigh_vals_setup(A / 2)
-            truncalg = TruncatedAlgorithm(alg, trunctol(; atol = maximum(abs, D) / 2))
+            truncalg = TruncatedAlgorithm(alg, trunctol(; atol = midgap_tol(eigh_vals(A))))
             DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eigh_trunc_setup(A, truncalg)
             ind = MatrixAlgebraKit.findtruncated(diagview(DV[1]), truncalg.trunc)
             ot = (ΔDVtrunc..., zero(real(T)))
@@ -601,7 +601,7 @@ function test_chainrules_svd(
                 @test isequal(ΔUSVᴴtrunc, ΔUSVᴴtrunc_copy)
             end
             S, ΔS = ad_svd_vals_setup(A)
-            truncalg = TruncatedAlgorithm(alg, trunctol(atol = S[1, 1] / 2))
+            truncalg = TruncatedAlgorithm(alg, trunctol(atol = midgap_tol(S)))
             USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
             ot = (ΔUSVᴴtrunc..., zero(real(T)))
             ot_copy = deepcopy(ot)
@@ -625,7 +625,7 @@ function test_chainrules_svd(
             dA1 = MatrixAlgebraKit.svd_pullback!(zero(A), A, USVᴴ, ΔUSVᴴtrunc, ind)
             dA2 = MatrixAlgebraKit.svd_trunc_pullback!(zero(A), A, (Utrunc, Strunc, Vᴴtrunc), ΔUSVᴴtrunc)
             @test isapprox(dA1, dA2; atol = atol, rtol = rtol)
-            trunc = trunctol(; atol = S[1, 1] / 2)
+            trunc = truncalg.trunc
             ind = MatrixAlgebraKit.findtruncated(diagview(S), trunc)
             ot = (ΔUSVᴴtrunc..., zero(real(T)))
             ot_copy = deepcopy(ot)

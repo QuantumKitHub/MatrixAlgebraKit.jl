@@ -19,7 +19,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `project_hermitian` and 
 """
 function test_mooncake_project_hermitian(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "project_hermitian" begin
         A = instantiate_matrix(T, sz)
@@ -47,7 +47,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `project_antihermitian` 
 """
 function test_mooncake_project_antihermitian(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "project_antihermitian" begin
         A = instantiate_matrix(T, sz)
