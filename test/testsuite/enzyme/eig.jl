@@ -47,10 +47,10 @@ function test_enzyme_eig_vals(
         A = make_eig_matrix(T, sz)
         alg = MatrixAlgebraKit.select_algorithm(eig_vals, A)
         D, ΔD = ad_eig_vals_setup(A)
-        test_reverse(eig_vals, RT, (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
-        test_reverse(call_and_zero!, RT, (eig_vals!, Const), (copy(A), TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
-        test_forward(eig_vals, RT, (A, TA), (alg, Const); atol, rtol, fdm)
-        test_forward(call_and_zero!, RT, (eig_vals!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
+        test_reverse(eig_vals_wrapper, RT, (eig_vals, Const), (A, TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
+        test_reverse(eig_vals!_wrapper, RT, (eig_vals!, Const), (copy(A), TA), (alg, Const); atol, rtol, output_tangent = ΔD, fdm)
+        test_forward(eig_vals_wrapper, RT, (eig_vals, Const), (A, TA), (alg, Const); atol, rtol, fdm)
+        test_forward(eig_vals!_wrapper, RT, (eig_vals!, Const), (copy(A), TA), (alg, Const); atol, rtol, fdm)
     end
 end
 
@@ -83,7 +83,7 @@ function test_enzyme_eig_trunc(
         @testset "trunctol" begin
             A = make_eig_matrix(T, sz)
             D = eig_vals(A)
-            trunc = trunctol(atol = maximum(abs, D) / 2; by = abs)
+            trunc = trunctol(atol = midgap_tol(D); by = abs)
             truncalg = TruncatedAlgorithm(alg, trunc)
             DV, _, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
             test_reverse(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)

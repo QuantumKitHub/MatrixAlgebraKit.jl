@@ -74,8 +74,8 @@ function test_mooncake_eig_vals(
         output_tangent = Mooncake.randn_tangent(rng, D)
 
         Mooncake.TestUtils.test_rule(
-            rng, eig_vals, A, alg;
-            output_tangent, atol, rtol
+            rng, eig_vals_wrapper, eig_vals, A, alg;
+            output_tangent, atol, rtol, is_primitive = false
         )
         if A isa Diagonal{<:Complex}
             A2 = copy(A)
@@ -90,7 +90,7 @@ function test_mooncake_eig_vals(
             )
         end
         Mooncake.TestUtils.test_rule(
-            rng, call_and_zero!, eig_vals!, A, alg;
+            rng, eig_vals!_wrapper, eig_vals!, A, alg;
             output_tangent, atol, rtol, is_primitive = false
         )
     end
@@ -144,7 +144,7 @@ function test_mooncake_eig_trunc(
 
         @testset "trunctol" begin
             D = eig_vals(A)
-            trunc = trunctol(atol = maximum(abs, D) / 2; by = abs)
+            trunc = trunctol(atol = midgap_tol(D); by = abs)
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
             DV, DVtrunc, ΔDV_arrays, ΔDVtrunc_arrays = ad_eig_trunc_setup(A, alg_trunc)
