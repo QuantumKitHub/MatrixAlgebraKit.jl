@@ -36,4 +36,8 @@ if filter_tests!(testsuite, args)
     end
 end
 
-runtests(MatrixAlgebraKit, args; testsuite, init_code = :(const fast_tests = $fast))
+# Enzyme test workers peak at 5-7 GB (qr, lq, orthnull on Julia 1.10), so the default
+# assumption of 2 GiB per worker oversubscribes memory on CI runners and makes them swap
+memory_per_worker = any(startswith("enzyme/") ∘ first, testsuite) ? 6 * 2^30 : 2 * 2^30
+
+runtests(MatrixAlgebraKit, args; testsuite, init_code = :(const fast_tests = $fast), memory_per_worker)
