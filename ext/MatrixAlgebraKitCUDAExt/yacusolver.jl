@@ -300,11 +300,11 @@ for (bname, fname, elty, relty) in
             chkstride1(A, U, Vᴴ, S)
             m, n, batch_size = size(A)
             minmn = min(m, n)
-            batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
-            batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
             if length(U) == 0 && length(Vᴴ) == 0
                 jobz = 'N'
             else
+                batch_size != size(U, 3) && throw(ArgumentError("batch size mismatch between A and U"))
+                batch_size != size(Vᴴ, 3) && throw(ArgumentError("batch size mismatch between A and Vᴴ"))
                 jobz = 'V'
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
