@@ -558,7 +558,7 @@ function EnzymeRules.forward(
         ::Type{RT},
         f::Const{<:Union{typeof(eigh_trunc!), typeof(eig_trunc!)}},
         DV::Annotation,
-        strategy::Const{<:TruncationStrategy},
+        strategy::Annotation{<:TruncationStrategy},
     ) where {RT}
     D, V = DV.val
     ind = MatrixAlgebraKit.findtruncated(diagview(D), strategy.val)
@@ -583,7 +583,7 @@ function EnzymeRules.forward(
         ::Type{RT},
         f::Const{typeof(svd_trunc!)},
         USVᴴ::Annotation,
-        strategy::Const{<:TruncationStrategy},
+        strategy::Annotation{<:TruncationStrategy},
     ) where {RT}
     U, S, Vᴴ = USVᴴ.val
     ind = MatrixAlgebraKit.findtruncated_svd(diagview(S), strategy.val)
