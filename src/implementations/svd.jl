@@ -142,14 +142,8 @@ function svd_via_adjoint!(f!::F, driver::Driver, A, S, U, Vᴴ; kwargs...) where
 end
 
 # LAPACK
-for f! in (:gesdd!, :gesvd!, :gesdvd!)
+for f! in (:gesdd!, :gesvd!, :gesdvd!, :gesvdx!)
     @eval $f!(::LAPACK, args...; kwargs...) = YALAPACK.$f!(args...; kwargs...)
-end
-
-function gesvdx!(::LAPACK, A, S, U, Vᴴ; kwargs...)
-    YALAPACK.gesvdx!(A, S, U, Vᴴ; kwargs...)
-    complete_svd_basis!(U, Vᴴ, length(S))
-    return S, U, Vᴴ
 end
 
 function gesvdj!(::LAPACK, A, S, U, Vᴴ; kwargs...)
@@ -212,6 +206,8 @@ for (f, f_lapack!, Alg) in (
             zero!(S)
             minmn = min(size(A)...)
             $f_lapack!(driver, A, view(S, 1:minmn, 1), U, Vᴴ; kwargs...)
+            # `gesvdx` only computes the leading `minmn` singular vectors
+            $(f === :bisection) && complete_svd_basis!(U, Vᴴ, minmn)
             diagview(S) .= view(S, 1:minmn, 1)
             zero!(view(S, 2:minmn, 1))
             fixgauge && gaugefix!(svd_full!, U, Vᴴ)
@@ -248,6 +244,16 @@ function complete_svd_basis!(U::AbstractMatrix, Vᴴ::AbstractMatrix, minmn::Int
     end
     return U, Vᴴ
 end
+
+"""
+    requires_tall(alg) -> Bool
+
+Whether `alg` only accepts matrices with `m ≥ n`, as cuSOLVER's and rocSOLVER's `gesvd` do
+for `QRIteration`. Single matrices work around this through the adjoint (see
+`svd_via_adjoint!`), whereas ragged batches zero-pad wide matrices to a square.
+"""
+requires_tall(::AbstractAlgorithm) = false
+requires_tall(::QRIteration) = true
 
 function svd_trunc_no_error!(A, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)

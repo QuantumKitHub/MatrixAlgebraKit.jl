@@ -11,12 +11,32 @@ function test_svd(T::Type, sz; test_compact::Bool = true, test_full::Bool = true
     end
 end
 
+function test_svd_batched(T::Type, sz, batch_size::Int; test_compact::Bool = true, test_full::Bool = true, test_trunc::Bool = true, kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "svd batched $summary_str batch_size $batch_size" begin
+        test_compact && test_svd_compact_batched(T, sz, batch_size; kwargs...)
+        test_full && test_svd_full_batched(T, sz, batch_size; kwargs...)
+        # TODO
+        #test_trunc && test_svd_trunc(T, sz; kwargs...)
+    end
+end
+
 function test_svd_algs(T::Type, sz, algs; test_compact::Bool = true, test_full::Bool = true, test_trunc::Bool = true, kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "svd algorithms $summary_str" begin
         test_compact && test_svd_compact_algs(T, sz, algs; kwargs...)
         test_full && test_svd_full_algs(T, sz, algs; kwargs...)
         test_trunc && test_svd_trunc_algs(T, sz, algs; kwargs...)
+    end
+end
+
+function test_svd_batched_algs(T::Type, sz, batch_size::Int, algs; test_compact::Bool = true, test_full::Bool = true, test_trunc::Bool = true, kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "svd batched algorithms $summary_str batch_size $batch_size" begin
+        test_compact && test_svd_compact_algs_batched(T, sz, algs, batch_size; kwargs...)
+        test_full && test_svd_full_algs_batched(T, sz, algs, batch_size; kwargs...)
+        # TODO
+        #test_trunc && test_svd_trunc_algs(T, sz, algs; kwargs...)
     end
 end
 
@@ -54,6 +74,50 @@ function test_svd_compact(
     end
 end
 
+function test_svd_compact_batched(
+        T::Type, sz, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        test_vals::Bool = true, kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "svd_compact! $summary_str batch_size $batch_size" begin
+        As = [instantiate_matrix(T, sz) for bi in 1:batch_size]
+        Ad = device_batch(As)
+        Ac = deepcopy(Ad)
+        m, n = size(first(As))
+        minmn = min(m, n)
+        U, S, Vᴴ = @testinferred batched_svd_compact(Ad)
+        @test size(U) == (m, minmn, batch_size)
+        @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
+        @test size(Vᴴ) == (minmn, n, batch_size)
+        for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 2), eachslice(Vᴴ, dims = 3))
+            @test u * Diagonal(s) * vᴴ ≈ a
+            @test isisometric(u)
+            @test isisometric(vᴴ; side = :right)
+            @test isposdef(Diagonal(s))
+        end
+
+        Sc = similar(diagview(S))
+        U2, S2, V2ᴴ = @testinferred batched_svd_compact!(Ac, (U, S, Vᴴ))
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
+        for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 2), eachslice(V2ᴴ, dims = 3))
+            @test u * Diagonal(s) * vᴴ ≈ a
+            @test isisometric(u)
+            @test isisometric(vᴴ; side = :right)
+            @test isposdef(Diagonal(s))
+        end
+
+        if test_vals
+            Sd = @testinferred batched_svd_vals(Ad)
+            for (s, sd) in zip(eachslice(S, dims = 2), eachslice(Sd, dims = 2))
+                @test s ≈ sd
+            end
+        end
+    end
+end
+
 function test_svd_compact_algs(
         T::Type, sz, algs;
         atol::Real = 0, rtol::Real = precision(eltype(T)),
@@ -83,6 +147,88 @@ function test_svd_compact_algs(
         if test_vals
             Sd = @testinferred svd_vals(A; alg)
             @test S ≈ Diagonal(Sd)
+        end
+    end
+end
+
+function test_svd_compact_algs_batched(
+        T::Type, sz, algs, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        test_vals::Bool = true, kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "svd_compact! algorithm $alg $summary_str batch_size $batch_size" for alg in algs
+        As = [instantiate_matrix(T, sz) for bi in 1:batch_size]
+        Ad = device_batch(As)
+        Ac = deepcopy(Ad)
+        m, n = size(first(As))
+        minmn = min(m, n)
+        U, S, Vᴴ = @testinferred batched_svd_compact(Ad; alg)
+        @test size(U) == (m, minmn, batch_size)
+        @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
+        @test size(Vᴴ) == (minmn, n, batch_size)
+        for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 2), eachslice(Vᴴ, dims = 3))
+            @test u * Diagonal(s) * vᴴ ≈ a
+            @test isisometric(u)
+            @test isisometric(vᴴ; side = :right)
+            @test isposdef(Diagonal(s))
+        end
+
+        U2, S2, V2ᴴ = @testinferred batched_svd_compact!(Ac, (U, S, Vᴴ); alg)
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
+        for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 2), eachslice(V2ᴴ, dims = 3))
+            @test u * Diagonal(s) * vᴴ ≈ a
+            @test isisometric(u)
+            @test isisometric(vᴴ; side = :right)
+            @test isposdef(Diagonal(s))
+        end
+
+        if test_vals
+            Sd = @testinferred batched_svd_vals(Ad; alg)
+            for (s, sd) in zip(eachslice(S, dims = 2), eachslice(Sd, dims = 2))
+                @test s ≈ sd
+            end
+        end
+
+        # ragged batch: `As` is one group of `batch_size` equal sized matrices,
+        # and then `nextra` matrices of different sizes are either decomposed
+        # one at a time or zero-padded into one more batch
+        @testset "ragged with $nextra extra sizes" for nextra in (2, 5)
+            Ar = [As; [instantiate_matrix(T, (max(m - i % 3, 0), max(n - i % 4, 0))) for i in 1:nextra]]
+            Us = [similar(a, size(a, 1), minimum(size(a))) for a in Ar]
+            Ss = [Diagonal(similar(a, real(eltype(T)), minimum(size(a)))) for a in Ar]
+            Vᴴs = [similar(a, minimum(size(a)), size(a, 2)) for a in Ar]
+            U3, S3, V3ᴴ = @testinferred batched_svd_compact!(deepcopy(Ar), (Us, Ss, Vᴴs); alg)
+            @test U3 === Us
+            @test S3 === Ss
+            @test V3ᴴ === Vᴴs
+            for (a, u, s, vᴴ) in zip(Ar, U3, S3, V3ᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isisometric(u)
+                @test isisometric(vᴴ; side = :right)
+            end
+
+            U4, S4, V4ᴴ = @testinferred batched_svd_compact(Ar; alg)
+            @test S4 isa AbstractVector{<:Diagonal}
+            for (a, u, s, vᴴ) in zip(Ar, U4, S4, V4ᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isisometric(u)
+                @test isisometric(vᴴ; side = :right)
+            end
+
+            if test_vals
+                Sv = [similar(a, real(eltype(T)), minimum(size(a))) for a in Ar]
+                Sv2 = @testinferred batched_svd_vals!(deepcopy(Ar), Sv; alg)
+                for (s, s2) in zip(S3, Sv2)
+                    @test collect(diagview(s)) ≈ collect(s2)
+                end
+                Sv3 = @testinferred batched_svd_vals(Ar; alg)
+                for (s, s3) in zip(S3, Sv3)
+                    @test collect(diagview(s)) ≈ collect(s3)
+                end
+            end
         end
     end
 end
@@ -120,6 +266,48 @@ function test_svd_full(
     end
 end
 
+function test_svd_full_batched(
+        T::Type, sz, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "svd_full! $summary_str batch_size $batch_size" begin
+        As = [instantiate_matrix(T, sz) for bi in 1:batch_size]
+        Ad = device_batch(As)
+        Ac = deepcopy(Ad)
+        m, n = size(first(As))
+        minmn = min(m, n)
+        U, S, Vᴴ = @testinferred batched_svd_full(Ad)
+        @test size(U) == (m, m, batch_size)
+        @test S isa AbstractArray{real(eltype(T)), 3} && size(S) == (m, n, batch_size)
+        @test size(Vᴴ) == (n, n, batch_size)
+        for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 3), eachslice(Vᴴ, dims = 3))
+            @test u * s * vᴴ ≈ a
+            @test isunitary(u)
+            @test isunitary(vᴴ)
+            @test all(isposdef, diagview(s))
+        end
+
+        U2, S2, V2ᴴ = @testinferred batched_svd_full!(Ac, (U, S, Vᴴ))
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
+        for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 3), eachslice(V2ᴴ, dims = 3))
+            @test u * s * vᴴ ≈ a
+            @test isunitary(u)
+            @test isunitary(vᴴ)
+            @test all(isposdef, diagview(s))
+        end
+
+        Sc = similar(first(As), real(eltype(T)), min(m, n), batch_size)
+        Sc2 = @testinferred batched_svd_vals!(copy!(Ac, Ad), Sc)
+        for (s, s2) in zip(eachslice(S, dims = 3), eachslice(Sc, dims = 2))
+            @test collect(diagview(s)) ≈ collect(s2)
+        end
+    end
+end
+
 function test_svd_full_algs(
         T::Type, sz, algs;
         atol::Real = 0, rtol::Real = precision(eltype(T)),
@@ -142,6 +330,9 @@ function test_svd_full_algs(
         @test all(isposdef, diagview(S))
 
         U2, S2, V2ᴴ = @testinferred svd_full!(Ac, (U, S, Vᴴ); alg)
+        @test U2 === U
+        @test S2 === S
+        @test V2ᴴ === Vᴴ
         @test U2 * S2 * V2ᴴ ≈ A
         @test isunitary(U2)
         @test isunitary(V2ᴴ)
@@ -150,6 +341,116 @@ function test_svd_full_algs(
         Sc = similar(A, real(eltype(T)), min(m, n))
         Sc2 = @testinferred svd_vals!(copy!(Ac, A), Sc; alg)
         @test collect(diagview(S)) ≈ collect(Sc2)
+    end
+end
+
+function test_svd_full_algs_batched(
+        T::Type, sz, algs, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "svd_full! algorithm $alg $summary_str batch_size $batch_size" for alg in algs
+        As = [instantiate_matrix(T, sz) for bi in 1:batch_size]
+        Ad = device_batch(As)
+        Ac = deepcopy(Ad)
+        m, n = size(first(As))
+        minmn = min(m, n)
+        U, S, Vᴴ = @testinferred batched_svd_full(Ad; alg)
+        @test size(U) == (m, m, batch_size)
+        @test S isa AbstractArray{real(eltype(T)), 3} && size(S) == (m, n, batch_size)
+        @test size(Vᴴ) == (n, n, batch_size)
+        for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 3), eachslice(Vᴴ, dims = 3))
+            @test u * s * vᴴ ≈ a
+            @test isunitary(u)
+            @test isunitary(vᴴ)
+            @test all(isposdef, diagview(s))
+        end
+
+        U2, S2, V2ᴴ = @testinferred batched_svd_full!(Ac, (U, S, Vᴴ); alg)
+        for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 3), eachslice(V2ᴴ, dims = 3))
+            @test u * s * vᴴ ≈ a
+            @test isunitary(u)
+            @test isunitary(vᴴ)
+            @test all(isposdef, diagview(s))
+        end
+
+        Sc = similar(first(As), real(eltype(T)), min(m, n), batch_size)
+        Sc2 = @testinferred batched_svd_vals!(copy!(Ac, Ad), Sc; alg)
+        for (s, s2) in zip(eachslice(S, dims = 3), eachslice(Sc, dims = 2))
+            @test collect(diagview(s)) ≈ collect(s2)
+        end
+
+        # ragged batch: `As` is one group of `batch_size` equal sized matrices,
+        # and then `nextra` matrices of different sizes are either decomposed
+        # one at a time or zero-padded into one more batch
+        @testset "ragged with $nextra extra sizes" for nextra in (2, 5)
+            Ar = [As; [instantiate_matrix(T, (max(m - i % 3, 0), max(n - i % 4, 0))) for i in 1:nextra]]
+            Us = [similar(a, size(a, 1), size(a, 1)) for a in Ar]
+            Ss = [similar(a, real(eltype(T)), size(a)) for a in Ar]
+            Vᴴs = [similar(a, size(a, 2), size(a, 2)) for a in Ar]
+            U3, S3, V3ᴴ = @testinferred batched_svd_full!(deepcopy(Ar), (Us, Ss, Vᴴs); alg)
+            for (a, u, s, vᴴ) in zip(Ar, U3, S3, V3ᴴ)
+                @test size(u) == (size(a, 1), size(a, 1))
+                @test size(s) == size(a)
+                @test size(vᴴ) == (size(a, 2), size(a, 2))
+                @test u * s * vᴴ ≈ a
+                @test isunitary(u)
+                @test isunitary(vᴴ)
+            end
+
+            U4, S4, V4ᴴ = @testinferred batched_svd_full(Ar; alg)
+            for (a, u, s, vᴴ) in zip(Ar, U4, S4, V4ᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isunitary(u)
+                @test isunitary(vᴴ)
+            end
+
+            Sv = [similar(a, real(eltype(T)), minimum(size(a))) for a in Ar]
+            Sv2 = @testinferred batched_svd_vals!(deepcopy(Ar), Sv; alg)
+            for (s, s2) in zip(S3, Sv2)
+                @test collect(diagview(s)) ≈ collect(s2)
+            end
+        end
+    end
+end
+
+# Ragged batches containing matrices larger than the driver's batched size limit must
+# be split off and decomposed one at a time rather than handed to the driver.
+function test_svd_algs_batched_oversized(
+        T::Type, algs, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        kwargs...
+    )
+    summary_str = testargs_summary(T)
+    return @testset "batched svd over the size limit, algorithm $alg $summary_str" for alg in algs
+        limit = MatrixAlgebraKit.max_batched_blocksize(alg, MatrixAlgebraKit.default_driver(alg, T), T)
+        if limit < typemax(Int) # nothing to do if the driver + algo combo has no limit
+            sizes = ((limit + 5, limit + 3), (limit + 1, 5), (limit - 2, limit - 4))
+            Ar = [instantiate_matrix(T, sz) for sz in sizes for _ in 1:batch_size]
+            batches, _ = MatrixAlgebraKit._ragged_batches(Ar, alg)
+            @test all(((inds, mn),) -> maximum(mn) <= limit, batches)
+            @test !isempty(batches)
+
+            U, S, Vᴴ = @testinferred batched_svd_compact(Ar; alg)
+            for (a, u, s, vᴴ) in zip(Ar, U, S, Vᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isisometric(u)
+                @test isisometric(vᴴ; side = :right)
+            end
+
+            Uf, Sf, Vfᴴ = @testinferred batched_svd_full(Ar; alg)
+            for (a, u, s, vᴴ) in zip(Ar, Uf, Sf, Vfᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isunitary(u)
+                @test isunitary(vᴴ)
+            end
+
+            Sv = @testinferred batched_svd_vals(Ar; alg)
+            for (s, sv) in zip(S, Sv)
+                @test collect(diagview(s)) ≈ collect(sv)
+            end
+        end
     end
 end
 

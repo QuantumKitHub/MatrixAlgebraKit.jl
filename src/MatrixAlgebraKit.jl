@@ -18,6 +18,8 @@ export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
 export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
 export svd_compact, svd_full, svd_vals, svd_trunc, svd_trunc_no_error
 export svd_compact!, svd_full!, svd_vals!, svd_trunc!, svd_trunc_no_error!
+export batched_svd_compact, batched_svd_full, batched_svd_vals
+export batched_svd_compact!, batched_svd_full!, batched_svd_vals!
 export eigh_full, eigh_vals, eigh_trunc, eigh_trunc_no_error
 export eigh_full!, eigh_vals!, eigh_trunc!, eigh_trunc_no_error!
 export eig_full, eig_vals, eig_trunc, eig_trunc_no_error
@@ -99,6 +101,7 @@ include("common/utility.jl")
 
 include("yalapack.jl")
 include("algorithms.jl")
+include("batches.jl")
 
 include("interface/projections.jl")
 include("interface/decompositions.jl")
@@ -108,6 +111,7 @@ include("interface/matrixfunctions.jl")
 include("interface/qr.jl")
 include("interface/lq.jl")
 include("interface/svd.jl")
+include("interface/batched_svd.jl")
 include("interface/eig.jl")
 include("interface/eigh.jl")
 include("interface/gen_eig.jl")
@@ -121,6 +125,7 @@ include("implementations/truncation.jl")
 include("implementations/qr.jl")
 include("implementations/lq.jl")
 include("implementations/svd.jl")
+include("implementations/batched_svd.jl")
 include("implementations/eig.jl")
 include("implementations/eigh.jl")
 include("implementations/gen_eig.jl")
