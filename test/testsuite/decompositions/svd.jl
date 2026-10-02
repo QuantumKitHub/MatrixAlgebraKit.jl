@@ -468,7 +468,7 @@ function test_svd_trunc(
         S₀ = collect(svd_vals(A))
         r = minmn - 2
 
-        if m > 0 && n > 0
+        if m > 0 && n > 0 && r >= 0
             U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; trunc = truncrank(r))
             @test length(diagview(S1)) == r
             @test collect(diagview(S1)) ≈ S₀[1:r]
@@ -573,7 +573,7 @@ function test_svd_trunc_algs(
         S₀ = collect(svd_vals(A))
         r = minmn - 2
 
-        if m > 0 && n > 0
+        if m > 0 && n > 0 && r >= 0
             U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; trunc = truncrank(r), alg)
             @test length(diagview(S1)) == r
             @test collect(diagview(S1)) ≈ S₀[1:r]

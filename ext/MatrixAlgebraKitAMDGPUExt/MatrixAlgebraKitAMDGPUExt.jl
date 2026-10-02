@@ -20,13 +20,13 @@ MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: StridedROCArray{<:BlasF
 MatrixAlgebraKit.default_driver(::Type{TA}) where {TA <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}} = ROCSOLVER()
 
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCMatrix{<:BlasFloat}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCArray{<:BlasFloat, 3}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
 end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}
-    return QRIteration(; kwargs...)
+    return Bisection(; kwargs...)
 end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return DivideAndConquer(; kwargs...)
@@ -55,8 +55,14 @@ function gesvdj!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::Strid
     return MatrixAlgebraKit.svd_via_adjoint!(gesvdj!, ROCSOLVER(), A, S, U, Vᴴ; kwargs...)
 end
 
-gesvdx!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
-    YArocSOLVER.gesvdx!(A, S, U, Vᴴ; kwargs...)
+function gesvdx!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
+    if min(size(A)...) == 1
+        _gesvdx_rank1!(A, S, U, Vᴴ; kwargs...)
+    else
+        YArocSOLVER.gesvdx!(A, S, U, Vᴴ; kwargs...)
+    end
+    return S, U, Vᴴ
+end
 
 # rocSOLVER's batched `gesvd` requires m ≥ n, so wide matrices go through the adjoint
 function gesvd_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat}
@@ -80,13 +86,63 @@ gesvdj_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ss::Strided
 gesvdj_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
     YArocSOLVER.gesvdj_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
 
-gesvdx_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
-    YArocSOLVER.gesvdx_batched!(As, Ss, Us, Vᴴs; kwargs...)
-gesvdx_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
-    YArocSOLVER.gesvdx_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+function gesvdx_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat}
+    if min(size(first(As))...) == 1
+        _gesvdx_rank1_batched!(As, Ss, Us, Vᴴs; kwargs...)
+    else
+        YArocSOLVER.gesvdx_batched!(As, Ss, Us, Vᴴs; kwargs...)
+    end
+    return Ss, Us, Vᴴs
+end
+function gesvdx_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ss::StridedROCMatrix, Us::StridedROCArray{T, 3}, Vᴴs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat}
+    if min(size(As, 1), size(As, 2)) == 1
+        _gesvdx_rank1_batched!(As, Ss, Us, Vᴴs; kwargs...)
+    else
+        YArocSOLVER.gesvdx_strided_batched!(As, Ss, Us, Vᴴs; kwargs...)
+    end
+    return Ss, Us, Vᴴs
+end
 
 gesdd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...) =
     YArocSOLVER.gesdd!(A, S, U, Vᴴ; kwargs...)
+
+function _gesvdx_rank1!(A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
+    select_kwargs = Base.structdiff(NamedTuple(kwargs), (; irange = nothing, vl = nothing, vu = nothing))
+    nrmA = norm(A)
+    fill!(S, nrmA)
+    if !isempty(U) && !isempty(Vᴴ)
+        u, v = view(U, :, 1), view(Vᴴ, 1, :)
+        x, e = size(A, 1) == 1 ? (v, u) : (u, v)
+        if iszero(nrmA)
+            zero!(x)
+            fill!(view(x, 1:1), one(eltype(x)))
+        else
+            copyto!(x, vec(A))
+            x ./= nrmA
+        end
+        fill!(e, one(eltype(e)))
+    end
+    _gesvdx_apply_range!(S, select_kwargs)
+    return S, U, Vᴴ
+end
+
+function _gesvdx_rank1_batched!(As, Ss::StridedROCMatrix, Us, Vᴴs; kwargs...)
+    select_kwargs = Base.structdiff(NamedTuple(kwargs), (; irange = nothing, vl = nothing, vu = nothing))
+    gesvdj_batched!(ROCSOLVER(), As, Ss, Us, Vᴴs; select_kwargs...)
+    _gesvdx_apply_range!(Ss, select_kwargs)
+    return Ss, Us, Vᴴs
+end
+
+function _gesvdx_apply_range!(S, select::NamedTuple)
+    if haskey(select, :irange)
+        1 in convert(UnitRange{Int}, select.irange) || zero!(S)
+    elseif haskey(select, :vl) || haskey(select, :vu)
+        vl = convert(eltype(S), get(select, :vl, -Inf))
+        vu = convert(eltype(S), get(select, :vu, Inf))
+        S .= ifelse.((vl .<= S) .& (S .< vu), S, zero(eltype(S)))
+    end
+    return S
+end
 
 heevj!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevj!(A, Dd, V; kwargs...)
