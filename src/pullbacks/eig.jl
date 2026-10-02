@@ -165,12 +165,7 @@ function eig_trunc_pullback!(
     APᴴ = mul!(complex.(A'), ViG, (V * Dmat)', -1, 1)
     X₀ = iszerotangent(ΔV₊) ? APᴴ * Z : mul!(ΔV₊, APᴴ, Z, 1, 1)
     X₀ ./= D'
-    # Normalize by the smallest |eigenvalue|, which caps `max|D̄⁻¹|` at 1, so squaring can
-    # only shrink it.
-    dabsmin = minimum(abs, D)
-    APᴴ ./= dabsmin
-    D̄⁻¹ = dabsmin ./ conj.(D)
-    X = accelerative_smith_iteration!(X₀, similar(X₀), APᴴ, D̄⁻¹, degeneracy_atol, maxiter)
+    X = accelerative_smith_iteration!(X₀, similar(X₀), APᴴ, inv.(conj.(D)), degeneracy_atol, maxiter)
     Z .+= X
     if eltype(ΔA) <: Real
         ΔAc = mul!(APᴴ, Z, V') # recycle APᴴ
