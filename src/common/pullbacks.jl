@@ -52,6 +52,9 @@ Reference: https://doi.org/10.1016/j.aml.2009.01.012.
 """
 function accelerative_smith_iteration!(X, Xₙ, G, w, atol, maxiter)
     Gₙ = similar(G)
+    wmax = maximum(abs, w)
+    w ./= wmax
+    G .*= wmax
     for k in 1:maxiter
         Xₙ = rmul!(mul!(Xₙ, G, X), Diagonal(w))
         if maximum(abs, Xₙ) < atol
