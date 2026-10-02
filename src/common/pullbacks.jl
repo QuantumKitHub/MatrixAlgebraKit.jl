@@ -45,8 +45,8 @@ Solve `X = B + G * X * Diagonal(w)` by summing the Neumann series
 for at most `maxiter` steps.
 
 On entry, `X` contains `B`, and it is overwritten with the result. `Xₙ` is used as a buffer,
-and `G` and `w` are overwritten. It is assumed that `w` is normalized such that
-`maximum(abs, w) == 1`, so that squaring it can only shrink it.
+and `G` and `w` are overwritten. `w` is normalized such that `maximum(abs, w) == 1`, so that
+squaring it can only shrink it; `G` is scaled by the inverse factor to compensate.
 
 Reference: https://doi.org/10.1016/j.aml.2009.01.012.
 """

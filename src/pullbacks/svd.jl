@@ -247,9 +247,7 @@ function svd_trunc_pullback!(
         Y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
         US = mul!(ΔAV, U, Smat) # recycle ΔAV
         AP = mul!(copy(A), US, Vᴴ, -1, 1)
-        minS = @view S[end:end]
-        AP ./= minS
-        S⁻¹ = minS ./ S
+        S⁻¹ = inv.(S)
         # sum the series on the smaller side only, the other side follows from
         # Yᴴ = Y₀ᴴ + S⁻¹ X' AP (m ≤ n) or X = X₀ + AP Y S⁻¹ (m > n)
         if m ≤ n

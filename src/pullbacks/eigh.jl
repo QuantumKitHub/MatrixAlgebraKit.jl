@@ -153,12 +153,7 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV₊)
         X₀ = rdiv!(ΔV₊, Diagonal(D))
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
-        # Normalize by the smallest retained |eigenvalue|, as `svd_trunc_pullback!` does
-        # with `S[end]`. That caps `max|D⁻¹|` at 1, so squaring can only shrink it.
-        dabsmin = minimum(abs, D)
-        AP ./= dabsmin
-        D⁻¹ = dabsmin ./ D
-        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, D⁻¹, degeneracy_atol, maxiter)
+        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), degeneracy_atol, maxiter)
         Z .+= X
         # we cannot directly multiply Z * V' into ΔA, because we have to
         # take the Hermitian part, and cannot apply project_hermitian! to
