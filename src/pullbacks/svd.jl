@@ -250,36 +250,25 @@ function svd_trunc_pullback!(
         minS = @view S[end:end]
         AP ./= minS
         S⁻¹ = minS ./ S
-        # sum the series on the smaller side only, the other side follows from Yᴴ = Y₀ᴴ + S⁻¹ X' AP;
-        # for m > n, work with the adjoint problem, which swaps X and Yᴴ
-        m > n && ((AP, X₀, Y₀ᴴ) = (AP', Y₀ᴴ', X₀'))
-        X₁ = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
-        X₁ .+= X₀
-        Xₖ, Xₖ₊₁ = X₁, X₀
-        APAᴴₖ = AP * AP'
-        APAᴴₖ₊₁ = zero(APAᴴₖ)
-        S⁻¹ₖ, S⁻¹ₖ₊₁ = S⁻¹ .^ 2, zero(S⁻¹)
-        for k in 1:maxiter
-            Xₖ₊₁ = rmul!(mul!(Xₖ₊₁, APAᴴₖ, Xₖ), Diagonal(S⁻¹ₖ))
-            if norm(Xₖ₊₁, Inf) < degeneracy_atol
-                break
-            end
-            Xₖ₊₁ .+= Xₖ
-            if k == maxiter
-                @warn "Sylvester iteration did not converge after $k iterations, final norm of X: $(maximum(abs, Xₖ₊₁))"
-                break
-            end
-            S⁻¹ₖ₊₁ .= S⁻¹ₖ .^ 2
-            APAᴴₖ₊₁ = mul!(APAᴴₖ₊₁, APAᴴₖ, APAᴴₖ)
-            Xₖ, Xₖ₊₁ = Xₖ₊₁, Xₖ
-            APAᴴₖ, APAᴴₖ₊₁ = APAᴴₖ₊₁, APAᴴₖ
-            S⁻¹ₖ, S⁻¹ₖ₊₁ = S⁻¹ₖ₊₁, S⁻¹ₖ
+        # sum the series on the smaller side only, the other side follows from
+        # Yᴴ = Y₀ᴴ + S⁻¹ X' AP (m ≤ n) or X = X₀ + AP Y S⁻¹ (m > n)
+        if m ≤ n
+            X = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
+            X .+= X₀
+            X = _smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, degeneracy_atol, maxiter) # recycle X₀
+            Yᴴ = lmul!(Diagonal(S⁻¹), X' * AP)
+            Yᴴ .+= Y₀ᴴ
+            ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
+            ΔA = mul!(ΔA, U, Yᴴ, 1, 1)
+        else
+            Y = rmul!(AP' * X₀, Diagonal(S⁻¹))
+            Y .+= Y₀ᴴ'
+            Y = _smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, degeneracy_atol, maxiter)
+            X = rmul!(AP * Y, Diagonal(S⁻¹))
+            X .+= X₀
+            ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
+            ΔA = mul!(ΔA, U, Y', 1, 1)
         end
-        Yₖᴴ = lmul!(Diagonal(S⁻¹), Xₖ' * AP)
-        Yₖᴴ .+= Y₀ᴴ
-        m > n && ((Xₖ, Yₖᴴ) = (Yₖᴴ', Xₖ'))
-        ΔA = mul!(ΔA, Xₖ, Vᴴ, 1, 1)
-        ΔA = mul!(ΔA, U, Yₖᴴ, 1, 1)
     end
     return ΔA
 end
