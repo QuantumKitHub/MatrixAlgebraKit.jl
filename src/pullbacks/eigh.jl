@@ -153,38 +153,13 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV₊)
         X₀ = rdiv!(ΔV₊, Diagonal(D))
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
-        # Normalize by the smallest retained |eigenvalue|, as `svd_trunc_pullback!` does
-        # with `S[end]`. That caps `max|D⁻¹|` at 1, so squaring can only shrink it.
-        dabsmin = minimum(abs, D)
-        AP ./= dabsmin
-        D⁻¹ = dabsmin ./ D
-        X₁ = rmul!(AP * X₀, Diagonal(D⁻¹))
-        X₁ .+= X₀
-        Xₖ, Xₖ₊₁ = X₁, X₀
-        APₖ, APₖ₊₁ = AP * AP, AP
-        D⁻¹ₖ, D⁻¹ₖ₊₁ = D⁻¹ .^ 2, D⁻¹
-        for k in 1:maxiter
-            Xₖ₊₁ = rmul!(mul!(Xₖ₊₁, APₖ, Xₖ), Diagonal(D⁻¹ₖ))
-            if norm(Xₖ₊₁, Inf) < degeneracy_atol
-                break
-            end
-            Xₖ₊₁ .+= Xₖ
-            if k == maxiter
-                @warn "Sylvester iteration did not converge after $k iterations, final norm of X: $(norm(Xₖ₊₁, Inf)))"
-                break
-            end
-            D⁻¹ₖ₊₁ .= D⁻¹ₖ .^ 2
-            APₖ₊₁ = mul!(APₖ₊₁, APₖ, APₖ)
-            Xₖ, Xₖ₊₁ = Xₖ₊₁, Xₖ
-            APₖ, APₖ₊₁ = APₖ₊₁, APₖ
-            D⁻¹ₖ, D⁻¹ₖ₊₁ = D⁻¹ₖ₊₁, D⁻¹ₖ
-        end
-        Z .+= Xₖ
+        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), degeneracy_atol, maxiter)
+        Z .+= X
         # we cannot directly multiply Z * V' into ΔA, because we have to
         # take the Hermitian part, and cannot apply project_hermitian! to
         # the current contents of ΔA
         # TODO: add an `add_project_hermitian!`
-        # recycle AP's storage, but overwrite it: the loop leaves APₖ in that buffer
+        # recycle AP's storage, but overwrite it: `accelerative_smith_iteration!` may leave a power of AP in it
         ΔA′ = project_hermitian!(mul!(AP, Z, V'))
         ΔA .+= ΔA′
     else

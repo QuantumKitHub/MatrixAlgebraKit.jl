@@ -247,41 +247,26 @@ function svd_trunc_pullback!(
         Y₀ᴴ = iszerotangent(ΔV₊ᴴ) ? zero(Vᴴ) : ldiv!(Diagonal(S), ΔV₊ᴴ)
         US = mul!(ΔAV, U, Smat) # recycle ΔAV
         AP = mul!(copy(A), US, Vᴴ, -1, 1)
-        minS = @view S[end:end]
-        AP ./= minS
-        S⁻¹ = minS ./ S
-        X₁ = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
-        X₁ .+= X₀
-        Y₁ᴴ = lmul!(Diagonal(S⁻¹), X₀' * AP)
-        Y₁ᴴ .+= Y₀ᴴ
-        Xₖ, Xₖ₊₁ = X₁, X₀
-        Yₖᴴ, Yₖ₊₁ᴴ = Y₁ᴴ, Y₀ᴴ
-        APAᴴₖ, AᴴPAₖ = AP * AP', AP' * AP
-        APAᴴₖ₊₁, AᴴPAₖ₊₁ = zero(APAᴴₖ), zero(AᴴPAₖ)
-        S⁻¹ₖ, S⁻¹ₖ₊₁ = S⁻¹ .^ 2, S⁻¹
-        for k in 1:maxiter
-            Xₖ₊₁ = rmul!(mul!(Xₖ₊₁, APAᴴₖ, Xₖ), Diagonal(S⁻¹ₖ))
-            Yₖ₊₁ᴴ = lmul!(Diagonal(S⁻¹ₖ), mul!(Yₖ₊₁ᴴ, Yₖᴴ, AᴴPAₖ))
-            if norm(Xₖ₊₁, Inf) < degeneracy_atol && norm(Yₖ₊₁ᴴ, Inf) < degeneracy_atol
-                break
-            end
-            Xₖ₊₁ .+= Xₖ
-            Yₖ₊₁ᴴ .+= Yₖᴴ
-            if k == maxiter
-                @warn "Sylvester iteration did not converge after $k iterations, final norms of X: $(norm(Xₖ₊₁, Inf)), Yᴴ: $(norm(Yₖ₊₁ᴴ, Inf)))"
-                break
-            end
-            S⁻¹ₖ₊₁ .= S⁻¹ₖ .^ 2
-            APAᴴₖ₊₁ = mul!(APAᴴₖ₊₁, APAᴴₖ, APAᴴₖ)
-            AᴴPAₖ₊₁ = mul!(AᴴPAₖ₊₁, AᴴPAₖ, AᴴPAₖ)
-            Xₖ, Xₖ₊₁ = Xₖ₊₁, Xₖ
-            Yₖᴴ, Yₖ₊₁ᴴ = Yₖ₊₁ᴴ, Yₖᴴ
-            APAᴴₖ, APAᴴₖ₊₁ = APAᴴₖ₊₁, APAᴴₖ
-            AᴴPAₖ, AᴴPAₖ₊₁ = AᴴPAₖ₊₁, AᴴPAₖ
-            S⁻¹ₖ, S⁻¹ₖ₊₁ = S⁻¹ₖ₊₁, S⁻¹ₖ
+        S⁻¹ = inv.(S)
+        # sum the series on the smaller side only, the other side follows from
+        # Yᴴ = Y₀ᴴ + S⁻¹ X' AP (m ≤ n) or X = X₀ + AP Y S⁻¹ (m > n)
+        if m ≤ n
+            X = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
+            X .+= X₀
+            X = accelerative_smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, degeneracy_atol, maxiter) # recycle X₀
+            Yᴴ = lmul!(Diagonal(S⁻¹), X' * AP)
+            Yᴴ .+= Y₀ᴴ
+            ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
+            ΔA = mul!(ΔA, U, Yᴴ, 1, 1)
+        else
+            Y = rmul!(AP' * X₀, Diagonal(S⁻¹))
+            Y .+= Y₀ᴴ'
+            Y = accelerative_smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, degeneracy_atol, maxiter)
+            X = rmul!(AP * Y, Diagonal(S⁻¹))
+            X .+= X₀
+            ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
+            ΔA = mul!(ΔA, U, Y', 1, 1)
         end
-        ΔA = mul!(ΔA, Xₖ, Vᴴ, 1, 1)
-        ΔA = mul!(ΔA, U, Yₖᴴ, 1, 1)
     end
     return ΔA
 end
