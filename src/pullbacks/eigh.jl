@@ -36,7 +36,7 @@ function check_and_prepare_eigh_cotangents(
     if !iszerotangent(ΔDmat)
         ΔD = diagview(ΔDmat)
         k == length(ΔD) || throw(DimensionMismatch())
-        VᴴAΔV[ind′ .+ p .* (0:(k - 1))] .+= real.(ΔD) # the entries (ind′[l], l)
+        diagview(view(VᴴAΔV, ind′, :)) .+= real.(ΔD)
     else
         ΔD = nothing
     end
