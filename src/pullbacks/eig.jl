@@ -161,36 +161,19 @@ function eig_trunc_pullback!(
     Z = ViG * VᴴΔAV
 
     # add contribution from orthogonal complement
-    AP = mul!(complex.(A), V * Dmat, ViG', -1, 1)
-    X₀ = iszerotangent(ΔV₊) ? AP' * Z : mul!(ΔV₊, AP', Z, 1, 1)
+    # build the adjoint of AP directly, since that is what the series is summed with
+    APᴴ = mul!(complex.(A'), ViG, (V * Dmat)', -1, 1)
+    X₀ = iszerotangent(ΔV₊) ? APᴴ * Z : mul!(ΔV₊, APᴴ, Z, 1, 1)
     X₀ ./= D'
-    dabsmax = maximum(abs, D)
-    AP ./= dabsmax
-    D̄⁻¹ = dabsmax ./ conj.(D)
-    X₁ = rmul!(AP' * X₀, Diagonal(D̄⁻¹))
-    X₁ .+= X₀
-    Xₖ, Xₖ₊₁ = X₁, X₀
-    APₖ, APₖ₊₁ = AP * AP, AP
-    D̄⁻¹ₖ, D̄⁻¹ₖ₊₁ = D̄⁻¹ .^ 2, D̄⁻¹
-    for k in 1:maxiter
-        Xₖ₊₁ = rmul!(mul!(Xₖ₊₁, APₖ', Xₖ), Diagonal(D̄⁻¹ₖ))
-        if norm(Xₖ₊₁, Inf) < degeneracy_atol
-            break
-        end
-        Xₖ₊₁ .+= Xₖ
-        if k == maxiter
-            @warn "Sylvester iteration did not converge after $k iterations, final norm of X: $(norm(Xₖ₊₁, Inf)))"
-            break
-        end
-        D̄⁻¹ₖ₊₁ .= D̄⁻¹ₖ .^ 2
-        APₖ₊₁ = mul!(APₖ₊₁, APₖ, APₖ)
-        Xₖ, Xₖ₊₁ = Xₖ₊₁, Xₖ
-        APₖ, APₖ₊₁ = APₖ₊₁, APₖ
-        D̄⁻¹ₖ, D̄⁻¹ₖ₊₁ = D̄⁻¹ₖ₊₁, D̄⁻¹ₖ
-    end
-    Z .+= Xₖ
+    # Normalize by the smallest |eigenvalue|, which caps `max|D̄⁻¹|` at 1, so squaring can
+    # only shrink it.
+    dabsmin = minimum(abs, D)
+    APᴴ ./= dabsmin
+    D̄⁻¹ = dabsmin ./ conj.(D)
+    X = accelerative_smith_iteration!(X₀, similar(X₀), APᴴ, D̄⁻¹, degeneracy_atol, maxiter)
+    Z .+= X
     if eltype(ΔA) <: Real
-        ΔAc = mul!(AP, Z, V') # recycle AP
+        ΔAc = mul!(APᴴ, Z, V') # recycle APᴴ
         ΔA .+= real.(ΔAc)
     else
         ΔA = mul!(ΔA, Z, V', 1, 1)
