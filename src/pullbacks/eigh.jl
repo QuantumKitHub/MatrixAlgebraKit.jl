@@ -90,7 +90,7 @@ function eigh_pullback!(
     if 2 * length(ind′) <= n
         Xʳ = copy(VᴴΔAVₖ)
         Xʳ[ind′, :] .= zero(eltype(Xʳ)) # these entries are part of the columns ind′
-        Vₖ = V[:, ind′]
+        Vₖ = view(V, :, ind′)
         ΔA = mul!(ΔA, V * VᴴΔAVₖ, Vₖ', 1, 1)
         ΔA = mul!(ΔA, Vₖ, Xʳ' * V', 1, 1)
     else
