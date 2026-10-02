@@ -158,13 +158,13 @@ function eigh_trunc_pullback!(
         dabsmin = minimum(abs, D)
         AP ./= dabsmin
         D⁻¹ = dabsmin ./ D
-        X = _smith_iteration!(X₀, similar(X₀), AP, D⁻¹, degeneracy_atol, maxiter)
+        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, D⁻¹, degeneracy_atol, maxiter)
         Z .+= X
         # we cannot directly multiply Z * V' into ΔA, because we have to
         # take the Hermitian part, and cannot apply project_hermitian! to
         # the current contents of ΔA
         # TODO: add an `add_project_hermitian!`
-        # recycle AP's storage, but overwrite it: `_smith_iteration!` may leave a power of AP in it
+        # recycle AP's storage, but overwrite it: `accelerative_smith_iteration!` may leave a power of AP in it
         ΔA′ = project_hermitian!(mul!(AP, Z, V'))
         ΔA .+= ΔA′
     else

@@ -255,7 +255,7 @@ function svd_trunc_pullback!(
         if m ≤ n
             X = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
             X .+= X₀
-            X = _smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, degeneracy_atol, maxiter) # recycle X₀
+            X = accelerative_smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, degeneracy_atol, maxiter) # recycle X₀
             Yᴴ = lmul!(Diagonal(S⁻¹), X' * AP)
             Yᴴ .+= Y₀ᴴ
             ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
@@ -263,7 +263,7 @@ function svd_trunc_pullback!(
         else
             Y = rmul!(AP' * X₀, Diagonal(S⁻¹))
             Y .+= Y₀ᴴ'
-            Y = _smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, degeneracy_atol, maxiter)
+            Y = accelerative_smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, degeneracy_atol, maxiter)
             X = rmul!(AP * Y, Diagonal(S⁻¹))
             X .+= X₀
             ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
