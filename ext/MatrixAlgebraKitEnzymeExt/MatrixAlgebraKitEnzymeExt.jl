@@ -560,10 +560,7 @@ function EnzymeRules.forward(
         DV::Annotation,
         strategy::Annotation{<:TruncationStrategy},
     ) where {RT}
-    D, V = DV.val
-    ind = MatrixAlgebraKit.findtruncated(diagview(D), strategy.val)
-    Dtrunc = Diagonal(diagview(D)[ind])
-    Vtrunc = V[:, ind]
+    (Dtrunc, Vtrunc), ind = MatrixAlgebraKit.truncate(f.val, DV.val, strategy.val)
     dDtrunc = isa(DV, Const) ? nothing : Diagonal(diagview(DV.dval[1])[ind])
     dVtrunc = isa(DV, Const) ? nothing : DV.dval[2][:, ind]
     if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
@@ -585,11 +582,7 @@ function EnzymeRules.forward(
         USVᴴ::Annotation,
         strategy::Annotation{<:TruncationStrategy},
     ) where {RT}
-    U, S, Vᴴ = USVᴴ.val
-    ind = MatrixAlgebraKit.findtruncated_svd(diagview(S), strategy.val)
-    Utrunc = U[:, ind]
-    Strunc = Diagonal(diagview(S)[ind])
-    Vᴴtrunc = Vᴴ[ind, :]
+    (Utrunc, Strunc, Vᴴtrunc), ind = MatrixAlgebraKit.truncate(f.val, USVᴴ.val, strategy.val)
     dUtrunc = isa(USVᴴ, Const) ? nothing : USVᴴ.dval[1][:, ind]
     dStrunc = isa(USVᴴ, Const) ? nothing : Diagonal(diagview(USVᴴ.dval[2])[ind])
     dVᴴtrunc = isa(USVᴴ, Const) ? nothing : USVᴴ.dval[3][ind, :]
