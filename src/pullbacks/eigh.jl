@@ -6,8 +6,8 @@ function check_and_prepare_eigh_cotangents(
 
     # only the columns ind of VᴴΔV and VᴴAΔV are computed; their rows ind follow by antihermiticity
     n, p = size(V)
-    K = select_indices(axes(D, 1), ind)
-    k = length(K)
+    ind′ = select_indices(axes(D, 1), ind)
+    k = length(ind′)
     if !iszerotangent(ΔV)
         n == size(ΔV, 1) || throw(DimensionMismatch())
         k == size(ΔV, 2) || throw(DimensionMismatch())
@@ -17,13 +17,13 @@ function check_and_prepare_eigh_cotangents(
         else
             ΔV₊ = mul!(copy(ΔV), V, VᴴΔV₁, -1, 1)
         end
-        aVᴴΔV₁ = antihermitian_columns!(VᴴΔV₁, K)
+        aVᴴΔV₁ = antihermitian_columns!(VᴴΔV₁, ind′)
     else
         ΔV₊ = nothing
         aVᴴΔV₁ = zero!(similar(V, (p, k)))
     end
 
-    Dₖ = D[K]
+    Dₖ = D[ind′]
     bc = Base.broadcasted(transpose(Dₖ), D, aVᴴΔV₁) do d₁, d₂, v
         return abs(d₁ - d₂) < degeneracy_atol ? v : zero(v)
     end
@@ -38,7 +38,7 @@ function check_and_prepare_eigh_cotangents(
     if !iszerotangent(ΔDmat)
         ΔD = diagview(ΔDmat)
         k == length(ΔD) || throw(DimensionMismatch())
-        VᴴAΔV[K .+ p .* (0:(k - 1))] .+= real.(ΔD) # the entries (K[l], l)
+        VᴴAΔV[ind′ .+ p .* (0:(k - 1))] .+= real.(ΔD) # the entries (ind′[l], l)
     else
         ΔD = nothing
     end
@@ -86,22 +86,22 @@ function eigh_pullback!(
         D, V, ΔDmat, ΔV, ind; degeneracy_atol, gauge_atol
     )
 
-    # VᴴΔAV is Hermitian and nonzero only in its rows and columns K, which are VᴴΔAVₖ' and VᴴΔAVₖ.
+    # VᴴΔAV is Hermitian and nonzero only in its rows and columns ind′, which are VᴴΔAVₖ' and VᴴΔAVₖ.
     # For k ≤ n / 2, applying these two blocks directly, in O(n² k), is faster than forming VᴴΔAV.
-    K = select_indices(axes(D, 1), ind)
-    if 2 * length(K) <= n
+    ind′ = select_indices(axes(D, 1), ind)
+    if 2 * length(ind′) <= n
         Xʳ = copy(VᴴΔAVₖ)
-        Xʳ[K, :] .= zero(eltype(Xʳ)) # these entries are part of the columns K
-        Vₖ = V[:, K]
+        Xʳ[ind′, :] .= zero(eltype(Xʳ)) # these entries are part of the columns ind′
+        Vₖ = V[:, ind′]
         ΔA = mul!(ΔA, V * VᴴΔAVₖ, Vₖ', 1, 1)
         ΔA = mul!(ΔA, Vₖ, Xʳ' * V', 1, 1)
     else
-        if is_leading_index(K, n) # NOTE: all columns in order (e.g. `ind = Colon()`): the original path
+        if is_leading_index(ind′, n) # NOTE: all columns in order (e.g. `ind = Colon()`): the original path
             VᴴΔAV = VᴴΔAVₖ
         else
             VᴴΔAV = zero!(similar(VᴴΔAVₖ, (n, n)))
-            VᴴΔAV[K, :] .= VᴴΔAVₖ'
-            VᴴΔAV[:, K] .= VᴴΔAVₖ
+            VᴴΔAV[ind′, :] .= VᴴΔAVₖ'
+            VᴴΔAV[:, ind′] .= VᴴΔAVₖ
         end
         ΔA = mul!(ΔA, V * VᴴΔAV, V', 1, 1)
     end
