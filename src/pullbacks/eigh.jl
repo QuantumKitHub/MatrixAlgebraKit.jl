@@ -88,11 +88,10 @@ function eigh_pullback!(
     # For k ≤ n / 2, applying these two blocks directly, in O(n² k), is faster than forming VᴴΔAV.
     ind′ = select_indices(axes(D, 1), ind)
     if 2 * length(ind′) <= n
-        Xʳ = copy(VᴴΔAVₖ)
-        Xʳ[ind′, :] .= zero(eltype(Xʳ)) # these entries are part of the columns ind′
         Vₖ = view(V, :, ind′)
         ΔA = mul!(ΔA, V * VᴴΔAVₖ, Vₖ', 1, 1)
-        ΔA = mul!(ΔA, Vₖ, Xʳ' * V', 1, 1)
+        VᴴΔAVₖ[ind′, :] .= zero(eltype(VᴴΔAVₖ))
+        ΔA = mul!(ΔA, Vₖ, VᴴΔAVₖ' * V', 1, 1)
     else
         if is_leading_index(ind′, n) # NOTE: all columns in order (e.g. `ind = Colon()`): the original path
             VᴴΔAV = VᴴΔAVₖ
