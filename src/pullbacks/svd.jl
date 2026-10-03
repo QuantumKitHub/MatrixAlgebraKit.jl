@@ -178,10 +178,13 @@ function svd_pullback!(
 
     # UᴴΔAV is nonzero only in its rows and columns ind′, which are UᴴΔAVₖ and UᴴΔAVʳ'. For k ≤ r / 2,
     # applying these two blocks directly, in O(m n k), is faster than forming UᴴΔAV.
+    S′ = view(S, ind′)
+    U′ = view(U, :, ind′)
+    Vᴴ′ = view(Vᴴ, ind′, :) # this might be slightly confusion with adjoint
     if 2 * length(ind′) <= r
         UᴴΔAVʳ[ind′, :] .= zero(eltype(UᴴΔAVʳ)) # these entries are part of the columns ind′
-        ΔA = mul!(ΔA, U₁ * UᴴΔAVₖ, Vᴴ[ind′, :], 1, 1)
-        ΔA = mul!(ΔA, U[:, ind′], UᴴΔAVʳ' * V₁ᴴ, 1, 1)
+        ΔA = mul!(ΔA, U₁ * UᴴΔAVₖ, Vᴴ′, 1, 1)
+        ΔA = mul!(ΔA, U′, UᴴΔAVʳ' * V₁ᴴ, 1, 1)
     else
         if is_leading_index(ind′, r) # NOTE: all columns in order (e.g. `ind = Colon()`): the original path
             UᴴΔAV = UᴴΔAVₖ
@@ -195,12 +198,12 @@ function svd_pullback!(
 
     # Add the remaining contributions
     if m > r && !iszerotangent(ΔU₊) # ΔU₁ is already orthogonal to U₁
-        ΔU₊ ./= transpose(S[ind′])
-        ΔA = mul!(ΔA, ΔU₊, Vᴴ[ind′, :], 1, 1)
+        ΔU₊ ./= transpose(S′)
+        ΔA = mul!(ΔA, ΔU₊, Vᴴ′, 1, 1)
     end
     if n > r && !iszerotangent(ΔV₊ᴴ) # ΔV₁ᴴ is already orthogonal to V₁ᴴ
-        ΔV₊ᴴ .= S[ind′] .\ ΔV₊ᴴ
-        ΔA = mul!(ΔA, U[:, ind′], ΔV₊ᴴ, 1, 1)
+        ΔV₊ᴴ .= S′ .\ ΔV₊ᴴ
+        ΔA = mul!(ΔA, U′, ΔV₊ᴴ, 1, 1)
     end
     return ΔA
 end
