@@ -94,16 +94,21 @@ function test_enzyme_svd_trunc(
             trunc = truncrank(r)
             truncalg = TruncatedAlgorithm(alg, trunc)
             USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
-            test_reverse(svd_trunc_no_error, RT, (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
+            test_reverse(svd_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
             test_reverse(call_and_zero!, RT, (svd_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
+            test_forward(svd_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, fdm)
+            test_forward(call_and_zero!, RT, (svd_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, fdm)
         end
         @testset "trunctol" begin
             S = svd_vals(A, alg)
             trunc = trunctol(atol = maximum(S) / 2)
             truncalg = TruncatedAlgorithm(alg, trunc)
             USVᴴ, _, ΔUSVᴴ, ΔUSVᴴtrunc = ad_svd_trunc_setup(A, truncalg)
-            test_reverse(svd_trunc_no_error, RT, (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
+            test_reverse(svd_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
             test_reverse(call_and_zero!, RT, (svd_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔUSVᴴtrunc, fdm)
+            # use max range here to try to dodge issues when the gap between eigenvalues is close to the FD perturbation
+            test_forward(svd_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
+            test_forward(call_and_zero!, RT, (svd_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
         end
     end
 end
