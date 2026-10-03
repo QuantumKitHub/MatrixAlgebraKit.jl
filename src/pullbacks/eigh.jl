@@ -88,7 +88,7 @@ function eigh_pullback!(
     # For k ≤ n / 2, applying these two blocks directly, in O(n² k), is faster than forming VᴴΔAV.
     ind′ = select_indices(axes(D, 1), ind)
     if 2 * length(ind′) <= n
-        Vₖ = view(V, :, ind′)
+        Vₖ = V[:, ind′]
         ΔA = mul!(ΔA, V * VᴴΔAVₖ, Vₖ', 1, 1)
         VᴴΔAVₖ[ind′, :] .= zero(eltype(VᴴΔAVₖ))
         ΔA = mul!(ΔA, Vₖ, VᴴΔAVₖ' * V', 1, 1)

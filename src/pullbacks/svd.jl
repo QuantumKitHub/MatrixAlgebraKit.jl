@@ -179,8 +179,8 @@ function svd_pullback!(
     # UᴴΔAV is nonzero only in its rows and columns ind′, which are UᴴΔAVₖ and UᴴΔAVʳ'. For k ≤ r / 2,
     # applying these two blocks directly, in O(m n k), is faster than forming UᴴΔAV.
     S′ = view(S, ind′)
-    U′ = view(U, :, ind′)
-    Vᴴ′ = view(Vᴴ, ind′, :) # this might be slightly confusion with adjoint
+    U′ = U[:, ind′]
+    Vᴴ′ = Vᴴ[ind′, :] # this might be slightly confusion with adjoint
     if 2 * length(ind′) <= r
         UᴴΔAVʳ[ind′, :] .= zero(eltype(UᴴΔAVʳ)) # these entries are part of the columns ind′
         ΔA = mul!(ΔA, U₁ * UᴴΔAVₖ, Vᴴ′, 1, 1)
