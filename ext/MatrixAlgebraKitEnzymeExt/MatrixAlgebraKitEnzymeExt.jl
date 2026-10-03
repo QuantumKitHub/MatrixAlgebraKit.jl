@@ -2,7 +2,7 @@ module MatrixAlgebraKitEnzymeExt
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: copy_input, initialize_output, zero!, has_equal_storage
-using MatrixAlgebraKit: diagview, inv_safe, truncate
+using MatrixAlgebraKit: diagview, inv_safe, truncate, TruncationStrategy
 using MatrixAlgebraKit: qr_pullback!, lq_pullback!
 using MatrixAlgebraKit: qr_pushforward!, lq_pushforward!
 using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
@@ -19,7 +19,7 @@ using Enzyme.EnzymeCore: EnzymeRules
 using LinearAlgebra
 
 @inline EnzymeRules.inactive_type(::Type{Alg}) where {Alg <: MatrixAlgebraKit.AbstractAlgorithm} = true
-@inline EnzymeRules.inactive_type(::Type{TS}) where {TS <: MatrixAlgebraKit.TruncationStrategy} = true
+@inline EnzymeRules.inactive_type(::Type{TS}) where {TS <: TruncationStrategy} = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.select_algorithm), func::F, A::AbstractMatrix, alg::Alg) where {F, Alg} = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_algorithm), func::F, A::AbstractMatrix) where {F} = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.check_input), func::F, A::AbstractMatrix, alg::Alg) where {F, Alg} = true
@@ -547,6 +547,51 @@ function EnzymeRules.forward(
         return S.val
     elseif EnzymeRules.needs_shadow(config)
         return S.dval
+    else
+        return nothing
+    end
+end
+
+function EnzymeRules.forward(
+        config::EnzymeRules.FwdConfigWidth{1},
+        func::Const{typeof(truncate)},
+        ::Type{RT},
+        f::Const{<:Union{typeof(eigh_trunc!), typeof(eig_trunc!)}},
+        DV::Annotation,
+        strategy::Annotation{<:TruncationStrategy},
+    ) where {RT}
+    (Dtrunc, Vtrunc), ind = MatrixAlgebraKit.truncate(f.val, DV.val, strategy.val)
+    dDtrunc = isa(DV, Const) ? nothing : Diagonal(diagview(DV.dval[1])[ind])
+    dVtrunc = isa(DV, Const) ? nothing : DV.dval[2][:, ind]
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return Duplicated(((Dtrunc, Vtrunc), ind), ((dDtrunc, dVtrunc), make_zero(ind)))
+    elseif EnzymeRules.needs_primal(config)
+        return ((Dtrunc, Vtrunc), ind)
+    elseif EnzymeRules.needs_shadow(config)
+        return ((dDtrunc, dVtrunc), make_zero(ind))
+    else
+        return nothing
+    end
+end
+
+function EnzymeRules.forward(
+        config::EnzymeRules.FwdConfigWidth{1},
+        func::Const{typeof(truncate)},
+        ::Type{RT},
+        f::Const{typeof(svd_trunc!)},
+        USVᴴ::Annotation,
+        strategy::Annotation{<:TruncationStrategy},
+    ) where {RT}
+    (Utrunc, Strunc, Vᴴtrunc), ind = MatrixAlgebraKit.truncate(f.val, USVᴴ.val, strategy.val)
+    dUtrunc = isa(USVᴴ, Const) ? nothing : USVᴴ.dval[1][:, ind]
+    dStrunc = isa(USVᴴ, Const) ? nothing : Diagonal(diagview(USVᴴ.dval[2])[ind])
+    dVᴴtrunc = isa(USVᴴ, Const) ? nothing : USVᴴ.dval[3][ind, :]
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return Duplicated(((Utrunc, Strunc, Vᴴtrunc), ind), ((dUtrunc, dStrunc, dVᴴtrunc), make_zero(ind)))
+    elseif EnzymeRules.needs_primal(config)
+        return ((Utrunc, Strunc, Vᴴtrunc), ind)
+    elseif EnzymeRules.needs_shadow(config)
+        return ((dUtrunc, dStrunc, dVᴴtrunc), make_zero(ind))
     else
         return nothing
     end
