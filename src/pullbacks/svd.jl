@@ -223,17 +223,17 @@ function svd_trunc_pullback!(
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
-        maxiter::Int = 100 # TODO: better default, depending on expected number of steps using quadratic convergence?
+        maxiter::Int = 10 * minimum(size(ΔA)) # conjugate-gradient iterations
     )
     # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ
     m, n = size(U, 1), size(Vᴴ, 2)
     (m, n) == size(ΔA) || throw(DimensionMismatch(lazy"size of ΔA ($(size(ΔA))) does not match size of USVᴴ ($m, $n)"))
     S = diagview(Smat)
-    p = length(S)
-    p == size(U, 2) || throw(DimensionMismatch(lazy"U has $p columns but S has $(length(S)) singular values"))
-    p == size(Vᴴ, 1) || throw(DimensionMismatch(lazy"Vᴴ has $p rows but  S has $(length(S)) singular values"))
-    iszero(p) && return ΔA
+    k = length(S)
+    k == size(U, 2) || throw(DimensionMismatch(lazy"U has $k columns but S has $(length(S)) singular values"))
+    k == size(Vᴴ, 1) || throw(DimensionMismatch(lazy"Vᴴ has $k rows but  S has $(length(S)) singular values"))
+    iszero(k) && return ΔA
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
@@ -257,7 +257,12 @@ function svd_trunc_pullback!(
         if m ≤ n
             X = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
             X .+= X₀
-            X = accelerative_smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, degeneracy_atol, maxiter) # recycle X₀
+            APᴴZ = similar(X, n, k) # for applying AP AP' without forming it
+            X = hermitian_stein_cg!(
+                X, (GZ, Z) -> mul!(GZ, AP, mul!(view(APᴴZ, :, axes(Z, 2)), AP', Z)), () -> AP * AP',
+                S⁻¹ .^ 2, degeneracy_atol, maxiter;
+                cost_apply = 2 * m * n, cost_apply_formed = m^2, cost_form = m^2 * n
+            )
             Yᴴ = lmul!(Diagonal(S⁻¹), X' * AP)
             Yᴴ .+= Y₀ᴴ
             ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
@@ -265,7 +270,12 @@ function svd_trunc_pullback!(
         else
             Y = rmul!(AP' * X₀, Diagonal(S⁻¹))
             Y .+= Y₀ᴴ'
-            Y = accelerative_smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, degeneracy_atol, maxiter)
+            APZ = similar(Y, m, k) # for applying AP' AP without forming it
+            Y = hermitian_stein_cg!(
+                Y, (GZ, Z) -> mul!(GZ, AP', mul!(view(APZ, :, axes(Z, 2)), AP, Z)), () -> AP' * AP,
+                S⁻¹ .^ 2, degeneracy_atol, maxiter;
+                cost_apply = 2 * m * n, cost_apply_formed = n^2, cost_form = n^2 * m
+            )
             X = rmul!(AP * Y, Diagonal(S⁻¹))
             X .+= X₀
             ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
