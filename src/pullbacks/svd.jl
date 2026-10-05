@@ -32,10 +32,10 @@ function check_and_prepare_svd_cotangents(
             ΔU₀ = ΔU[:, J]
         elseif full_rank && indU == 1:m
             ΔU₀ = ΔU[:, ind₀]
-            U₃ = view(U, :, r+1:m)
-            ΔU₃ = ΔU[:, r+1:m]
+            U₃ = view(U, :, (r + 1):m)
+            ΔU₃ = ΔU[:, (r + 1):m]
             U₁ᴴΔU₃ = U₁' * ΔU₃ # gauge-invariant part
-            mul!(ΔU₀, U₃, U₁ᴴΔU₃',  -1, 1)
+            mul!(ΔU₀, U₃, U₁ᴴΔU₃', -1, 1)
             mul!(ΔU₃, U₁, U₁ᴴΔU₃, -1, 1)
             ΔgaugeU = max(ΔgaugeU, maximum(abs, ΔU₃; init = zero(ΔgaugeU)))
         else
@@ -57,8 +57,8 @@ function check_and_prepare_svd_cotangents(
             ΔV₀ᴴ = ΔVᴴ[J, :]
         elseif full_rank && indV == 1:n
             ΔV₀ᴴ = ΔVᴴ[ind₀, :]
-            V₃ᴴ = view(Vᴴ, r+1:n, :)
-            ΔV₃ᴴ = ΔVᴴ[r+1:n, :]
+            V₃ᴴ = view(Vᴴ, (r + 1):n, :)
+            ΔV₃ᴴ = ΔVᴴ[(r + 1):n, :]
             V₁ᴴΔV₃ = V₁ᴴ * (ΔV₃ᴴ)' # gauge-invariant part
             mul!(ΔV₀ᴴ, V₁ᴴΔV₃, V₃ᴴ, -1, 1)
             mul!(ΔV₃ᴴ, V₁ᴴΔV₃', V₁ᴴ, -1, 1)
@@ -80,7 +80,7 @@ function check_and_prepare_svd_cotangents(
     aUᴴΔAV₁₀ = (aUᴴΔU₁₀ .- aVᴴΔV₁₀) .* inv_safe.(transpose(S₀) .+ S₁, degeneracy_atol) # antihermitian part of UᴴΔAV, restricted to rows 1:r and column ind₀
 
     gaugepart = (abs.(transpose(S₀) .- S₁) .< degeneracy_atol) .* (aUᴴΔU₁₀ .+ aVᴴΔV₁₀)
-    Δgauge = max(Δgauge, maximum(abs, gaugepart;init = zero(Δgauge)))
+    Δgauge = max(Δgauge, maximum(abs, gaugepart; init = zero(Δgauge)))
 
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
