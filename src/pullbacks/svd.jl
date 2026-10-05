@@ -43,7 +43,7 @@ function check_and_prepare_svd_cotangents(
         end
         UᴴΔU₁₀ = U₁' * ΔU₀
         ΔU₊ = mul!(ΔU₀, U₁, UᴴΔU₁₀, -1, 1)
-        aUᴴΔU₁₀ = antihermitian_columns!(U₁ᴴΔU₀, ind₀)
+        aUᴴΔU₁₀ = antihermitian_columns!(UᴴΔU₁₀, ind₀)
         Δgauge = max(Δgauge, ΔgaugeU)
     else
         ΔU₊ = nothing

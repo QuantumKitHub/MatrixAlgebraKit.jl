@@ -7,7 +7,7 @@ function check_and_prepare_eigh_cotangents(
     # Only the columns ind₀ of VᴴΔV and VᴴΔAV are computed; their rows ind follow by antihermiticity
     n, p = size(V)
     ind₀ = select_indices(axes(D, 1), ind)
-    k = length(ind′)
+    k = length(ind₀)
     if !iszerotangent(ΔV)
         n == size(ΔV, 1) || throw(DimensionMismatch())
         k == size(ΔV, 2) || throw(DimensionMismatch())
@@ -17,7 +17,7 @@ function check_and_prepare_eigh_cotangents(
         else
             ΔV₊ = mul!(copy(ΔV), V, VᴴΔV₀, -1, 1)
         end
-        aVᴴΔV₀ = antihermitian_columns!(VᴴΔV₀, ind′)
+        aVᴴΔV₀ = antihermitian_columns!(VᴴΔV₀, ind₀)
     else
         ΔV₊ = nothing
         aVᴴΔV₀ = zero!(similar(V, (p, k)))
@@ -36,7 +36,7 @@ function check_and_prepare_eigh_cotangents(
     if !iszerotangent(ΔDmat)
         ΔD = diagview(ΔDmat)
         k == length(ΔD) || throw(DimensionMismatch())
-        diagview(view(VᴴAΔV₀, ind₀, :)) .+= real.(ΔD)
+        diagview(view(VᴴΔAV₀, ind₀, :)) .+= real.(ΔD)
     else
         ΔD = nothing
     end
