@@ -4,44 +4,44 @@ function check_and_prepare_eigh_cotangents(
         gauge_atol::Real = default_pullback_gauge_atol(ΔDmat, ΔV)
     )
 
-    # only the columns ind of VᴴΔV and VᴴAΔV are computed; their rows ind follow by antihermiticity
+    # Only the columns ind₀ of VᴴΔV and VᴴΔAV are computed; their rows ind follow by antihermiticity
     n, p = size(V)
-    ind′ = select_indices(axes(D, 1), ind)
+    ind₀ = select_indices(axes(D, 1), ind)
     k = length(ind′)
     if !iszerotangent(ΔV)
         n == size(ΔV, 1) || throw(DimensionMismatch())
         k == size(ΔV, 2) || throw(DimensionMismatch())
-        VᴴΔV₁ = V' * ΔV
+        VᴴΔV₀ = V' * ΔV
         if p == n
             ΔV₊ = zero(ΔV)
         else
-            ΔV₊ = mul!(copy(ΔV), V, VᴴΔV₁, -1, 1)
+            ΔV₊ = mul!(copy(ΔV), V, VᴴΔV₀, -1, 1)
         end
-        aVᴴΔV₁ = antihermitian_columns!(VᴴΔV₁, ind′)
+        aVᴴΔV₀ = antihermitian_columns!(VᴴΔV₀, ind′)
     else
         ΔV₊ = nothing
-        aVᴴΔV₁ = zero!(similar(V, (p, k)))
+        aVᴴΔV₀ = zero!(similar(V, (p, k)))
     end
 
-    Dₖ = view(D, ind′)
-    gauge_part = (abs.(transpose(Dₖ) .- D) .< degeneracy_atol) .* aVᴴΔV₁
+    D₀ = view(D, ind₀)
+    gauge_part = (abs.(transpose(D₀) .- D) .< degeneracy_atol) .* aVᴴΔV₀
     Δgauge = maximum(abs, gauge_part; init = abs(zero(eltype(D))))
 
     Δgauge ≤ gauge_atol ||
         @warn "`eigh` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-    aVᴴΔV₁ .*= inv_safe.(transpose(Dₖ) .- D, degeneracy_atol)
-    VᴴAΔV = aVᴴΔV₁
+    aVᴴΔV₀ .*= inv_safe.(transpose(D₀) .- D, degeneracy_atol)
+    VᴴΔAV₀ = aVᴴΔV₀
 
     if !iszerotangent(ΔDmat)
         ΔD = diagview(ΔDmat)
         k == length(ΔD) || throw(DimensionMismatch())
-        diagview(view(VᴴAΔV, ind′, :)) .+= real.(ΔD)
+        diagview(view(VᴴAΔV₀, ind₀, :)) .+= real.(ΔD)
     else
         ΔD = nothing
     end
 
-    return VᴴAΔV, ΔV₊
+    return VᴴΔAV₀, ΔV₊, ind₀
 end
 
 """
@@ -79,26 +79,25 @@ function eigh_pullback!(
     (n, n) == size(ΔA) || throw(DimensionMismatch())
     iszero(n) && return ΔA
 
-    ΔDmat, ΔV = ΔDV
-    VᴴΔAVₖ, = check_and_prepare_eigh_cotangents(
+    ΔDmat, ΔV, ind₀ = ΔDV
+    VᴴΔAV₀, = check_and_prepare_eigh_cotangents(
         D, V, ΔDmat, ΔV, ind; degeneracy_atol, gauge_atol
     )
 
-    # VᴴΔAV is Hermitian and nonzero only in its rows and columns ind′, which are VᴴΔAVₖ' and VᴴΔAVₖ.
-    # For k ≤ n / 2, applying these two blocks directly, in O(n² k), is faster than forming VᴴΔAV.
-    ind′ = select_indices(axes(D, 1), ind)
-    if 2 * length(ind′) <= n
-        Vₖ = V[:, ind′]
-        ΔA = mul!(ΔA, V * VᴴΔAVₖ, Vₖ', 1, 1)
-        VᴴΔAVₖ[ind′, :] .= zero(eltype(VᴴΔAVₖ))
-        ΔA = mul!(ΔA, Vₖ, VᴴΔAVₖ' * V', 1, 1)
+    # VᴴΔAV₀ is Hermitian and nonzero only in its rows and columns ind₀, which are VᴴΔAV₀' and VᴴΔAV₀.
+    # For length(ind₀) ≤ n / 2, applying these two blocks directly, in O(n² k), is faster than forming VᴴΔAV.
+    if 2 * length(ind₀) <= n
+        V₀ = V[:, ind₀]
+        ΔA = mul!(ΔA, V * VᴴΔAV₀, V₀', 1, 1)
+        VᴴΔAV₀[ind₀, :] .= zero(eltype(VᴴΔAV₀))
+        ΔA = mul!(ΔA, V₀, VᴴΔAV₀' * V', 1, 1)
     else
-        if is_leading_index(ind′, n) # NOTE: all columns in order (e.g. `ind = Colon()`): the original path
-            VᴴΔAV = VᴴΔAVₖ
+        if is_leading_index(ind₀, n) # NOTE: all columns in order (e.g. `ind = Colon()`): the original path
+            VᴴΔAV = VᴴΔAV₀
         else
-            VᴴΔAV = zero!(similar(VᴴΔAVₖ, (n, n)))
-            VᴴΔAV[ind′, :] .= VᴴΔAVₖ'
-            VᴴΔAV[:, ind′] .= VᴴΔAVₖ
+            VᴴΔAV = zero!(similar(VᴴΔAV₀, (n, n)))
+            VᴴΔAV[ind₀, :] .= VᴴΔAV₀'
+            VᴴΔAV[:, ind₀] .= VᴴΔAV₀
         end
         ΔA = mul!(ΔA, V * VᴴΔAV, V', 1, 1)
     end
