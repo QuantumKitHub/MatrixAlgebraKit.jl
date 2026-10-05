@@ -99,11 +99,9 @@ function check_and_prepare_svd_cotangents(
         aVᴴΔV₁ = zero!(similar(V₁ᴴ, (r, k)))
     end
 
-    Sₖ = S[ind′]
-    bc = Base.broadcasted(transpose(Sₖ), S₁, aUᴴΔU₁, aVᴴΔV₁) do s₁, s₂, u, v
-        return abs(s₁ - s₂) < degeneracy_atol ? u + v : zero(u) + zero(v)
-    end
-    Δgauge = max(Δgauge, maximum(abs, Base.Broadcast.instantiate(bc); init = abs(zero(eltype(S)))))
+    Sₖ = view(S, ind′)
+    gaugepart = (abs.(transpose(Sₖ) .- S₁) .< degeneracy_atol) .* (aUᴴΔU₁ .+ aVᴴΔV₁)
+    Δgauge = max(Δgauge, maximum(abs, gaugepart; init = abs(zero(eltype(S)))))
 
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
