@@ -4,7 +4,7 @@ function check_and_prepare_eigh_cotangents(
         gauge_atol::Real = default_pullback_gauge_atol(ΔDmat, ΔV)
     )
 
-    # Only the columns ind₀ of VᴴΔV and VᴴΔAV are computed; their rows ind follow by antihermiticity
+    # Only the columns ind₀ of VᴴΔV and VᴴΔAV are computed; their rows ind₀ follow by antihermiticity
     n, p = size(V)
     ind₀ = select_indices(axes(D, 1), ind)
     k = length(ind₀)
@@ -79,8 +79,8 @@ function eigh_pullback!(
     (n, n) == size(ΔA) || throw(DimensionMismatch())
     iszero(n) && return ΔA
 
-    ΔDmat, ΔV, ind₀ = ΔDV
-    VᴴΔAV₀, = check_and_prepare_eigh_cotangents(
+    ΔDmat, ΔV = ΔDV
+    VᴴΔAV₀, _, ind₀ = check_and_prepare_eigh_cotangents(
         D, V, ΔDmat, ΔV, ind; degeneracy_atol, gauge_atol
     )
 

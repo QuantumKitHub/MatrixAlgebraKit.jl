@@ -18,7 +18,7 @@ function check_and_prepare_svd_cotangents(
     Δgauge = zero(eltype(S))
 
     # Only the columns ind₀ ⊆ 1:r of UᴴΔAV are computed.
-    # By keeping its hermitian and antihermitian parts seperate, we can reconstruct the full UᴴΔAV
+    # By keeping its hermitian and antihermitian parts separate, we can reconstruct the full UᴴΔAV
     J = indS .<= r
     ind₀ = indS[J]
     k = length(ind₀)
@@ -67,7 +67,7 @@ function check_and_prepare_svd_cotangents(
             throw(ArgumentError(lazy"Unexpected selection of Vᴴ rows: indV = $indV, expected indS = $indS or 1:$n"))
         end
         VᴴΔV₁₀ = V₁ᴴ * ΔV₀ᴴ'
-        ΔV₊ᴴ = mul!(ΔV₀ᴴ, VᴴΔV₀', V₁ᴴ, -1, 1)
+        ΔV₊ᴴ = mul!(ΔV₀ᴴ, VᴴΔV₁₀', V₁ᴴ, -1, 1)
         aVᴴΔV₁₀ = antihermitian_columns!(VᴴΔV₁₀, ind₀)
         Δgauge = max(Δgauge, ΔgaugeV)
     else
@@ -76,8 +76,8 @@ function check_and_prepare_svd_cotangents(
     end
 
     S₀ = view(S, ind₀)
-    hUᴴΔAV₁₀ = (aUᴴΔU₁₀ .+ aVᴴΔV₁₀) .* inv_safe.(transpose(S₀) .- S₁, degeneracy_atol) # hermitian part of UᴴΔAV, restricted to rows 1:r and column ind₀
-    aUᴴΔAV₁₀ = (aUᴴΔU₁₀ .- aVᴴΔV₁₀) .* inv_safe.(transpose(S₀) .+ S₁, degeneracy_atol) # antihermitian part of UᴴΔAV, restricted to rows 1:r and column ind₀
+    hUᴴΔAV₁₀ = (aUᴴΔU₁₀ .+ aVᴴΔV₁₀) .* inv_safe.(transpose(S₀) .- S₁, degeneracy_atol) # hermitian part of UᴴΔAV, restricted to rows 1:r and columns ind₀
+    aUᴴΔAV₁₀ = (aUᴴΔU₁₀ .- aVᴴΔV₁₀) .* inv_safe.(transpose(S₀) .+ S₁, degeneracy_atol) # antihermitian part of UᴴΔAV, restricted to rows 1:r and columns ind₀
 
     gaugepart = (abs.(transpose(S₀) .- S₁) .< degeneracy_atol) .* (aUᴴΔU₁₀ .+ aVᴴΔV₁₀)
     Δgauge = max(Δgauge, maximum(abs, gaugepart; init = zero(Δgauge)))
@@ -93,7 +93,7 @@ function check_and_prepare_svd_cotangents(
     Δgauge ≤ gauge_atol ||
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
 
-    return hUᴴΔAV₁₀, aUᴴΔU₁₀, ΔU₊, ΔV₊ᴴ, ind₀
+    return hUᴴΔAV₁₀, aUᴴΔAV₁₀, ΔU₊, ΔV₊ᴴ, ind₀
 end
 
 """
@@ -139,27 +139,28 @@ function svd_pullback!(
     S₁ = view(S, 1:r)
 
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    hUᴴΔAV₁₀, aUᴴΔU₁₀, ΔU₊, ΔV₊ᴴ, ind₀ = check_and_prepare_svd_cotangents(
+    hUᴴΔAV₁₀, aUᴴΔAV₁₀, ΔU₊, ΔV₊ᴴ, ind₀ = check_and_prepare_svd_cotangents(
         U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
     )
 
-    # UᴴΔAV is nonzero only in its rows and columns ind′, which are UᴴΔAVₖ and UᴴΔAVʳ'. For k ≤ r / 2,
-    # applying these two blocks directly, in O(m n k), is faster than forming UᴴΔAV.
+    # UᴴΔAV is nonzero only in its columns ind₀, which are hUᴴΔAV₁₀ + aUᴴΔAV₁₀, and its rows ind₀,
+    # which are hUᴴΔAV₁₀' - aUᴴΔAV₁₀'. For k ≤ r / 2, applying these two blocks directly, in O(m n k),
+    # is faster than forming UᴴΔAV.
     S₀ = view(S, ind₀)
     U₀ = U[:, ind₀]
     V₀ᴴ = Vᴴ[ind₀, :]
     if 2 * length(ind₀) <= r
-        ΔA = mul!(ΔA, U₁ * (hUᴴΔAV₁₀ + aUᴴΔU₁₀), V₀ᴴ, 1, 1)
+        ΔA = mul!(ΔA, U₁ * (hUᴴΔAV₁₀ + aUᴴΔAV₁₀), V₀ᴴ, 1, 1)
         hUᴴΔAV₁₀[ind₀, :] .= zero(eltype(hUᴴΔAV₁₀))
-        aUᴴΔU₁₀[ind₀, :] .= zero(eltype(aUᴴΔU₁₀))
-        ΔA = mul!(ΔA, U₀, (hUᴴΔAV₁₀' - aUᴴΔU₁₀') * V₁ᴴ, 1, 1)
+        aUᴴΔAV₁₀[ind₀, :] .= zero(eltype(aUᴴΔAV₁₀))
+        ΔA = mul!(ΔA, U₀, (hUᴴΔAV₁₀' - aUᴴΔAV₁₀') * V₁ᴴ, 1, 1)
     else
         if is_leading_index(ind₀, r) # NOTE: all columns in order (e.g. `ind = Colon()`): the original path
-            UᴴΔAV = hUᴴΔAV₁₀ + aUᴴΔU₁₀
+            UᴴΔAV = hUᴴΔAV₁₀ + aUᴴΔAV₁₀
         else
             UᴴΔAV = zero!(similar(hUᴴΔAV₁₀, (r, r)))
-            UᴴΔAV[ind₀, :] .= hUᴴΔAV₁₀' .- aUᴴΔU₁₀'
-            UᴴΔAV[:, ind₀] .= hUᴴΔAV₁₀' .+ aUᴴΔU₁₀'
+            UᴴΔAV[ind₀, :] .= hUᴴΔAV₁₀' .- aUᴴΔAV₁₀'
+            UᴴΔAV[:, ind₀] .= hUᴴΔAV₁₀ .+ aUᴴΔAV₁₀
         end
         ΔA = mul!(ΔA, U₁, UᴴΔAV * V₁ᴴ, 1, 1) # add the contribution to ΔA
     end
@@ -232,10 +233,10 @@ function svd_trunc_pullback!(
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
-    hUᴴΔAV, aUᴴΔU, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
+    hUᴴΔAV, aUᴴΔAV, ΔU₊, ΔV₊ᴴ = check_and_prepare_svd_cotangents(
         U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, p; degeneracy_atol, gauge_atol
     )
-    UᴴΔAV = hUᴴΔAV .+ aUᴴΔU
+    UᴴΔAV = hUᴴΔAV .+ aUᴴΔAV
     ΔAV = U * UᴴΔAV
     ΔA = mul!(ΔA, ΔAV, Vᴴ, 1, 1) # add the contribution to ΔA
 
