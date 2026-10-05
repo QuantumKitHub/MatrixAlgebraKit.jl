@@ -17,13 +17,15 @@ function check_and_prepare_svd_cotangents(
     indS = axes(S, 1)[ind]
     Δgauge = zero(eltype(S))
 
-    # Only the columns ind′ ⊆ 1:r of UᴴΔAV are computed, its rows ind′ follow by antihermiticity. These
-    # are the columns of the cotangents within the rank, or all of 1:r in the full rank case
-    # if there are cotangents beyond it, since those have components along all of U₁ or V₁ᴴ.
+    # Only the columns ind′ ⊆ 1:r of UᴴΔAV are computed, its rows ind′ follow by antihermiticity.
+    # j₁ are the positions in indS of the cotangents within the rank, which need the columns
+    # indS[j₁]. If the rank is full and there are cotangents beyond it (`fold`), those have
+    # components along all of U₁ or V₁ᴴ, which are folded into all columns 1:r of UᴴΔAV.
     j₁ = all(<=(r), indS) ? eachindex(indS) : findall(<=(r), indS)
     fold = r == minmn && max(length(indU), length(indV)) > length(j₁)
     ind′ = fold ? (1:r) : indS[j₁]
-    l₁ = fold ? indS[j₁] : eachindex(j₁) # columns of the cotangents j₁ among ind′
+    # positions of the cotangents j₁ among the columns ind′, i.e. ind′[l₁] == indS[j₁]
+    l₁ = fold ? indS[j₁] : eachindex(ind′)
     k = length(ind′)
 
     if !iszerotangent(ΔU)
