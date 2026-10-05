@@ -19,8 +19,9 @@ function check_and_prepare_svd_cotangents(
 
     # Only the columns ind₀ ⊆ 1:r of UᴴΔAV are computed.
     # By keeping its hermitian and antihermitian parts separate, we can reconstruct the full UᴴΔAV
-    J = indS .<= r
-    ind₀ = indS[J]
+    J₁ = findall(<=(r), indS)
+    J₂ = findall(>(r), indS)
+    ind₀ = indS[J₁]
     k = length(ind₀)
     full_rank = (ind₀ == 1:minmn)
 
@@ -29,11 +30,13 @@ function check_and_prepare_svd_cotangents(
         m == size(ΔU, 1) || throw(DimensionMismatch(lazy"first dimension of ΔU ($(size(ΔU, 1))) does not match first dimension of U ($m)"))
         length(indU) == size(ΔU, 2) || throw(DimensionMismatch(lazy"length of selected U columns ($(length(indU))) does not match second dimension of ΔU ($(size(ΔU, 2)))"))
         if indU == indS
-            ΔU₀ = ΔU[:, J]
+            ΔU₀ = ΔU[:, J₁]
+            ΔgaugeU = max(ΔgaugeU, maximum(abs, view(ΔU, :, J₂); init = zero(ΔgaugeU)))
         elseif full_rank && indU == 1:m
             ΔU₀ = ΔU[:, ind₀]
-            U₃ = view(U, :, (r + 1):m)
-            ΔU₃ = ΔU[:, (r + 1):m]
+            J₃ = (r + 1):m
+            U₃ = view(U, :, J₃)
+            ΔU₃ = ΔU[:, J₃]
             U₁ᴴΔU₃ = U₁' * ΔU₃ # gauge-invariant part
             mul!(ΔU₀, U₃, U₁ᴴΔU₃', -1, 1)
             mul!(ΔU₃, U₁, U₁ᴴΔU₃, -1, 1)
@@ -54,11 +57,13 @@ function check_and_prepare_svd_cotangents(
         n == size(ΔVᴴ, 2) || throw(DimensionMismatch(lazy"second dimension of ΔVᴴ ($(size(ΔVᴴ, 2))) does not match second dimension of Vᴴ ($n)"))
         length(indV) == size(ΔVᴴ, 1) || throw(DimensionMismatch(lazy"length of selected Vᴴ rows ($(length(indV))) does not match first dimension of ΔVᴴ ($(size(ΔVᴴ, 1)))"))
         if indV == indS
-            ΔV₀ᴴ = ΔVᴴ[J, :]
+            ΔV₀ᴴ = ΔVᴴ[J₁, :]
+            ΔgaugeV = max(ΔgaugeV, maximum(abs, view(ΔVᴴ, J₂, :); init = zero(ΔgaugeV)))
         elseif full_rank && indV == 1:n
             ΔV₀ᴴ = ΔVᴴ[ind₀, :]
-            V₃ᴴ = view(Vᴴ, (r + 1):n, :)
-            ΔV₃ᴴ = ΔVᴴ[(r + 1):n, :]
+            J₃ = (r + 1):n
+            V₃ᴴ = view(Vᴴ, J₃, :)
+            ΔV₃ᴴ = ΔVᴴ[J₃, :]
             V₁ᴴΔV₃ = V₁ᴴ * (ΔV₃ᴴ)' # gauge-invariant part
             mul!(ΔV₀ᴴ, V₁ᴴΔV₃, V₃ᴴ, -1, 1)
             mul!(ΔV₃ᴴ, V₁ᴴΔV₃', V₁ᴴ, -1, 1)
@@ -86,8 +91,7 @@ function check_and_prepare_svd_cotangents(
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
         diagview(view(hUᴴΔAV₁₀, ind₀, :)) .+= real.(view(ΔS, J)) # the diagonal entries
-        badΔS = view(ΔS, map(!, J))
-        Δgauge = max(Δgauge, maximum(abs, badΔS; init = zero(Δgauge)))
+        Δgauge = max(Δgauge, maximum(abs, view(ΔS, J₂); init = zero(Δgauge)))
     end
 
     Δgauge ≤ gauge_atol ||
@@ -134,21 +138,21 @@ function svd_pullback!(
     r = svd_rank(S; rank_atol)
     iszero(r) && return ΔA
 
-    U₁ = view(U, :, 1:r)
-    V₁ᴴ = view(Vᴴ, 1:r, :)
-    S₁ = view(S, 1:r)
-
+    # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
     hUᴴΔAV₁₀, aUᴴΔAV₁₀, ΔU₊, ΔV₊ᴴ, ind₀ = check_and_prepare_svd_cotangents(
         U, S, Vᴴ, ΔU, ΔSmat, ΔVᴴ, r, ind; degeneracy_atol, gauge_atol
     )
 
+    U₀ = U[:, ind₀] # ind₀ is not necessarily a range
+    U₁ = view(U, :, 1:r)
+    V₀ᴴ = Vᴴ[ind₀, :]
+    V₁ᴴ = view(Vᴴ, 1:r, :)
+    S₀ = view(S, ind₀)
+
     # UᴴΔAV is nonzero only in its columns ind₀, which are hUᴴΔAV₁₀ + aUᴴΔAV₁₀, and its rows ind₀,
     # which are hUᴴΔAV₁₀' - aUᴴΔAV₁₀'. For k ≤ r / 2, applying these two blocks directly, in O(m n k),
     # is faster than forming UᴴΔAV.
-    S₀ = view(S, ind₀)
-    U₀ = U[:, ind₀]
-    V₀ᴴ = Vᴴ[ind₀, :]
     if 2 * length(ind₀) <= r
         ΔA = mul!(ΔA, U₁ * (hUᴴΔAV₁₀ + aUᴴΔAV₁₀), V₀ᴴ, 1, 1)
         hUᴴΔAV₁₀[ind₀, :] .= zero(eltype(hUᴴΔAV₁₀))
@@ -176,6 +180,7 @@ function svd_pullback!(
     end
     return ΔA
 end
+
 # Diagonal: do not specialize on `A`, since we may insert `A = nothing` to assert independence of `A` in the implementation
 function svd_pullback!(
         ΔA::Diagonal, A, USVᴴ, ΔUSVᴴ, ind = Colon();
