@@ -90,8 +90,8 @@ function check_and_prepare_svd_cotangents(
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
-        hUᴴΔAV₁₀[ind₀ .+ r .* (0:length(ind₀)-1)] .+= real.(view(ΔS, J₁)) # diagonal entries
-        Δgauge = max(Δgauge, maximum(abs, view(ΔS, J₂); init = zero(Δgauge)))
+        hUᴴΔAV₁₀[ind₀ .+ r .* (0:(length(ind₀) - 1))] .+= real.(ΔS[J₁]) # diagonal entries
+        Δgauge = max(Δgauge, maximum(abs, ΔS[J₂]; init = zero(Δgauge)))
     end
 
     Δgauge ≤ gauge_atol ||
@@ -148,7 +148,7 @@ function svd_pullback!(
     U₁ = view(U, :, 1:r)
     V₀ᴴ = Vᴴ[ind₀, :]
     V₁ᴴ = view(Vᴴ, 1:r, :)
-    S₀ = view(S, ind₀)
+    S₀ = S[ind₀]
 
     # UᴴΔAV is nonzero only in its columns ind₀, which are hUᴴΔAV₁₀ + aUᴴΔAV₁₀, and its rows ind₀,
     # which are hUᴴΔAV₁₀' - aUᴴΔAV₁₀'. For k ≤ r / 2, applying these two blocks directly, in O(m n k),
