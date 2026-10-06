@@ -510,22 +510,34 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
 end
 
 for (jname, bname, fname, elty, relty) in
-    ((:heevj_batched!, :cusolverDnSsyevjBatched_bufferSize, :cusolverDnSsyevjBatched,
-      :Float32, :Float32),
-     (:heevj_batched!, :cusolverDnDsyevjBatched_bufferSize, :cusolverDnDsyevjBatched,
-      :Float64, :Float64),
-     (:heevj_batched!, :cusolverDnCheevjBatched_bufferSize, :cusolverDnCheevjBatched,
-      :ComplexF32, :Float32),
-     (:heevj_batched!, :cusolverDnZheevjBatched_bufferSize, :cusolverDnZheevjBatched,
-      :ComplexF64, :Float64))
+    (
+        (
+            :heevj_batched!, :cusolverDnSsyevjBatched_bufferSize, :cusolverDnSsyevjBatched,
+            :Float32, :Float32,
+        ),
+        (
+            :heevj_batched!, :cusolverDnDsyevjBatched_bufferSize, :cusolverDnDsyevjBatched,
+            :Float64, :Float64,
+        ),
+        (
+            :heevj_batched!, :cusolverDnCheevjBatched_bufferSize, :cusolverDnCheevjBatched,
+            :ComplexF32, :Float32,
+        ),
+        (
+            :heevj_batched!, :cusolverDnZheevjBatched_bufferSize, :cusolverDnZheevjBatched,
+            :ComplexF64, :Float64,
+        ),
+    )
     @eval begin
-        function $jname(A::StridedCuArray{$elty, 3},
-                        W::StridedCuMatrix{$relty} = CuMatrix{$relty}(undef, size(A, 2), size(A, 3)),
-                        V::StridedCuArray{$elty, 3} = CuArray{$elty, 3}(undef, size(A)...);
-                        check::Bool = CHECK_LIBRARY_CALLS[],
-                        uplo::Char = 'U',
-                        tol::$relty=eps($relty),
-                        max_sweeps::Int=100)
+        function $jname(
+                A::StridedCuArray{$elty, 3},
+                W::StridedCuMatrix{$relty} = CuMatrix{$relty}(undef, size(A, 2), size(A, 3)),
+                V::StridedCuArray{$elty, 3} = CuArray{$elty, 3}(undef, size(A)...);
+                check::Bool = CHECK_LIBRARY_CALLS[],
+                uplo::Char = 'U',
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100
+            )
             # Set up information for the solver arguments
             chkuplo(uplo)
             m, n, batch_size = size(A)
@@ -558,8 +570,10 @@ for (jname, bname, fname, elty, relty) in
 
             # Run the solver
             with_workspace(dh.workspace_gpu, bufferSize) do buffer
-                return cuSOLVER.$fname(dh, jobz, uplo, n, A, lda, W, buffer,
-                                       sizeof(buffer) ÷ sizeof($elty), dh.info, params[], batch_size)
+                return cuSOLVER.$fname(
+                    dh, jobz, uplo, n, A, lda, W, buffer,
+                    sizeof(buffer) ÷ sizeof($elty), dh.info, params[], batch_size
+                )
             end
 
             if check
@@ -583,13 +597,14 @@ for (jname, bname, fname, elty, relty) in
         end
     end
 end
-        
-function heev_batched!(A::StridedCuArray{T, 3},
-                       W::StridedCuMatrix{Tr} = CuMatrix{Tr}(undef, size(A, 2), size(A, 3)),
-                       V::StridedCuArray{T, 3} = CuArray{T, 3}(undef, size(A)...);
-                       check::Bool = CHECK_LIBRARY_CALLS[],
-                       uplo::Char = 'U',
-                      ) where {T <: BlasFloat, Tr <: BlasReal}
+
+function heev_batched!(
+        A::StridedCuArray{T, 3},
+        W::StridedCuMatrix{Tr} = CuMatrix{Tr}(undef, size(A, 2), size(A, 3)),
+        V::StridedCuArray{T, 3} = CuArray{T, 3}(undef, size(A)...);
+        check::Bool = CHECK_LIBRARY_CALLS[],
+        uplo::Char = 'U',
+    ) where {T <: BlasFloat, Tr <: BlasReal}
     # Set up information for the solver arguments
     chkuplo(uplo)
     m, n, batch_size = size(A)
@@ -612,8 +627,10 @@ function heev_batched!(A::StridedCuArray{T, 3},
     function bufferSize()
         out_cpu = Ref{Csize_t}(0)
         out_gpu = Ref{Csize_t}(0)
-        cuSOLVER.cusolverDnXsyevBatched_bufferSize(dh, params, jobz, uplo, n, T, A, lda,
-                                          Tr, W, T, out_gpu, out_cpu, batch_size)
+        cuSOLVER.cusolverDnXsyevBatched_bufferSize(
+            dh, params, jobz, uplo, n, T, A, lda,
+            Tr, W, T, out_gpu, out_cpu, batch_size
+        )
         return out_gpu[], out_cpu[]
     end
 
@@ -622,9 +639,11 @@ function heev_batched!(A::StridedCuArray{T, 3},
         dh.workspace_gpu, dh.workspace_cpu,
         bufferSize()...
     ) do buffer_gpu, buffer_cpu
-        return cuSOLVER.cusolverDnXsyevBatched(dh, jobz, uplo, n, T, A, lda, Tr, W, T,
-                                               buffer_gpu, sizeof(buffer_gpu), buffer_cpu,
-                                               sizeof(buffer_cpu), dh.info, batch_size)
+        return cuSOLVER.cusolverDnXsyevBatched(
+            dh, jobz, uplo, n, T, A, lda, Tr, W, T,
+            buffer_gpu, sizeof(buffer_gpu), buffer_cpu,
+            sizeof(buffer_cpu), dh.info, batch_size
+        )
     end
 
     if check
