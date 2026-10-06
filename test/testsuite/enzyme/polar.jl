@@ -19,7 +19,7 @@ Only runs for tall or square matrices (`m >= n`).
 """
 function test_enzyme_left_polar(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "left_polar: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)
@@ -44,7 +44,7 @@ Only runs for wide or square matrices (`m <= n`).
 """
 function test_enzyme_right_polar(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "right_polar: RT $RT, TA $TA" for RT in (Duplicated,), TA in (Duplicated,)
         A = instantiate_matrix(T, sz)

@@ -60,6 +60,57 @@ test in-place Hermitian eigendecomposition rules via Mooncake's non-primitive AD
 eigh!_wrapper(f!, A, alg) = (F = f!(project_hermitian!(A), alg); MatrixAlgebraKit.zero!(A); F)
 
 """
+    eig_vals_wrapper(f, A, alg)
+
+Wrapper that sorts the eigenvalues returned by `f(A, alg)` by modulus and then by imaginary part.
+LAPACK's ordering of the eigenvalues can change discontinuously under small perturbations of
+`A`, which breaks finite-difference checks. The ordering imposed here is smooth for matrices
+built with `make_eig_matrix`, whose eigenvalues have distinct moduli up to conjugate pairs.
+"""
+eig_vals_wrapper(f, A, alg) = sort_eigvals(f(A, alg))
+
+"""
+    eig_vals!_wrapper(f!, A, alg)
+
+In-place variant of [`eig_vals_wrapper`](@ref), which zeros `A` after calling `f!`.
+"""
+eig_vals!_wrapper(f!, A, alg) = sort_eigvals(call_and_zero!(f!, A, alg))
+
+"""
+    eig_trunc_wrapper(f, A, alg)
+
+Wrapper that sorts the eigenpairs returned by `f(A, alg)` (`(D, V)` or `(D, V, ϵ)`) by
+modulus and then by imaginary part of the eigenvalues. Truncation by value keeps the retained
+eigenpairs in LAPACK's ordering, which can change discontinuously under small perturbations
+of `A` and breaks finite-difference checks; see [`eig_vals_wrapper`](@ref).
+"""
+eig_trunc_wrapper(f, A, alg) = sort_eig_trunc(f(A, alg))
+
+"""
+    eig_trunc!_wrapper(f!, A, alg)
+
+In-place variant of [`eig_trunc_wrapper`](@ref), which zeros `A` after calling `f!`.
+"""
+eig_trunc!_wrapper(f!, A, alg) = sort_eig_trunc(call_and_zero!(f!, A, alg))
+
+# sortperm is used here because Mooncake CAN differentiate that on CUDA,
+# but CANNOT differentiate sort
+eigvals_sortperm(D) = sortperm(collect(D); by = λ -> (abs(λ), imag(λ)))
+sort_eigvals(D) = D[eigvals_sortperm(D)]
+
+# reorder `(D, V, rest...)` (or its tangent) by the permutation `p` of the eigenvalues
+permute_eigpairs(DV, p) = (Diagonal(diagview(DV[1])[p]), permute_columns(DV[2], p), Base.tail(Base.tail(DV))...)
+
+# equivalent to `V[:, p]`, but written with linear indexing because Mooncake CAN differentiate
+# that on CUDA, but CANNOT differentiate `V[:, p]`
+function permute_columns(V, p)
+    m = size(V, 1)
+    lin = vec((1:m) .+ m .* (p' .- 1))
+    return reshape(vec(V)[lin], m, length(p))
+end
+sort_eig_trunc(DV) = permute_eigpairs(DV, eigvals_sortperm(diagview(DV[1])))
+
+"""
     qr_gauge_invariant_wrapper(f, A, alg, r)
 
 Wrapper that calls `Q, R = f(A, alg)` and returns only the parts of the decomposition that
@@ -149,11 +200,27 @@ function stabilize_eigvals!(D::AbstractVector)
     n = maximum(p)
     # rescale eigenvalues so that they lie on distinct radii in the complex plane
     # that are chosen randomly in non-overlapping intervals [10 * k/n, 10 * (k+0.5)/n)] for k=1,...,n
-    radii = 10 .* ((1:n) .+ rand(real(eltype(D)), n) ./ 2) ./ n
+    radii = 10 .* ((1:n) .+ rand(rng, real(eltype(D)), n) ./ 2) ./ n
     hD = sign.(collect(D)) .* radii[p]
     copyto!(D, hD)
     return D
 end
+"""
+    midgap_tol(vals)
+
+Return a truncation tolerance halfway across the widest gap between consecutive values of
+`abs.(vals)`, restricted to the middle half so that truncation keeps a nontrivial subset.
+This keeps the number of retained values fixed under the perturbations used by
+finite-difference checks.
+"""
+function midgap_tol(vals)
+    s = sort!(collect(abs.(vals)))
+    n = length(s)
+    gaps = (max(1, n ÷ 4)):(min(n - 1, (3n) ÷ 4))
+    _, i = findmax(i -> s[i + 1] - s[i], gaps)
+    return (s[gaps[i]] + s[gaps[i] + 1]) / 2
+end
+
 function make_eig_matrix(T, sz)
     A = instantiate_matrix(T, sz)
     D, V = eig_full(A)

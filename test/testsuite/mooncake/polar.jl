@@ -19,7 +19,7 @@ Only runs for tall or square matrices (`m >= n`).
 """
 function test_mooncake_left_polar(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "left_polar" begin
         A = instantiate_matrix(T, sz)
@@ -48,7 +48,7 @@ Only runs for wide or square matrices (`m <= n`).
 """
 function test_mooncake_right_polar(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "right_polar" begin
         A = instantiate_matrix(T, sz)

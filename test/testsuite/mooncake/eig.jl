@@ -19,7 +19,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `eig_full` and its in-pl
 """
 function test_mooncake_eig_full(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eig_full" begin
         A = make_eig_matrix(T, sz)
@@ -65,7 +65,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `eig_vals` and its in-pl
 """
 function test_mooncake_eig_vals(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eig_vals" begin
         A = make_eig_matrix(T, sz)
@@ -74,8 +74,8 @@ function test_mooncake_eig_vals(
         output_tangent = Mooncake.randn_tangent(rng, D)
 
         Mooncake.TestUtils.test_rule(
-            rng, eig_vals, A, alg;
-            output_tangent, atol, rtol
+            rng, eig_vals_wrapper, eig_vals, A, alg;
+            output_tangent, atol, rtol, is_primitive = false
         )
         if A isa Diagonal{<:Complex}
             A2 = copy(A)
@@ -90,7 +90,7 @@ function test_mooncake_eig_vals(
             )
         end
         Mooncake.TestUtils.test_rule(
-            rng, call_and_zero!, eig_vals!, A, alg;
+            rng, eig_vals!_wrapper, eig_vals!, A, alg;
             output_tangent, atol, rtol, is_primitive = false
         )
     end
@@ -104,7 +104,7 @@ in-place variants, over a range of truncation ranks and a tolerance-based trunca
 """
 function test_mooncake_eig_trunc(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "eig_trunc" begin
         A = make_eig_matrix(T, sz)
@@ -144,18 +144,22 @@ function test_mooncake_eig_trunc(
 
         @testset "trunctol" begin
             D = eig_vals(A)
-            trunc = trunctol(atol = maximum(abs, D) / 2; by = abs)
+            trunc = trunctol(atol = midgap_tol(D); by = abs)
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
             DV, DVtrunc, ΔDV_arrays, ΔDVtrunc_arrays = ad_eig_trunc_setup(A, alg_trunc)
+            # trunctol keeps LAPACK's eigenvalue ordering, so sort the outputs (and the tangent)
+            p = eigvals_sortperm(diagview(DVtrunc[1]))
+            DVtrunc = permute_eigpairs(DVtrunc, p)
+            ΔDVtrunc_arrays = permute_eigpairs(ΔDVtrunc_arrays, p)
             ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(
-                rng, eig_trunc_no_error, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol
+                rng, eig_trunc_wrapper, eig_trunc_no_error, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol, is_primitive = false
             )
             Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, eig_trunc_no_error!, A, alg_trunc;
+                rng, eig_trunc!_wrapper, eig_trunc_no_error!, A, alg_trunc;
                 mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol, is_primitive = false
             )
 
@@ -164,11 +168,11 @@ function test_mooncake_eig_trunc(
             ΔDVϵtrunc = (ΔDVtrunc..., Δϵ)
 
             Mooncake.TestUtils.test_rule(
-                rng, eig_trunc, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol
+                rng, eig_trunc_wrapper, eig_trunc, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol, is_primitive = false
             )
             Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, eig_trunc!, A, alg_trunc;
+                rng, eig_trunc!_wrapper, eig_trunc!, A, alg_trunc;
                 mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol, is_primitive = false
             )
         end

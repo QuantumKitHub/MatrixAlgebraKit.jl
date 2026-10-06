@@ -20,7 +20,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `svd_compact` and its in
 """
 function test_mooncake_svd_compact(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "svd_compact" begin
         A = instantiate_matrix(T, sz)
@@ -47,7 +47,7 @@ gauge-dependent extra columns of `U` and rows of `Vᴴ` are zeroed out in the co
 """
 function test_mooncake_svd_full(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "svd_full" begin
         A = instantiate_matrix(T, sz)
@@ -75,7 +75,7 @@ Test the Mooncake forward- and reverse-mode AD rule for `svd_vals` and its in-pl
 """
 function test_mooncake_svd_vals(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "svd_vals" begin
         A = instantiate_matrix(T, sz)
@@ -102,7 +102,7 @@ in-place variants, over a range of truncation ranks and a tolerance-based trunca
 """
 function test_mooncake_svd_trunc(
         T, sz;
-        rng = Random.default_rng(), atol::Real = 0, rtol::Real = precision(T)
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
     )
     return @testset "svd_trunc" begin
         A = instantiate_matrix(T, sz)
@@ -143,7 +143,7 @@ function test_mooncake_svd_trunc(
 
         @testset "trunctol" begin
             S = svd_vals(A)
-            trunc = trunctol(atol = maximum(S) / 2)
+            trunc = trunctol(atol = midgap_tol(S))
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
             USVᴴ, USVᴴtrunc, ΔUSVᴴ_arrays, ΔUSVᴴtrunc_arrays = ad_svd_trunc_setup(A, alg_trunc)
