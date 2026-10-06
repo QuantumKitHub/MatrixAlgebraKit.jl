@@ -20,6 +20,8 @@ export svd_compact, svd_full, svd_vals, svd_trunc, svd_trunc_no_error
 export svd_compact!, svd_full!, svd_vals!, svd_trunc!, svd_trunc_no_error!
 export batched_svd_compact, batched_svd_full, batched_svd_vals
 export batched_svd_compact!, batched_svd_full!, batched_svd_vals!
+export batched_eigh_full, batched_eigh_vals
+export batched_eigh_full!, batched_eigh_vals!
 export eigh_full, eigh_vals, eigh_trunc, eigh_trunc_no_error
 export eigh_full!, eigh_vals!, eigh_trunc!, eigh_trunc_no_error!
 export eig_full, eig_vals, eig_trunc, eig_trunc_no_error
@@ -114,6 +116,7 @@ include("interface/svd.jl")
 include("interface/batched_svd.jl")
 include("interface/eig.jl")
 include("interface/eigh.jl")
+include("interface/batched_eigh.jl")
 include("interface/gen_eig.jl")
 include("interface/schur.jl")
 include("interface/polar.jl")
@@ -128,6 +131,7 @@ include("implementations/svd.jl")
 include("implementations/batched_svd.jl")
 include("implementations/eig.jl")
 include("implementations/eigh.jl")
+include("implementations/batched_eigh.jl")
 include("implementations/gen_eig.jl")
 include("implementations/schur.jl")
 include("implementations/polar.jl")
