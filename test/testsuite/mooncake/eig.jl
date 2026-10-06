@@ -148,14 +148,18 @@ function test_mooncake_eig_trunc(
             alg_trunc = TruncatedAlgorithm(alg, trunc)
 
             DV, DVtrunc, ΔDV_arrays, ΔDVtrunc_arrays = ad_eig_trunc_setup(A, alg_trunc)
+            # trunctol keeps LAPACK's eigenvalue ordering, so sort the outputs (and the tangent)
+            p = eigvals_sortperm(diagview(DVtrunc[1]))
+            DVtrunc = permute_eigpairs(DVtrunc, p)
+            ΔDVtrunc_arrays = permute_eigpairs(ΔDVtrunc_arrays, p)
             ΔDVtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(DVtrunc), ΔDVtrunc_arrays)
 
             Mooncake.TestUtils.test_rule(
-                rng, eig_trunc_no_error, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol
+                rng, eig_trunc_wrapper, eig_trunc_no_error, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol, is_primitive = false
             )
             Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, eig_trunc_no_error!, A, alg_trunc;
+                rng, eig_trunc!_wrapper, eig_trunc_no_error!, A, alg_trunc;
                 mode = Mooncake.ReverseMode, output_tangent = ΔDVtrunc, atol, rtol, is_primitive = false
             )
 
@@ -164,11 +168,11 @@ function test_mooncake_eig_trunc(
             ΔDVϵtrunc = (ΔDVtrunc..., Δϵ)
 
             Mooncake.TestUtils.test_rule(
-                rng, eig_trunc, A, alg_trunc;
-                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol
+                rng, eig_trunc_wrapper, eig_trunc, A, alg_trunc;
+                mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol, is_primitive = false
             )
             Mooncake.TestUtils.test_rule(
-                rng, call_and_zero!, eig_trunc!, A, alg_trunc;
+                rng, eig_trunc!_wrapper, eig_trunc!, A, alg_trunc;
                 mode = Mooncake.ReverseMode, output_tangent = ΔDVϵtrunc, atol, rtol, is_primitive = false
             )
         end

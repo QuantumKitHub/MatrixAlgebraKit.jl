@@ -76,9 +76,31 @@ In-place variant of [`eig_vals_wrapper`](@ref), which zeros `A` after calling `f
 """
 eig_vals!_wrapper(f!, A, alg) = sort_eigvals(call_and_zero!(f!, A, alg))
 
+"""
+    eig_trunc_wrapper(f, A, alg)
+
+Wrapper that sorts the eigenpairs returned by `f(A, alg)` (`(D, V)` or `(D, V, ϵ)`) by
+modulus and then by imaginary part of the eigenvalues. Truncation by value keeps the retained
+eigenpairs in LAPACK's ordering, which can change discontinuously under small perturbations
+of `A` and breaks finite-difference checks; see [`eig_vals_wrapper`](@ref).
+"""
+eig_trunc_wrapper(f, A, alg) = sort_eig_trunc(f(A, alg))
+
+"""
+    eig_trunc!_wrapper(f!, A, alg)
+
+In-place variant of [`eig_trunc_wrapper`](@ref), which zeros `A` after calling `f!`.
+"""
+eig_trunc!_wrapper(f!, A, alg) = sort_eig_trunc(call_and_zero!(f!, A, alg))
+
 # sortperm is used here because Mooncake CAN differentiate that on CUDA,
 # but CANNOT differentiate sort
-sort_eigvals(D) = D[sortperm(collect(D); by = λ -> (abs(λ), imag(λ)))]
+eigvals_sortperm(D) = sortperm(collect(D); by = λ -> (abs(λ), imag(λ)))
+sort_eigvals(D) = D[eigvals_sortperm(D)]
+
+# reorder `(D, V, rest...)` (or its tangent) by the permutation `p` of the eigenvalues
+permute_eigpairs(DV, p) = (Diagonal(diagview(DV[1])[p]), DV[2][:, p], Base.tail(Base.tail(DV))...)
+sort_eig_trunc(DV) = permute_eigpairs(DV, eigvals_sortperm(diagview(DV[1])))
 
 """
     qr_gauge_invariant_wrapper(f, A, alg, r)

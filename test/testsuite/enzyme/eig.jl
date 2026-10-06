@@ -85,12 +85,14 @@ function test_enzyme_eig_trunc(
             D = eig_vals(A)
             trunc = trunctol(atol = midgap_tol(D); by = abs)
             truncalg = TruncatedAlgorithm(alg, trunc)
-            DV, _, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
-            test_reverse(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
-            test_reverse(call_and_zero!, RT, (eig_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            DV, DVtrunc, ΔDV, ΔDVtrunc = ad_eig_trunc_setup(A, truncalg)
+            # trunctol keeps LAPACK's eigenvalue ordering, so sort the outputs (and the tangent)
+            ΔDVtrunc = permute_eigpairs(ΔDVtrunc, eigvals_sortperm(diagview(DVtrunc[1])))
+            test_reverse(eig_trunc_wrapper, RT, (eig_trunc_no_error, Const), (A, TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
+            test_reverse(eig_trunc!_wrapper, RT, (eig_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, output_tangent = ΔDVtrunc, fdm)
             # use max range here to try to dodge issues when the gap between eigenvalues is close to the FD perturbation
-            test_forward(eig_trunc_no_error, RT, (A, TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
-            test_forward(call_and_zero!, RT, (eig_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
+            test_forward(eig_trunc_wrapper, RT, (eig_trunc_no_error, Const), (A, TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
+            test_forward(eig_trunc!_wrapper, RT, (eig_trunc_no_error!, Const), (copy(A), TA), (truncalg, Const); atol, rtol, fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-3))
         end
     end
 end
