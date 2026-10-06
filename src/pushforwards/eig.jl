@@ -11,13 +11,16 @@ function eig_pushforward!(
     end
     if !iszerotangent(ΔV)
         ∂K .*= inv_safe.(transpose(diagview(D)) .- diagview(D), degeneracy_atol)
+        # The diagonal corrections depend on the unnormalized eigenvector tangent.
         mul!(ΔV, V, ∂K)
-        ΔV .-= V .* real.(sum(conj.(V) .* ΔV; dims = 1))
-        if eltype(V) <: Complex # fix gauge for `gaugefix!` compatibility
+        if eltype(V) <: Real # fix norm conservation
+            diagview(∂K) .-= vec(real.(sum(conj.(V) .* ΔV; dims = 1)))
+        else # also fix gauge for `gaugefix!` compatibility
             _, I = findmax(abs, V; dims = 1)
-            infinitesimal_phases = imag.(ΔV[I] ./ V[I])
-            ΔV .-= im .* V .* infinitesimal_phases
+            diagview(∂K) .-= vec(real.(sum(conj.(V) .* ΔV; dims = 1)) .+ im .* imag.(ΔV[I] ./ V[I]))
         end
+        # Only the diagonal changed, so add its contribution to the existing tangent.
+        mul!(ΔV, V, Diagonal(diagview(∂K)), 1, 1)
     end
     return ΔDV
 end
