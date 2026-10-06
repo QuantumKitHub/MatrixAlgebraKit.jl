@@ -18,6 +18,7 @@ using .TestSuite
 
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
+batch_size = 16
 m = 54
 for T in (BLASFloats..., GenericFloats...)
     TestSuite.seed_rng!(123)
@@ -31,6 +32,10 @@ for T in (BLASFloats..., GenericFloats...)
             TestSuite.test_eigh_algs(CuMatrix{T}, (m, m), CUSOLVER_EIGH_ALGS)
             TestSuite.test_eigh(Diagonal{T, CuVector{T}}, m)
             TestSuite.test_eigh_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
+
+            TestSuite.test_eigh_batched(CuMatrix{T}, (m, m), batch_size)
+            CUDA_EIGH_ALGS = (Jacobi(),)
+            TestSuite.test_eigh_batched_algs(CuMatrix{T}, (m, m), batch_size, CUDA_EIGH_ALGS)
         end
         if AMDGPU.functional()
             ROCSOLVER_EIGH_ALGS = (
