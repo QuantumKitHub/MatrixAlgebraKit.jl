@@ -23,7 +23,7 @@ function check_and_prepare_eigh_cotangents(
         aVᴴΔV₀ = zero!(similar(V, (p, k)))
     end
 
-    D₀ = view(D, ind₀)
+    D₀ = D[ind₀]
     gauge_part = (abs.(transpose(D₀) .- D) .< degeneracy_atol) .* aVᴴΔV₀
     Δgauge = maximum(abs, gauge_part; init = abs(zero(eltype(D))))
 

@@ -12,9 +12,10 @@ function check_and_prepare_svd_cotangents(
     U₁ = view(U, :, 1:r)
     V₁ᴴ = view(Vᴴ, 1:r, :)
     S₁ = view(S, 1:r)
-    indU = axes(U, 2)[ind]
-    indV = axes(Vᴴ, 1)[ind]
-    indS = axes(S, 1)[ind]
+
+    indU = select_indices(axes(U, 2), ind)
+    indV = select_indices(axes(Vᴴ, 1), ind)
+    indS = select_indices(axes(S, 1), ind)
     Δgauge = zero(eltype(S))
 
     # Only the columns ind₀ ⊆ 1:r of UᴴΔAV are computed.
@@ -80,7 +81,7 @@ function check_and_prepare_svd_cotangents(
         aVᴴΔV₁₀ = zero!(similar(V₁ᴴ, (r, k)))
     end
 
-    S₀ = view(S, ind₀)
+    S₀ = S[ind₀] # view fails broadcasting below on GPU
     hUᴴΔAV₁₀ = (aUᴴΔU₁₀ .+ aVᴴΔV₁₀) .* inv_safe.(transpose(S₀) .- S₁, degeneracy_atol) # hermitian part of UᴴΔAV, restricted to rows 1:r and columns ind₀
     aUᴴΔAV₁₀ = (aUᴴΔU₁₀ .- aVᴴΔV₁₀) .* inv_safe.(transpose(S₀) .+ S₁, degeneracy_atol) # antihermitian part of UᴴΔAV, restricted to rows 1:r and columns ind₀
 
@@ -90,7 +91,7 @@ function check_and_prepare_svd_cotangents(
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
-        diagview(view(hUᴴΔAV₁₀, ind₀, :)) .+= real.(view(ΔS, J₁)) # the diagonal entries
+        diagview(view(hUᴴΔAV₁₀, ind₀, :)) .+= real.(view(ΔS, J₁)) # diagonal entries
         Δgauge = max(Δgauge, maximum(abs, view(ΔS, J₂); init = zero(Δgauge)))
     end
 
