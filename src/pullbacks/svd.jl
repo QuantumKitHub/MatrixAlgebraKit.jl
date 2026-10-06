@@ -23,7 +23,6 @@ function check_and_prepare_svd_cotangents(
     J₁ = findall(<=(r), indS)
     J₂ = findall(>(r), indS)
     ind₀ = indS[J₁]
-    k = length(ind₀)
     full_rank = (ind₀ == 1:minmn)
 
     if !iszerotangent(ΔU)
@@ -51,7 +50,7 @@ function check_and_prepare_svd_cotangents(
         Δgauge = max(Δgauge, ΔgaugeU)
     else
         ΔU₊ = nothing
-        aUᴴΔU₁₀ = zero!(similar(U₁, (r, k)))
+        aUᴴΔU₁₀ = zero!(similar(U₁, (r, length(ind₀))))
     end
     if !iszerotangent(ΔVᴴ)
         ΔgaugeV = zero(eltype(S))
@@ -78,7 +77,7 @@ function check_and_prepare_svd_cotangents(
         Δgauge = max(Δgauge, ΔgaugeV)
     else
         ΔV₊ᴴ = nothing
-        aVᴴΔV₁₀ = zero!(similar(V₁ᴴ, (r, k)))
+        aVᴴΔV₁₀ = zero!(similar(V₁ᴴ, (r, length(ind₀))))
     end
 
     S₀ = S[ind₀] # view fails broadcasting below on GPU
@@ -91,7 +90,7 @@ function check_and_prepare_svd_cotangents(
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
-        diagview(view(hUᴴΔAV₁₀, ind₀, :)) .+= real.(view(ΔS, J₁)) # diagonal entries
+        hUᴴΔAV₁₀[ind₀ .+ r .* (0:length(ind₀)-1)] .+= real.(view(ΔS, J₁)) # diagonal entries
         Δgauge = max(Δgauge, maximum(abs, view(ΔS, J₂); init = zero(Δgauge)))
     end
 
