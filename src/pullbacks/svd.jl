@@ -90,7 +90,7 @@ function check_and_prepare_svd_cotangents(
     if !iszerotangent(ΔSmat)
         ΔS = diagview(ΔSmat)
         length(indS) == length(ΔS) || throw(DimensionMismatch(lazy"length of selected S values ($(length(indS))) does not match length of ΔS ($(length(ΔS)))"))
-        diagview(view(hUᴴΔAV₁₀, ind₀, :)) .+= real.(view(ΔS, J)) # the diagonal entries
+        diagview(view(hUᴴΔAV₁₀, ind₀, :)) .+= real.(view(ΔS, J₁)) # the diagonal entries
         Δgauge = max(Δgauge, maximum(abs, view(ΔS, J₂); init = zero(Δgauge)))
     end
 

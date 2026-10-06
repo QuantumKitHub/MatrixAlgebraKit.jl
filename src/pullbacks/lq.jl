@@ -115,7 +115,7 @@ end
 
 function check_lq_null_cotangents(Nᴴ, ΔNᴴ; gauge_atol::Real = default_pullback_gauge_atol(ΔNᴴ))
     aNᴴΔN = project_antihermitian!(Nᴴ * ΔNᴴ')
-    Δgauge = maximum(abs, aNᴴΔN; init = zero(eltype(aNᴴΔN)))
+    Δgauge = maximum(abs, aNᴴΔN; init = abs(zero(eltype(aNᴴΔN))))
     Δgauge ≤ gauge_atol ||
         @warn "`lq_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     return

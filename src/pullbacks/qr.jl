@@ -39,7 +39,7 @@ function check_and_prepare_qr_cotangents(
             I = uppertriangularind(ΔR₂₂)
             upper_inds = view(LinearIndices(ΔR), (p + 1):minmn, (p + 1):n)[I]
             ΔR₂₂upper = view(ΔR, upper_inds)
-            Δgauge_R = maximum(abs, ΔR₂₂upper; init = zero(eltype(ΔR₂₂upper)))
+            Δgauge_R = maximum(abs, ΔR₂₂upper; init = abs(zero(eltype(ΔR))))
             Δgauge_R = max(Δgauge_R, maximum(abs, view(ΔR₂₂, diagind(ΔR₂₂)); init = zero(Δgauge_R)))
             Δgauge = max(Δgauge, Δgauge_R)
         end
@@ -121,7 +121,7 @@ end
 
 function check_qr_null_cotangents(N, ΔN; gauge_atol::Real = default_pullback_gauge_atol(ΔN))
     aNᴴΔN = project_antihermitian!(N' * ΔN)
-    Δgauge = maximum(abs, aNᴴΔN; init = zero(eltype(aNᴴΔN)))
+    Δgauge = maximum(abs, aNᴴΔN; init = abs(zero(eltype(aNᴴΔN))))
     Δgauge ≤ gauge_atol ||
         @warn "`qr_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     return
