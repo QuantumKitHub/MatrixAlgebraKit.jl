@@ -99,7 +99,15 @@ eigvals_sortperm(D) = sortperm(collect(D); by = λ -> (abs(λ), imag(λ)))
 sort_eigvals(D) = D[eigvals_sortperm(D)]
 
 # reorder `(D, V, rest...)` (or its tangent) by the permutation `p` of the eigenvalues
-permute_eigpairs(DV, p) = (Diagonal(diagview(DV[1])[p]), DV[2][:, p], Base.tail(Base.tail(DV))...)
+permute_eigpairs(DV, p) = (Diagonal(diagview(DV[1])[p]), permute_columns(DV[2], p), Base.tail(Base.tail(DV))...)
+
+# equivalent to `V[:, p]`, but written with linear indexing because Mooncake CAN differentiate
+# that on CUDA, but CANNOT differentiate `V[:, p]`
+function permute_columns(V, p)
+    m = size(V, 1)
+    lin = vec((1:m) .+ m .* (p' .- 1))
+    return reshape(vec(V)[lin], m, length(p))
+end
 sort_eig_trunc(DV) = permute_eigpairs(DV, eigvals_sortperm(diagview(DV[1])))
 
 """
