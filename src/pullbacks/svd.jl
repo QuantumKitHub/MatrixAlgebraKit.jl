@@ -230,10 +230,10 @@ function svd_trunc_pullback!(
     m, n = size(U, 1), size(Vᴴ, 2)
     (m, n) == size(ΔA) || throw(DimensionMismatch(lazy"size of ΔA ($(size(ΔA))) does not match size of USVᴴ ($m, $n)"))
     S = diagview(Smat)
-    k = length(S)
-    k == size(U, 2) || throw(DimensionMismatch(lazy"U has $k columns but S has $(length(S)) singular values"))
-    k == size(Vᴴ, 1) || throw(DimensionMismatch(lazy"Vᴴ has $k rows but  S has $(length(S)) singular values"))
-    iszero(k) && return ΔA
+    p = length(S)
+    p == size(U, 2) || throw(DimensionMismatch(lazy"U has $p columns but S has $(length(S)) singular values"))
+    p == size(Vᴴ, 1) || throw(DimensionMismatch(lazy"Vᴴ has $p rows but  S has $(length(S)) singular values"))
+    iszero(p) && return ΔA
 
     # Extract and check the cotangents
     ΔU, ΔSmat, ΔVᴴ = ΔUSVᴴ
@@ -257,7 +257,7 @@ function svd_trunc_pullback!(
         if m ≤ n
             X = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
             X .+= X₀
-            APᴴZ = similar(X, n, k) # for applying AP AP' without forming it
+            APᴴZ = similar(X, n, p) # for applying AP AP' without forming it
             X = hermitian_stein_cg!(
                 X, (GZ, Z) -> mul!(GZ, AP, mul!(view(APᴴZ, :, axes(Z, 2)), AP', Z)), () -> AP * AP',
                 S⁻¹ .^ 2, degeneracy_atol, maxiter;
@@ -270,7 +270,7 @@ function svd_trunc_pullback!(
         else
             Y = rmul!(AP' * X₀, Diagonal(S⁻¹))
             Y .+= Y₀ᴴ'
-            APZ = similar(Y, m, k) # for applying AP' AP without forming it
+            APZ = similar(Y, m, p) # for applying AP' AP without forming it
             Y = hermitian_stein_cg!(
                 Y, (GZ, Z) -> mul!(GZ, AP', mul!(view(APZ, :, axes(Z, 2)), AP, Z)), () -> AP' * AP,
                 S⁻¹ .^ 2, degeneracy_atol, maxiter;

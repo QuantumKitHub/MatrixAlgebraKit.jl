@@ -148,11 +148,11 @@ function eigh_trunc_pullback!(
 
     # Basic size checks and determination
     Dmat, V = DV
-    (n, k) = size(V)
+    (n, p) = size(V)
     D = diagview(Dmat)
-    k == length(D) || throw(DimensionMismatch())
+    p == length(D) || throw(DimensionMismatch())
     (n, n) == size(ΔA) || throw(DimensionMismatch())
-    iszero(k) && return ΔA
+    iszero(p) && return ΔA
 
     ΔDmat, ΔV = ΔDV
     VᴴΔAV, ΔV₊ = check_and_prepare_eigh_cotangents(
@@ -164,7 +164,7 @@ function eigh_trunc_pullback!(
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
         X = hermitian_stein_cg!(
             X₀, nothing, () -> AP, inv.(D), degeneracy_atol, maxiter;
-            cost_apply = n^2, cost_form = 0, cost_square = n^3 + n^2 * k
+            cost_apply = n^2, cost_form = 0, cost_square = n^3 + n^2 * p
         )
         Z .+= X
         # we cannot directly multiply Z * V' into ΔA, because we have to
