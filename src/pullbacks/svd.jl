@@ -132,7 +132,6 @@ function svd_pullback!(
     # Extract the SVD components
     U, Smat, Vᴴ = USVᴴ
     m, n = size(U, 1), size(Vᴴ, 2)
-    minmn = min(m, n)
     (m, n) == size(ΔA) || throw(DimensionMismatch(lazy"size of ΔA ($(size(ΔA))) does not match size of USVᴴ ($m, $n)"))
     S = diagview(Smat)
     r = svd_rank(S; rank_atol)
