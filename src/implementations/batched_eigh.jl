@@ -92,13 +92,15 @@ function initialize_output(::typeof(batched_eigh_vals!), A::AbstractArray{T, 3},
     return similar(A, real(eltype(A)), (n, batch_size))
 end
 
-for f! in (:heevj_batched!, :heev_batched!)
+for f! in (:heevj_batched!, :heev_batched!, :heevd_batched!, :heevx_batched!)
     @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $($(f!))"))
 end
 
 for (f, f_lapack!, Alg) in (
         (:qr_iteration, :heev_batched!, :QRIteration),
         (:jacobi, :heevj_batched!, :Jacobi),
+        (:bisection, :heevx_batched!, :Bisection),
+        (:divideandconquer, :heevd_batched!, :DivideAndConquer),
     )
     eigh_full_f! = Symbol(:batched_eigh_full_, f, :!)
     eigh_vals_f! = Symbol(:batched_eigh_vals_, f, :!)
