@@ -1,6 +1,7 @@
-# Solvers for the Stein equation X - G X Diagonal(w) = B, i.e. (1 - wᵢ G) xᵢ = bᵢ per column, of the
-# truncated pullbacks. svd: G = P Pᴴ or Pᴴ P (the smaller), wᵢ = 1/σᵢ²; eigh: G = P, wᵢ = 1/λᵢ; with
-# P the part of A outside the kept vectors and γᵢ < 1 the spectral radius of wᵢ G.
+# Solvers for the Stein equation X - G X Diagonal(w) = B, i.e. (1 - wᵢ G) xᵢ = bᵢ per column.
+# Used in the pullback of truncated decompositions, with G = P Pᴴ or Pᴴ P, wᵢ = 1/σᵢ² for the case of SVD, 
+# and G = P, wᵢ = 1/λᵢ for the case of EIG(H). Here, P the part of A outside the kept vectors.
+# Naive iteration requires γᵢ, the spectral radius of wᵢ G, to be smaller than 1.
 
 """
     accelerative_smith_iteration!(X, Xₙ, G, w, atol, maxiter)
