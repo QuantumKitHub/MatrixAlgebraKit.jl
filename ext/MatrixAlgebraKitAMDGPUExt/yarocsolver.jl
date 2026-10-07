@@ -1443,42 +1443,7 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
         function heevd_batched!(
                 A::AbstractVector{<:StridedROCMatrix{$elty}},
                 W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), length(A)),
-                V::StridedROCMatrix{$elty} = similar(first(A), $elty, size(first(A))..., length(A));
-                uplo::Char = 'U',
-                check::Bool = CHECK_LIBRARY_CALLS[],
-            )
-            chkuplo(uplo)
-            n = checksquare(first(A))
-            batch_size = length(A)
-            size(W) == (n, length(A)) || throw(DimensionMismatch("size mismatch between A and W"))
-            if length(V) == 0
-                jobz = rocSOLVER.rocblas_evect_none
-            else
-                size(V) == (n, n, batch_size) || throw(DimensionMismatch("size mismatch between A and V"))
-                jobz = rocSOLVER.rocblas_evect_original
-            end
-            lda = max(1, stride(first(A), 2))
-            ldw = max(1, stride(W, 2))
-            dh = rocBLAS.handle()
-            work = ROCMatix{$relty}(undef, n, batch_size)
-            dev_info = ROCVector{Cint}(undef, batch_size)
-            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
-            pA = ROCVector(map(pointer, A))
-            $heevd(dh, jobz, roc_uplo, n, pA, lda, W, ldw, work, n, dev_info, batch_size)
-
-            if check
-                foreach(chkargsok ∘ BlasInt, collect(dev_info))
-            end
-
-            if jobz == rocSOLVER.rocblas_evect_original && V !== A
-                copy!(V, A)
-            end
-            return W, V
-        end
-        function heev_batched!(
-                A::AbstractVector{<:StridedROCMatrix{$elty}},
-                W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), length(A)),
-                V::StridedROCMatrix{$elty} = similar(first(A), $elty, size(first(A))..., length(A));
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A))..., length(A));
                 uplo::Char = 'U',
                 check::Bool = CHECK_LIBRARY_CALLS[],
             )
@@ -1499,7 +1464,42 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
             dev_info = ROCVector{Cint}(undef, batch_size)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             pA = ROCVector(map(pointer, A))
-            $heev(dh, jobz, roc_uplo, n, pA, lda, W, ldw, work, n, dev_info, batch_size)
+            $heevd_batched(dh, jobz, roc_uplo, n, pA, lda, W, ldw, work, n, dev_info, batch_size)
+
+            if check
+                foreach(chkargsok ∘ BlasInt, collect(dev_info))
+            end
+
+            if jobz == rocSOLVER.rocblas_evect_original && V !== A
+                copy!(V, A)
+            end
+            return W, V
+        end
+        function heev_batched!(
+                A::AbstractVector{<:StridedROCMatrix{$elty}},
+                W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), length(A)),
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A))..., length(A));
+                uplo::Char = 'U',
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            chkuplo(uplo)
+            n = checksquare(first(A))
+            batch_size = length(A)
+            size(W) == (n, length(A)) || throw(DimensionMismatch("size mismatch between A and W"))
+            if length(V) == 0
+                jobz = rocSOLVER.rocblas_evect_none
+            else
+                size(V) == (n, n, batch_size) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = rocSOLVER.rocblas_evect_original
+            end
+            lda = max(1, stride(first(A), 2))
+            ldw = max(1, stride(W, 2))
+            dh = rocBLAS.handle()
+            work = ROCMatrix{$relty}(undef, n, batch_size)
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            pA = ROCVector(map(pointer, A))
+            $heev_batched(dh, jobz, roc_uplo, n, pA, lda, W, ldw, work, n, dev_info, batch_size)
 
             if check
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
@@ -1513,7 +1513,7 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
         function heevx_batched!(
                 A::AbstractVector{<:StridedROCMatrix{$elty}},
                 W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), length(A)),
-                V::StridedROCMatrix{$elty} = similar(first(A), $elty, size(first(A))..., length(A));
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A))..., length(A));
                 uplo::Char = 'U',
                 check::Bool = CHECK_LIBRARY_CALLS[],
                 kwargs...
@@ -1547,13 +1547,13 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
             end
             dh = rocBLAS.handle()
             abstol = -one($relty)
-            nev = ROCVector{Cint}(undef, 1)
+            nev = ROCVector{Cint}(undef, batch_size)
             ldv = max(1, stride(V, 2))
             ifail = ROCMatrix{Cint}(undef, n, batch_size)
             dev_info = ROCVector{Cint}(undef, batch_size)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             pA = ROCVector(map(pointer, A))
-            $heevx(dh, jobz, range, roc_uplo, n, pA, lda, vl, vu, il, iu, abstol, nev, W, ldw, V, ldv, ifail, n, dev_info, batch_size)
+            $heevx_batched(dh, jobz, range, roc_uplo, n, pA, lda, vl, vu, il, iu, abstol, nev, W, ldw, V, ldv, ifail, n, dev_info, batch_size)
 
             if check
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
@@ -1590,7 +1590,180 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             roc_sort = sort == 'N' ? rocSOLVER.rocblas_esort_none : rocSOLVER.rocblas_esort_ascending
             pA = ROCVector(map(pointer, A))
-            $heevj(dh, roc_sort, jobz, roc_uplo, n, pA, lda, tol, residual, max_sweeps, n_sweeps, W, ldw, dev_info, batch_size)
+            $heevj_batched(dh, roc_sort, jobz, roc_uplo, n, pA, lda, tol, residual, max_sweeps, n_sweeps, W, ldw, dev_info, batch_size)
+
+            if check
+                foreach(chkargsok ∘ BlasInt, collect(dev_info))
+            end
+
+            if jobz == rocSOLVER.rocblas_evect_original && V !== A
+                copy!(V, A)
+            end
+            return W, V
+        end
+    end
+end
+
+for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
+    (
+        (:(rocSOLVER.rocsolver_ssyevd_strided_batched), :(rocSOLVER.rocsolver_ssyev_strided_batched), :(rocSOLVER.rocsolver_ssyevx_strided_batched), :(rocSOLVER.rocsolver_ssyevj_strided_batched), :Float32, :Float32),
+        (:(rocSOLVER.rocsolver_dsyevd_strided_batched), :(rocSOLVER.rocsolver_dsyev_strided_batched), :(rocSOLVER.rocsolver_dsyevx_strided_batched), :(rocSOLVER.rocsolver_dsyevj_strided_batched), :Float64, :Float64),
+        (:(rocSOLVER.rocsolver_cheevd_strided_batched), :(rocSOLVER.rocsolver_cheev_strided_batched), :(rocSOLVER.rocsolver_cheevx_strided_batched), :(rocSOLVER.rocsolver_cheevj_strided_batched), :ComplexF32, :Float32),
+        (:(rocSOLVER.rocsolver_zheevd_strided_batched), :(rocSOLVER.rocsolver_zheev_strided_batched), :(rocSOLVER.rocsolver_zheevx_strided_batched), :(rocSOLVER.rocsolver_zheevj_strided_batched), :ComplexF64, :Float64),
+    )
+    @eval begin
+        function heevd_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), size(A, 3)),
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(A)...);
+                uplo::Char = 'U',
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            chkuplo(uplo)
+            m, n, batch_size = size(A)
+            m == n || throw(DimensionMismatch("A must be square in its first two dimensions"))
+            size(W) == (n, batch_size) || throw(DimensionMismatch("size mismatch between A and W"))
+            if length(V) == 0
+                jobz = rocSOLVER.rocblas_evect_none
+            else
+                size(V) == size(A) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = rocSOLVER.rocblas_evect_original
+            end
+            lda = max(1, stride(A, 2))
+            strideA = max(1, stride(A, 3))
+            ldw = max(1, stride(W, 2))
+            dh = rocBLAS.handle()
+            work = ROCMatrix{$relty}(undef, n, batch_size)
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            $heevd_batched(dh, jobz, roc_uplo, n, A, lda, strideA, W, ldw, work, n, dev_info, batch_size)
+
+            if check
+                foreach(chkargsok ∘ BlasInt, collect(dev_info))
+            end
+
+            if jobz == rocSOLVER.rocblas_evect_original && V !== A
+                copy!(V, A)
+            end
+            return W, V
+        end
+        function heev_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), size(A, 3)),
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(A)...);
+                uplo::Char = 'U',
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            chkuplo(uplo)
+            m, n, batch_size = size(A)
+            m == n || throw(DimensionMismatch("A must be square in its first two dimensions"))
+            size(W) == (n, batch_size) || throw(DimensionMismatch("size mismatch between A and W"))
+            if length(V) == 0
+                jobz = rocSOLVER.rocblas_evect_none
+            else
+                size(V) == size(A) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = rocSOLVER.rocblas_evect_original
+            end
+            lda = max(1, stride(A, 2))
+            strideA = max(1, stride(A, 3))
+            ldw = max(1, stride(W, 2))
+            dh = rocBLAS.handle()
+            work = ROCMatrix{$relty}(undef, n, batch_size)
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            $heev_batched(dh, jobz, roc_uplo, n, A, lda, strideA, W, ldw, work, n, dev_info, batch_size)
+
+            if check
+                foreach(chkargsok ∘ BlasInt, collect(dev_info))
+            end
+
+            if jobz == rocSOLVER.rocblas_evect_original && V !== A
+                copy!(V, A)
+            end
+            return W, V
+        end
+        function heevx_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), size(A, 3)),
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(A)...);
+                uplo::Char = 'U',
+                check::Bool = CHECK_LIBRARY_CALLS[],
+                kwargs...
+            )
+            chkuplo(uplo)
+            m, n, batch_size = size(A)
+            m == n || throw(DimensionMismatch("A must be square in its first two dimensions"))
+            size(W) == (n, batch_size) || throw(DimensionMismatch("size mismatch between A and W"))
+            lda = max(1, stride(A, 2))
+            strideA = max(1, stride(A, 3))
+            ldw = max(1, stride(W, 2))
+            if haskey(kwargs, :irange)
+                il = first(kwargs[:irange])
+                iu = last(kwargs[:irange])
+                vl = vu = zero($relty)
+                range = rocSOLVER.rocblas_erange_index
+            elseif haskey(kwargs, :vl) || haskey(kwargs, :vu)
+                vl = convert($relty, get(kwargs, :vl, -Inf))
+                vu = convert($relty, get(kwargs, :vu, +Inf))
+                il = iu = 0
+                range = rocSOLVER.rocblas_erange_value
+            else
+                il = iu = 0
+                vl = vu = zero($relty)
+                range = rocSOLVER.rocblas_erange_all
+            end
+            if length(V) == 0
+                jobz = rocSOLVER.rocblas_evect_none
+            else
+                size(V) == (n, n, batch_size) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = rocSOLVER.rocblas_evect_original
+            end
+            dh = rocBLAS.handle()
+            abstol = -one($relty)
+            nev = ROCVector{Cint}(undef, batch_size)
+            ldv = max(1, stride(V, 2))
+            strideV = max(1, stride(V, 3))
+            ifail = ROCMatrix{Cint}(undef, n, batch_size)
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            $heevx_batched(dh, jobz, range, roc_uplo, n, A, lda, strideA, vl, vu, il, iu, abstol, nev, W, ldw, V, ldv, strideV, ifail, n, dev_info, batch_size)
+
+            if check
+                foreach(chkargsok ∘ BlasInt, collect(dev_info))
+            end
+            m = collect(nev)
+            return W, V, m
+        end
+        function heevj_strided_batched!(
+                A::StridedROCArray{$elty, 3},
+                W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), size(A, 3)),
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(A)...);
+                uplo::Char = 'U',
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100,
+                sort::Char = 'N',
+                check::Bool = CHECK_LIBRARY_CALLS[],
+            )
+            chkuplo(uplo)
+            m, n, batch_size = size(A)
+            m == n || throw(DimensionMismatch("A must be square in its first two dimensions"))
+            size(W) == (n, batch_size) || throw(DimensionMismatch("size mismatch between A and W"))
+            if length(V) == 0
+                jobz = rocSOLVER.rocblas_evect_none
+            else
+                size(V) == size(A) || throw(DimensionMismatch("size mismatch between A and V"))
+                jobz = rocSOLVER.rocblas_evect_original
+            end
+            lda = max(1, stride(A, 2))
+            strideA = max(1, stride(A, 3))
+            ldw = max(1, stride(W, 2))
+            dh = rocBLAS.handle()
+            dev_info = ROCVector{Cint}(undef, batch_size)
+            residual = ROCVector{$relty}(undef, batch_size)
+            n_sweeps = ROCVector{Cint}(undef, batch_size)
+            roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
+            roc_sort = sort == 'N' ? rocSOLVER.rocblas_esort_none : rocSOLVER.rocblas_esort_ascending
+            $heevj_batched(dh, roc_sort, jobz, roc_uplo, n, A, lda, strideA, tol, residual, max_sweeps, n_sweeps, W, ldw, dev_info, batch_size)
 
             if check
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
