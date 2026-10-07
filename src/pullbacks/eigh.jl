@@ -84,7 +84,7 @@ function eigh_pullback!(
     )
 
     # VᴴΔAV₀ is Hermitian and nonzero only in its rows and columns ind₀, which are VᴴΔAV₀' and VᴴΔAV₀.
-    # For length(ind₀) ≤ n / 2, applying these two blocks directly, in O(n² k), is faster than forming VᴴΔAV.
+    # For p = length(ind₀) ≤ n / 2, applying these two blocks directly, in O(n² p), is faster than forming VᴴΔAV.
     if 2 * length(ind₀) <= n
         V₀ = V[:, ind₀]
         ΔA = mul!(ΔA, V * VᴴΔAV₀, V₀', 1, 1)

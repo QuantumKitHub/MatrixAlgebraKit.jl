@@ -150,7 +150,7 @@ function svd_pullback!(
     S₀ = S[ind₀]
 
     # UᴴΔAV is nonzero only in its columns ind₀, which are hUᴴΔAV₁₀ + aUᴴΔAV₁₀, and its rows ind₀,
-    # which are hUᴴΔAV₁₀' - aUᴴΔAV₁₀'. For k ≤ r / 2, applying these two blocks directly, in O(m n k),
+    # which are hUᴴΔAV₁₀' - aUᴴΔAV₁₀'. For p = length(ind₀) ≤ r / 2, applying these two blocks directly, in O(m n p),
     # is faster than forming UᴴΔAV.
     if 2 * length(ind₀) <= r
         ΔA = mul!(ΔA, U₁ * (hUᴴΔAV₁₀ + aUᴴΔAV₁₀), V₀ᴴ, 1, 1)
