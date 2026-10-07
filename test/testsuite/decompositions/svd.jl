@@ -454,6 +454,50 @@ function test_svd_algs_batched_oversized(
     end
 end
 
+# Whether the driver for `alg` reports support for ragged batches of each SVD function,
+# and if so, that ragged batches of all distinct sizes are decomposed correctly.
+function test_svd_algs_batched_ragged_support(
+        T::Type, algs, batch_size::Int;
+        supported::Bool = true,
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        kwargs...
+    )
+    summary_str = testargs_summary(T)
+    return @testset "batched svd ragged support, algorithm $alg $summary_str" for alg in algs
+        driver = MatrixAlgebraKit.default_driver(alg, T)
+        for f! in (svd_compact!, svd_full!, svd_vals!)
+            @test MatrixAlgebraKit.supports_ragged_batch(f!, alg, driver, T) == supported
+            @test MatrixAlgebraKit.supports_ragged_batch(f!, alg, MatrixAlgebraKit.DefaultDriver(), T) == supported
+        end
+        # only the SVD functions have ragged batched implementations
+        @test !MatrixAlgebraKit.supports_ragged_batch(qr_full!, alg, driver, T)
+
+        if supported
+            Ar = [instantiate_matrix(T, (2 + i, 1 + (i * 7) % (batch_size + 3))) for i in 1:batch_size]
+            @test allunique(size.(Ar))
+
+            U, S, Vᴴ = @testinferred batched_svd_compact(Ar; alg)
+            for (a, u, s, vᴴ) in zip(Ar, U, S, Vᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isisometric(u)
+                @test isisometric(vᴴ; side = :right)
+            end
+
+            Uf, Sf, Vfᴴ = @testinferred batched_svd_full(Ar; alg)
+            for (a, u, s, vᴴ) in zip(Ar, Uf, Sf, Vfᴴ)
+                @test u * s * vᴴ ≈ a
+                @test isunitary(u)
+                @test isunitary(vᴴ)
+            end
+
+            Sv = @testinferred batched_svd_vals(Ar; alg)
+            for (s, sv) in zip(S, Sv)
+                @test collect(diagview(s)) ≈ collect(sv)
+            end
+        end
+    end
+end
+
 function test_svd_trunc(
         T::Type, sz;
         atol::Real = 0, rtol::Real = precision(eltype(T)),

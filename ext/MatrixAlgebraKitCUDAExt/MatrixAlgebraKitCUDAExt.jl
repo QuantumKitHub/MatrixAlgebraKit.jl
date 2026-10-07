@@ -42,6 +42,10 @@ MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration,
 
 # `cusolverDnXgesvdjBatched` only accepts matrices up to 32x32
 MatrixAlgebraKit.max_batched_blocksize(::AbstractAlgorithm, ::CUSOLVER, ::Type{<:AnyCuArray}) = 32
+# CUSOLVER only provides a batched kernel for `Jacobi`
+MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_full!), ::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
+MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_compact!), ::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
+MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_vals!), ::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
 
 function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
     m, n = size(A)

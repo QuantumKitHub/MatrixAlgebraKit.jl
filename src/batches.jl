@@ -20,9 +20,9 @@ batched_adjoint(A::AbstractVector{<:AbstractMatrix}) = map(a -> adjoint!(similar
     supports_ragged_batch(f!, alg::AbstractAlgorithm, driver::Driver, T::Type) -> Bool
 
 Whether the algorithm `alg` running on `driver` accepts a *ragged* batch of matrices
-of type `T` which do not have uniform size for function `f!`. `true` by default.
+of type `T` which do not have uniform size for function `f!`. `false` by default.
 """
-supports_ragged_batch(f!, alg::AbstractAlgorithm, driver::Driver, ::Type) = true
+supports_ragged_batch(f!, alg::AbstractAlgorithm, driver::Driver, ::Type) = false
 supports_ragged_batch(f!, alg::AbstractAlgorithm, ::DefaultDriver, ::Type{TA}) where {TA} =
     supports_ragged_batch(f!, alg, default_driver(alg, TA), TA)
 
