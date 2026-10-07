@@ -640,7 +640,7 @@ function heev_batched!(
         bufferSize()...
     ) do buffer_gpu, buffer_cpu
         return cuSOLVER.cusolverDnXsyevBatched(
-            dh, jobz, uplo, n, T, A, lda, Tr, W, T,
+            dh, params, jobz, uplo, n, T, A, lda, Tr, W, T,
             buffer_gpu, sizeof(buffer_gpu), buffer_cpu,
             sizeof(buffer_cpu), dh.info, batch_size
         )
