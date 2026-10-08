@@ -25,6 +25,10 @@ end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedCuArray{<:BlasFloat, 3}}
     return Jacobi(; kwargs...)
 end
+# CUSOLVER only batches `Jacobi`, so don't fall through to the single-matrix default
+function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedCuMatrix{<:BlasFloat}}}
+    return default_svd_algorithm(CuArray{eltype(eltype(T)), 3}; kwargs...)
+end
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
     return QRIteration(; kwargs...)
 end

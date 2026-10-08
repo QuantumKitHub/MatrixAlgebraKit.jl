@@ -64,4 +64,4 @@ for f in (:batched_svd_full!, :batched_svd_compact!, :batched_svd_vals!)
         return default_svd_algorithm(A; kwargs...)
     end
 end
-default_svd_algorithm(::Type{<:AbstractVector{M}}; kwargs...) where {M <: AbstractMatrix} = default_svd_algorithm(M; kwargs...)
+default_svd_algorithm(::Type{V}; kwargs...) where {M <: AbstractMatrix, V <: AbstractVector{M}} = default_svd_algorithm(M; kwargs...)
