@@ -25,9 +25,6 @@ end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedCuArray{<:BlasFloat, 3}}
     return Jacobi(; kwargs...)
 end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: Vector{<:StridedCuMatrix{<:BlasFloat}}}
-    return Jacobi(; kwargs...)
-end
 function MatrixAlgebraKit.default_eig_algorithm(::Type{T}; kwargs...) where {T <: StridedCuVecOrMat{<:BlasFloat}}
     return QRIteration(; kwargs...)
 end
