@@ -69,6 +69,15 @@ function test_eigh_full_batched(
         Ad = device_batch(As)
         Ac = deepcopy(Ad)
         m, n = size(first(As))
+        
+        D, V = @testinferred batched_eigh_full(As)
+        @test D isa Vector{<:AbstractMatrix{real(eltype(T))}} && length(D) == batch_size
+        @test length(V) == batch_size
+        for (a, d, v) in zip(As, D, V)
+            @test a * v ≈ v * Diagonal(d)
+            @test isunitary(v)
+            @test all(isreal, d)
+        end
 
         D, V = @testinferred batched_eigh_full(Ad)
         @test D isa AbstractMatrix{real(eltype(T))} && size(D) == (n, batch_size)
@@ -84,6 +93,10 @@ function test_eigh_full_batched(
             @test a * v2 ≈ v2 * Diagonal(d2)
         end
 
+        D3 = @testinferred batched_eigh_vals(As)
+        for (d, dd) in zip(eachslice(D, dims = 2), D3)
+            @test d ≈ dd
+        end
         D3 = @testinferred batched_eigh_vals(Ad)
         for (d, dd) in zip(eachslice(D, dims = 2), eachslice(D3, dims = 2))
             @test d ≈ dd

@@ -34,6 +34,9 @@ end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedCuArray{<:BlasFloat, 3}}
     return Jacobi(; kwargs...)
 end
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: Vector{<:StridedCuMatrix{<:BlasFloat}}}
+    return Jacobi(; kwargs...)
+end
 
 for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::CUSOLVER, args...) = YACUSOLVER.$f(args...)
