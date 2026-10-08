@@ -69,7 +69,7 @@ function test_eigh_full_batched(
         Ad = device_batch(As)
         Ac = deepcopy(Ad)
         m, n = size(first(As))
-        
+
         D, V = @testinferred batched_eigh_full(As)
         @test D isa Vector{<:AbstractMatrix{real(eltype(T))}} && length(D) == batch_size
         @test length(V) == batch_size

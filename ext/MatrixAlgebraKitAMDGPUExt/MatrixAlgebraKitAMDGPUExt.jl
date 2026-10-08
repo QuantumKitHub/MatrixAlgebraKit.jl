@@ -52,6 +52,8 @@ MatrixAlgebraKit.supports_pointer_batch(::AbstractAlgorithm, ::ROCSOLVER, ::Type
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_full!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_compact!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_vals!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
+MatrixAlgebraKit.supports_ragged_batch(::typeof(eigh_full!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
+MatrixAlgebraKit.supports_ragged_batch(::typeof(eigh_vals!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
 
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     m, n = size(A)

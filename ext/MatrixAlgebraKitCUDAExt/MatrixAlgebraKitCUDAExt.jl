@@ -52,6 +52,8 @@ MatrixAlgebraKit.max_batched_blocksize(::AbstractAlgorithm, ::CUSOLVER, ::Type{<
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_full!), ::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_compact!), ::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_vals!), ::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
+MatrixAlgebraKit.supports_ragged_batch(::typeof(eigh_full!), ::AbstractAlgorithm, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
+MatrixAlgebraKit.supports_ragged_batch(::typeof(eigh_vals!), ::AbstractAlgorithm, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
 
 function gesvd!(::CUSOLVER, A::StridedCuMatrix, S::StridedCuVector, U::StridedCuMatrix, Vᴴ::StridedCuMatrix; kwargs...)
     m, n = size(A)
