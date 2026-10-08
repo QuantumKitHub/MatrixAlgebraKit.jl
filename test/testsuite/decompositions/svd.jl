@@ -86,6 +86,19 @@ function test_svd_compact_batched(
         Ac = deepcopy(Ad)
         m, n = size(first(As))
         minmn = min(m, n)
+        U, S, Vᴴ = @testinferred batched_svd_compact(As)
+        @test length(U) == batch_size
+        @test length(S) == batch_size
+        @test length(Vᴴ) == batch_size
+        for (a, u, s, vᴴ) in zip(As, U, S, Vᴴ)
+            @test size(u) == (m, minmn)
+            @test size(vᴴ) == (minmn, n)
+            @test s isa Diagonal{real(eltype(T))} && size(s) == (minmn, minmn)
+            @test u * s * vᴴ ≈ a
+            @test isisometric(u)
+            @test isisometric(vᴴ; side = :right)
+            @test isposdef(s)
+        end
         U, S, Vᴴ = @testinferred batched_svd_compact(Ad)
         @test size(U) == (m, minmn, batch_size)
         @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
@@ -110,6 +123,10 @@ function test_svd_compact_batched(
         end
 
         if test_vals
+            Sd = @testinferred batched_svd_vals(As)
+            for (s, sd) in zip(eachslice(S, dims = 2), Sd)
+                @test s ≈ sd
+            end
             Sd = @testinferred batched_svd_vals(Ad)
             for (s, sd) in zip(eachslice(S, dims = 2), eachslice(Sd, dims = 2))
                 @test s ≈ sd
@@ -163,6 +180,19 @@ function test_svd_compact_algs_batched(
         Ac = deepcopy(Ad)
         m, n = size(first(As))
         minmn = min(m, n)
+        U, S, Vᴴ = @testinferred batched_svd_compact(As; alg)
+        @test length(U) == batch_size
+        @test length(S) == batch_size
+        @test length(Vᴴ) == batch_size
+        for (a, u, s, vᴴ) in zip(As, U, S, Vᴴ)
+            @test size(u) == (m, minmn)
+            @test size(vᴴ) == (minmn, n)
+            @test s isa Diagonal{real(eltype(T))} && size(s) == (minmn, minmn)
+            @test u * s * vᴴ ≈ a
+            @test isisometric(u)
+            @test isisometric(vᴴ; side = :right)
+            @test isposdef(s)
+        end
         U, S, Vᴴ = @testinferred batched_svd_compact(Ad; alg)
         @test size(U) == (m, minmn, batch_size)
         @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
@@ -186,6 +216,10 @@ function test_svd_compact_algs_batched(
         end
 
         if test_vals
+            Sd = @testinferred batched_svd_vals(As; alg)
+            for (s, sd) in zip(eachslice(S, dims = 2), Sd)
+                @test s ≈ sd
+            end
             Sd = @testinferred batched_svd_vals(Ad; alg)
             for (s, sd) in zip(eachslice(S, dims = 2), eachslice(Sd, dims = 2))
                 @test s ≈ sd
@@ -278,6 +312,19 @@ function test_svd_full_batched(
         Ac = deepcopy(Ad)
         m, n = size(first(As))
         minmn = min(m, n)
+        U, S, Vᴴ = @testinferred batched_svd_full(As)
+        @test length(U) == batch_size
+        @test length(S) == batch_size
+        @test length(Vᴴ) == batch_size
+        for (a, u, s, vᴴ) in zip(As, U, S, Vᴴ)
+            @test size(u) == (m, m)
+            @test size(vᴴ) == (n, n)
+            @test s isa AbstractMatrix{real(eltype(T))} && size(s) == (m, n)
+            @test u * s * vᴴ ≈ a
+            @test isunitary(u)
+            @test isunitary(vᴴ)
+            @test all(isposdef, diagview(s))
+        end
         U, S, Vᴴ = @testinferred batched_svd_full(Ad)
         @test size(U) == (m, m, batch_size)
         @test S isa AbstractArray{real(eltype(T)), 3} && size(S) == (m, n, batch_size)
@@ -356,6 +403,19 @@ function test_svd_full_algs_batched(
         Ac = deepcopy(Ad)
         m, n = size(first(As))
         minmn = min(m, n)
+        U, S, Vᴴ = @testinferred batched_svd_full(As; alg)
+        @test length(U) == batch_size
+        @test length(S) == batch_size
+        @test length(Vᴴ) == batch_size
+        for (a, u, s, vᴴ) in zip(As, U, S, Vᴴ)
+            @test size(u) == (m, m)
+            @test size(vᴴ) == (n, n)
+            @test s isa AbstractMatrix{real(eltype(T))} && size(s) == (m, n)
+            @test u * s * vᴴ ≈ a
+            @test isunitary(u)
+            @test isunitary(vᴴ)
+            @test all(isposdef, diagview(s))
+        end
         U, S, Vᴴ = @testinferred batched_svd_full(Ad; alg)
         @test size(U) == (m, m, batch_size)
         @test S isa AbstractArray{real(eltype(T)), 3} && size(S) == (m, n, batch_size)
