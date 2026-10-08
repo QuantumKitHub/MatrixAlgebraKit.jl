@@ -18,11 +18,11 @@ function check_and_prepare_qr_cotangents(
             Q₃ = view(Q, :, (minmn + 1):size(Q, 2))
             Q₁ᴴΔQ₃ = Q₁' * ΔQ₃
             mul!(ΔQ₃, Q₁, Q₁ᴴΔQ₃, -1, 1)
-            Δgauge_Q = norm(ΔQ₃, Inf)
+            Δgauge_Q = maximum(abs, ΔQ₃; init = abs(zero(eltype(ΔQ))))
             mul!(ΔQ₁, Q₃, Q₁ᴴΔQ₃', -1, 1)
         else
             ΔQ₂₃ = view(ΔQ, :, (p + 1):size(Q, 2))
-            Δgauge_Q = norm(ΔQ₂₃, Inf)
+            Δgauge_Q = maximum(abs, ΔQ₂₃; init = abs(zero(eltype(ΔQ))))
         end
         Δgauge = max(Δgauge, Δgauge_Q)
     end
@@ -39,8 +39,8 @@ function check_and_prepare_qr_cotangents(
             I = uppertriangularind(ΔR₂₂)
             upper_inds = view(LinearIndices(ΔR), (p + 1):minmn, (p + 1):n)[I]
             ΔR₂₂upper = view(ΔR, upper_inds)
-            Δgauge_R = norm(ΔR₂₂upper, Inf)
-            Δgauge_R = max(Δgauge_R, norm(view(ΔR₂₂, diagind(ΔR₂₂)), Inf))
+            Δgauge_R = maximum(abs, ΔR₂₂upper; init = abs(zero(eltype(ΔR))))
+            Δgauge_R = max(Δgauge_R, maximum(abs, view(ΔR₂₂, diagind(ΔR₂₂)); init = zero(Δgauge_R)))
             Δgauge = max(Δgauge, Δgauge_R)
         end
     else
@@ -121,7 +121,7 @@ end
 
 function check_qr_null_cotangents(N, ΔN; gauge_atol::Real = default_pullback_gauge_atol(ΔN))
     aNᴴΔN = project_antihermitian!(N' * ΔN)
-    Δgauge = norm(aNᴴΔN)
+    Δgauge = maximum(abs, aNᴴΔN; init = abs(zero(eltype(aNᴴΔN))))
     Δgauge ≤ gauge_atol ||
         @warn "`qr_null` cotangent sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     return

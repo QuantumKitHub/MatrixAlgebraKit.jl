@@ -71,3 +71,20 @@ function accelerative_smith_iteration!(X, Xₙ, G, w, atol, maxiter)
     end
     return X
 end
+
+"""
+    antihermitian_columns!(X, ind)
+
+Given the columns `X = M[:, ind]` of a square matrix `M` that is nonzero only in its columns
+`ind`, overwrite `X` with the same columns of the antihermitian part `(M - M') / 2` and return it.
+Here `M'` is nonzero only in the rows `ind`, so it only contributes to the square block
+`X[ind, :] = M[ind, ind]` on the diagonal of `M`.
+"""
+function antihermitian_columns!(X, ind)
+    # NOTE: all columns in order (e.g. from `ind = Colon()` in the pullback): the original in-place projection
+    is_leading_index(ind, size(X, 1)) && return project_antihermitian!(X)
+    Xdiag = project_antihermitian!(X[ind, :]) # the diagonal block M[ind, ind]
+    X ./= 2
+    X[ind, :] .= Xdiag
+    return X
+end
