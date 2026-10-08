@@ -18,34 +18,73 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.9...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.10...HEAD)
 
 ### Added
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Performance
+
+## [0.6.10](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.9...v0.6.10) - 2026-10-08
+
+### Added
+
+- Batched SVD functions `batched_svd_compact`, `batched_svd_full` and `batched_svd_vals` (and their
+  `!` variants), accepting either a 3D array or a (possibly ragged) vector of matrices, with
+  batched drivers for CUSOLVER and rocSOLVER ([#275](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/275)). Whether a driver accepts ragged batches is
+  controlled by `supports_ragged_batch`, which is `false` by default ([#297](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/297)).
+- Forward-mode (pushforward) rules for the QR and LQ decompositions, through the Enzyme and Mooncake
+  extensions.
+- Enzyme forward rule for `truncate` ([#288](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/288)).
+- `MatrixAlgebraKit.CHECK_LIBRARY_CALLS[] = false` disables the post-call info checks in the CUSOLVER
+  and rocSOLVER drivers, which otherwise force device synchronization through an `@allowscalar`
+  read ([#270](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/270)).
+- The `Bisection` SVD algorithm is now supported by the rocSOLVER driver, and by both LAPACK and
+  rocSOLVER for `svd_full` ([#281](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/281)).
+
+### Changed
+
 - `qr_compact!`, `qr_full!`, `lq_compact!` and `lq_full!` now extract `R` (or `L`) before
   constructing `Q`, so that an inplace `Q` (supplying `A` itself as output for `Q`) can be combined
-  with computing `R` (or `L`) and with `positive = true`.
+  with computing `R` (or `L`) and with `positive = true` ([#267](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/267)).
 - The CUSOLVER driver constructs `Q` with `ungqr!` instead of `unmqr!`, which is both faster and
   avoids the large workspace of `ormqr`, whose 32-bit size query fails altogether for large
-  matrices.
+  matrices ([#267](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/267)).
 
 ### Deprecated
 
 - `schur_vals` and `schur_vals!` in favour of `eig_vals` and `eig_vals!`. LAPACK's `gees` balances
   without scaling, so the eigenvalues it returns are those of `eig_vals(A; scale = false)`, which is
   considerably less accurate for badly scaled matrices and no faster. Note that `eig_vals` does not
-  accept the `expert` keyword argument.
-
-### Removed
+  accept the `expert` keyword argument ([#277](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/277)).
 
 ### Fixed
 
-- `schur_full` now supports `Diagonal` inputs through `DiagonalAlgorithm` ([#276](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/issues/276)).
-- LQ decompositions no longer gauge fix `Q` when `positive = false` and `L` is not computed.
+- `schur_full` now supports `Diagonal` inputs through `DiagonalAlgorithm` ([#276](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/issues/276), [#277](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/277)).
+- LQ decompositions no longer gauge fix `Q` when `positive = false` and `L` is not computed ([#267](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/267)).
+- `remove_svd_gauge_dependence!` now handles rank-deficient SVDs correctly ([#286](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/286)).
+- The `eig` pushforward now keeps the eigenvector tangents consistent with the unit-norm normalization of `V` ([#290](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/290)).
+- Fixed overflow in the Sylvester iterations of `eigh_trunc_pullback!` ([#282](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/282)) and
+  `eig_trunc_pullback!` ([#294](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/294)).
+- rocSOLVER's `gesvdx` returning no singular values when `min(m, n) == 1` is now worked around ([#284](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/284)).
+- The `svd_trunc`, `eig` / `eigh` and LQ pullbacks now work on GPU arrays ([#258](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/258), [#271](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/271), [#272](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/272), [#273](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/273), [#280](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/280)).
+- The `svd`, `eig` and `eigh` pullbacks now instantiate their broadcasts, avoiding `axes` errors for
+  some wrapped array types ([#266](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/266)).
+- Enzyme rules no longer store `nothing` in their caches ([#256](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/256), [#259](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/259)).
 
 ### Performance
+
+- `svd_pullback!` and `eigh_pullback!` now cost proportional to the number of cotangent columns
+  supplied, rather than the full size of the decomposition ([#292](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/292)).
+- `svd_trunc_pullback!` sums only one Neumann series, and the truncated pullbacks share a doubling
+  (accelerative Smith) iteration for their Sylvester equations ([#287](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/287), [#294](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/294)).
 
 ## [0.6.9](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.8...v0.6.9) - 2026-07-10
 
