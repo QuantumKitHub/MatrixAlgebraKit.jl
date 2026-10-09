@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.10...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.11...HEAD)
 
 ### Added
 
@@ -29,6 +29,22 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Removed
 
 ### Fixed
+
+### Performance
+
+## [0.6.11](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.10...v0.6.11) - 2026-10-09
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Bug in `select_indices` that lead to correctness errors for SVD pullbacks for some truncation schemes.
 
 ### Performance
 
