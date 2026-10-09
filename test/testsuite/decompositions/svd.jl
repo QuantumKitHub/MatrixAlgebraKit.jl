@@ -114,7 +114,7 @@ function test_svd_compact_batched(
         @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
         @test size(Vᴴ) == (minmn, n, batch_size)
         for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 2), eachslice(Vᴴ, dims = 3))
-            is_valid_svd_compact(a, u, s, vᴴ)
+            is_valid_svd_compact(a, u, Diagonal(s), vᴴ)
         end
 
         Sc = similar(diagview(S))
