@@ -40,6 +40,31 @@ function test_svd_batched_algs(T::Type, sz, batch_size::Int, algs; test_compact:
     end
 end
 
+function is_valid_svd_compact(A, U, S, Vᴴ)
+    m, n = size(A)
+    minmn = min(m, n)
+    @test size(U) == (m, minmn)
+    @test S isa Diagonal{real(eltype(A))} && size(S) == (minmn, minmn)
+    @test size(Vᴴ) == (minmn, n)
+    @test U * S * Vᴴ ≈ A
+    @test isisometric(U)
+    @test isisometric(Vᴴ; side = :right)
+    @test isposdef(S)
+    return
+end
+
+function is_valid_svd_full(A, U, S, Vᴴ)
+    m, n = size(A)
+    @test size(U) == (m, m)
+    @test eltype(S) == real(eltype(T)) && size(S) == (m, n)
+    @test size(Vᴴ) == (n, n)
+    @test U * S * Vᴴ ≈ A
+    @test isunitary(U)
+    @test isunitary(Vᴴ)
+    @test all(isposdef, diagview(S))
+    return
+end
+
 function test_svd_compact(
         T::Type, sz;
         atol::Real = 0, rtol::Real = precision(eltype(T)),
@@ -52,20 +77,11 @@ function test_svd_compact(
         m, n = size(A)
         minmn = min(m, n)
         U, S, Vᴴ = @testinferred svd_compact(A)
-        @test size(U) == (m, minmn)
-        @test S isa Diagonal{real(eltype(T))} && size(S) == (minmn, minmn)
-        @test size(Vᴴ) == (minmn, n)
-        @test U * S * Vᴴ ≈ A
-        @test isisometric(U)
-        @test isisometric(Vᴴ; side = :right)
-        @test isposdef(S)
+        is_valid_svd_compact(A, U, S, Vᴴ)
 
         Sc = similar(A, real(eltype(T)), min(m, n))
         U2, S2, V2ᴴ = @testinferred svd_compact!(Ac, (U, S, Vᴴ))
-        @test U2 * S2 * V2ᴴ ≈ A
-        @test isisometric(U2)
-        @test isisometric(V2ᴴ; side = :right)
-        @test isposdef(S2)
+        is_valid_svd_compact(A, U2, S2, V2ᴴ)
 
         if test_vals
             Sd = @testinferred svd_vals(A)
@@ -91,23 +107,14 @@ function test_svd_compact_batched(
         @test length(S) == batch_size
         @test length(Vᴴ) == batch_size
         for (a, u, s, vᴴ) in zip(As, U, S, Vᴴ)
-            @test size(u) == (m, minmn)
-            @test size(vᴴ) == (minmn, n)
-            @test s isa Diagonal{real(eltype(T))} && size(s) == (minmn, minmn)
-            @test u * s * vᴴ ≈ a
-            @test isisometric(u)
-            @test isisometric(vᴴ; side = :right)
-            @test isposdef(s)
+            is_valid_svd_compact(a, u, s, vᴴ)
         end
         U, S, Vᴴ = @testinferred batched_svd_compact(Ad)
         @test size(U) == (m, minmn, batch_size)
         @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
         @test size(Vᴴ) == (minmn, n, batch_size)
         for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 2), eachslice(Vᴴ, dims = 3))
-            @test u * Diagonal(s) * vᴴ ≈ a
-            @test isisometric(u)
-            @test isisometric(vᴴ; side = :right)
-            @test isposdef(Diagonal(s))
+            is_valid_svd_compact(a, u, s, vᴴ)
         end
 
         Sc = similar(diagview(S))
@@ -116,10 +123,7 @@ function test_svd_compact_batched(
         @test S2 === S
         @test V2ᴴ === Vᴴ
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 2), eachslice(V2ᴴ, dims = 3))
-            @test u * Diagonal(s) * vᴴ ≈ a
-            @test isisometric(u)
-            @test isisometric(vᴴ; side = :right)
-            @test isposdef(Diagonal(s))
+            is_valid_svd_compact(a, u, Diagonal(s), vᴴ)
         end
 
         if test_vals
@@ -147,19 +151,10 @@ function test_svd_compact_algs(
         m, n = size(A)
         minmn = min(m, n)
         U, S, Vᴴ = @testinferred svd_compact(A; alg)
-        @test size(U) == (m, minmn)
-        @test S isa Diagonal{real(eltype(T))} && size(S) == (minmn, minmn)
-        @test size(Vᴴ) == (minmn, n)
-        @test U * S * Vᴴ ≈ A
-        @test isisometric(U)
-        @test isisometric(Vᴴ; side = :right)
-        @test isposdef(S)
+        is_valid_svd_compact(A, U, S, Vᴴ)
 
         U2, S2, V2ᴴ = @testinferred svd_compact!(Ac, (U, S, Vᴴ); alg)
-        @test U2 * S2 * V2ᴴ ≈ A
-        @test isisometric(U2)
-        @test isisometric(V2ᴴ; side = :right)
-        @test isposdef(S2)
+        is_valid_svd_compact(A, U2, S2, V2ᴴ)
 
         if test_vals
             Sd = @testinferred svd_vals(A; alg)
@@ -185,23 +180,14 @@ function test_svd_compact_algs_batched(
         @test length(S) == batch_size
         @test length(Vᴴ) == batch_size
         for (a, u, s, vᴴ) in zip(As, U, S, Vᴴ)
-            @test size(u) == (m, minmn)
-            @test size(vᴴ) == (minmn, n)
-            @test s isa Diagonal{real(eltype(T))} && size(s) == (minmn, minmn)
-            @test u * s * vᴴ ≈ a
-            @test isisometric(u)
-            @test isisometric(vᴴ; side = :right)
-            @test isposdef(s)
+            is_valid_svd_compact(a, u, s, vᴴ)
         end
         U, S, Vᴴ = @testinferred batched_svd_compact(Ad; alg)
         @test size(U) == (m, minmn, batch_size)
         @test S isa AbstractMatrix{real(eltype(T))} && size(S) == (minmn, batch_size)
         @test size(Vᴴ) == (minmn, n, batch_size)
         for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 2), eachslice(Vᴴ, dims = 3))
-            @test u * Diagonal(s) * vᴴ ≈ a
-            @test isisometric(u)
-            @test isisometric(vᴴ; side = :right)
-            @test isposdef(Diagonal(s))
+            is_valid_svd_compact(a, u, Diagonal(s), vᴴ)
         end
 
         U2, S2, V2ᴴ = @testinferred batched_svd_compact!(Ac, (U, S, Vᴴ); alg)
@@ -209,10 +195,7 @@ function test_svd_compact_algs_batched(
         @test S2 === S
         @test V2ᴴ === Vᴴ
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 2), eachslice(V2ᴴ, dims = 3))
-            @test u * Diagonal(s) * vᴴ ≈ a
-            @test isisometric(u)
-            @test isisometric(vᴴ; side = :right)
-            @test isposdef(Diagonal(s))
+            is_valid_svd_compact(a, u, Diagonal(s), vᴴ)
         end
 
         if test_vals
@@ -239,17 +222,13 @@ function test_svd_compact_algs_batched(
             @test S3 === Ss
             @test V3ᴴ === Vᴴs
             for (a, u, s, vᴴ) in zip(Ar, U3, S3, V3ᴴ)
-                @test u * s * vᴴ ≈ a
-                @test isisometric(u)
-                @test isisometric(vᴴ; side = :right)
+                is_valid_svd_compact(a, u, s, vᴴ)
             end
 
             U4, S4, V4ᴴ = @testinferred batched_svd_compact(Ar; alg)
             @test S4 isa AbstractVector{<:Diagonal}
             for (a, u, s, vᴴ) in zip(Ar, U4, S4, V4ᴴ)
-                @test u * s * vᴴ ≈ a
-                @test isisometric(u)
-                @test isisometric(vᴴ; side = :right)
+                is_valid_svd_compact(a, u, s, vᴴ)
             end
 
             if test_vals
@@ -280,19 +259,10 @@ function test_svd_full(
         minmn = min(m, n)
 
         U, S, Vᴴ = @testinferred svd_full(A)
-        @test size(U) == (m, m)
-        @test eltype(S) == real(eltype(T)) && size(S) == (m, n)
-        @test size(Vᴴ) == (n, n)
-        @test U * S * Vᴴ ≈ A
-        @test isunitary(U)
-        @test isunitary(Vᴴ)
-        @test all(isposdef, diagview(S))
+        is_valid_svd_full(A, U, S, Vᴴ)
 
         U2, S2, V2ᴴ = @testinferred svd_full!(Ac, (U, S, Vᴴ))
-        @test U2 * S2 * V2ᴴ ≈ A
-        @test isunitary(U2)
-        @test isunitary(V2ᴴ)
-        @test all(isposdef, diagview(S2))
+        is_valid_svd_full(A, U2, S2, V2ᴴ)
 
         Sc = similar(A, real(eltype(T)), min(m, n))
         Sc2 = @testinferred svd_vals!(copy!(Ac, A), Sc)
@@ -317,23 +287,14 @@ function test_svd_full_batched(
         @test length(S) == batch_size
         @test length(Vᴴ) == batch_size
         for (a, u, s, vᴴ) in zip(As, U, S, Vᴴ)
-            @test size(u) == (m, m)
-            @test size(vᴴ) == (n, n)
-            @test s isa AbstractMatrix{real(eltype(T))} && size(s) == (m, n)
-            @test u * s * vᴴ ≈ a
-            @test isunitary(u)
-            @test isunitary(vᴴ)
-            @test all(isposdef, diagview(s))
+            is_valid_svd_full(a, u, s, vᴴ)
         end
         U, S, Vᴴ = @testinferred batched_svd_full(Ad)
         @test size(U) == (m, m, batch_size)
         @test S isa AbstractArray{real(eltype(T)), 3} && size(S) == (m, n, batch_size)
         @test size(Vᴴ) == (n, n, batch_size)
         for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 3), eachslice(Vᴴ, dims = 3))
-            @test u * s * vᴴ ≈ a
-            @test isunitary(u)
-            @test isunitary(vᴴ)
-            @test all(isposdef, diagview(s))
+            is_valid_svd_full(a, u, s, vᴴ)
         end
 
         U2, S2, V2ᴴ = @testinferred batched_svd_full!(Ac, (U, S, Vᴴ))
@@ -341,10 +302,7 @@ function test_svd_full_batched(
         @test S2 === S
         @test V2ᴴ === Vᴴ
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 3), eachslice(V2ᴴ, dims = 3))
-            @test u * s * vᴴ ≈ a
-            @test isunitary(u)
-            @test isunitary(vᴴ)
-            @test all(isposdef, diagview(s))
+            is_valid_svd_full(a, u, s, vᴴ)
         end
 
         Sc = similar(first(As), real(eltype(T)), min(m, n), batch_size)
@@ -368,22 +326,13 @@ function test_svd_full_algs(
         minmn = min(m, n)
 
         U, S, Vᴴ = @testinferred svd_full(A; alg)
-        @test size(U) == (m, m)
-        @test eltype(S) == real(eltype(T)) && size(S) == (m, n)
-        @test size(Vᴴ) == (n, n)
-        @test U * S * Vᴴ ≈ A
-        @test isunitary(U)
-        @test isunitary(Vᴴ)
-        @test all(isposdef, diagview(S))
+        is_valid_svd_full(A, U, S, Vᴴ)
 
         U2, S2, V2ᴴ = @testinferred svd_full!(Ac, (U, S, Vᴴ); alg)
         @test U2 === U
         @test S2 === S
         @test V2ᴴ === Vᴴ
-        @test U2 * S2 * V2ᴴ ≈ A
-        @test isunitary(U2)
-        @test isunitary(V2ᴴ)
-        @test all(isposdef, diagview(S2))
+        is_valid_svd_full(A, U2, S2, V2ᴴ)
 
         Sc = similar(A, real(eltype(T)), min(m, n))
         Sc2 = @testinferred svd_vals!(copy!(Ac, A), Sc; alg)
@@ -408,31 +357,19 @@ function test_svd_full_algs_batched(
         @test length(S) == batch_size
         @test length(Vᴴ) == batch_size
         for (a, u, s, vᴴ) in zip(As, U, S, Vᴴ)
-            @test size(u) == (m, m)
-            @test size(vᴴ) == (n, n)
-            @test s isa AbstractMatrix{real(eltype(T))} && size(s) == (m, n)
-            @test u * s * vᴴ ≈ a
-            @test isunitary(u)
-            @test isunitary(vᴴ)
-            @test all(isposdef, diagview(s))
+            is_valid_svd_full(a, u, s, vᴴ)
         end
         U, S, Vᴴ = @testinferred batched_svd_full(Ad; alg)
         @test size(U) == (m, m, batch_size)
         @test S isa AbstractArray{real(eltype(T)), 3} && size(S) == (m, n, batch_size)
         @test size(Vᴴ) == (n, n, batch_size)
         for (a, u, s, vᴴ) in zip(As, eachslice(U, dims = 3), eachslice(S, dims = 3), eachslice(Vᴴ, dims = 3))
-            @test u * s * vᴴ ≈ a
-            @test isunitary(u)
-            @test isunitary(vᴴ)
-            @test all(isposdef, diagview(s))
+            is_valid_svd_full(a, u, s, vᴴ)
         end
 
         U2, S2, V2ᴴ = @testinferred batched_svd_full!(Ac, (U, S, Vᴴ); alg)
         for (a, u, s, vᴴ) in zip(As, eachslice(U2, dims = 3), eachslice(S2, dims = 3), eachslice(V2ᴴ, dims = 3))
-            @test u * s * vᴴ ≈ a
-            @test isunitary(u)
-            @test isunitary(vᴴ)
-            @test all(isposdef, diagview(s))
+            is_valid_svd_full(a, u, s, vᴴ)
         end
 
         Sc = similar(first(As), real(eltype(T)), min(m, n), batch_size)
@@ -451,19 +388,12 @@ function test_svd_full_algs_batched(
             Vᴴs = [similar(a, size(a, 2), size(a, 2)) for a in Ar]
             U3, S3, V3ᴴ = @testinferred batched_svd_full!(deepcopy(Ar), (Us, Ss, Vᴴs); alg)
             for (a, u, s, vᴴ) in zip(Ar, U3, S3, V3ᴴ)
-                @test size(u) == (size(a, 1), size(a, 1))
-                @test size(s) == size(a)
-                @test size(vᴴ) == (size(a, 2), size(a, 2))
-                @test u * s * vᴴ ≈ a
-                @test isunitary(u)
-                @test isunitary(vᴴ)
+                is_valid_svd_full(a, u, s, vᴴ)
             end
 
             U4, S4, V4ᴴ = @testinferred batched_svd_full(Ar; alg)
             for (a, u, s, vᴴ) in zip(Ar, U4, S4, V4ᴴ)
-                @test u * s * vᴴ ≈ a
-                @test isunitary(u)
-                @test isunitary(vᴴ)
+                is_valid_svd_full(a, u, s, vᴴ)
             end
 
             Sv = [similar(a, real(eltype(T)), minimum(size(a))) for a in Ar]
@@ -494,16 +424,12 @@ function test_svd_algs_batched_oversized(
 
             U, S, Vᴴ = @testinferred batched_svd_compact(Ar; alg)
             for (a, u, s, vᴴ) in zip(Ar, U, S, Vᴴ)
-                @test u * s * vᴴ ≈ a
-                @test isisometric(u)
-                @test isisometric(vᴴ; side = :right)
+                is_valid_svd_compact(a, u, s, vᴴ)
             end
 
             Uf, Sf, Vfᴴ = @testinferred batched_svd_full(Ar; alg)
             for (a, u, s, vᴴ) in zip(Ar, Uf, Sf, Vfᴴ)
-                @test u * s * vᴴ ≈ a
-                @test isunitary(u)
-                @test isunitary(vᴴ)
+                is_valid_svd_full(a, u, s, vᴴ)
             end
 
             Sv = @testinferred batched_svd_vals(Ar; alg)
@@ -538,16 +464,12 @@ function test_svd_algs_batched_ragged_support(
 
             U, S, Vᴴ = @testinferred batched_svd_compact(Ar; alg)
             for (a, u, s, vᴴ) in zip(Ar, U, S, Vᴴ)
-                @test u * s * vᴴ ≈ a
-                @test isisometric(u)
-                @test isisometric(vᴴ; side = :right)
+                is_valid_svd_compact(a, u, s, vᴴ)
             end
 
             Uf, Sf, Vfᴴ = @testinferred batched_svd_full(Ar; alg)
             for (a, u, s, vᴴ) in zip(Ar, Uf, Sf, Vfᴴ)
-                @test u * s * vᴴ ≈ a
-                @test isunitary(u)
-                @test isunitary(vᴴ)
+                is_valid_svd_full(a, u, s, vᴴ)
             end
 
             Sv = @testinferred batched_svd_vals(Ar; alg)
