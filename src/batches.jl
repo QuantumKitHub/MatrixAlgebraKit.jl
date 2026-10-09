@@ -52,9 +52,9 @@ supports_pointer_batch(alg::AbstractAlgorithm, ::DefaultDriver, ::Type{TA}) wher
 # Split a ragged batch into batches the driver can handle: matrices of equal size are
 # batched together, and, if `pad`, whatever is left over is zero-padded into one more batch.
 # Returns the batches as `(indices, (m, n))` pairs, and the indices of the matrices that have
-# to be decomposed one at a time.
+# to be decomposed one at a time. Groups smaller than `threshold` are not worth a batched call.
 # TODO: should everything be padded into ONE batch?
-function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgorithm; pad::Bool = true)
+function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgorithm; pad::Bool = true, threshold::Int = BATCHED_SVD_THRESHOLD)
     batches = Tuple{Vector{Int}, Tuple{Int, Int}}[]
     rest = Int[]
     isempty(A) && return batches, rest
@@ -66,7 +66,7 @@ function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgor
         push!(get!(Vector{Int}, groups, size(A[i])), i)
     end
     for ((m, n), inds) in groups
-        if length(inds) >= BATCHED_SVD_THRESHOLD && max(m, n) <= batch_size_limit && (!needs_tall || m >= n)
+        if length(inds) >= threshold && max(m, n) <= batch_size_limit && (!needs_tall || m >= n)
             push!(batches, (inds, (m, n)))
         else
             append!(rest, inds)
@@ -79,7 +79,7 @@ function _ragged_batches(A::AbstractVector{<:AbstractMatrix}, alg::AbstractAlgor
     m = maximum(i -> size(A[i], 1), rest; init = 0)
     n = maximum(i -> size(A[i], 2), rest; init = 0)
     padded = needs_tall ? (max(m, n), max(m, n)) : (m, n)
-    if length(rest) >= BATCHED_SVD_THRESHOLD && maximum(padded) <= batch_size_limit
+    if length(rest) >= threshold && maximum(padded) <= batch_size_limit
         push!(batches, (rest, padded))
         rest = Int[]
     end

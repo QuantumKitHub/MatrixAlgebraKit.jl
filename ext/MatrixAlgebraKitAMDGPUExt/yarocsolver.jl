@@ -1470,8 +1470,8 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
             end
 
-            if jobz == rocSOLVER.rocblas_evect_original && V !== A
-                copy!(V, A)
+            if jobz == rocSOLVER.rocblas_evect_original
+                foreach(i -> copyto!(view(V, :, :, i), A[i]), 1:batch_size)
             end
             return W, V
         end
@@ -1505,8 +1505,8 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
             end
 
-            if jobz == rocSOLVER.rocblas_evect_original && V !== A
-                copy!(V, A)
+            if jobz == rocSOLVER.rocblas_evect_original
+                foreach(i -> copyto!(view(V, :, :, i), A[i]), 1:batch_size)
             end
             return W, V
         end
@@ -1553,7 +1553,9 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
             dev_info = ROCVector{Cint}(undef, batch_size)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             pA = ROCVector(map(pointer, A))
-            $heevx_batched(dh, jobz, range, roc_uplo, n, pA, lda, vl, vu, il, iu, abstol, nev, W, ldw, V, ldv, ifail, n, dev_info, batch_size)
+            # rocSOLVER expects Z as an array of pointers to each eigenvector matrix
+            pV = ROCVector([pointer(V) + (i - 1) * stride(V, 3) * sizeof($elty) for i in 1:batch_size])
+            $heevx_batched(dh, jobz, range, roc_uplo, n, pA, lda, vl, vu, il, iu, abstol, nev, W, ldw, pV, ldv, ifail, n, dev_info, batch_size)
 
             if check
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
@@ -1564,7 +1566,7 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
         function heevj_batched!(
                 A::AbstractVector{<:StridedROCMatrix{$elty}},
                 W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), length(A)),
-                V::StridedROCMatrix{$elty} = similar(first(A), $elty, size(first(A))..., length(A));
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A))..., length(A));
                 uplo::Char = 'U',
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100,
@@ -1596,8 +1598,8 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
             end
 
-            if jobz == rocSOLVER.rocblas_evect_original && V !== A
-                copy!(V, A)
+            if jobz == rocSOLVER.rocblas_evect_original
+                foreach(i -> copyto!(view(V, :, :, i), A[i]), 1:batch_size)
             end
             return W, V
         end
