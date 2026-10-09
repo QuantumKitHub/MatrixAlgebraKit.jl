@@ -56,7 +56,7 @@ end
 function is_valid_svd_full(A, U, S, Vᴴ)
     m, n = size(A)
     @test size(U) == (m, m)
-    @test eltype(S) == real(eltype(T)) && size(S) == (m, n)
+    @test eltype(S) == real(eltype(A)) && size(S) == (m, n)
     @test size(Vᴴ) == (n, n)
     @test U * S * Vᴴ ≈ A
     @test isunitary(U)
