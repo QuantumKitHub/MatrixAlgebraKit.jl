@@ -26,6 +26,12 @@ function select_indices(r::AbstractRange, ind::AbstractVector{<:Integer})
     checkbounds(r, ind)
     return first(r) .+ step(r) .* (ind .- 1)
 end
+# `Bool <: Integer`, so logical masks need to
+# be converted *before* the arithmetic above
+function select_indices(r::AbstractRange, ind::AbstractVector{Bool})
+    checkbounds(r, ind)
+    return select_indices(r, findall(ind))
+end
 
 """
     is_leading_index(ind, p::Int)
