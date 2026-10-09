@@ -44,6 +44,13 @@ function gaugefix!(::Union{typeof(eig_full!), typeof(eigh_full!), typeof(gen_eig
     return V
 end
 
+function gaugefix!(::typeof(batched_eigh_full!), V)
+    for v in eachslice(V, dims = 3)
+        gaugefix!(eigh_full!, v)
+    end
+    return V
+end
+
 function gaugefix!(::typeof(svd_full!), U, Vᴴ)
     m, n = size(U, 2), size(Vᴴ, 1)
     for j in 1:max(m, n)

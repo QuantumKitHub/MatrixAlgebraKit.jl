@@ -9,6 +9,7 @@ using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesdd!, gesvdx!, gesvdj!
 import MatrixAlgebraKit: gesvdj_batched!, gesdd_batched!, gesvd_batched!, gesvdx_batched!
 import MatrixAlgebraKit: heevj!, heevd!, heev!, heevx!
+import MatrixAlgebraKit: heevj_batched!, heevd_batched!, heev_batched!, heevx_batched!
 import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!
 using AMDGPU
 using LinearAlgebra
@@ -31,6 +32,12 @@ end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return DivideAndConquer(; kwargs...)
 end
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCArray{<:BlasFloat, 3}}
+    return Bisection(; kwargs...)
+end
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}
+    return Bisection(; kwargs...)
+end
 
 for f in (:geqrf!, :ungqr!, :unmqr!)
     @eval $f(::ROCSOLVER, args...) = YArocSOLVER.$f(args...)
@@ -45,6 +52,8 @@ MatrixAlgebraKit.supports_pointer_batch(::AbstractAlgorithm, ::ROCSOLVER, ::Type
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_full!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_compact!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_vals!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
+MatrixAlgebraKit.supports_ragged_batch(::typeof(eigh_full!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
+MatrixAlgebraKit.supports_ragged_batch(::typeof(eigh_vals!), ::AbstractAlgorithm, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
 
 function gesvd!(::ROCSOLVER, A::StridedROCMatrix, S::StridedROCVector, U::StridedROCMatrix, Vᴴ::StridedROCMatrix; kwargs...)
     m, n = size(A)
@@ -149,12 +158,28 @@ end
 
 heevj!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevj!(A, Dd, V; kwargs...)
+heevj_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ds::StridedROCMatrix, Vs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.heevj_batched!(As, Ds, Vs; kwargs...)
+heevj_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ds::StridedROCMatrix, Vs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.heevj_strided_batched!(As, Ds, Vs; kwargs...)
 heevd!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevd!(A, Dd, V; kwargs...)
+heevd_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ds::StridedROCMatrix, Vs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.heevd_batched!(As, Ds, Vs; kwargs...)
+heevd_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ds::StridedROCMatrix, Vs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.heevd_strided_batched!(As, Ds, Vs; kwargs...)
 heev!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heev!(A, Dd, V; kwargs...)
+heev_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ds::StridedROCMatrix, Vs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.heev_batched!(As, Ds, Vs; kwargs...)
+heev_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ds::StridedROCMatrix, Vs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.heev_strided_batched!(As, Ds, Vs; kwargs...)
 heevx!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevx!(A, Dd, V; kwargs...)
+heevx_batched!(::ROCSOLVER, As::AbstractVector{<:StridedROCMatrix}, Ds::StridedROCMatrix, Vs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.heevx_batched!(As, Ds, Vs; kwargs...)
+heevx_batched!(::ROCSOLVER, As::StridedROCArray{T, 3}, Ds::StridedROCMatrix, Vs::StridedROCArray{T, 3}; kwargs...) where {T <: BlasFloat} =
+    YArocSOLVER.heevx_strided_batched!(As, Ds, Vs; kwargs...)
 
 function MatrixAlgebraKit.findtruncated_svd(values::StridedROCVector, strategy::TruncationByValue)
     return MatrixAlgebraKit.findtruncated(values, strategy)
