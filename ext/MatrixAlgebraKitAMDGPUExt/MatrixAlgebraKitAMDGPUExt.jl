@@ -25,9 +25,6 @@ end
 function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: StridedROCArray{<:BlasFloat, 3}}
     return Bisection(; kwargs...)
 end
-function MatrixAlgebraKit.default_svd_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedROCMatrix{<:BlasFloat}}}
-    return Bisection(; kwargs...)
-end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedROCVecOrMat{<:BlasFloat}}
     return DivideAndConquer(; kwargs...)
 end

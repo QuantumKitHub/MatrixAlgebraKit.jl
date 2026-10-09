@@ -64,6 +64,10 @@ if CUDA.functional()
         TestSuite.test_svd_batched_algs(CuMatrix{T}, (m, n), batch_size, CUDA_SVD_ALGS)
     end
     for T in BLASFloats
+        @test MatrixAlgebraKit.default_svd_algorithm(Vector{CuMatrix{T}}) isa Jacobi
+        @test MatrixAlgebraKit.default_svd_algorithm(CuArray{T, 3}) isa Jacobi
+    end
+    for T in BLASFloats
         TestSuite.seed_rng!(123)
         TestSuite.test_svd_algs_batched_oversized(CuMatrix{T}, (Jacobi(),), batch_size)
         TestSuite.test_svd_algs_batched_ragged_support(CuMatrix{T}, (Jacobi(),), batch_size)
@@ -99,6 +103,10 @@ if AMDGPU.functional()
         TestSuite.test_svd_algs(ROCMatrix{T}, (m, n), AMD_SVD_ALGS)
         TestSuite.test_svd_batched(ROCMatrix{T}, (m, n), batch_size)
         TestSuite.test_svd_batched_algs(ROCMatrix{T}, (m, n), batch_size, AMD_SVD_ALGS)
+    end
+    for T in BLASFloats
+        @test MatrixAlgebraKit.default_svd_algorithm(Vector{ROCMatrix{T}}) ==
+            MatrixAlgebraKit.default_svd_algorithm(ROCMatrix{T})
     end
     for T in BLASFloats
         TestSuite.seed_rng!(123)
