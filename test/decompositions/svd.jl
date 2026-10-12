@@ -68,6 +68,7 @@ if CUDA.functional()
         TestSuite.test_svd_algs_batched_oversized(CuMatrix{T}, (Jacobi(),), batch_size)
         TestSuite.test_svd_algs_batched_ragged_support(CuMatrix{T}, (Jacobi(),), batch_size)
         TestSuite.test_svd_algs_batched_ragged_support(CuMatrix{T}, (QRIteration(),), batch_size; supported = false)
+        TestSuite.test_svd_algs_batched_ragged_support(Diagonal{T, CuVector{T}}, (DiagonalAlgorithm(),), batch_size; supported = false)
     end
 
     # Randomized SVD:
@@ -104,6 +105,7 @@ if AMDGPU.functional()
         TestSuite.seed_rng!(123)
         AMD_SVD_ALGS = (QRIteration(), Jacobi(), DivideAndConquer(), Bisection())
         TestSuite.test_svd_algs_batched_ragged_support(ROCMatrix{T}, AMD_SVD_ALGS, batch_size)
+        TestSuite.test_svd_algs_batched_ragged_support(Diagonal{T, ROCVector{T}}, (DiagonalAlgorithm(),), batch_size; supported = false)
     end
 
     @testset "Bisection with min(m, n) == 1 $(testargs_summary(T, sz))" for T in BLASFloats,
