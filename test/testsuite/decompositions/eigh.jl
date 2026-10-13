@@ -122,7 +122,7 @@ function test_eigh_trunc(
         @testset "specify truncation algorithm" begin
             atol = sqrt(eps(real(eltype(T))))
             m4 = 4
-            smallA = randn!(similar(A, (m4, m4)))
+            smallA = instantiate_matrix(T, (m4, m4))
             V = T <: Diagonal ? I : qr_compact(smallA)[1]
             Ddiag = similar(A, real(eltype(T)), m4)
             copyto!(Ddiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
@@ -161,7 +161,7 @@ function test_eigh_trunc_algs(
         # truncrank
         atol = sqrt(eps(real(eltype(T))))
         m4 = 4
-        smallA = randn!(similar(A, (m4, m4)))
+        smallA = instantiate_matrix(T, (m4, m4))
         V = T <: Diagonal ? I : qr_compact(smallA)[1]
         Ddiag = similar(A, real(eltype(T)), m4)
         copyto!(Ddiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])

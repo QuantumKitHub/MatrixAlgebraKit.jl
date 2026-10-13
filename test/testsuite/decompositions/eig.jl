@@ -117,7 +117,7 @@ function test_eig_trunc(
 
         m4 = 4
         atol = sqrt(eps(real(eltype(T))))
-        V = T <: Diagonal ? I : copyto!(similar(A, eltype(T), m4, m4), randn(rng, eltype(T), m4, m4))
+        V = instantiate_matrix(T, (m4, m4))
         Ddiag = similar(A, real(eltype(T)), m4)
         copyto!(Ddiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
         D = Diagonal(Ddiag)
@@ -158,7 +158,7 @@ function test_eig_trunc_algs(
 
         m4 = 4
         atol = sqrt(eps(real(eltype(T))))
-        V = T <: Diagonal ? I : copyto!(similar(A, eltype(T), m4, m4), randn(rng, eltype(T), m4, m4))
+        V = instantiate_matrix(T, (m4, m4))
         Ddiag = similar(A, real(eltype(T)), m4)
         copyto!(Ddiag, real(eltype(T))[0.9, 0.3, 0.1, 0.01])
         D = Diagonal(Ddiag)
