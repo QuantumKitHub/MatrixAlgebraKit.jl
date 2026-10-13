@@ -42,6 +42,9 @@ function gaugefix!(::Union{typeof(eig_full!), typeof(eigh_full!), typeof(gen_eig
     return V
 end
 
+# TODO: can do the multiplication @. Vᴴk = signs_t * Vᴴk in one fell swoop
+# earlier, or compute signs in the n > m case entirely with reference to V?
+# This might require modifying forward-mode AD rules.
 function gaugefix!(::typeof(svd_full!), U, Vᴴ)
     m, n = size(U, 2), size(Vᴴ, 1)
     k = min(m, n)
