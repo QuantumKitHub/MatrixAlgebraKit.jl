@@ -36,32 +36,26 @@ function gaugefix!(::typeof(lq_householder!), L, Q, Ld)
 end
 
 function gaugefix!(::Union{typeof(eig_full!), typeof(eigh_full!), typeof(gen_eig_full!)}, V::AbstractMatrix)
-    for j in axes(V, 2)
-        v = view(V, :, j)
-        s = sign(_argmaxabs(v))
-        @inbounds v .*= conj(s)
-    end
+    signs = reduce(_largest, V; dims = 1, init = zero(eltype(V)))
+    @. signs = sign(signs)
+    @. V = V * conj(signs)
     return V
 end
 
 function gaugefix!(::typeof(svd_full!), U, Vᴴ)
     m, n = size(U, 2), size(Vᴴ, 1)
-    for j in 1:max(m, n)
-        if j <= min(m, n)
-            u = view(U, :, j)
-            v = view(Vᴴ, j, :)
-            s = sign(_argmaxabs(u))
-            u .*= conj(s)
-            v .*= s
-        elseif j <= m
-            u = view(U, :, j)
-            s = sign(_argmaxabs(u))
-            u .*= conj(s)
-        else
-            v = view(Vᴴ, j, :)
-            s = sign(_argmaxabs(v))
-            v .*= conj(s)
-        end
+    k = min(m, n)
+    signs = reduce(_largest, U; dims = 1, init = zero(eltype(U)))
+    @. signs = sign(signs)
+    @. U = U * conj(signs)
+    Vᴴk = view(Vᴴ, axes(Vᴴ, 1)[1:k], :)
+    signs_t = transpose(view(signs, :, axes(signs, 2)[1:k]))
+    @. Vᴴk = signs_t * Vᴴk
+    if n > m
+        Vᴴr = view(Vᴴ, axes(Vᴴ, 1)[(k + 1):n], :)
+        signs_r = reduce(_largest, Vᴴr; dims = 2, init = zero(eltype(Vᴴ)))
+        @. signs_r = sign(signs_r)
+        @. Vᴴr = Vᴴr * conj(signs_r)
     end
     return (U, Vᴴ)
 end
