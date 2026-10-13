@@ -55,7 +55,7 @@ function gaugefix!(::typeof(svd_full!), U, Vᴴ)
         Vᴴr = view(Vᴴ, axes(Vᴴ, 1)[(k + 1):n], :)
         signs_r = reduce(_largest, Vᴴr; dims = 2, init = zero(eltype(Vᴴ)))
         @. signs_r = sign(signs_r)
-        @. Vᴴr = Vᴴr * conj(signs_r)
+        @. Vᴴr = conj(signs_r) * Vᴴr
     end
     return (U, Vᴴ)
 end
