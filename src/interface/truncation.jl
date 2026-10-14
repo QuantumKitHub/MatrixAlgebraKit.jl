@@ -13,6 +13,7 @@ const docs_truncation_strategies = """
 - [`trunctol`](@ref)
 - [`truncerror`](@ref)
 - [`truncfilter`](@ref)
+- [`truncdegen`](@ref)
 """
 
 const docs_null_truncation_kwargs = """
@@ -194,6 +195,34 @@ is smaller than `max(atol, rtol * norm)`, where the error is determined using th
 """
 function truncerror(; atol::Real = 0, rtol::Real = 0, p::Real = 2)
     return TruncationByError(promote(atol, rtol)..., p)
+end
+
+"""
+    TruncationDegenerate(strategy::TruncationStrategy, atol::Real, rtol::Real)
+
+Truncation strategy that discards an entire degenerate subspace when another strategy would split it.
+See also [`truncdegen`](@ref).
+"""
+# Adapted from ITensor/TensorAlgebra.jl, src/MatrixAlgebra.jl at 51b5c56c.
+# Copyright 2024 The Simons Foundation, Inc. - All Rights Reserved.
+# Licensed under Apache-2.0; see LICENSES/TensorAlgebra.txt. Documentation adapted here.
+struct TruncationDegenerate{Strategy <: TruncationStrategy, T <: Real} <: TruncationStrategy
+    strategy::Strategy
+    atol::T
+    rtol::T
+end
+
+"""
+    truncdegen(strategy::TruncationStrategy; atol::Real=0, rtol::Real=0)
+
+Modify `strategy` so that if its cutoff falls within a degenerate subspace, the entire subspace is discarded.
+A value ``v`` is considered degenerate with the largest discarded value ``s`` when ``|v - s| \\leq \\max(\\mathrm{atol}, \\mathrm{rtol} \\cdot |s|)``.
+The spectrum must be sorted in descending order, and `strategy` must keep a contiguous prefix of it.
+This strategy only discards values, so it may violate a requested minimum rank or maximum truncation error.
+Empty selections and selections keeping all values are unchanged.
+"""
+function truncdegen(strategy::TruncationStrategy; atol::Real = 0, rtol::Real = 0)
+    return TruncationDegenerate(strategy, promote(atol, rtol)...)
 end
 
 """

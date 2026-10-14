@@ -1,6 +1,7 @@
 using MatrixAlgebraKit
 using Test
 using TestExtras
+using LinearAlgebra: Diagonal, diag, norm
 using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationUnion,
     TruncationByOrder, TruncationByValue, TruncationStrategy, findtruncated, findtruncated_svd
 
@@ -93,4 +94,31 @@ using MatrixAlgebraKit: NoTruncation, TruncationIntersection, TruncationUnion,
     union2 = union1 | truncrank(4)
     @test union2 isa TruncationUnion
     @test length(union2.components) == 3
+
+    # TruncationDegenerate
+    values = [10.0, 5.0, 5.0, 4.9996, 4.9992, 1.0e-9, 1.0e-9, 0.0]
+    strategy = @constinferred truncdegen(truncrank(3); rtol = 1.0e-4)
+    for find in (findtruncated, findtruncated_svd)
+        @test @constinferred(find(values, truncdegen(truncrank(2)))) == Base.OneTo(1)
+        @test @constinferred(find(values, strategy)) == Base.OneTo(1)
+        @test find(values, truncdegen(truncrank(3))) == Base.OneTo(3)
+        @test find(values, truncdegen(truncrank(4); atol = 1.0e-3)) == Base.OneTo(1)
+        # The comparison uses the largest originally discarded value, without chaining.
+        @test find(values, truncdegen(truncrank(4); rtol = 1.0e-4)) == Base.OneTo(3)
+        @test find(values, truncdegen(truncrank(0))) == Base.OneTo(0)
+        @test find(Float64[], strategy) == Base.OneTo(0)
+        @test find(values, truncdegen(notrunc())) == Base.OneTo(length(values))
+        @test find(values, truncdegen(truncrank(100))) == Base.OneTo(length(values))
+        @test find(zeros(4), truncdegen(truncrank(2))) == Base.OneTo(0)
+        @test find(ones(4), strategy) == Base.OneTo(0)
+        @test find(values, truncdegen(truncrank(6) & trunctol(; atol = 1.0e-8))) == Base.OneTo(5)
+        @test find(values, truncdegen(TruncationStrategy(; atol = 6, minrank = 2))) == Base.OneTo(1)
+        @test_throws ArgumentError find(reverse(values), strategy)
+        @test_throws ArgumentError find(values, truncdegen(truncfilter(!=(5))))
+    end
+
+    A = Matrix(Diagonal(values))
+    U, S, Vᴴ, ϵ = svd_trunc(A; trunc = strategy)
+    @test diag(S) == values[1:1]
+    @test norm(A - U * S * Vᴴ) ≈ ϵ ≈ norm(values[2:end])
 end

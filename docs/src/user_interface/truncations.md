@@ -127,6 +127,7 @@ truncrank
 trunctol
 truncfilter
 truncerror
+truncdegen
 ```
 
 Strategies can be composed using the `&` operator ([`TruncationIntersection`](@ref)) to keep only values satisfying **all** conditions,
@@ -144,6 +145,27 @@ combined_trunc = truncrank(10) & trunctol(; atol = 1e-6);
 # Keep values above tolerance, but always at least 3 (union)
 combined_trunc = trunctol(; atol = 1e-6) | truncrank(3);
 ```
+
+### Preserving Degenerate Multiplets
+
+Use [`truncdegen`](@ref) to discard the entire multiplet when a cutoff splits a group of equal or nearly equal values.
+It compares retained values against the largest discarded value, using an absolute or relative degeneracy tolerance.
+For example, a rank-two cutoff through the equal singular values below is reduced to rank one:
+
+```jldoctest truncations; output=false
+using LinearAlgebra: Diagonal
+B = Diagonal([4.0, 2.0, 2.0, 1e-12]);
+trunc = truncdegen(truncrank(2); rtol = 1e-4);
+U, S, Vᴴ, ϵ = svd_trunc(B; trunc);
+diagview(S) == [4.0]
+
+# output
+true
+```
+
+The spectrum must be sorted in descending order, and the wrapped strategy must retain a contiguous prefix.
+These assumptions are satisfied by ordinary rank and magnitude cutoffs on singular values.
+Discarding the full multiplet may violate a requested minimum rank or maximum truncation error.
 
 ## Truncation Error
 

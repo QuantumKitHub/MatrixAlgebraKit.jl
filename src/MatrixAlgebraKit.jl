@@ -52,7 +52,7 @@ export CUSOLVER_Simple, CUSOLVER_HouseholderQR, CUSOLVER_QRIteration, CUSOLVER_S
 export ROCSOLVER_HouseholderQR, ROCSOLVER_QRIteration, ROCSOLVER_Jacobi,
     ROCSOLVER_DivideAndConquer, ROCSOLVER_Bisection
 
-export notrunc, truncrank, trunctol, truncerror, truncfilter
+export notrunc, truncrank, trunctol, truncerror, truncfilter, truncdegen
 
 @static if VERSION >= v"1.11.0-DEV.469"
     eval(
@@ -64,7 +64,7 @@ export notrunc, truncrank, trunctol, truncerror, truncfilter
     eval(
         Expr(
             :public, :TruncationByOrder, :TruncationByFilter, :TruncationByValue,
-            :TruncationByError, :TruncationIntersection, :TruncationUnion, :truncate
+            :TruncationByError, :TruncationDegenerate, :TruncationIntersection, :TruncationUnion, :truncate
         )
     )
     eval(

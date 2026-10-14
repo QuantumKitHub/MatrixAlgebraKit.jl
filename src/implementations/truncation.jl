@@ -78,6 +78,28 @@ function findtruncated_svd(values::AbstractVector, strategy::TruncationByValue)
     end
 end
 
+# Adapted from ITensor/TensorAlgebra.jl, src/MatrixAlgebra.jl at 51b5c56c.
+# Copyright 2024 The Simons Foundation, Inc. - All Rights Reserved.
+# Licensed under Apache-2.0; see LICENSES/TensorAlgebra.txt. Added empty/Colon guards.
+function findtruncated(values::AbstractVector, strategy::TruncationDegenerate)
+    Base.require_one_based_indexing(values)
+    issorted(values; rev = true) || throw(ArgumentError("Values must be reverse sorted."))
+    indices_collection = findtruncated(values, strategy.strategy)
+    indices_collection isa Colon && return Base.OneTo(length(values))
+    isempty(indices_collection) && return Base.OneTo(0)
+    indices = Base.OneTo(maximum(indices_collection))
+    indices_collection == indices ||
+        throw(ArgumentError("Truncation must be a contiguous range."))
+    length(indices_collection) == length(values) && return indices
+    # The largest discarded value sets the degeneracy tolerance.
+    truncval = values[last(indices) + 1]
+    atol = max(strategy.atol, strategy.rtol * abs(truncval))
+    for rank in reverse(indices)
+        ≈(values[rank], truncval; atol, rtol = 0) || return Base.OneTo(rank)
+    end
+    return Base.OneTo(0)
+end
+
 function findtruncated(values::AbstractVector, strategy::TruncationByError)
     I = sortperm(values; by = abs, rev = true)
     I′ = _truncerr_impl(values, I; strategy.atol, strategy.rtol, strategy.p)

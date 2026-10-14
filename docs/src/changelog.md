@@ -22,6 +22,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- `truncdegen` discards an entire degenerate subspace when a truncation would split it, adapted from ITensor/TensorAlgebra.jl ([#101](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/issues/101)).
+
 ### Changed
 
 ### Deprecated
