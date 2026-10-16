@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.11...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.12...HEAD)
 
 ### Added
 
@@ -31,6 +31,31 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 ### Performance
+
+## [0.6.12](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.11...v0.6.12) - 2026-10-16
+
+### Added
+
+### Changed
+
+- The default SVD algorithm for `ROCArray` inputs (single matrices, 3D arrays and vectors of
+  matrices) is `QRIteration` again, instead of `Bisection` ([#308](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/308)).
+- `default_svd_algorithm` for a vector of matrices now falls back to the default for its element
+  type; for vectors of `CuMatrix` it uses `Jacobi`, the only algorithm CUSOLVER batches ([#300](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/300)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- `DiagonalAlgorithm` no longer reports that it supports pointer or ragged batches with the
+  rocSOLVER driver ([#305](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/305)).
+
+### Performance
+
+- Gauge fixing for `svd_full`, `eig_full`, `eigh_full` and `gen_eig_full` is now vectorized, so it
+  no longer loops over columns and works efficiently on GPU arrays ([#307](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/307)).
 
 ## [0.6.11](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.10...v0.6.11) - 2026-10-09
 
