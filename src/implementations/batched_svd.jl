@@ -194,7 +194,7 @@ for (f, f_lapack!, Alg) in (
             check_input(batched_svd_compact!, A, USVᴴ, alg)
             driver = get(alg.kwargs, :driver, default_driver(alg, eltype(A)))
             supports_pointer_batch(alg, driver, eltype(A)) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
+                throw(ArgumentError(LazyString("driver ", driver, " does not support ragged (non-uniform) batches")))
             return $svd_compact_f!(A, USVᴴ...; alg.kwargs...)
         end
         function batched_svd_compact!(A::AbstractArray{T, 3}, USVᴴ, alg::$Alg) where {T}
@@ -205,7 +205,7 @@ for (f, f_lapack!, Alg) in (
             check_input(batched_svd_full!, A, USVᴴ, alg)
             driver = get(alg.kwargs, :driver, default_driver(alg, eltype(A)))
             supports_pointer_batch(alg, driver, eltype(A)) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
+                throw(ArgumentError(LazyString("driver ", driver, " does not support ragged (non-uniform) batches")))
             return $svd_full_f!(A, USVᴴ...; alg.kwargs...)
         end
         function batched_svd_full!(A::AbstractArray{T, 3}, USVᴴ, alg::$Alg) where {T}
@@ -216,7 +216,7 @@ for (f, f_lapack!, Alg) in (
             check_input(batched_svd_vals!, A, S, alg)
             driver = get(alg.kwargs, :driver, default_driver(alg, eltype(A)))
             supports_pointer_batch(alg, driver, eltype(A)) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
+                throw(ArgumentError(LazyString("driver ", driver, " does not support ragged (non-uniform) batches")))
             return $svd_vals_f!(A, S; alg.kwargs...)
         end
         function batched_svd_vals!(A::AbstractArray{T, 3}, S, alg::$Alg) where {T}

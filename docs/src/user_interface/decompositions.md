@@ -164,7 +164,7 @@ Filter = t -> t isa Type && t <: MatrixAlgebraKit.SVDAlgorithms
 The [Polar Decomposition](https://en.wikipedia.org/wiki/Polar_decomposition) of a matrix `A` is a factorization `A = W * P`, where `W` is unitary and `P` is positive semi-definite.
 If `A` is invertible (and therefore square), the polar decomposition always exists and is unique.
 For non-square matrices `A` of size `(m, n)`, the decomposition `A = W * P` with `P` positive semi-definite of size `(n, n)` and `W` isometric of size `(m, n)` exists only if `m >= n`, and is unique if `A` and thus `P` is full rank.
-For `m <= n`, we can analoguously decompose `A` as `A = P * Wᴴ` with `P` positive semi-definite of size `(m, m)` and `Wᴴ` of size `(m, n)` such that `W = (Wᴴ)'` is isometric. Only in the case `m = n` do both decompositions exist.
+For `m <= n`, we can analogously decompose `A` as `A = P * Wᴴ` with `P` positive semi-definite of size `(m, m)` and `Wᴴ` of size `(m, n)` such that `W = (Wᴴ)'` is isometric. Only in the case `m = n` do both decompositions exist.
 
 The decompositions `A = W * P` or `A = P * Wᴴ` can be computed with the [`left_polar`](@ref) and [`right_polar`](@ref) functions, respectively.
 
@@ -173,7 +173,7 @@ left_polar
 right_polar
 ```
 
-These functions can be implemented by first computing a singular value decomposition, and then constructing the polar decomposition from the singular values and vectors. Alternatively, the polar decomposition can be computed using an 
+These functions can be implemented by first computing a singular value decomposition, and then constructing the polar decomposition from the singular values and vectors. Alternatively, the polar decomposition can be computed using an
 iterative method based on Newton's method, that can be more efficient for large matrices, especially if they are
 close to being isometric already.
 
@@ -430,4 +430,3 @@ Additionally, the default value can also be controlled with a global toggle usin
 MatrixAlgebraKit.gaugefix!
 MatrixAlgebraKit.default_fixgauge
 ```
-

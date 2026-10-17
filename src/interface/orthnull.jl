@@ -115,7 +115,7 @@ application purposes.
 
 ### `alg::Nothing`
 This default mode uses the presence of a truncation strategy `trunc` to determine an optimal
-decomposition type, which will typicall be LQ-based for no truncation, or SVD-based for
+decomposition type, which will typically be LQ-based for no truncation, or SVD-based for
 truncation. The remaining keyword arguments are passed on directly to the algorithm selection
 procedure of the chosen decomposition type.
 

@@ -6,12 +6,12 @@
     inv_regularized(a::Number, tol = defaulttol(a))
     inv_regularized(A::Matrix, tol = defaulttol(A); isposdef = false, kwargs...)
 
-Compute a smooth regularised inverse (L2 Tikhonov regularisation) of a number or square 
+Compute a smooth regularised inverse (L2 Tikhonov regularisation) of a number or square
 matrix a.
 
 *   For numbers, this is given by `inv(hypot(a, tol))`.
 
-*   For matrices, this is computed using the singular value decomposition and aplying
+*   For matrices, this is computed using the singular value decomposition and applying
     `inv_regularized` to the singular values. If `isposdef = true`, the singular value
     decomposition is equivalent to the (Hermitian) eigenvalue decomposition of `A` and
     the latter is used instead.
