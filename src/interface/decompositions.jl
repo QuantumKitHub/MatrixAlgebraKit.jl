@@ -32,7 +32,7 @@ by construction.
 
 Algorithm type to denote the standard LAPACK algorithm for computing the QR decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
-the keyword arugments, i.e.  `?geqrt` will be chosen if `blocksize > 1`. With
+the keyword arguments, i.e.  `?geqrt` will be chosen if `blocksize > 1`. With
 `blocksize == 1`, `?geqrf` will be chosen if `pivoted == false` and `?geqp3` will be chosen
 if `pivoted == true`. The keyword `positive = true` is used to ensure that the diagonal
 elements of `R` are non-negative.
@@ -44,7 +44,7 @@ elements of `R` are non-negative.
 
 Algorithm type to denote the standard LAPACK algorithm for computing the LQ decomposition of
 a matrix using Householder reflectors. The specific LAPACK function can be controlled using
-the keyword arugments, i.e. `?gelqt` will be chosen if `blocksize > 1` or `?gelqf` will be
+the keyword arguments, i.e. `?gelqt` will be chosen if `blocksize > 1` or `?gelqf` will be
 chosen if `blocksize == 1`. The keyword `positive = true` is used to ensure that the
 diagonal elements of `L` are non-negative.
 """
@@ -382,7 +382,7 @@ $_fixgauge_docs
     CUSOLVER_SVDPolar(; fixgauge = default_fixgauge())
 
 Algorithm type to denote the CUSOLVER driver for computing the singular value decomposition of
-a general matrix by using Halley's iterative algorithm to compute the polar decompositon,
+a general matrix by using Halley's iterative algorithm to compute the polar decomposition,
 followed by the hermitian eigenvalue decomposition of the positive definite factor.
 $_fixgauge_docs
 """

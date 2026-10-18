@@ -214,7 +214,7 @@ end
     remove_eig_gauge_dependence!(ΔV, D, V; degeneracy_atol = ...)
 
 Remove the gauge-dependent part from the cotangent `ΔV` of the eigenvector matrix `V`. The
-eigenvectors are only determined up to a scalar factor (or an abitrary linear transformation
+eigenvectors are only determined up to a scalar factor (or an arbitrary linear transformation
 across eigenvectors associated with degenerate eigenvalues), so the corresponding components of
 `ΔV` are projected out.
 """
