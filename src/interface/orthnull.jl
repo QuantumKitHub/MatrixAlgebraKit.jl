@@ -389,7 +389,7 @@ end
     return RightNullViaLQ(alg)
 end
 @inline function select_algorithm(::typeof(right_null!), A, ::Val{:svd}; trunc = nothing, kwargs...)
-    alg_svd = select_algorithm(svd_full!, A; get(kwargs, :svd, nothing))
+    alg_svd = select_algorithm(svd_full!, A, get(kwargs, :svd, nothing))
     alg = TruncatedAlgorithm(alg_svd, select_null_truncation(A, trunc))
     return RightNullViaSVD(alg)
 end
