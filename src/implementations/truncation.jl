@@ -163,6 +163,40 @@ _ind_union(A::Base.OneTo, B::Base.OneTo) = Base.OneTo(max(length(A), length(B)))
 _ind_union(A::AbstractUnitRange, B::AbstractUnitRange) = union(A, B)
 _ind_union(A, B) = union(A, B)
 
+function findtruncated(values::AbstractVector, strategy::TruncationDegenerate)
+    keep = _ind_to_mask(values, findtruncated(values, strategy.strategy))
+    perm = sortperm(values; by = abs, rev = true)
+    return findall(_keep_degenerate!(keep, values, perm, strategy))
+end
+function findtruncated_svd(values::AbstractVector, strategy::TruncationDegenerate)
+    # values are already sorted by decreasing magnitude
+    keep = _ind_to_mask(values, findtruncated_svd(values, strategy.strategy))
+    return findall(_keep_degenerate!(keep, values, eachindex(values), strategy))
+end
+
+_ind_to_mask(values::AbstractVector, ::Colon) = trues(length(values))
+_ind_to_mask(values::AbstractVector, ind::AbstractVector{Bool}) = BitVector(ind)
+function _ind_to_mask(values::AbstractVector, ind)
+    keep = falses(length(values))
+    keep[ind] .= true
+    return keep
+end
+
+# walk the values in sorted order `perm`, and make sure each group of consecutive degenerate
+# values is either kept or discarded as a whole cluster
+function _keep_degenerate!(keep::AbstractVector{Bool}, values::AbstractVector, perm, strategy::TruncationDegenerate)
+    σs = abs.(collect(view(values, perm)))
+    start = firstindex(σs)
+    for k in eachindex(σs)
+        if k == lastindex(σs) || σs[k] - σs[k + 1] > max(strategy.atol, strategy.rtol * σs[k])
+            group = view(perm, start:k)
+            allequal(view(keep, group)) || (keep[group] .= strategy.mode === :up)
+            start = k + 1
+        end
+    end
+    return keep
+end
+
 # Truncation error
 # ----------------
 truncation_error(values::AbstractVector, ind) = truncation_error!(copy(values), ind)

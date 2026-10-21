@@ -270,6 +270,45 @@ Base.:|(::NoTruncation, ::NoTruncation) = notrunc()
 Base.:|(::NoTruncation, ::TruncationUnion) = notrunc()
 Base.:|(::TruncationUnion, ::NoTruncation) = notrunc()
 
+"""
+    TruncationDegenerate(strategy::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
+
+Truncation strategy that applies `strategy` and then adjusts the selection such that groups of
+(near-)degenerate values are never split.
+
+See also [`truncdegenerate`](@ref).
+"""
+struct TruncationDegenerate{S <: TruncationStrategy, T <: Real} <: TruncationStrategy
+    strategy::S
+    atol::T
+    rtol::T
+    mode::Symbol
+end
+function TruncationDegenerate(strategy::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
+    return TruncationDegenerate(strategy, promote(atol, rtol)..., mode)
+end
+
+"""
+    truncdegenerate(strategy::TruncationStrategy; atol::Real=0, rtol::Real=1e-10, mode::Symbol=:down)
+
+Truncation strategy that applies `strategy`, and then makes sure that groups of (near-)degenerate
+values are either kept or discarded as a whole.
+
+Values are sorted by decreasing magnitude, and two consecutive values `abs(vᵢ) ≥ abs(vᵢ₊₁)` are
+considered degenerate whenever `abs(vᵢ) - abs(vᵢ₊₁) ≤ max(atol, rtol * abs(vᵢ))`. Groups of
+degenerate values that are only partially kept by `strategy` are discarded entirely if
+`mode = :down`, or kept entirely if `mode = :up`.
+
+This is useful when the degeneracies are due to a symmetry, where splitting a
+degenerate group would break the symmetry due to rounding errors.
+In particular, `truncdegenerate(truncrank(howmany))` keeps at most `howmany` values for
+`mode = :down`, and at least `min(howmany, length(values))` values for `mode = :up`.
+"""
+function truncdegenerate(strategy::TruncationStrategy; atol::Real = 0, rtol::Real = 1.0e-10, mode::Symbol = :down)
+    mode in (:down, :up) || throw(ArgumentError(lazy"mode must be `:down` or `:up`, got `$mode`"))
+    return TruncationDegenerate(strategy, atol, rtol, mode)
+end
+
 @doc """
     truncation_error(values, ind)
 Compute the truncation error as the 2-norm of the values that are not kept by `ind`.

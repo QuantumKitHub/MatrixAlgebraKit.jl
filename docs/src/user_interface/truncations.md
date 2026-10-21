@@ -145,6 +145,19 @@ combined_trunc = truncrank(10) & trunctol(; atol = 1e-6);
 combined_trunc = trunctol(; atol = 1e-6) | truncrank(3);
 ```
 
+Truncating with a fixed number of values can split a group of (near-)degenerate values, such as 
+when these degeneracies are due to a symmetry. Wrapping a strategy with [`truncdegenerate`](@ref)
+ensures that such groups are either kept or discarded as a whole cluster:
+
+```@docs; canonical=false
+truncdegenerate
+```
+
+```julia
+# Keep at most 10 values, without splitting degenerate groups
+degenerate_trunc = truncdegenerate(truncrank(10); rtol = 1e-10);
+```
+
 ## Truncation Error
 
 When using truncated decompositions such as [`svd_trunc`](@ref), [`eig_trunc`](@ref), or [`eigh_trunc`](@ref), an additional truncation error value is returned.
