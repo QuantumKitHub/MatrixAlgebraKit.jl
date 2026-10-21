@@ -11,11 +11,27 @@ function test_eigh(T::Type, sz; test_trunc = true, kwargs...)
     end
 end
 
+function test_eigh_batched(T::Type, sz, batch_size::Int; test_trunc = false, kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "eigh batched $summary_str batch_size $batch_size" begin
+        test_eigh_full_batched(T, sz, batch_size; kwargs...)
+        test_trunc && test_eigh_trunc_batched(T, sz, batch_size; kwargs...)
+    end
+end
+
 function test_eigh_algs(T::Type, sz, algs; test_trunc = true, kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eigh algorithms $summary_str" begin
         test_eigh_full_algs(T, sz, algs; kwargs...)
         test_trunc && test_eigh_trunc_algs(T, sz, algs; kwargs...)
+    end
+end
+
+function test_eigh_batched_algs(T::Type, sz, batch_size::Int, algs; test_trunc = false, kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "eigh algorithms $summary_str batch_size $batch_size" begin
+        test_eigh_full_algs_batched(T, sz, algs, batch_size; kwargs...)
+        test_trunc && test_eigh_trunc_algs_batched(T, sz, algs, batch_size; kwargs...)
     end
 end
 
@@ -42,6 +58,52 @@ function test_eigh_full(
     end
 end
 
+function test_eigh_full_batched(
+        T::Type, sz, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "eigh_full! $summary_str batch_size $batch_size" begin
+        As = [project_hermitian!(instantiate_matrix(T, sz)) for bi in 1:batch_size]
+        Ad = device_batch(As)
+        Ac = deepcopy(Ad)
+        m, n = size(first(As))
+
+        D, V = @testinferred batched_eigh_full(As)
+        @test D isa Vector{<:AbstractMatrix{real(eltype(T))}} && length(D) == batch_size
+        @test length(V) == batch_size
+        for (a, d, v) in zip(As, D, V)
+            @test a * v ≈ v * Diagonal(d)
+            @test isunitary(v)
+            @test all(isreal, d)
+        end
+
+        D, V = @testinferred batched_eigh_full(Ad)
+        @test D isa AbstractMatrix{real(eltype(T))} && size(D) == (n, batch_size)
+        @test size(V) == (n, n, batch_size)
+        for (a, d, v) in zip(As, eachslice(D, dims = 2), eachslice(V, dims = 3))
+            @test a * v ≈ v * Diagonal(d)
+            @test isunitary(v)
+            @test all(isreal, d)
+        end
+
+        D2, V2 = batched_eigh_full!(Ac, (D, V))
+        for (a, d2, v2) in zip(As, eachslice(D2, dims = 2), eachslice(V2, dims = 3))
+            @test a * v2 ≈ v2 * Diagonal(d2)
+        end
+
+        D3 = @testinferred batched_eigh_vals(As)
+        for (d, dd) in zip(eachslice(D, dims = 2), D3)
+            @test d ≈ dd
+        end
+        D3 = @testinferred batched_eigh_vals(Ad)
+        for (d, dd) in zip(eachslice(D, dims = 2), eachslice(D3, dims = 2))
+            @test d ≈ dd
+        end
+    end
+end
+
 function test_eigh_full_algs(
         T::Type, sz, algs;
         atol::Real = 0, rtol::Real = precision(T),
@@ -62,6 +124,39 @@ function test_eigh_full_algs(
 
         D3 = @testinferred eigh_vals(A; alg)
         @test D ≈ Diagonal(D3)
+    end
+end
+
+function test_eigh_full_algs_batched(
+        T::Type, sz, algs, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "eigh_full! algorithm $alg  $summary_str batch_size $batch_size" for alg in algs
+        As = [project_hermitian!(instantiate_matrix(T, sz)) for bi in 1:batch_size]
+        Ad = device_batch(As)
+        Ac = deepcopy(Ad)
+        m, n = size(first(As))
+
+        D, V = @testinferred batched_eigh_full(Ad; alg)
+        @test D isa AbstractMatrix{real(eltype(T))} && size(D) == (n, batch_size)
+        @test size(V) == (n, n, batch_size)
+        for (a, d, v) in zip(As, eachslice(D, dims = 2), eachslice(V, dims = 3))
+            @test a * v ≈ v * Diagonal(d)
+            @test isunitary(v)
+            @test all(isreal, d)
+        end
+
+        D2, V2 = batched_eigh_full!(Ac, (D, V); alg)
+        for (a, d2, v2) in zip(As, eachslice(D2, dims = 2), eachslice(V2, dims = 3))
+            @test a * v2 ≈ v2 * Diagonal(d2)
+        end
+
+        D3 = @testinferred batched_eigh_vals(Ad; alg)
+        for (d, dd) in zip(eachslice(D, dims = 2), eachslice(D3, dims = 2))
+            @test d ≈ dd
+        end
     end
 end
 
