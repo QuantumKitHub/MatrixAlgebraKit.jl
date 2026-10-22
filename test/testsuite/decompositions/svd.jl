@@ -686,7 +686,7 @@ function test_svd_trunc_algs(
             @test ϵ2 ≈ norm(diagview(S)[3:4]) atol = atol
             @test_throws ArgumentError svd_trunc(A; alg = truncalg, trunc = (; maxrank = 2))
             @test_throws ArgumentError svd_trunc_no_error(A; alg = truncalg, trunc = (; maxrank = 2))
-            
+
             # truncdegenerate
             Sdiag = similar(A, real(eltype(T)), m4)
             copyto!(Sdiag, real(eltype(T))[0.9, 0.3, 0.3, 0.01])
