@@ -121,7 +121,7 @@ end
             sort(vals_sorted[1:4])
     end
 
-    # nothing changes if the cut does not split a degenerate cluster 
+    # nothing changes if the cut does not split a degenerate cluster
     for howmany in (0, 1, 4, 5, 6)
         for mode in (:down, :up)
             strategy = truncdegenerate(truncrank(howmany); mode)
