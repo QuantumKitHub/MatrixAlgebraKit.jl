@@ -271,25 +271,25 @@ Base.:|(::NoTruncation, ::TruncationUnion) = notrunc()
 Base.:|(::TruncationUnion, ::NoTruncation) = notrunc()
 
 """
-    TruncationDegenerate(strategy::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
+    TruncationMultiplets(strategy::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
 
 Truncation strategy that applies `strategy` and then adjusts the selection such that groups of
 (near-)degenerate values are never split.
 
-See also [`truncdegenerate`](@ref).
+See also [`truncmultiplets`](@ref).
 """
-struct TruncationDegenerate{S <: TruncationStrategy, T <: Real} <: TruncationStrategy
+struct TruncationMultiplets{S <: TruncationStrategy, T <: Real} <: TruncationStrategy
     strategy::S
     atol::T
     rtol::T
     mode::Symbol
 end
-function TruncationDegenerate(strategy::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
-    return TruncationDegenerate(strategy, promote(atol, rtol)..., mode)
+function TruncationMultiplets(strategy::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
+    return TruncationMultiplets(strategy, promote(atol, rtol)..., mode)
 end
 
 """
-    truncdegenerate(strategy::TruncationStrategy; atol::Real=0, rtol::Real=1e-10, mode::Symbol=:down)
+    truncmultiplets(strategy::TruncationStrategy; atol::Real=0, rtol::Real=1e-10, mode::Symbol=:down)
 
 Truncation strategy that applies `strategy`, and then makes sure that groups of (near-)degenerate
 values are either kept or discarded as a whole.
@@ -301,12 +301,12 @@ degenerate values that are only partially kept by `strategy` are discarded entir
 
 This is useful when the degeneracies are due to a symmetry, where splitting a
 degenerate group would break the symmetry due to rounding errors.
-In particular, `truncdegenerate(truncrank(howmany))` keeps at most `howmany` values for
+In particular, `truncmultiplets(truncrank(howmany))` keeps at most `howmany` values for
 `mode = :down`, and at least `min(howmany, length(values))` values for `mode = :up`.
 """
-function truncdegenerate(strategy::TruncationStrategy; atol::Real = 0, rtol::Real = 1.0e-10, mode::Symbol = :down)
+function truncmultiplets(strategy::TruncationStrategy; atol::Real = 0, rtol::Real = 1.0e-10, mode::Symbol = :down)
     mode in (:down, :up) || throw(ArgumentError(lazy"mode must be `:down` or `:up`, got `$mode`"))
-    return TruncationDegenerate(strategy, atol, rtol, mode)
+    return TruncationMultiplets(strategy, atol, rtol, mode)
 end
 
 @doc """

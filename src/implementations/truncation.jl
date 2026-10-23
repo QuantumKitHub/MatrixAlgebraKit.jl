@@ -163,15 +163,15 @@ _ind_union(A::Base.OneTo, B::Base.OneTo) = Base.OneTo(max(length(A), length(B)))
 _ind_union(A::AbstractUnitRange, B::AbstractUnitRange) = union(A, B)
 _ind_union(A, B) = union(A, B)
 
-function findtruncated(values::AbstractVector, strategy::TruncationDegenerate)
+function findtruncated(values::AbstractVector, strategy::TruncationMultiplets)
     keep = _ind_to_mask(values, findtruncated(values, strategy.strategy))
     perm = sortperm(values; by = abs, rev = true)
-    return findall(_keep_degenerate!(keep, values, perm, strategy))
+    return findall(_keep_multiplets!(keep, values, perm, strategy))
 end
-function findtruncated_svd(values::AbstractVector, strategy::TruncationDegenerate)
+function findtruncated_svd(values::AbstractVector, strategy::TruncationMultiplets)
     # values are already sorted by decreasing magnitude
     keep = _ind_to_mask(values, findtruncated_svd(values, strategy.strategy))
-    return findall(_keep_degenerate!(keep, values, eachindex(values), strategy))
+    return findall(_keep_multiplets!(keep, values, eachindex(values), strategy))
 end
 
 _ind_to_mask(values::AbstractVector, ::Colon) = trues(length(values))
@@ -184,7 +184,7 @@ end
 
 # walk the values in sorted order `perm`, and make sure each group of consecutive degenerate
 # values is either kept or discarded as a whole cluster
-function _keep_degenerate!(keep::AbstractVector{Bool}, values::AbstractVector, perm, strategy::TruncationDegenerate)
+function _keep_multiplets!(keep::AbstractVector{Bool}, values::AbstractVector, perm, strategy::TruncationMultiplets)
     σs = abs.(collect(view(values, perm)))
     start = firstindex(σs)
     for k in eachindex(σs)

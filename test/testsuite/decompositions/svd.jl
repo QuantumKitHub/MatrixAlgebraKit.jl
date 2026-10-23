@@ -687,17 +687,17 @@ function test_svd_trunc_algs(
             @test_throws ArgumentError svd_trunc(A; alg = truncalg, trunc = (; maxrank = 2))
             @test_throws ArgumentError svd_trunc_no_error(A; alg = truncalg, trunc = (; maxrank = 2))
 
-            # truncdegenerate
+            # truncmultiplets
             Sdiag = similar(A, real(eltype(T)), m4)
             copyto!(Sdiag, real(eltype(T))[0.9, 0.3, 0.3, 0.01])
             S = Diagonal(Sdiag)
             Vᴴ = instantiate_unitary(T, A, m4)
             A = U * S * Vᴴ
-            truncalg = TruncatedAlgorithm(alg, truncdegenerate(truncrank(2); atol = 0.2))
+            truncalg = TruncatedAlgorithm(alg, truncmultiplets(truncrank(2); atol = 0.2))
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; alg = truncalg)
             @test collect(diagview(S2)) ≈ collect(diagview(S)[1:1])
             @test ϵ2 ≈ norm(diagview(S)[2:4]) atol = atol
-            truncalg = TruncatedAlgorithm(alg, truncdegenerate(truncrank(3); atol = 0.2))
+            truncalg = TruncatedAlgorithm(alg, truncmultiplets(truncrank(3); atol = 0.2))
             U2, S2, V2ᴴ, ϵ2 = @testinferred svd_trunc(A; alg = truncalg)
             @test collect(diagview(S2)) ≈ collect(diagview(S)[1:3])
             @test ϵ2 ≈ norm(diagview(S)[4:4]) atol = atol

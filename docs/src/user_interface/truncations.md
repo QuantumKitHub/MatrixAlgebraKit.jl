@@ -146,16 +146,16 @@ combined_trunc = trunctol(; atol = 1e-6) | truncrank(3);
 ```
 
 Truncating with a fixed number of values can split a group of (near-)degenerate values, such as 
-when these degeneracies are due to a symmetry. Wrapping a strategy with [`truncdegenerate`](@ref)
+when these degeneracies are due to a symmetry. Wrapping a strategy with [`truncmultiplets`](@ref)
 ensures that such groups are either kept or discarded as a whole cluster:
 
 ```@docs; canonical=false
-truncdegenerate
+truncmultiplets
 ```
 
 ```julia
 # Keep at most 10 values, without splitting degenerate groups
-degenerate_trunc = truncdegenerate(truncrank(10); rtol = 1e-10);
+degenerate_trunc = truncmultiplets(truncrank(10); rtol = 1e-10);
 ```
 
 ## Truncation Error
