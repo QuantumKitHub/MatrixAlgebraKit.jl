@@ -100,7 +100,7 @@ end
 @testset "truncmultiplets" begin
     trunc = @constinferred truncmultiplets(truncrank(2))
     @test trunc isa TruncationMultiplets
-    @test trunc.strategy == truncrank(2)
+    @test trunc.trunc == truncrank(2)
     @test trunc.atol == 0 && trunc.rtol == 1.0e-10
     @test trunc.mode === :down
     @test trunc == truncmultiplets(truncrank(2))

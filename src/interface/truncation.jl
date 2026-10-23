@@ -271,21 +271,21 @@ Base.:|(::NoTruncation, ::TruncationUnion) = notrunc()
 Base.:|(::TruncationUnion, ::NoTruncation) = notrunc()
 
 """
-    TruncationMultiplets(strategy::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
+    TruncationMultiplets(trunc::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
 
-Truncation strategy that applies `strategy` and then adjusts the selection such that groups of
+Truncation strategy that applies `trunc` and then adjusts the selection such that groups of
 (near-)degenerate values are never split.
 
 See also [`truncmultiplets`](@ref).
 """
 struct TruncationMultiplets{S <: TruncationStrategy, T <: Real} <: TruncationStrategy
-    strategy::S
+    trunc::S
     atol::T
     rtol::T
     mode::Symbol
 end
-function TruncationMultiplets(strategy::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
-    return TruncationMultiplets(strategy, promote(atol, rtol)..., mode)
+function TruncationMultiplets(trunc::TruncationStrategy, atol::Real, rtol::Real, mode::Symbol)
+    return TruncationMultiplets(trunc, promote(atol, rtol)..., mode)
 end
 
 """

@@ -164,13 +164,13 @@ _ind_union(A::AbstractUnitRange, B::AbstractUnitRange) = union(A, B)
 _ind_union(A, B) = union(A, B)
 
 function findtruncated(values::AbstractVector, strategy::TruncationMultiplets)
-    keep = _ind_to_mask(values, findtruncated(values, strategy.strategy))
+    keep = _ind_to_mask(values, findtruncated(values, strategy.trunc))
     perm = sortperm(values; by = abs, rev = true)
     return findall(_keep_multiplets!(keep, values, perm, strategy))
 end
 function findtruncated_svd(values::AbstractVector, strategy::TruncationMultiplets)
     # values are already sorted by decreasing magnitude
-    keep = _ind_to_mask(values, findtruncated_svd(values, strategy.strategy))
+    keep = _ind_to_mask(values, findtruncated_svd(values, strategy.trunc))
     return findall(_keep_multiplets!(keep, values, eachindex(values), strategy))
 end
 
@@ -190,7 +190,7 @@ function _keep_multiplets!(keep::AbstractVector{Bool}, values::AbstractVector, p
     for k in eachindex(σs)
         if k == lastindex(σs) || σs[k] - σs[k + 1] > max(strategy.atol, strategy.rtol * σs[k])
             group = view(perm, start:k)
-            allequal(view(keep, group)) || (keep[group] .= strategy.mode === :up)
+            allequal(view(keep, group)) || (keep[group] .= strategy.mode == :up)
             start = k + 1
         end
     end
