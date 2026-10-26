@@ -48,11 +48,6 @@ function MatrixAlgebraKit.uppertriangular!(A::StridedCuMatrix)
     A .= ifelse.((1:m) .> transpose(1:n), zero(eltype(A)), A)
     return A
 end
-function MatrixAlgebraKit.lowertriangular!(A::StridedCuMatrix)
-    m, n = size(A)
-    A .= ifelse.((1:m) .< transpose(1:n), zero(eltype(A)), A)
-    return A
-end
 
 MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
 

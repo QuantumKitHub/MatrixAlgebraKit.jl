@@ -41,11 +41,6 @@ function MatrixAlgebraKit.uppertriangular!(A::StridedROCMatrix)
     A .= ifelse.((1:m) .> transpose(1:n), zero(eltype(A)), A)
     return A
 end
-function MatrixAlgebraKit.lowertriangular!(A::StridedROCMatrix)
-    m, n = size(A)
-    A .= ifelse.((1:m) .< transpose(1:n), zero(eltype(A)), A)
-    return A
-end
 
 # rocSOLVER's `gesvd*_batched` functions take the batch as an array
 # of device pointers, so a group of equally sized matrices
