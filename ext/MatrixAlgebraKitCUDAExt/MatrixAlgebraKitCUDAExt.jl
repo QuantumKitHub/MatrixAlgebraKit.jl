@@ -42,6 +42,13 @@ end
 
 MatrixAlgebraKit.prefers_ungqr(::CUSOLVER) = true
 
+# one kernel for the whole triangle instead of one per column
+function MatrixAlgebraKit.uppertriangular!(A::StridedCuMatrix)
+    m, n = size(A)
+    A .= ifelse.((1:m) .> transpose(1:n), zero(eltype(A)), A)
+    return A
+end
+
 MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
 
 # `cusolverDnXgesvdjBatched` only accepts matrices up to 32x32
