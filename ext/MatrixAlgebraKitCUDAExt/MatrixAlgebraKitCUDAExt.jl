@@ -91,81 +91,34 @@ function MatrixAlgebraKit.findtruncated_svd(values::StridedCuVector, strategy::T
     return MatrixAlgebraKit.findtruncated(values, strategy)
 end
 
-# COV_EXCL_START
-function _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, ::Val{true})
-    m, n = size(Au)
-    j = threadIdx().x + (blockIdx().x - 1i32) * blockDim().x
-    j > n && return
-    for i in 1:m
-        @inbounds begin
-            val = (Au[i, j] - adjoint(Al[j, i])) / 2
-            Bu[i, j] = val
-            Bl[j, i] = -adjoint(val)
-        end
-    end
-    return
-end
-
-function _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, ::Val{false})
-    m, n = size(Au)
-    j = threadIdx().x + (blockIdx().x - 1) * blockDim().x
-    j > n && return
-    for i in 1:m
-        @inbounds begin
-            val = (Au[i, j] + adjoint(Al[j, i])) / 2
-            Bu[i, j] = val
-            Bl[j, i] = adjoint(val)
-        end
-    end
-    return
-end
-
-function _project_hermitian_diag_kernel(A, B, ::Val{true})
+function _project_hermitian_kernel(A, B, ::Val{anti}) where {anti}
     n = size(A, 1)
-    j = threadIdx().x + (blockIdx().x - 1) * blockDim().x
-    j > n && return
-    @inbounds begin
-        for i in 1i32:(j - 1i32)
-            val = (A[i, j] - adjoint(A[j, i])) / 2
-            B[i, j] = val
-            B[j, i] = -adjoint(val)
-        end
-        B[j, j] = MatrixAlgebraKit._imimag(A[j, j])
+    i = workitemIdx().x + (workgroupIdx().x - 1) * workgroupDim().x
+    j = workitemIdx().y + (workgroupIdx().y - 1) * workgroupDim().y
+    (i > n || j > n || i > j) && return
+    @inbounds if i == j
+        B[j, j] = anti ? MatrixAlgebraKit._imimag(A[j, j]) : real(A[j, j])
+    else
+        aij = A[i, j]
+        aji = A[j, i]
+        val = anti ? (aij - adjoint(aji)) / 2 : (aij + adjoint(aji)) / 2
+        B[i, j] = val
+        B[j, i] = anti ? -adjoint(val) : adjoint(val)
     end
     return
 end
-
-function _project_hermitian_diag_kernel(A, B, ::Val{false})
-    n = size(A, 1)
-    j = threadIdx().x + (blockIdx().x - 1i32) * blockDim().x
-    j > n && return
-    @inbounds begin
-        for i in 1i32:(j - 1i32)
-            val = (A[i, j] + adjoint(A[j, i])) / 2
-            B[i, j] = val
-            B[j, i] = adjoint(val)
-        end
-        B[j, j] = real(A[j, j])
-    end
-    return
-end
-# COV_EXCL_STOP
 
 const SupportedCuMatrix{T} = Union{AnyCuMatrix{T}, SubArray{T, 2, <:AnyCuMatrix{T}}}
 
-function MatrixAlgebraKit._project_hermitian_offdiag!(
-        Au::SupportedCuMatrix, Al::SupportedCuMatrix, Bu::SupportedCuMatrix, Bl::SupportedCuMatrix, ::Val{anti}
-    ) where {anti}
-    thread_dim = 512
-    block_dim = cld(size(Au, 2), thread_dim)
-    @cuda threads = thread_dim blocks = block_dim _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, Val(anti))
-    return nothing
-end
-function MatrixAlgebraKit._project_hermitian_diag!(A::SupportedCuMatrix, B::SupportedCuMatrix, ::Val{anti}) where {anti}
-    thread_dim = 512
-    block_dim = cld(size(A, 1), thread_dim)
-    @cuda threads = thread_dim blocks = block_dim _project_hermitian_diag_kernel(A, B, Val(anti))
-    return nothing
+function MatrixAlgebraKit.project_hermitian_native!(
+        A::SupportedCuMatrix, B::SupportedCuMatrix, anti::Val; blocksize = 32
+    )
+    n = size(A, 1)
+    n == 0 && return B
+    thread_dim = (16, 16)
+    block_dim = (cld(n, 16), cld(n, 16))
+    @roc groupsize = thread_dim gridsize = block_dim _project_hermitian_kernel(A, B, anti)
+    return B
 end
 
 # avoids calling the `StridedMatrix` specialization to avoid scalar indexing,
