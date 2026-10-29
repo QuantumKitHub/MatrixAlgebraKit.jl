@@ -49,13 +49,6 @@ end
 # TODO: can do the multiplication @. Vᴴk = signs_t * Vᴴk in one fell swoop
 # earlier, or compute signs in the n > m case entirely with reference to V?
 # This might require modifying forward-mode AD rules.
-function gaugefix!(::typeof(batched_eigh_full!), V)
-    for v in eachslice(V, dims = 3)
-        gaugefix!(eigh_full!, v)
-    end
-    return V
-end
-
 function gaugefix!(::typeof(svd_full!), U, Vᴴ)
     m, n = size(U, 2), size(Vᴴ, 1)
     k = min(m, n)
@@ -82,6 +75,13 @@ function gaugefix!(::Union{typeof(svd_compact!), typeof(svd_trunc!)}, U, Vᴴ)
     @. U = U * conj(signs)
     @. Vᴴ = signs_t * Vᴴ
     return (U, Vᴴ)
+end
+
+function gaugefix!(::typeof(batched_eigh_full!), V)
+    for v in eachslice(V, dims = 3)
+        gaugefix!(eigh_full!, v)
+    end
+    return V
 end
 
 function gaugefix!(::typeof(batched_svd_compact!), U, Vᴴ)

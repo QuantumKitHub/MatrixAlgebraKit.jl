@@ -97,10 +97,10 @@ for f! in (:heevj_batched!, :heev_batched!, :heevd_batched!, :heevx_batched!)
 end
 
 for (f, f_lapack!, Alg) in (
+        (:divide_and_conquer, :heevd_batched!, :DivideAndConquer),
         (:qr_iteration, :heev_batched!, :QRIteration),
-        (:jacobi, :heevj_batched!, :Jacobi),
         (:bisection, :heevx_batched!, :Bisection),
-        (:divideandconquer, :heevd_batched!, :DivideAndConquer),
+        (:jacobi, :heevj_batched!, :Jacobi),
     )
     eigh_full_f! = Symbol(:batched_eigh_full_, f, :!)
     eigh_vals_f! = Symbol(:batched_eigh_vals_, f, :!)
@@ -111,7 +111,7 @@ for (f, f_lapack!, Alg) in (
             check_input(batched_eigh_full!, A, DV, alg)
             driver = get(alg.kwargs, :driver, default_driver(alg, eltype(A)))
             supports_pointer_batch(alg, driver, eltype(A)) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
+                throw(ArgumentError(LazyString("driver ", driver, " does not support ragged (non-uniform) batches")))
             return $eigh_full_f!(A, DV...; alg.kwargs...)
         end
         function batched_eigh_full!(A::AbstractArray{T, 3}, DV, alg::$Alg) where {T}
@@ -122,7 +122,7 @@ for (f, f_lapack!, Alg) in (
             check_input(batched_eigh_vals!, A, D, alg)
             driver = get(alg.kwargs, :driver, default_driver(alg, eltype(A)))
             supports_pointer_batch(alg, driver, eltype(A)) ||
-                throw(ArgumentError(LazyString("driver ", driver, " does not suppport ragged (non-uniform) batches")))
+                throw(ArgumentError(LazyString("driver ", driver, " does not support ragged (non-uniform) batches")))
             return $eigh_vals_f!(A, D; alg.kwargs...)
         end
         function batched_eigh_vals!(A::AbstractArray{T, 3}, D, alg::$Alg) where {T}
@@ -188,12 +188,11 @@ for (f, f_lapack!, Alg) in (
     # Implementation
     @eval begin
         function $eigh_full_f!(driver::Driver, A, D, V; fixgauge::Bool = true, kwargs...)
+            zero!(D)
             if _isempty_batch(A)
-                zero!(D)
                 foreach(one!, eachslice(V, dims = 3))
                 return D, V
             end
-            zero!(D)
             $f_lapack!(driver, A, D, V; kwargs...)
             fixgauge && gaugefix!(batched_eigh_full!, V)
             return D, V
@@ -212,10 +211,6 @@ for (f, f_lapack!, Alg) in (
         end
     end
 end
-
-# Fewest matrices in a ragged batch that are worth a batched call
-# Should this be settable by the user?
-const BATCHED_EIGH_THRESHOLD::Int = 4
 
 function _packed_output(::typeof(batched_eigh_full!), A::AbstractVector{<:AbstractMatrix}, ::AbstractAlgorithm)
     a = first(A)
