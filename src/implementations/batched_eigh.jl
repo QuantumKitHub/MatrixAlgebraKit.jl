@@ -145,7 +145,7 @@ for (f, f_lapack!, Alg) in (
                 Ab = _ragged_pack(A, inds, m, n, alg)
                 Db, Vb = batched_eigh_full!(Ab, _packed_output(batched_eigh_full!, Ab, alg), alg)
                 for (j, i) in enumerate(inds)
-                    copyto!(Ds[i], view(Db, :, :, j))
+                    copyto!(diagview(Ds[i]), view(Db, :, j))
                     copyto!(Vs[i], view(Vb, :, :, j))
                 end
             end
@@ -158,7 +158,9 @@ for (f, f_lapack!, Alg) in (
                 A::AbstractVector{<:AbstractMatrix}, D::AbstractVector{<:AbstractVector}, alg::$Alg
             )
             check_input(batched_eigh_vals!, A, D, alg)
-            batches, rest = _ragged_batches(A, alg)
+            # zero padding adds zero eigenvalues that interleave with the actual spectrum,
+            # so only matrices of equal size are batched
+            batches, rest = _ragged_batches(A, alg; pad = false)
             for (inds, (m, n)) in batches
                 Ab = _ragged_pack(A, inds, m, n, alg)
                 Db = batched_eigh_vals!(Ab, _packed_output(batched_eigh_vals!, Ab, alg), alg)
