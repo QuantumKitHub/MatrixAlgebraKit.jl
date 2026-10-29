@@ -70,6 +70,14 @@ function test_lq_compact(
             Lblocked, Qblocked = @testinferred lq_compact(A; blocksize = 2)
             @test Lblocked * Qblocked ≈ A
             @test isisometric(Qblocked; side = :right, atol, rtol)
+
+            for positive in (false, true), blocksize in (1, 2)
+                _, Qref = lq_compact(A; positive, blocksize)
+                empty_factor = similar(A, 0, 0)
+                omitted, Qonly = lq_compact!(copy(A), (empty_factor, similar(Qref)); positive, blocksize)
+                @test omitted === empty_factor
+                @test Qonly ≈ Qref
+            end
         else
             @test_throws Exception lq_compact(A; blocksize = 2)
         end
@@ -143,6 +151,12 @@ function test_lq_compact_algs(
 
         # does the elementary functionality work
         L, Q = @testinferred lq_compact(A; alg)
+
+        # The triangular factor can be requested without constructing Q.
+        Q0 = Q isa Diagonal ? Diagonal(similar(parent(Q), 0)) : similar(Q, 0, 0)
+        L2, Q2 = lq_compact!(copy(A), (similar(L), Q0); alg)
+        @test Q2 === Q0
+        @test L2 ≈ L
         @test L * Q ≈ A
         @test isisometric(Q; side = :right, atol, rtol)
         @test A == Ac
@@ -235,6 +249,12 @@ function test_lq_full_algs(
 
         # does the elementary functionality work
         L, Q = @testinferred lq_full(A; alg)
+
+        # The triangular factor can be requested without constructing Q.
+        Q0 = Q isa Diagonal ? Diagonal(similar(parent(Q), 0)) : similar(Q, 0, 0)
+        L2, Q2 = lq_full!(copy(A), (similar(L), Q0); alg)
+        @test Q2 === Q0
+        @test L2 ≈ L
         @test L * Q ≈ A
         @test isisometric(Q; side = :right, atol, rtol)
         @test A == Ac

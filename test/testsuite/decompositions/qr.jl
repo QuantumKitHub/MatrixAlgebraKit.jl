@@ -71,6 +71,14 @@ function test_qr_compact(
             Qblocked, Rblocked = @testinferred qr_compact(A; blocksize = 2)
             @test Qblocked * Rblocked ≈ A
             @test isisometric(Qblocked; atol, rtol)
+
+            for positive in (false, true), blocksize in (1, 2)
+                Qref, _ = qr_compact(A; positive, blocksize)
+                empty_factor = similar(A, 0, 0)
+                Qonly, omitted = qr_compact!(copy(A), (similar(Qref), empty_factor); positive, blocksize)
+                @test omitted === empty_factor
+                @test Qonly ≈ Qref
+            end
         else
             @test_throws Exception qr_compact(A; blocksize = 2)
         end
@@ -90,6 +98,12 @@ function test_qr_compact_algs(
 
         # does the elementary functionality work
         Q, R = @testinferred qr_compact(A; alg)
+
+        # The triangular factor can be requested without constructing Q.
+        Q0 = Q isa Diagonal ? Diagonal(similar(parent(Q), 0)) : similar(Q, 0, 0)
+        Q2, R2 = qr_compact!(copy(A), (Q0, similar(R)); alg)
+        @test Q2 === Q0
+        @test R2 ≈ R
         @test Q * R ≈ A
         @test isisometric(Q; atol, rtol)
         @test A == Ac
@@ -242,6 +256,12 @@ function test_qr_full_algs(
 
         # does the elementary functionality work
         Q, R = @testinferred qr_full(A; alg)
+
+        # The triangular factor can be requested without constructing Q.
+        Q0 = Q isa Diagonal ? Diagonal(similar(parent(Q), 0)) : similar(Q, 0, 0)
+        Q2, R2 = qr_full!(copy(A), (Q0, similar(R)); alg)
+        @test Q2 === Q0
+        @test R2 ≈ R
         @test Q * R ≈ A
         @test isunitary(Q; atol, rtol)
         @test A == Ac

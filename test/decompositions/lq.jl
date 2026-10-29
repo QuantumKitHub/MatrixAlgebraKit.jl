@@ -46,6 +46,7 @@ for T in (BLASFloats..., GenericFloats...), n in (37, m, 63)
         if T ∈ BLASFloats
             TestSuite.test_lq(T, (m, n))
             LAPACK_LQ_ALGS = (
+                LQViaTransposedQR(Householder()), # includes full L-only LQ for wide inputs
                 Householder(; positive = false, pivoted = false, blocksize = 1),
                 Householder(; positive = false, pivoted = false, blocksize = 8),
                 Householder(; positive = false, pivoted = true, blocksize = 1),

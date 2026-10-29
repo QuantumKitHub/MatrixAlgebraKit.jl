@@ -129,7 +129,6 @@ include("decompositions/schur.jl")
 include("decompositions/eig.jl")
 include("decompositions/eigh.jl")
 include("decompositions/orthnull.jl")
-include("decompositions/orth_factors.jl")
 include("decompositions/svd.jl")
 
 # Mooncake
