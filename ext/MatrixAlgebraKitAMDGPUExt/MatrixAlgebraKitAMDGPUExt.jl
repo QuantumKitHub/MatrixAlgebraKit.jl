@@ -61,7 +61,6 @@ for alg in (:Bisection, :Jacobi, :QRIteration, :DivideAndConquer)
     @eval MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_vals!), ::$alg, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
 end
 for alg in (:Bisection, :Jacobi, :QRIteration, :DivideAndConquer)
-    @eval MatrixAlgebraKit.supports_pointer_batch(::$alg, ::ROCSOLVER, ::Type{<:StridedROCMatrix{<:BlasFloat}}) = true
     @eval MatrixAlgebraKit.supports_ragged_batch(::typeof(eigh_full!), ::$alg, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
     @eval MatrixAlgebraKit.supports_ragged_batch(::typeof(eigh_vals!), ::$alg, ::ROCSOLVER, ::Type{<:AnyROCArray}) = true
 end
