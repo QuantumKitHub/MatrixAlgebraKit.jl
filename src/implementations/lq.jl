@@ -326,7 +326,7 @@ function lq_via_qr!(
         Qt, Lt = qr_compact!(At, (Qt, Lt), qr_alg)
     end
     isempty(Q) || adjoint!(Q, Qt)
-    !isempty(L) && adjoint!(L, Lt)
+    isempty(L) || adjoint!(L, Lt)
     return L, Q
 end
 
