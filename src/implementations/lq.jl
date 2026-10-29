@@ -320,7 +320,7 @@ function lq_via_qr!(
     Qt = (A === Q) ? At : similar(Q')
     Lt = similar(L')
     n = size(A, 2)
-    if size(Q) == (n, n)
+    if size(Q) == (n, n) || size(L, 2) == n
         Qt, Lt = qr_full!(At, (Qt, Lt), qr_alg)
     else
         Qt, Lt = qr_compact!(At, (Qt, Lt), qr_alg)
