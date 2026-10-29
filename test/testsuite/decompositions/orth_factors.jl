@@ -99,3 +99,20 @@ function test_lq_full_without_basis(T::Type, sz)
         @test L2 * Q ≈ A
     end
 end
+
+"""Check that differentiating an omitted basis gives an instructive error."""
+function test_orth_without_basis_derivatives(T::Type, sz)
+    summary_str = testargs_summary(T, sz)
+    return @testset "Omitted basis differentiation errors $summary_str" begin
+        A = instantiate_matrix(T, sz)
+        E = similar(A, 0, 0)
+        _, R = left_orth(A)
+        L, _ = right_orth(A)
+        for f! in (MatrixAlgebraKit.qr_pullback!, MatrixAlgebraKit.qr_pushforward!)
+            @test_throws r"omitted Q.*compute both Q and R" f!(zero(A), A, (E, R), (E, zero(R)))
+        end
+        for f! in (MatrixAlgebraKit.lq_pullback!, MatrixAlgebraKit.lq_pushforward!)
+            @test_throws r"omitted Q.*compute both L and Q" f!(zero(A), A, (L, E), (zero(L), E))
+        end
+    end
+end

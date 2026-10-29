@@ -7,11 +7,11 @@ using .TestSuite
 
 qr_algs = Tuple(
     alg for positive in (false, true) for alg in (
-        Householder(; blocksize = 1, positive),
-        Householder(; blocksize = 2, positive),
-        Householder(; blocksize = 1, pivoted = true, positive),
-        Householder(; driver = Native(), positive),
-    )
+            Householder(; blocksize = 1, positive),
+            Householder(; blocksize = 2, positive),
+            Householder(; blocksize = 1, pivoted = true, positive),
+            Householder(; driver = Native(), positive),
+        )
 )
 lq_algs = Tuple(
     Householder(; positive, blocksize) for positive in (false, true) for blocksize in (1, 2)
@@ -25,6 +25,7 @@ end
 for T in (Float64, ComplexF64)
     TestSuite.seed_rng!(123)
     TestSuite.test_orth_without_basis(Diagonal{T, Vector{T}}, 4)
+    TestSuite.test_orth_without_basis_derivatives(T, (7, 4))
 end
 TestSuite.seed_rng!(123)
 TestSuite.test_lq_full_without_basis(Float64, (4, 7))
