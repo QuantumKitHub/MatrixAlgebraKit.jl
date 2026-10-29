@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.12...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.13...HEAD)
 
 ### Added
 
@@ -31,6 +31,31 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 ### Performance
+
+## [0.6.13](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.12...v0.6.13) - 2026-10-29
+
+### Added
+
+- New truncation strategy `truncmultiplets`, which wraps another strategy and makes sure groups of
+  (near-)degenerate values are kept or discarded as a whole ([#312](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/312)).
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- `right_null` with `alg = :svd` now respects the `svd` keyword argument for choosing the SVD
+  algorithm, as `left_null` already did ([#311](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/311)).
+- The workspace for `U` and `Vᴴ` allocated by the CUDA `Jacobi` SVD now has the correct size when
+  singular vectors are not requested ([#314](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/314)).
+
+### Performance
+
+- `uppertriangular!` on `CuArray` and `ROCArray` now zeroes the lower triangle in a single kernel
+  instead of one kernel per column ([#313](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/313)).
 
 ## [0.6.12](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.11...v0.6.12) - 2026-10-16
 
