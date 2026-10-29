@@ -83,7 +83,7 @@ function MatrixAlgebraKit.svd_rank(S::AnyGPUVector; rank_atol = MatrixAlgebraKit
 end
 
 function MatrixAlgebraKit.svd_pullback!(ΔA::AnyGPUMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyGPUVector; kwargs...)
-    return svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
+    return MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
 end
 
 # have to override this as methods are missing in GPUArrays for the various
