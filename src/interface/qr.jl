@@ -11,6 +11,7 @@ where `Q` is a square unitary matrix with the same number of rows as `A` and `R`
 upper triangular matrix with the same size as `A`.
 
 Pass an empty `Q` output to `qr_full!` to compute only `R` without constructing `Q`.
+Conversely, an empty `R` output requests only `Q`.
 
 !!! note
     The bang method `qr_full!` optionally accepts the output structure and
@@ -33,6 +34,7 @@ orthogonal columns spanning the image of `A`, and the matrix `R` of size `(min(m
 is upper triangular.
 
 Pass an empty `Q` output to `qr_compact!` to compute only `R` without constructing `Q`.
+Conversely, an empty `R` output requests only `Q`.
 
 !!! note
     The bang method `qr_compact!` optionally accepts the output structure and

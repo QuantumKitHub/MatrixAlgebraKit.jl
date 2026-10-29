@@ -11,6 +11,7 @@ where `Q` is a square unitary matrix with the same number of rows as `A` and `L`
 lower triangular matrix with the same size as `A`.
 
 Pass an empty `Q` output to `lq_full!` to compute only `L` without constructing `Q`.
+Conversely, an empty `L` output requests only `Q`.
 
 !!! note
     The bang method `lq_full!` optionally accepts the output structure and
@@ -32,6 +33,7 @@ such that `A = L * Q` where the matrix `Q` of size `(min(m,n), n)` has orthogona
 spanning the image of `A'`, and the matrix `L` of size `(m, min(m,n))` is lower triangular.
 
 Pass an empty `Q` output to `lq_compact!` to compute only `L` without constructing `Q`.
+Conversely, an empty `L` output requests only `Q`.
 
 !!! note
     The bang method `lq_compact!` optionally accepts the output structure and

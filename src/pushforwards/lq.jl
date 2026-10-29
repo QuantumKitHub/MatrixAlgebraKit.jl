@@ -21,6 +21,8 @@ function lq_pushforward!(
     )
     # TODO: Support L-only `right_orth!` with an empty Q output; this rule currently requires Q.
     L, Q = LQ
+    isempty(Q) && !isempty(L) &&
+        throw(ArgumentError("LQ differentiation with an omitted Q output is not supported; compute both L and Q."))
     ΔL, ΔQ = ΔLQ
     m = size(L, 1)
     n = size(Q, 2)
