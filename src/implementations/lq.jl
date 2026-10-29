@@ -159,7 +159,6 @@ function lq_householder!(
             throw(ArgumentError("in-place Q is only supported if L does not share memory with A"))
     end
 
-    Ld = diagview(A)
     if blocksize > 1
         # L doubles as workspace for T, so Q is constructed before L is extracted
         mb = min(minmn, blocksize)
@@ -167,17 +166,23 @@ function lq_householder!(
         A, T = gelqt!(driver, A, T)
         isempty(Q) || (Q = gemlqt!(driver, 'R', 'N', A, T, one!(Q)))
         computeL && _lq_copyL!(L, A)
+        positive && gaugefix!(lq_householder!, L, Q, diagview(A))
     else
         A, τ = gelqf!(driver, A)
         computeL && _lq_copyL!(L, A)
         if inplaceQ
-            positive && (Ld = copy(Ld)) # unglq! destroys the diagonal of A
-            unglq!(driver, A, τ) # Q === A, so no need to rebind Q
-        elseif !isempty(Q)
-            Q = unmlq!(driver, 'R', 'N', A, τ, one!(Q))
+            if positive
+                Ld = copy(diagview(A)) # unglq! destroys the diagonal of A
+                unglq!(driver, A, τ) # Q === A, so no need to rebind Q
+                gaugefix!(lq_householder!, L, Q, Ld)
+            else
+                unglq!(driver, A, τ)
+            end
+        else
+            isempty(Q) || (Q = unmlq!(driver, 'R', 'N', A, τ, one!(Q)))
+            positive && gaugefix!(lq_householder!, L, Q, diagview(A))
         end
     end
-    positive && gaugefix!(lq_householder!, L, Q, Ld)
 
     return L, Q
 end

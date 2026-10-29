@@ -182,7 +182,6 @@ function qr_householder!(
     end
 
     # Compute QR in packed form
-    Rd = diagview(A)
     if blocksize > 1
         # R doubles as workspace for T, so Q is constructed before R is extracted
         nb = min(minmn, blocksize)
@@ -190,6 +189,7 @@ function qr_householder!(
         A, T = geqrt!(driver, A, T)
         isempty(Q) || (Q = gemqrt!(driver, 'L', 'N', A, T, one!(Q)))
         computeR && _qr_copyR!(R, A)
+        positive && gaugefix!(qr_householder!, Q, R, diagview(A))
     else
         if pivoted
             A, τ, jpvt = geqp3!(driver, A)
@@ -198,15 +198,20 @@ function qr_householder!(
             A, τ = geqrf!(driver, A)
             computeR && _qr_copyR!(R, A)
         end
+        # Gauge fixing rescales rows, which commutes with pivoting.
         if inplaceQ
-            positive && (Rd = copy(Rd)) # ungqr! destroys the diagonal of A
-            ungqr!(driver, A, τ) # Q === A, so no need to rebind Q
-        elseif !isempty(Q)
-            Q = _qr_buildQ!(driver, Q, A, τ, minmn)
+            if positive
+                Rd = copy(diagview(A)) # ungqr! destroys the diagonal of A
+                ungqr!(driver, A, τ) # Q === A, so no need to rebind Q
+                gaugefix!(qr_householder!, Q, R, Rd)
+            else
+                ungqr!(driver, A, τ)
+            end
+        else
+            isempty(Q) || (Q = _qr_buildQ!(driver, Q, A, τ, minmn))
+            positive && gaugefix!(qr_householder!, Q, R, diagview(A))
         end
     end
-    # Gauge fixing rescales rows, which commutes with pivoting.
-    positive && gaugefix!(qr_householder!, Q, R, Rd)
 
     return Q, R
 end
