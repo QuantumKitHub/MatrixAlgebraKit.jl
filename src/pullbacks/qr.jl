@@ -76,6 +76,7 @@ function qr_pullback!(
         gauge_atol::Real = default_pullback_gauge_atol(ΔQR[1])
     )
     # process
+    # TODO: Support R-only `left_orth!` with an empty Q output; this rule currently requires Q.
     Q, R = QR
     m = size(Q, 1)
     n = size(R, 2)

@@ -10,6 +10,8 @@ Compute the full LQ decomposition of the rectangular matrix `A`, such that `A = 
 where `Q` is a square unitary matrix with the same number of rows as `A` and `L` is a
 lower triangular matrix with the same size as `A`.
 
+Pass an empty `Q` output to `lq_full!` to compute only `L` without constructing `Q`.
+
 !!! note
     The bang method `lq_full!` optionally accepts the output structure and
     possibly destroys the input matrix `A`. Always use the return value of the function
@@ -28,6 +30,8 @@ See also [`lq_compact(!)`](@ref lq_compact).
 Compute the compact LQ decomposition of the rectangular matrix `A` of size `(m,n)`,
 such that `A = L * Q` where the matrix `Q` of size `(min(m,n), n)` has orthogonal rows
 spanning the image of `A'`, and the matrix `L` of size `(m, min(m,n))` is lower triangular.
+
+Pass an empty `Q` output to `lq_compact!` to compute only `L` without constructing `Q`.
 
 !!! note
     The bang method `lq_compact!` optionally accepts the output structure and

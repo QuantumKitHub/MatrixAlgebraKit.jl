@@ -4,3 +4,4 @@
 .*.swp
 Manifest.toml
 docs/build/
+.vscode

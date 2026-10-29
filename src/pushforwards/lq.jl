@@ -19,6 +19,7 @@ function lq_pushforward!(
         ΔA, A, LQ, ΔLQ;
         rank_atol::Real = default_pullback_rank_atol(LQ[1]), kwargs...
     )
+    # TODO: Support L-only `right_orth!` with an empty Q output; this rule currently requires Q.
     L, Q = LQ
     ΔL, ΔQ = ΔLQ
     m = size(L, 1)

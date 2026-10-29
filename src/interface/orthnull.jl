@@ -76,6 +76,10 @@ deduce the decomposition kind with [`left_orth_alg(alg)`](@ref left_orth_alg).
     destroys the input matrix `A`. Always use the return value of the function as it may
     not always be possible to use the provided `CV` as output.
 
+For QR-based decompositions, pass an empty basis matrix to compute only `C` (the `R` factor):
+`left_orth!(A, (similar(A, 0, 0), C); alg = :qr)`.
+The returned basis matrix remains empty, and its construction is skipped.
+
 See also [`right_orth(!)`](@ref right_orth), [`left_null(!)`](@ref left_null) and
 [`right_null(!)`](@ref right_null).
 """
@@ -156,6 +160,10 @@ deduce the decomposition kind with [`right_orth_alg`](@ref).
     The bang method `right_orth!` optionally accepts the output structure and possibly
     destroys the input matrix `A`. Always use the return value of the function as it may not
     always be possible to use the provided `CVᴴ` as output.
+
+For LQ-based decompositions, pass an empty basis matrix to compute only `C` (the `L` factor):
+`right_orth!(A, (C, similar(A, 0, 0)); alg = :lq)`.
+The returned basis matrix remains empty, and its construction is skipped.
 
 See also [`left_orth(!)`](@ref left_orth), [`left_null(!)`](@ref left_null) and
 [`right_null(!)`](@ref right_null).

@@ -76,6 +76,7 @@ function lq_pullback!(
         gauge_atol::Real = default_pullback_gauge_atol(ΔLQ[2])
     )
     # process
+    # TODO: Support L-only `right_orth!` with an empty Q output; this rule currently requires Q.
     L, Q = LQ
     m = size(L, 1)
     n = size(Q, 2)

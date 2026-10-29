@@ -70,7 +70,7 @@ function qr_householder!(
 
     # compute QR
     Q̃, R̃ = qr!(A)
-    lmul!(Q̃, one!(Q))
+    isempty(Q) || lmul!(Q̃, one!(Q))
 
     if computeR
         copyto!(view(R, 1:minmn, :), R̃)

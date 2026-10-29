@@ -12,7 +12,7 @@ function check_input(::typeof(lq_full!), A::AbstractMatrix, LQ, ::AbstractAlgori
     @assert L isa AbstractMatrix && Q isa AbstractMatrix
     isempty(L) || @check_size(L, (m, n))
     @check_scalar(L, A)
-    @check_size(Q, (n, n))
+    isempty(Q) || @check_size(Q, (n, n))
     @check_scalar(Q, A)
     return nothing
 end
@@ -23,7 +23,7 @@ function check_input(::typeof(lq_compact!), A::AbstractMatrix, LQ, ::AbstractAlg
     @assert L isa AbstractMatrix && Q isa AbstractMatrix
     isempty(L) || @check_size(L, (m, minmn))
     @check_scalar(L, A)
-    @check_size(Q, (minmn, n))
+    isempty(Q) || @check_size(Q, (minmn, n))
     @check_scalar(Q, A)
     return nothing
 end
@@ -42,7 +42,7 @@ function check_input(::typeof(lq_full!), A::AbstractMatrix, (L, Q), ::DiagonalAl
     @assert Q isa Diagonal && L isa Diagonal
     isempty(L) || @check_size(L, (m, n))
     @check_scalar(L, A)
-    @check_size(Q, (n, n))
+    isempty(Q) || @check_size(Q, (n, n))
     @check_scalar(Q, A)
     return nothing
 end
@@ -167,7 +167,7 @@ function lq_householder!(
         else
             A, T = gelqt!(driver, A, similar(A, mb, minmn))
         end
-        Q = gemlqt!(driver, 'R', 'N', A, T, one!(Q))
+        isempty(Q) || (Q = gemlqt!(driver, 'R', 'N', A, T, one!(Q)))
         computeL && _lq_copyL!(L, A)
         positive && gaugefix!(lq_householder!, computeL ? L : nothing, Q, diagview(A))
     else
@@ -179,7 +179,7 @@ function lq_householder!(
             unglq!(driver, A, τ) # Q === A, so no need to rebind Q
             positive && gaugefix!(lq_householder!, Lf, Q, Ld)
         else
-            Q = unmlq!(driver, 'R', 'N', A, τ, one!(Q))
+            isempty(Q) || (Q = unmlq!(driver, 'R', 'N', A, τ, one!(Q)))
             positive && gaugefix!(lq_householder!, Lf, Q, diagview(A))
         end
     end
@@ -220,6 +220,7 @@ function lq_householder!(
             L[i, j] = A[i, j]
         end
     end
+    isempty(Q) && return L, Q
     # build Q
     one!(Q)
     @inbounds for i in minmn:-1:1
@@ -329,7 +330,7 @@ function lq_via_qr!(
     else
         Qt, Lt = qr_compact!(At, (Qt, Lt), qr_alg)
     end
-    adjoint!(Q, Qt)
+    isempty(Q) || adjoint!(Q, Qt)
     !isempty(L) && adjoint!(L, Lt)
     return L, Q
 end
@@ -348,38 +349,28 @@ end
 function lq_full!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
     check_input(lq_full!, A, LQ, alg)
     L, Q = LQ
-    lq_diagonal!(A, L, Q; alg.kwargs...)
+    _lq_diagonal!(A, L, Q; alg.kwargs...)
     return L, Q
 end
 function lq_compact!(A::AbstractMatrix, LQ, alg::DiagonalAlgorithm)
     check_input(lq_compact!, A, LQ, alg)
     L, Q = LQ
-    lq_diagonal!(A, L, Q; alg.kwargs...)
+    _lq_diagonal!(A, L, Q; alg.kwargs...)
     return L, Q
 end
 function lq_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
     check_input(lq_null!, A, N, alg)
-    return lq_null_diagonal!(A, N; alg.kwargs...)
+    return _lq_null_diagonal!(A, N; alg.kwargs...)
 end
 
-function lq_diagonal!(
+function _lq_diagonal!(
         A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix; positive::Bool = true
     )
-    # note: Ad and Qd might share memory here so order of operations is important
-    Ad = diagview(A)
-    Ld = diagview(L)
-    Qd = diagview(Q)
-    if positive
-        @. Ld = abs(Ad)
-        @. Qd = sign_safe(Ad)
-    else
-        Ld .= Ad
-        one!(Q)
-    end
+    Q, L = _qr_diagonal!(A, Q, L; positive)
     return L, Q
 end
 
-lq_null_diagonal!(A::AbstractMatrix, N; positive::Bool = true) = N
+_lq_null_diagonal!(A::AbstractMatrix, N; positive::Bool = true) = N
 
 # Deprecations
 # ------------

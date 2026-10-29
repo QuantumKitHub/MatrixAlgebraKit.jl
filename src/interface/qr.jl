@@ -10,6 +10,8 @@ Compute the full QR decomposition of the rectangular matrix `A`, such that `A = 
 where `Q` is a square unitary matrix with the same number of rows as `A` and `R` is an
 upper triangular matrix with the same size as `A`.
 
+Pass an empty `Q` output to `qr_full!` to compute only `R` without constructing `Q`.
+
 !!! note
     The bang method `qr_full!` optionally accepts the output structure and
     possibly destroys the input matrix `A`. Always use the return value of the function
@@ -29,6 +31,8 @@ Compute the compact QR decomposition of the rectangular matrix `A` of size `(m,n
 such that `A = Q * R` where the isometric matrix `Q` of size `(m, min(m,n))` has
 orthogonal columns spanning the image of `A`, and the matrix `R` of size `(min(m,n), n)`
 is upper triangular.
+
+Pass an empty `Q` output to `qr_compact!` to compute only `R` without constructing `Q`.
 
 !!! note
     The bang method `qr_compact!` optionally accepts the output structure and

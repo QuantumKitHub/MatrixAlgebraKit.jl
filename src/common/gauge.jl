@@ -15,8 +15,10 @@ _largest(x::Complex, y::Complex) = abs2(x) < abs2(y) ? y : x
 
 function gaugefix!(::typeof(qr_householder!), Q, R, Rd)
     ax = Base.OneTo(length(Rd))
-    Qf = view(Q, axes(Q, 1), ax)
-    Qf .*= sign_safe.(transpose(Rd))
+    if !isempty(Q)
+        Qf = view(Q, axes(Q, 1), ax)
+        Qf .*= sign_safe.(transpose(Rd))
+    end
     if !isnothing(R)
         Rf = view(R, ax, axes(R, 2))
         Rf .*= conj.(sign_safe.(Rd))
@@ -26,8 +28,10 @@ end
 
 function gaugefix!(::typeof(lq_householder!), L, Q, Ld)
     ax = Base.OneTo(length(Ld))
-    Qf = view(Q, ax, axes(Q, 2))
-    Qf .*= sign_safe.(Ld)
+    if !isempty(Q)
+        Qf = view(Q, ax, axes(Q, 2))
+        Qf .*= sign_safe.(Ld)
+    end
     if !isnothing(L)
         Lf = view(L, axes(L, 1), ax)
         Lf .*= conj.(sign_safe.(transpose(Ld)))

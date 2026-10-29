@@ -17,6 +17,7 @@ function qr_pushforward!(
         ΔA, A, QR, ΔQR;
         rank_atol::Real = default_pullback_rank_atol(QR[2]), kwargs...
     )
+    # TODO: Support R-only `left_orth!` with an empty Q output; this rule currently requires Q.
     Q, R = QR
     ΔQ, ΔR = ΔQR
     m = size(Q, 1)
