@@ -11,11 +11,10 @@ function test_eigh(T::Type, sz; test_trunc = true, kwargs...)
     end
 end
 
-function test_eigh_batched(T::Type, sz, batch_size::Int; test_trunc = false, kwargs...)
+function test_eigh_batched(T::Type, sz, batch_size::Int; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eigh batched $summary_str batch_size $batch_size" begin
         test_eigh_full_batched(T, sz, batch_size; kwargs...)
-        test_trunc && test_eigh_trunc_batched(T, sz, batch_size; kwargs...)
     end
 end
 
@@ -27,11 +26,44 @@ function test_eigh_algs(T::Type, sz, algs; test_trunc = true, kwargs...)
     end
 end
 
-function test_eigh_batched_algs(T::Type, sz, batch_size::Int, algs; test_trunc = false, kwargs...)
+function test_eigh_batched_algs(T::Type, sz, batch_size::Int, algs; kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eigh algorithms $summary_str batch_size $batch_size" begin
         test_eigh_full_algs_batched(T, sz, algs, batch_size; kwargs...)
-        test_trunc && test_eigh_trunc_algs_batched(T, sz, algs, batch_size; kwargs...)
+    end
+end
+
+# Whether the driver for `alg` reports support for ragged batches of each EIGH function,
+# and if so, that ragged batches of all distinct sizes are decomposed correctly.
+function test_eigh_algs_batched_ragged_support(
+        T::Type, algs, batch_size::Int;
+        supported::Bool = true,
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        kwargs...
+    )
+    summary_str = testargs_summary(T)
+    return @testset "batched eigh ragged support, algorithm $alg $summary_str" for alg in algs
+        driver = MatrixAlgebraKit.default_driver(alg, T)
+        for f! in (eigh_full!, eigh_vals!)
+            @test MatrixAlgebraKit.supports_ragged_batch(f!, alg, driver, T) == supported
+            @test MatrixAlgebraKit.supports_ragged_batch(f!, alg, MatrixAlgebraKit.DefaultDriver(), T) == supported
+        end
+
+        if supported
+            Ar = [project_hermitian!(instantiate_matrix(T, (1 + i, 1 + i))) for i in 1:batch_size]
+            @test allunique(size.(Ar))
+
+            D, V = @testinferred batched_eigh_full(Ar; alg)
+            for (a, d, v) in zip(Ar, D, V)
+                @test a * v ≈ v * d
+                @test isunitary(v)
+            end
+
+            Dv = @testinferred batched_eigh_vals(Ar; alg)
+            for (d, dv) in zip(D, Dv)
+                @test collect(diagview(d)) ≈ collect(dv)
+            end
+        end
     end
 end
 

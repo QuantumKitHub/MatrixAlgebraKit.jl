@@ -38,7 +38,7 @@ end
 function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: StridedCuArray{<:BlasFloat, 3}}
     return Jacobi(; kwargs...)
 end
-function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: Vector{<:StridedCuMatrix{<:BlasFloat}}}
+function MatrixAlgebraKit.default_eigh_algorithm(::Type{T}; kwargs...) where {T <: AbstractVector{<:StridedCuMatrix{<:BlasFloat}}}
     return Jacobi(; kwargs...)
 end
 
@@ -58,7 +58,7 @@ end
 MatrixAlgebraKit.supports_svd_full(::CUSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :svd_polar)
 
 # `cusolverDnXgesvdjBatched` only accepts matrices up to 32x32
-MatrixAlgebraKit.max_batched_blocksize(::AbstractAlgorithm, ::CUSOLVER, ::Type{<:AnyCuArray}) = 32
+MatrixAlgebraKit.max_batched_blocksize(::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = 32
 # CUSOLVER only provides a batched kernel for `Jacobi`
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_full!), ::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
 MatrixAlgebraKit.supports_ragged_batch(::typeof(svd_compact!), ::Jacobi, ::CUSOLVER, ::Type{<:AnyCuArray}) = true
