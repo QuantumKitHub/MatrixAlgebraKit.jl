@@ -1,7 +1,7 @@
 module MatrixAlgebraKitGPUArraysExt
 
 using MatrixAlgebraKit, GPUArrays, LinearAlgebra
-using GPUArrays.KernelAbstractions: @kernel, @index, Global, get_backend
+using GPUArrays.KernelAbstractions: @kernel, @index, get_backend
 
 # one kernel for the whole triangle instead of one per column
 function MatrixAlgebraKit.uppertriangular!(A::AnyGPUMatrix)
@@ -12,7 +12,7 @@ end
 
 @kernel function _project_hermitian_kernel(A, B, ::Val{anti}) where {anti}
     n = size(A, 1)
-    i, j = @index(Global, NTuple) 
+    i, j = @index(Global, NTuple)
     if !(i > n || j > n || i > j)
         @inbounds if i == j
             B[j, j] = anti ? MatrixAlgebraKit._imimag(A[j, j]) : real(A[j, j])
@@ -33,29 +33,25 @@ function MatrixAlgebraKit.project_hermitian_native!(
     )
     n = size(A, 1)
     n == 0 && return B
-    thread_dim = (16, 16)
-    block_dim = (cld(n, 16), cld(n, 16))
-    _project_hermitian_kernel(get_backend(A), thread_dim, block_dim)(A, B, anti)
+    _project_hermitian_kernel(get_backend(A), (16, 16), (n, n))(A, B, anti)
     return B
+end
+
+@kernel function _avgdiff_kernel(A, B)
+    j = @index(Global)
+    if j ≤ length(A)
+        @inbounds begin
+            a = A[j]
+            b = B[j]
+            A[j] = (a + b) / 2
+            B[j] = b - a
+        end
+    end
 end
 
 function MatrixAlgebraKit._avgdiff!(A::AnyGPUMatrix, B::AnyGPUMatrix)
     axes(A) == axes(B) || throw(DimensionMismatch())
-    @kernel function _avgdiff_kernel(A, B)
-        j = @index(Global)
-        if j ≤ length(A)
-            @inbounds begin
-                a = A[j]
-                b = B[j]
-                A[j] = (a + b) / 2
-                B[j] = b - a
-            end
-        end
-    end
-    thread_dim = 512
-    block_dim = cld(length(A), thread_dim)
-    backend = get_backend(A)
-    _avgdiff_kernel(backend, thread_dim, length(A))(A, B)
+    _avgdiff_kernel(get_backend(A), 512, length(A))(A, B)
     return A, B
 end
 
