@@ -19,7 +19,7 @@ function gaugefix!(::typeof(qr_householder!), Q, R, Rd)
         Qf = view(Q, axes(Q, 1), ax)
         Qf .*= sign_safe.(transpose(Rd))
     end
-    if !isnothing(R)
+    if !isempty(R)
         Rf = view(R, ax, axes(R, 2))
         Rf .*= conj.(sign_safe.(Rd))
     end
@@ -32,7 +32,7 @@ function gaugefix!(::typeof(lq_householder!), L, Q, Ld)
         Qf = view(Q, ax, axes(Q, 2))
         Qf .*= sign_safe.(Ld)
     end
-    if !isnothing(L)
+    if !isempty(L)
         Lf = view(L, axes(L, 1), ax)
         Lf .*= conj.(sign_safe.(transpose(Ld)))
     end

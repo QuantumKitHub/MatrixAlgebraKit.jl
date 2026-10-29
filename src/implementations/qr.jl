@@ -170,7 +170,7 @@ function qr_householder!(
 
     m, n = size(A)
     minmn = min(m, n)
-    computeR = length(R) > 0
+    computeR = !isempty(R)
     inplaceQ = Q === A
 
     if inplaceQ
@@ -182,17 +182,14 @@ function qr_householder!(
     end
 
     # Compute QR in packed form
+    Rd = diagview(A)
     if blocksize > 1
         # R doubles as workspace for T, so Q is constructed before R is extracted
         nb = min(minmn, blocksize)
-        if computeR # first use R as space for T
-            A, T = geqrt!(driver, A, view(R, 1:nb, 1:minmn))
-        else
-            A, T = geqrt!(driver, A, similar(A, nb, minmn))
-        end
+        T = computeR ? view(R, 1:nb, 1:minmn) : similar(A, nb, minmn)
+        A, T = geqrt!(driver, A, T)
         isempty(Q) || (Q = gemqrt!(driver, 'L', 'N', A, T, one!(Q)))
         computeR && _qr_copyR!(R, A)
-        positive && gaugefix!(qr_householder!, Q, computeR ? R : nothing, diagview(A))
     else
         if pivoted
             A, τ, jpvt = geqp3!(driver, A)
@@ -201,16 +198,15 @@ function qr_householder!(
             A, τ = geqrf!(driver, A)
             computeR && _qr_copyR!(R, A)
         end
-        Rf = computeR ? R : nothing # gaugefix! rescales rows, which commutes with the pivoting
         if inplaceQ
-            Rd = positive ? copy(diagview(A)) : nothing # ungqr! destroys the diagonal of A
+            positive && (Rd = copy(Rd)) # ungqr! destroys the diagonal of A
             ungqr!(driver, A, τ) # Q === A, so no need to rebind Q
-            positive && gaugefix!(qr_householder!, Q, Rf, Rd)
-        else
-            isempty(Q) || (Q = _qr_buildQ!(driver, Q, A, τ, minmn))
-            positive && gaugefix!(qr_householder!, Q, Rf, diagview(A))
+        elseif !isempty(Q)
+            Q = _qr_buildQ!(driver, Q, A, τ, minmn)
         end
     end
+    # Gauge fixing rescales rows, which commutes with pivoting.
+    positive && gaugefix!(qr_householder!, Q, R, Rd)
 
     return Q, R
 end

@@ -148,7 +148,7 @@ function lq_householder!(
 
     m, n = size(A)
     minmn = min(m, n)
-    computeL = length(L) > 0
+    computeL = !isempty(L)
     inplaceQ = Q === A
 
     if inplaceQ
@@ -159,30 +159,25 @@ function lq_householder!(
             throw(ArgumentError("in-place Q is only supported if L does not share memory with A"))
     end
 
+    Ld = diagview(A)
     if blocksize > 1
         # L doubles as workspace for T, so Q is constructed before L is extracted
         mb = min(minmn, blocksize)
-        if computeL # first use L as space for T
-            A, T = gelqt!(driver, A, view(L, 1:mb, 1:minmn))
-        else
-            A, T = gelqt!(driver, A, similar(A, mb, minmn))
-        end
+        T = computeL ? view(L, 1:mb, 1:minmn) : similar(A, mb, minmn)
+        A, T = gelqt!(driver, A, T)
         isempty(Q) || (Q = gemlqt!(driver, 'R', 'N', A, T, one!(Q)))
         computeL && _lq_copyL!(L, A)
-        positive && gaugefix!(lq_householder!, computeL ? L : nothing, Q, diagview(A))
     else
         A, τ = gelqf!(driver, A)
         computeL && _lq_copyL!(L, A)
-        Lf = computeL ? L : nothing
         if inplaceQ
-            Ld = positive ? copy(diagview(A)) : nothing # unglq! destroys the diagonal of A
+            positive && (Ld = copy(Ld)) # unglq! destroys the diagonal of A
             unglq!(driver, A, τ) # Q === A, so no need to rebind Q
-            positive && gaugefix!(lq_householder!, Lf, Q, Ld)
-        else
-            isempty(Q) || (Q = unmlq!(driver, 'R', 'N', A, τ, one!(Q)))
-            positive && gaugefix!(lq_householder!, Lf, Q, diagview(A))
+        elseif !isempty(Q)
+            Q = unmlq!(driver, 'R', 'N', A, τ, one!(Q))
         end
     end
+    positive && gaugefix!(lq_householder!, L, Q, Ld)
 
     return L, Q
 end

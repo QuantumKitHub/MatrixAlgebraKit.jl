@@ -66,19 +66,16 @@ function qr_householder!(
 
     m, n = size(A)
     minmn = min(m, n)
-    computeR = length(R) > 0
 
     # compute QR
     Q̃, R̃ = qr!(A)
     isempty(Q) || lmul!(Q̃, one!(Q))
 
-    if computeR
+    if !isempty(R)
         copyto!(view(R, 1:minmn, :), R̃)
         zero!(view(R, (minmn + 1):size(R, 1), :))
-        positive && gaugefix!(qr_householder!, Q, R, diagview(R̃))
-    elseif positive
-        gaugefix!(qr_householder!, Q, nothing, diagview(R̃))
     end
+    positive && gaugefix!(qr_householder!, Q, R, diagview(R̃))
 
     return Q, R
 end
