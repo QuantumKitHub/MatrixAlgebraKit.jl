@@ -157,6 +157,43 @@ function test_eigh_full_algs_batched(
         for (d, dd) in zip(eachslice(D, dims = 2), eachslice(D3, dims = 2))
             @test d ≈ dd
         end
+
+        # ragged batch: a group of `batch_size` equal sized matrices, small enough for every
+        # driver's batched size limit, and then `nextra` matrices of different sizes that are
+        # decomposed one at a time or batched with equally sized ones
+        MatrixAlgebraKit.supports_ragged_batch(eigh_full!, alg, MatrixAlgebraKit.DefaultDriver(), T) || continue
+        @testset "ragged with $nextra extra sizes" for nextra in (2, 5)
+            k = min(n, 16)
+            Ar = [
+                [project_hermitian!(instantiate_matrix(T, (k, k))) for _ in 1:batch_size];
+                [project_hermitian!(instantiate_matrix(T, (k - i % 3, k - i % 3))) for i in 1:nextra]
+            ]
+            Ds = [Diagonal(similar(a, real(eltype(T)), size(a, 1))) for a in Ar]
+            Vs = [similar(a) for a in Ar]
+            D4, V4 = @testinferred batched_eigh_full!(deepcopy(Ar), (Ds, Vs); alg)
+            @test D4 === Ds
+            @test V4 === Vs
+            for (a, d, v) in zip(Ar, D4, V4)
+                @test a * v ≈ v * d
+                @test isunitary(v)
+            end
+
+            D5, V5 = @testinferred batched_eigh_full(Ar; alg)
+            @test D5 isa AbstractVector{<:Diagonal}
+            for (a, d, v) in zip(Ar, D5, V5)
+                @test a * v ≈ v * d
+            end
+
+            Dv = [similar(a, real(eltype(T)), size(a, 1)) for a in Ar]
+            Dv2 = @testinferred batched_eigh_vals!(deepcopy(Ar), Dv; alg)
+            for (d, dv) in zip(D4, Dv2)
+                @test collect(diagview(d)) ≈ collect(dv)
+            end
+            Dv3 = @testinferred batched_eigh_vals(Ar; alg)
+            for (d, dv) in zip(D4, Dv3)
+                @test collect(diagview(d)) ≈ collect(dv)
+            end
+        end
     end
 end
 
