@@ -25,14 +25,6 @@ if filter_tests!(testsuite, args)
         delete!(testsuite, "common/truncate")
         delete!(testsuite, "decompositions/gen_eig")
         filter!(p -> !startswith(first(p), "chainrules/"), testsuite)
-    else
-        is_apple_ci = Sys.isapple() && get(ENV, "CI", "false") == "true"
-        is_windows_ci = Sys.iswindows() && get(ENV, "CI", "false") == "true"
-        if is_apple_ci
-            filter!(p -> !startswith(first(p), "mooncake/"), testsuite)
-            filter!(p -> !startswith(first(p), "chainrules/"), testsuite)
-        end
-        (is_windows_ci || is_apple_ci) && filter!(p -> !startswith(first(p), "enzyme/"), testsuite)
     end
 end
 
