@@ -35,13 +35,6 @@ end
 
 MatrixAlgebraKit.supports_svd_full(::ROCSOLVER, f::Symbol) = f in (:qr_iteration, :jacobi, :divide_and_conquer, :bisection)
 
-# one kernel for the whole triangle instead of one per column
-function MatrixAlgebraKit.uppertriangular!(A::StridedROCMatrix)
-    m, n = size(A)
-    A .= ifelse.((1:m) .> transpose(1:n), zero(eltype(A)), A)
-    return A
-end
-
 # rocSOLVER's `gesvd*_batched` functions take the batch as an array
 # of device pointers, so a group of equally sized matrices
 # doesn't need a copy into a 3D ROCArray.
@@ -164,117 +157,6 @@ heev!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatri
 heevx!(::ROCSOLVER, A::StridedROCMatrix, Dd::StridedROCVector, V::StridedROCMatrix; kwargs...) =
     YArocSOLVER.heevx!(A, Dd, V; kwargs...)
 
-function MatrixAlgebraKit.findtruncated_svd(values::StridedROCVector, strategy::TruncationByValue)
-    return MatrixAlgebraKit.findtruncated(values, strategy)
-end
-
-# COV_EXCL_START
-function _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, ::Val{true})
-    m, n = size(Au)
-    j = workitemIdx().x + (workgroupIdx().x - 1) * workgroupDim().x
-    j > n && return
-    for i in 1:m
-        @inbounds begin
-            val = (Au[i, j] - adjoint(Al[j, i])) / 2
-            Bu[i, j] = val
-            Bl[j, i] = -adjoint(val)
-        end
-    end
-    return
-end
-
-function _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, ::Val{false})
-    m, n = size(Au)
-    j = workitemIdx().x + (workgroupIdx().x - 1) * workgroupDim().x
-    j > n && return
-    for i in 1:m
-        @inbounds begin
-            val = (Au[i, j] + adjoint(Al[j, i])) / 2
-            Bu[i, j] = val
-            Bl[j, i] = adjoint(val)
-        end
-    end
-    return
-end
-
-function _project_hermitian_diag_kernel(A, B, ::Val{true})
-    n = size(A, 1)
-    j = workitemIdx().x + (workgroupIdx().x - 1) * workgroupDim().x
-    j > n && return
-    @inbounds begin
-        for i in 1:(j - 1)
-            val = (A[i, j] - adjoint(A[j, i])) / 2
-            B[i, j] = val
-            B[j, i] = -adjoint(val)
-        end
-        B[j, j] = MatrixAlgebraKit._imimag(A[j, j])
-    end
-    return
-end
-
-function _project_hermitian_diag_kernel(A, B, ::Val{false})
-    n = size(A, 1)
-    j = workitemIdx().x + (workgroupIdx().x - 1) * workgroupDim().x
-    j > n && return
-    @inbounds begin
-        for i in 1:(j - 1)
-            val = (A[i, j] + adjoint(A[j, i])) / 2
-            B[i, j] = val
-            B[j, i] = adjoint(val)
-        end
-        B[j, j] = real(A[j, j])
-    end
-    return
-end
-# COV_EXCL_STOP
-
-const SupportedROCMatrix{T} = Union{AnyROCMatrix{T}, SubArray{T, 2, <:AnyROCMatrix{T}}}
-
-function MatrixAlgebraKit._project_hermitian_offdiag!(
-        Au::SupportedROCMatrix, Al::SupportedROCMatrix, Bu::SupportedROCMatrix, Bl::SupportedROCMatrix, ::Val{anti}
-    ) where {anti}
-    thread_dim = 512
-    block_dim = cld(size(Au, 2), thread_dim)
-    @roc groupsize = thread_dim gridsize = block_dim _project_hermitian_offdiag_kernel(Au, Al, Bu, Bl, Val(anti))
-    return nothing
-end
-function MatrixAlgebraKit._project_hermitian_diag!(A::SupportedROCMatrix, B::SupportedROCMatrix, ::Val{anti}) where {anti}
-    thread_dim = 512
-    block_dim = cld(size(A, 1), thread_dim)
-    @roc groupsize = thread_dim gridsize = block_dim _project_hermitian_diag_kernel(A, B, Val(anti))
-    return nothing
-end
-
-# avoids calling the `StridedMatrix` specialization to avoid scalar indexing,
-# use (allocating) fallback instead until we write a dedicated kernel
-MatrixAlgebraKit.ishermitian_exact(A::StridedROCMatrix) = A == A'
-MatrixAlgebraKit.ishermitian_approx(A::StridedROCMatrix; atol, rtol, kwargs...) =
-    norm(project_antihermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
-MatrixAlgebraKit.isantihermitian_exact(A::StridedROCMatrix) = A == -A'
-MatrixAlgebraKit.isantihermitian_approx(A::StridedROCMatrix; atol, rtol, kwargs...) =
-    norm(project_hermitian(A; kwargs...)) ≤ max(atol, rtol * norm(A))
-
-function MatrixAlgebraKit._avgdiff!(A::StridedROCMatrix, B::StridedROCMatrix)
-    axes(A) == axes(B) || throw(DimensionMismatch())
-    # COV_EXCL_START
-    function _avgdiff_kernel(A, B)
-        j = workitemIdx().x + (workgroupIdx().x - 1) * workgroupDim().x
-        j > length(A) && return
-        @inbounds begin
-            a = A[j]
-            b = B[j]
-            A[j] = (a + b) / 2
-            B[j] = b - a
-        end
-        return
-    end
-    # COV_EXCL_STOP
-    thread_dim = 512
-    block_dim = cld(length(A), thread_dim)
-    @roc groupsize = thread_dim gridsize = block_dim _avgdiff_kernel(A, B)
-    return A, B
-end
-
 # avoids calling the BlasMat specialization that assumes syrk! or herk! is called
 # TODO: remove once syrk! or herk! is defined
 function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix{T}) where {T <: BlasFloat}
@@ -283,27 +165,9 @@ function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix
     return C
 end
 
-# TODO: intersect/union don't work on GPU
-MatrixAlgebraKit._ind_intersect(A::ROCVector{Int}, B::ROCVector{Int}) =
-    MatrixAlgebraKit._ind_intersect(collect(A), collect(B))
-MatrixAlgebraKit._ind_union(A::AbstractVector{<:Integer}, B::ROCVector{Int}) =
-    MatrixAlgebraKit._ind_union(A, collect(B))
-MatrixAlgebraKit._ind_union(A::ROCVector{Int}, B::AbstractVector{<:Integer}) =
-    MatrixAlgebraKit._ind_union(collect(A), B)
-MatrixAlgebraKit._ind_union(A::ROCVector{Int}, B::ROCVector{Int}) =
-    MatrixAlgebraKit._ind_union(collect(A), collect(B))
-
 function _sylvester(A::AnyROCMatrix, B::AnyROCMatrix, C::AnyROCMatrix)
     hX = sylvester(collect(A), collect(B), collect(C))
     return ROCArray(hX)
-end
-
-function svd_rank(S::AnyROCVector; rank_atol = MatrixAlgebraKit.default_pullback_rank_atol(S))
-    return something(findlast(≥(rank_atol), S), 0)
-end
-
-function svd_pullback!(ΔA::AnyROCMatrix, A, USVᴴ, ΔUSVᴴ, ind::AnyROCVector; kwargs...)
-    return svd_pullback!(ΔA, A, USVᴴ, ΔUSVᴴ, collect(ind); kwargs...)
 end
 
 end
