@@ -93,7 +93,7 @@ function MatrixAlgebraKit.svd_pushforward!(
         rank_atol::Real = MatrixAlgebraKit.default_pullback_rank_atol(USVᴴ[2]),
         degeneracy_atol::Real = MatrixAlgebraKit.default_pullback_rank_atol(USVᴴ[2])
     ) where {T}
-    return MatrixAlgebraKit.svd_pushforward!(diagm(diagview(ΔA)), A, USVᴴ, ΔUSVᴴ, ind; rank_atol, degeneracy_atol)
+    return MatrixAlgebraKit.svd_pushforward!(diagm(MatrixAlgebraKit.diagview(ΔA)), A, USVᴴ, ΔUSVᴴ, ind; rank_atol, degeneracy_atol)
 end
 
 end
