@@ -1465,13 +1465,16 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             pA = ROCVector(map(pointer, A))
             $heevd_batched(dh, jobz, roc_uplo, n, pA, lda, W, ldw, work, n, dev_info, batch_size)
+            AMDGPU.unsafe_free!(pA)
 
             if check
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
             end
 
-            if jobz == rocSOLVER.rocblas_evect_original && V !== A
-                copy!(V, A)
+            if jobz == rocSOLVER.rocblas_evect_original
+                for (v, a) in zip(eachslice(V, dims = 3), A)
+                    copy!(v, a)
+                end
             end
             return W, V
         end
@@ -1500,13 +1503,16 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             pA = ROCVector(map(pointer, A))
             $heev_batched(dh, jobz, roc_uplo, n, pA, lda, W, ldw, work, n, dev_info, batch_size)
+            AMDGPU.unsafe_free!(pA)
 
             if check
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
             end
 
-            if jobz == rocSOLVER.rocblas_evect_original && V !== A
-                copy!(V, A)
+            if jobz == rocSOLVER.rocblas_evect_original
+                for (v, a) in zip(eachslice(V, dims = 3), A)
+                    copy!(v, a)
+                end
             end
             return W, V
         end
@@ -1553,7 +1559,11 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
             dev_info = ROCVector{Cint}(undef, batch_size)
             roc_uplo = convert(rocSOLVER.rocblas_fill, uplo)
             pA = ROCVector(map(pointer, A))
-            $heevx_batched(dh, jobz, range, roc_uplo, n, pA, lda, vl, vu, il, iu, abstol, nev, W, ldw, V, ldv, ifail, n, dev_info, batch_size)
+            # `Z` is an array of pointers in the batched (non-strided) API
+            pV = ROCVector([pointer(V, (i - 1) * stride(V, 3) + 1) for i in 1:(length(V) == 0 ? 0 : batch_size)])
+            $heevx_batched(dh, jobz, range, roc_uplo, n, pA, lda, vl, vu, il, iu, abstol, nev, W, ldw, pV, ldv, ifail, n, dev_info, batch_size)
+            AMDGPU.unsafe_free!(pA)
+            AMDGPU.unsafe_free!(pV)
 
             if check
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
@@ -1564,7 +1574,7 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
         function heevj_batched!(
                 A::AbstractVector{<:StridedROCMatrix{$elty}},
                 W::StridedROCMatrix{$relty} = similar(first(A), $relty, size(first(A), 1), length(A)),
-                V::StridedROCMatrix{$elty} = similar(first(A), $elty, size(first(A))..., length(A));
+                V::StridedROCArray{$elty, 3} = similar(first(A), $elty, size(first(A))..., length(A));
                 uplo::Char = 'U',
                 tol::$relty = eps($relty),
                 max_sweeps::Int = 100,
@@ -1591,13 +1601,16 @@ for (heevd_batched, heev_batched, heevx_batched, heevj_batched, elty, relty) in
             roc_sort = sort == 'N' ? rocSOLVER.rocblas_esort_none : rocSOLVER.rocblas_esort_ascending
             pA = ROCVector(map(pointer, A))
             $heevj_batched(dh, roc_sort, jobz, roc_uplo, n, pA, lda, tol, residual, max_sweeps, n_sweeps, W, ldw, dev_info, batch_size)
+            AMDGPU.unsafe_free!(pA)
 
             if check
                 foreach(chkargsok ∘ BlasInt, collect(dev_info))
             end
 
-            if jobz == rocSOLVER.rocblas_evect_original && V !== A
-                copy!(V, A)
+            if jobz == rocSOLVER.rocblas_evect_original
+                for (v, a) in zip(eachslice(V, dims = 3), A)
+                    copy!(v, a)
+                end
             end
             return W, V
         end
