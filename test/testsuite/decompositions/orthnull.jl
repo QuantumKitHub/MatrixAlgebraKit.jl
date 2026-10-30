@@ -114,6 +114,16 @@ function test_left_orthnull(
         @test C isa typeof(A) && size(C) == (minmn, n)
         @test eltype(N) == eltype(A) && size(N) == (m, m - minmn)
         @test V * C ≈ A
+
+        V0 = V isa Diagonal ? Diagonal(similar(parent(V), 0)) : similar(V, 0, 0)
+        V2, C2 = left_orth!(copy(A), (V0, similar(C)))
+        @test V2 === V0
+        @test C2 ≈ C
+        if !isempty(C)
+            for f! in (MatrixAlgebraKit.qr_pullback!, MatrixAlgebraKit.qr_pushforward!)
+                @test_throws r"omitted Q.*compute both Q and R" f!(zero(A), A, (V0, C), (V0, zero(C)))
+            end
+        end
         @test isisometric(V)
         @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test isisometric(N)
@@ -253,6 +263,16 @@ function test_right_orthnull(
         @test Vᴴ isa typeof(A) && size(Vᴴ) == (minmn, n)
         @test eltype(Nᴴ) == eltype(A) && size(Nᴴ) == (n - minmn, n)
         @test C * Vᴴ ≈ A
+
+        V0 = Vᴴ isa Diagonal ? Diagonal(similar(parent(Vᴴ), 0)) : similar(Vᴴ, 0, 0)
+        C2, V2 = right_orth!(copy(A), (similar(C), V0))
+        @test V2 === V0
+        @test C2 ≈ C
+        if !isempty(C)
+            for f! in (MatrixAlgebraKit.lq_pullback!, MatrixAlgebraKit.lq_pushforward!)
+                @test_throws r"omitted Q.*compute both L and Q" f!(zero(A), A, (C, V0), (zero(C), V0))
+            end
+        end
         @test isisometric(Vᴴ; side = :right)
         @test LinearAlgebra.norm(A * adjoint(Nᴴ)) ≈ 0 atol = MatrixAlgebraKit.defaulttol(eltype(T))
         @test isisometric(Nᴴ; side = :right)

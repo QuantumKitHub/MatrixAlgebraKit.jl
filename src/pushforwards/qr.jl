@@ -17,7 +17,10 @@ function qr_pushforward!(
         ΔA, A, QR, ΔQR;
         rank_atol::Real = default_pullback_rank_atol(QR[2]), kwargs...
     )
+    # TODO: Support R-only `left_orth!` with an empty Q output; this rule currently requires Q.
     Q, R = QR
+    isempty(Q) && !isempty(R) &&
+        throw(ArgumentError("QR differentiation with an omitted Q output is not supported; compute both Q and R."))
     ΔQ, ΔR = ΔQR
     m = size(Q, 1)
     n = size(R, 2)

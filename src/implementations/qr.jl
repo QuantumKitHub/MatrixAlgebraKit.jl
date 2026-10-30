@@ -10,7 +10,7 @@ function check_input(::typeof(qr_full!), A::AbstractMatrix, QR, ::AbstractAlgori
     m, n = size(A)
     Q, R = QR
     @assert Q isa AbstractMatrix && R isa AbstractMatrix
-    @check_size(Q, (m, m))
+    isempty(Q) || @check_size(Q, (m, m))
     @check_scalar(Q, A)
     isempty(R) || @check_size(R, (m, n))
     @check_scalar(R, A)
@@ -21,7 +21,7 @@ function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR, ::AbstractAlg
     minmn = min(m, n)
     Q, R = QR
     @assert Q isa AbstractMatrix && R isa AbstractMatrix
-    @check_size(Q, (m, minmn))
+    isempty(Q) || @check_size(Q, (m, minmn))
     @check_scalar(Q, A)
     isempty(R) || @check_size(R, (minmn, n))
     @check_scalar(R, A)
@@ -40,7 +40,7 @@ function check_input(::typeof(qr_full!), A::AbstractMatrix, (Q, R), alg::Diagona
     m, n = size(A)
     @assert m == n && isdiag(A)
     @assert Q isa Diagonal && R isa Diagonal
-    @check_size(Q, (m, n))
+    isempty(Q) || @check_size(Q, (m, n))
     @check_scalar(Q, A)
     isempty(R) || @check_size(R, (m, n))
     @check_scalar(R, A)
@@ -170,7 +170,7 @@ function qr_householder!(
 
     m, n = size(A)
     minmn = min(m, n)
-    computeR = length(R) > 0
+    computeR = !isempty(R)
     inplaceQ = Q === A
 
     if inplaceQ
@@ -185,14 +185,11 @@ function qr_householder!(
     if blocksize > 1
         # R doubles as workspace for T, so Q is constructed before R is extracted
         nb = min(minmn, blocksize)
-        if computeR # first use R as space for T
-            A, T = geqrt!(driver, A, view(R, 1:nb, 1:minmn))
-        else
-            A, T = geqrt!(driver, A, similar(A, nb, minmn))
-        end
-        Q = gemqrt!(driver, 'L', 'N', A, T, one!(Q))
+        T = computeR ? view(R, 1:nb, 1:minmn) : similar(A, nb, minmn)
+        A, T = geqrt!(driver, A, T)
+        isempty(Q) || (Q = gemqrt!(driver, 'L', 'N', A, T, one!(Q)))
         computeR && _qr_copyR!(R, A)
-        positive && gaugefix!(qr_householder!, Q, computeR ? R : nothing, diagview(A))
+        positive && gaugefix!(qr_householder!, Q, R, diagview(A))
     else
         if pivoted
             A, τ, jpvt = geqp3!(driver, A)
@@ -201,14 +198,18 @@ function qr_householder!(
             A, τ = geqrf!(driver, A)
             computeR && _qr_copyR!(R, A)
         end
-        Rf = computeR ? R : nothing # gaugefix! rescales rows, which commutes with the pivoting
+        # Gauge fixing rescales rows, which commutes with pivoting.
         if inplaceQ
-            Rd = positive ? copy(diagview(A)) : nothing # ungqr! destroys the diagonal of A
-            ungqr!(driver, A, τ) # Q === A, so no need to rebind Q
-            positive && gaugefix!(qr_householder!, Q, Rf, Rd)
+            if positive
+                Rd = copy(diagview(A)) # ungqr! destroys the diagonal of A
+                ungqr!(driver, A, τ) # Q === A, so no need to rebind Q
+                gaugefix!(qr_householder!, Q, R, Rd)
+            else
+                ungqr!(driver, A, τ)
+            end
         else
-            Q = _qr_buildQ!(driver, Q, A, τ, minmn)
-            positive && gaugefix!(qr_householder!, Q, Rf, diagview(A))
+            isempty(Q) || (Q = _qr_buildQ!(driver, Q, A, τ, minmn))
+            positive && gaugefix!(qr_householder!, Q, R, diagview(A))
         end
     end
 
@@ -248,6 +249,7 @@ function qr_householder!(
             R[i, j] = A[i, j]
         end
     end
+    isempty(Q) && return Q, R
     # build Q
     one!(Q)
     @inbounds for j in minmn:-1:1
@@ -330,22 +332,22 @@ end
 function qr_full!(A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
     check_input(qr_full!, A, QR, alg)
     Q, R = QR
-    _diagonal_qr!(A, Q, R; alg.kwargs...)
+    _qr_diagonal!(A, Q, R; alg.kwargs...)
     return Q, R
 end
 function qr_compact!(A::AbstractMatrix, QR, alg::DiagonalAlgorithm)
     check_input(qr_compact!, A, QR, alg)
     Q, R = QR
-    _diagonal_qr!(A, Q, R; alg.kwargs...)
+    _qr_diagonal!(A, Q, R; alg.kwargs...)
     return Q, R
 end
 function qr_null!(A::AbstractMatrix, N, alg::DiagonalAlgorithm)
     check_input(qr_null!, A, N, alg)
-    _diagonal_qr_null!(A, N; alg.kwargs...)
+    _qr_null_diagonal!(A, N; alg.kwargs...)
     return N
 end
 
-function _diagonal_qr!(
+function _qr_diagonal!(
         A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix; positive::Bool = true
     )
     # note: Ad and Qd might share memory here so order of operations is important
@@ -354,7 +356,7 @@ function _diagonal_qr!(
     Rd = diagview(R)
     if positive
         @. Rd = abs(Ad)
-        @. Qd = sign_safe(Ad)
+        isempty(Q) || (@. Qd = sign_safe(Ad))
     else
         Rd .= Ad
         one!(Q)
@@ -362,7 +364,7 @@ function _diagonal_qr!(
     return Q, R
 end
 
-_diagonal_qr_null!(A::AbstractMatrix, N; positive::Bool = true) = N
+_qr_null_diagonal!(A::AbstractMatrix, N; positive::Bool = true) = N
 
 # Deprecations
 # ------------
