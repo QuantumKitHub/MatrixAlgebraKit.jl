@@ -509,6 +509,162 @@ for (celty, elty) in ((:ComplexF32, :Float32), (:ComplexF64, :Float64), (:Comple
     end
 end
 
+for (jname, bname, fname, elty, relty) in
+    (
+        (
+            :heevj_batched!, :cusolverDnSsyevjBatched_bufferSize, :cusolverDnSsyevjBatched,
+            :Float32, :Float32,
+        ),
+        (
+            :heevj_batched!, :cusolverDnDsyevjBatched_bufferSize, :cusolverDnDsyevjBatched,
+            :Float64, :Float64,
+        ),
+        (
+            :heevj_batched!, :cusolverDnCheevjBatched_bufferSize, :cusolverDnCheevjBatched,
+            :ComplexF32, :Float32,
+        ),
+        (
+            :heevj_batched!, :cusolverDnZheevjBatched_bufferSize, :cusolverDnZheevjBatched,
+            :ComplexF64, :Float64,
+        ),
+    )
+    @eval begin
+        function $jname(
+                A::StridedCuArray{$elty, 3},
+                W::StridedCuMatrix{$relty} = CuMatrix{$relty}(undef, size(A, 2), size(A, 3)),
+                V::StridedCuArray{$elty, 3} = CuArray{$elty, 3}(undef, size(A)...);
+                check::Bool = CHECK_LIBRARY_CALLS[],
+                uplo::Char = 'U',
+                tol::$relty = eps($relty),
+                max_sweeps::Int = 100
+            )
+            # Set up information for the solver arguments
+            chkuplo(uplo)
+            m, n, batch_size = size(A)
+            m == n || throw(DimensionMismatch("A must be square in its leading two dimensions"))
+            size(V) == size(A) || size(V) == (0, 0, batch_size) || throw(DimensionMismatch("size mismatch between A and V"))
+            lda = max(1, stride(A, 2))
+            n == size(W, 1) || throw(DimensionMismatch("size mismatch between A and W"))
+            batch_size == size(W, 2) || throw(DimensionMismatch("batch size mismatch between A and W"))
+            if length(V) == 0
+                jobz = 'N'
+            else
+                jobz = 'V'
+            end
+            params = Ref{cuSOLVER.syevjInfo_t}(C_NULL)
+
+            dh = cuSOLVER.dense_handle()
+            resize!(dh.info, batch_size)
+
+            # Initialize the solver parameters
+            cuSOLVER.cusolverDnCreateSyevjInfo(params)
+            cuSOLVER.cusolverDnXsyevjSetTolerance(params[], tol)
+            cuSOLVER.cusolverDnXsyevjSetMaxSweeps(params[], max_sweeps)
+
+            # Calculate the workspace size
+            function bufferSize()
+                out = Ref{Cint}(0)
+                cuSOLVER.$bname(dh, jobz, uplo, n, A, lda, W, out, params[], batch_size)
+                return out[] * sizeof($elty)
+            end
+
+            # Run the solver
+            with_workspace(dh.workspace_gpu, bufferSize) do buffer
+                return cuSOLVER.$fname(
+                    dh, jobz, uplo, n, A, lda, W, buffer,
+                    sizeof(buffer) ÷ sizeof($elty), dh.info, params[], batch_size
+                )
+            end
+
+            if check
+                # Copy the solver info and delete the device memory
+                info = collect(dh.info)
+
+                # Double check the solver's exit status
+                foreach(chkargsok ∘ BlasInt, info)
+            end
+            cuSOLVER.cusolverDnDestroySyevjInfo(params[])
+
+            # Return eigenvalues (in W) and possibly eigenvectors (in V)
+            if jobz == 'N'
+                return W
+            elseif jobz == 'V'
+                if V !== A
+                    copy!(V, A)
+                end
+                return W, V
+            end
+        end
+    end
+end
+
+function heev_batched!(
+        A::StridedCuArray{T, 3},
+        W::StridedCuMatrix{Tr} = CuMatrix{Tr}(undef, size(A, 2), size(A, 3)),
+        V::StridedCuArray{T, 3} = CuArray{T, 3}(undef, size(A)...);
+        check::Bool = CHECK_LIBRARY_CALLS[],
+        uplo::Char = 'U',
+    ) where {T <: BlasFloat, Tr <: BlasReal}
+    # Set up information for the solver arguments
+    chkuplo(uplo)
+    m, n, batch_size = size(A)
+    m == n || throw(DimensionMismatch("A must be square in its leading two dimensions"))
+    size(V) == size(A) || size(V) == (0, 0, batch_size) || throw(DimensionMismatch("size mismatch between A and V"))
+    lda = max(1, stride(A, 2))
+    n == size(W, 1) || throw(DimensionMismatch("size mismatch between A and W"))
+    batch_size == size(W, 2) || throw(DimensionMismatch("batch size mismatch between A and W"))
+    if length(V) == 0
+        jobz = 'N'
+    else
+        jobz = 'V'
+    end
+
+    dh = cuSOLVER.dense_handle()
+    resize!(dh.info, batch_size)
+    params = cuSOLVER.CuSolverParameters()
+
+    # Calculate the workspace size
+    function bufferSize()
+        out_cpu = Ref{Csize_t}(0)
+        out_gpu = Ref{Csize_t}(0)
+        cuSOLVER.cusolverDnXsyevBatched_bufferSize(
+            dh, params, jobz, uplo, n, T, A, lda,
+            Tr, W, T, out_gpu, out_cpu, batch_size
+        )
+        return out_gpu[], out_cpu[]
+    end
+
+    # Run the solver
+    cuSOLVER.with_workspaces(
+        dh.workspace_gpu, dh.workspace_cpu,
+        bufferSize()...
+    ) do buffer_gpu, buffer_cpu
+        return cuSOLVER.cusolverDnXsyevBatched(
+            dh, params, jobz, uplo, n, T, A, lda, Tr, W, T,
+            buffer_gpu, sizeof(buffer_gpu), buffer_cpu,
+            sizeof(buffer_cpu), dh.info, batch_size
+        )
+    end
+
+    if check
+        # Copy the solver info and delete the device memory
+        info = collect(dh.info)
+
+        # Double check the solver's exit status
+        foreach(chkargsok ∘ BlasInt, info)
+    end
+
+    if jobz == 'V' && V !== A
+        copy!(V, A)
+    end
+    # Return eigenvalues (in W) and possibly eigenvectors (in V)
+    if jobz == 'N'
+        return W
+    elseif jobz == 'V'
+        return W, V
+    end
+end
+
 # for (jname, bname, fname, elty, relty) in
 #     ((:sygvd!, :cusolverDnSsygvd_bufferSize, :cusolverDnSsygvd, :Float32, :Float32),
 #      (:sygvd!, :cusolverDnDsygvd_bufferSize, :cusolverDnDsygvd, :Float64, :Float64),
@@ -612,72 +768,6 @@ end
 #     end
 # end
 
-# for (jname, bname, fname, elty, relty) in
-#     ((:syevjBatched!, :cusolverDnSsyevjBatched_bufferSize, :cusolverDnSsyevjBatched,
-#       :Float32, :Float32),
-#      (:syevjBatched!, :cusolverDnDsyevjBatched_bufferSize, :cusolverDnDsyevjBatched,
-#       :Float64, :Float64),
-#      (:heevjBatched!, :cusolverDnCheevjBatched_bufferSize, :cusolverDnCheevjBatched,
-#       :ComplexF32, :Float32),
-#      (:heevjBatched!, :cusolverDnZheevjBatched_bufferSize, :cusolverDnZheevjBatched,
-#       :ComplexF64, :Float64))
-#     @eval begin
-#         function $jname(jobz::Char,
-#                         uplo::Char,
-#                         A::StridedCuArray{$elty};
-#                         check::Bool = CHECK_LIBRARY_CALLS[],
-#                         tol::$relty=eps($relty),
-#                         max_sweeps::Int=100)
-
-#             # Set up information for the solver arguments
-#             chkuplo(uplo)
-#             n = checksquare(A)
-#             lda = max(1, stride(A, 2))
-#             batchSize = size(A, 3)
-#             W = CuArray{$relty}(undef, n, batchSize)
-#             params = Ref{syevjInfo_t}(C_NULL)
-
-#             dh = dense_handle()
-#             resize!(dh.info, batchSize)
-
-#             # Initialize the solver parameters
-#             cusolverDnCreateSyevjInfo(params)
-#             cusolverDnXsyevjSetTolerance(params[], tol)
-#             cusolverDnXsyevjSetMaxSweeps(params[], max_sweeps)
-
-#             # Calculate the workspace size
-#             function bufferSize()
-#                 out = Ref{Cint}(0)
-#                 $bname(dh, jobz, uplo, n, A, lda, W, out, params[], batchSize)
-#                 return out[] * sizeof($elty)
-#             end
-
-#             # Run the solver
-#             with_workspace(dh.workspace_gpu, bufferSize) do buffer
-#                 return $fname(dh, jobz, uplo, n, A, lda, W, buffer,
-#                               sizeof(buffer) ÷ sizeof($elty), dh.info, params[], batchSize)
-#             end
-
-#             if check
-#                 # Copy the solver info and delete the device memory
-#                 info = collect(dh.info)
-
-#                 # Double check the solver's exit status
-#                 for i in 1:batchSize
-#                     chkargsok(BlasInt(info[i]))
-#                 end
-#             end
-#             cusolverDnDestroySyevjInfo(params[])
-
-#             # Return eigenvalues (in W) and possibly eigenvectors (in A)
-#             if jobz == 'N'
-#                 return W
-#             elseif jobz == 'V'
-#                 return W, A
-#             end
-#         end
-#     end
-# end
 
 # for (fname, elty) in ((:cusolverDnSpotrsBatched, :Float32),
 #                       (:cusolverDnDpotrsBatched, :Float64),
@@ -704,7 +794,7 @@ end
 #             end
 #             lda = max(1, stride(A[1], 2))
 #             ldb = max(1, stride(B[1], 2))
-#             batchSize = length(A)
+#             batch_size = length(A)
 
 #             Aptrs = unsafe_batch(A)
 #             Bptrs = unsafe_batch(B)
@@ -712,7 +802,7 @@ end
 #             dh = dense_handle()
 
 #             # Run the solver
-#             $fname(dh, uplo, n, nrhs, Aptrs, lda, Bptrs, ldb, dh.info, batchSize)
+#             $fname(dh, uplo, n, nrhs, Aptrs, lda, Bptrs, ldb, dh.info, batch_size)
 
 #             if check
 #                  # Copy the solver info and delete the device memory
@@ -735,22 +825,22 @@ end
 #             chkuplo(uplo)
 #             n = checksquare(A[1])
 #             lda = max(1, stride(A[1], 2))
-#             batchSize = length(A)
+#             batch_size = length(A)
 
 #             Aptrs = unsafe_batch(A)
 
 #             dh = dense_handle()
-#             resize!(dh.info, batchSize)
+#             resize!(dh.info, batch_size)
 
 #             # Run the solver
-#             $fname(dh, uplo, n, Aptrs, lda, dh.info, batchSize)
+#             $fname(dh, uplo, n, Aptrs, lda, dh.info, batch_size)
 
 #             if check
 #                 # Copy the solver info and delete the device memory
 #                 info = collect(dh.info)
 
 #                 # Double check the solver's exit status
-#                 for i in 1:batchSize
+#                 for i in 1:batch_size
 #                     chkargsok(BlasInt(info[i]))
 #                 end
 #             end
