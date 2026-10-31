@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.13...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.14...HEAD)
 
 ### Added
 
@@ -31,6 +31,26 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 ### Performance
+
+## [0.6.14](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.13...v0.6.14) - 2026-10-31
+
+### Added
+
+- QR/LQ decompositions and QR/LQ-based `left_orth!`/`right_orth!` accept empty outputs to skip unneeded factors ([#316](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/316)).
+
+### Changed
+
+- CI tests macOS and Windows after Ubuntu passes, cancels closed-PR runs, and enables previously excluded AD tests ([#315](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/315)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Performance
+
+- Faster GPU Hermitian and anti-Hermitian projections, with shared GPU code in a `GPUArrays` extension ([#318](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/318)).
 
 ## [0.6.13](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.12...v0.6.13) - 2026-10-29
 
