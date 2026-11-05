@@ -10,7 +10,189 @@ using CUDA.cuSOLVER
 using ..MatrixAlgebraKit: CHECK_LIBRARY_CALLS
 
 # QR methods are implemented with full access to allocated arrays, so we do not need to redo this:
-using CUDA.cuSOLVER: geqrf!, ormqr!, orgqr!
+using CUDA.cuSOLVER: unchecked_cusolverDnSorgqr_bufferSize, unchecked_cusolverDnDorgqr_bufferSize
+using CUDA.cuSOLVER: unchecked_cusolverDnZungqr_bufferSize, unchecked_cusolverDnCungqr_bufferSize
+using CUDA.cuSOLVER: unchecked_cusolverDnSormqr_bufferSize, unchecked_cusolverDnDormqr_bufferSize
+using CUDA.cuSOLVER: unchecked_cusolverDnZunmqr_bufferSize, unchecked_cusolverDnCunmqr_bufferSize
+
+# whether to prefer the blocked implementation even when cuSOLVER accepts the problem. For
+# tall matrices the legacy routines' workspace grows with the number of rows rather than
+# with the number of reflectors (to about 5x the size of A for k = 64), and they are slower:
+# on an RTX 5080 the blocked ormqr is 1.5-4x faster from 2^15 rows and m >= 8k, while orgqr
+# is up to 3.7x faster for small k and on par otherwise. Smaller problems are dominated by
+# the blocked implementation's launch overhead.
+prefer_blocked(m, k) = m >= max(2^15, 8k)
+
+# wrap geqrf, ormqr, orgqr ourselves to avoid having to do the info check
+for (bname, fname, elty) in (
+        (:cusolverDnSorgqr_bufferSize, :cusolverDnSorgqr, :Float32),
+        (:cusolverDnDorgqr_bufferSize, :cusolverDnDorgqr, :Float64),
+        (:cusolverDnCungqr_bufferSize, :cusolverDnCungqr, :ComplexF32),
+        (:cusolverDnZungqr_bufferSize, :cusolverDnZungqr, :ComplexF64),
+    )
+    @eval begin
+        function orgqr!(
+                A::StridedCuMatrix{$elty}, tau::CuVector{$elty};
+                blocksize::Union{Nothing, Integer} = nothing,
+                check::Bool = CHECK_LIBRARY_CALLS[]
+            )
+            m = size(A, 1)
+            n = min(m, size(A, 2))
+            lda = max(1, stride(A, 2))
+            k = length(tau)
+            dh = cuSOLVER.dense_handle()
+
+            # this workspace query does not fail on overflow, but wraps around: to a
+            # negative size at first, and past 2^32 elements to a small positive one that
+            # makes cuSOLVER write out of bounds. The workspace is no larger than Q, up to
+            # lower-order terms, so bounding `lda * n` rules out the latter.
+            lwork = Ref{Cint}(0)
+            if blocksize === nothing
+                if lda * n > typemax(Cint) || prefer_blocked(m, k)
+                    blocksize = cuSOLVER.HOUSEHOLDER_BLOCKSIZE
+                else
+                    status = $(Symbol(:unchecked_, bname))(dh, m, n, k, A, lda, tau, lwork)
+                    if status == cuSOLVER.CUSOLVER_STATUS_INVALID_VALUE || lwork[] < 0
+                        blocksize = cuSOLVER.HOUSEHOLDER_BLOCKSIZE
+                    elseif status != cuSOLVER.CUSOLVER_STATUS_SUCCESS
+                        CUDA.throw_api_error(status)
+                    end
+                end
+            end
+
+            if blocksize !== nothing
+                cuSOLVER.orgqr_blocked!(A, tau, n, blocksize)
+            else
+                CUDA.with_workspace(dh.workspace_gpu, lwork[] * sizeof($elty)) do buffer
+                    cuSOLVER.$fname(
+                        dh, m, n, k, A, lda, tau,
+                        buffer, sizeof(buffer) ÷ sizeof($elty), dh.info
+                    )
+                end
+
+                if check
+                    info = @allowscalar dh.info[1]
+                    cuSOLVER.chkargsok(BlasInt(info))
+                end
+            end
+
+            return if n < size(A, 2)
+                A[:, 1:n]
+            else
+                A
+            end
+        end
+    end
+end
+
+for (bname, fname, elty) in (
+        (:cusolverDnSormqr_bufferSize, :cusolverDnSormqr, :Float32),
+        (:cusolverDnDormqr_bufferSize, :cusolverDnDormqr, :Float64),
+        (:cusolverDnCunmqr_bufferSize, :cusolverDnCunmqr, :ComplexF32),
+        (:cusolverDnZunmqr_bufferSize, :cusolverDnZunmqr, :ComplexF64),
+    )
+    @eval begin
+        function ormqr!(
+                side::Char,
+                trans::Char,
+                A::StridedCuMatrix{$elty},
+                tau::CuVector{$elty},
+                C::StridedCuVecOrMat{$elty};
+                blocksize::Union{Nothing, Integer} = nothing,
+                check::Bool = CHECK_LIBRARY_CALLS[]
+            )
+            # Support transa = 'C' for real matrices
+            trans = $elty <: Real && trans == 'C' ? 'T' : trans
+            ($elty <: Complex) && (trans == 'T') && throw(ArgumentError("trans = 'T' is not supported with complex matrices."))
+
+            chkside(side)
+            chktrans(trans)
+            m, n = ndims(C) == 2 ? size(C) : (length(C), 1)
+            mA = size(A, 1)
+            k = length(tau)
+            if side == 'L' && m != mA
+                throw(DimensionMismatch("for a left-sided multiplication, the first dimension of C, $m, must equal the second dimension of A, $mA"))
+            end
+            if side == 'R' && n != mA
+                throw(DimensionMismatch("for a right-sided multiplication, the second dimension of C, $m, must equal the second dimension of A, $mA"))
+            end
+            if side == 'L' && k > m
+                throw(DimensionMismatch("invalid number of reflectors: k = $k should be <= m = $m"))
+            end
+            if side == 'R' && k > n
+                throw(DimensionMismatch("invalid number of reflectors: k = $k should be <= n = $n"))
+            end
+
+            lda = max(1, stride(A, 2))
+            ldc = max(1, stride(C, 2))
+            dh = cuSOLVER.dense_handle()
+
+            lwork = Ref{Cint}(0)
+            if blocksize === nothing
+                if max(m, n, lda, ldc) > typemax(Cint) || prefer_blocked(mA, k)
+                    blocksize = cuSOLVER.HOUSEHOLDER_BLOCKSIZE
+                else
+                    status = $(Symbol(:unchecked_, bname))(
+                        dh, side, trans, m, n, k, A, lda,
+                        tau, C, ldc, lwork
+                    )
+                    if status == cuSOLVER.CUSOLVER_STATUS_INVALID_VALUE || lwork[] < 0
+                        blocksize = cuSOLVER.HOUSEHOLDER_BLOCKSIZE
+                    elseif status != cuSOLVER.CUSOLVER_STATUS_SUCCESS
+                        CUDA.throw_api_error(status)
+                    end
+                end
+                CUDA.with_workspace(dh.workspace_gpu, lwork[] * sizeof($elty)) do buffer
+                    cuSOLVER.$fname(
+                        dh, side, trans, m, n, k, A, lda, tau, C, ldc,
+                        buffer, sizeof(buffer) ÷ sizeof($elty), dh.info
+                    )
+                end
+
+                if check
+                    info = @allowscalar dh.info[1]
+                    cuSOLVER.chkargsok(BlasInt(info))
+                end
+            end
+            if blocksize !== nothing
+                cuSOLVER.ormqr_blocked!(side, trans, A, tau, C, blocksize)
+            end
+            return C
+        end
+    end
+end
+
+for (bname, fname, elty) in (
+        (:cusolverDnSgeqrf_bufferSize, :cusolverDnSgeqrf, :Float32),
+        (:cusolverDnDgeqrf_bufferSize, :cusolverDnDgeqrf, :Float64),
+        (:cusolverDnCgeqrf_bufferSize, :cusolverDnCgeqrf, :ComplexF32),
+        (:cusolverDnZgeqrf_bufferSize, :cusolverDnZgeqrf, :ComplexF64),
+    )
+    @eval begin
+        function geqrf!(A::StridedCuMatrix{$elty}, tau::CuVector{$elty} = similar(A, $elty, min(size(A)...)); check::Bool = CHECK_LIBRARY_CALLS[])
+            m, n = size(A)
+            lda = max(1, stride(A, 2))
+            dh = cuSOLVER.dense_handle()
+            function bufferSize()
+                out = Ref{Cint}(0)
+                cuSOLVER.$bname(dh, m, n, A, lda, out)
+                return out[] * sizeof($elty)
+            end
+            CUDA.with_workspace(dh.workspace_gpu, bufferSize) do buffer
+                cuSOLVER.$fname(
+                    dh, m, n, A, lda, tau,
+                    buffer, sizeof(buffer) ÷ sizeof($elty), dh.info
+                )
+            end
+            if check
+                info = @allowscalar dh.info[1]
+                cuSOLVER.chkargsok(BlasInt(info))
+            end
+            return A, tau
+        end
+    end
+end
+
 const unmqr! = ormqr!
 const ungqr! = orgqr!
 
