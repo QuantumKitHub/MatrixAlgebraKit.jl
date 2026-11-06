@@ -712,8 +712,39 @@ function test_randomized_svd(T::Type, sz, algs; kwargs...)
         Ac = deepcopy(A)
         m, n = size(A)
         minmn = min(m, n)
+        k = alg.alg.k
         S₀ = collect(svd_vals(A))
+        atol = sqrt(eps(real(eltype(T)))) * S₀[1]
+
+        # outputs only hold the `k` computed triplets
         U1, S1, V1ᴴ, ϵ1 = @testinferred svd_trunc(A; alg)
-        @test collect(diagview(S1))[1:alg.alg.k] ≈ S₀[1:alg.alg.k]
+        @test A == Ac
+        @test size(U1) == (m, k) && size(S1) == (k, k) && size(V1ᴴ) == (k, n)
+        @test collect(diagview(S1)) ≈ S₀[1:k]
+        @test isisometric(U1)
+        @test isisometric(V1ᴴ; side = :right)
+        @test A * V1ᴴ' ≈ U1 * S1
+        @test ϵ1 ≈ norm(S₀[(k + 1):end]) atol = atol
+
+        # further truncation only looks at the `k` computed values
+        alg2 = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg, truncrank(k - 2) & trunctol(; atol = S₀[k] / 2))
+        U2, S2, V2ᴴ, ϵ2 = svd_trunc(A; alg = alg2)
+        @test size(S2) == (k - 2, k - 2)
+        @test collect(diagview(S2)) ≈ S₀[1:(k - 2)]
+        @test ϵ2 ≈ norm(S₀[(k - 1):end]) atol = atol
+
+        # larger (e.g. full-size) outputs are accepted, only the first `k` are used
+        USVᴴ = (similar(A, (m, m)), Diagonal(similar(A, real(eltype(A)), (minmn,))), similar(A, (n, n)))
+        U3, S3, V3ᴴ, ϵ3 = svd_trunc!(copy(A), USVᴴ, alg)
+        @test collect(diagview(S3)) ≈ S₀[1:k]
+        @test ϵ3 ≈ ϵ1 atol = atol
+
+        # gauge fixing is not passed on to the driver
+        alg4 = MatrixAlgebraKit.TruncatedAlgorithm(CUSOLVER_Randomized(; alg.alg.kwargs..., fixgauge = true), alg.trunc)
+        _, S4, _, _ = svd_trunc(A; alg = alg4)
+        @test collect(diagview(S4)) ≈ S₀[1:k]
+
+        # `k` is required
+        @test_throws ArgumentError svd_trunc(A; alg = MatrixAlgebraKit.TruncatedAlgorithm(CUSOLVER_Randomized(), alg.trunc))
     end
 end
