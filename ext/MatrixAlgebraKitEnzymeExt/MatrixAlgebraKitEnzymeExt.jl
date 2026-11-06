@@ -55,7 +55,6 @@ for (f, pb) in (
         (qr_compact!, qr_pullback!),
         (lq_compact!, lq_pullback!),
         (eig_full!, eig_pullback!),
-        (eigh_full!, eigh_pullback!),
         (left_polar!, left_polar_pullback!),
         (right_polar!, right_polar_pullback!),
     )
@@ -121,7 +120,6 @@ end
 for (f, pf) in (
         (:right_polar!, :right_polar_pushforward!),
         (:left_polar!, :left_polar_pushforward!),
-        (:eigh_full!, :eigh_pushforward!),
         (:eig_full!, :eig_pushforward!),
         (:qr_full!, :qr_pushforward!),
         (:lq_full!, :lq_pushforward!),
@@ -155,6 +153,91 @@ for (f, pf) in (
                 return nothing
             end
         end
+    end
+end
+
+function EnzymeRules.augmented_primal(
+        config::EnzymeRules.RevConfigWidth{1},
+        func::Const{typeof(eigh_full!)},
+        ::Type{RT},
+        A::Annotation,
+        arg::Annotation{Tuple{TA, TB}},
+        alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+        kwargs...
+    ) where {RT, TA, TB}
+    # A is overwritten in the primal, but not used in the pullback, so we do not need to cache it.
+    ret = func.val(A.val, arg.val, alg.val; kwargs...)
+    # if arg.val === ret, the annotation must be Duplicated or DuplicatedNoNeed
+    # if arg isa Const, ret may still be modified further down the call graph so we should
+    # copy it to protect ourselves
+    A_is_arg1 = !isa(A, Const) && has_equal_storage(A.val, arg.val[1])
+    A_is_arg2 = !isa(A, Const) && has_equal_storage(A.val, arg.val[2])
+    A_is_arg = A_is_arg1 || A_is_arg2
+    cache_arg = arg.val !== ret || A_is_arg || EnzymeRules.overwritten(config)[3] ? copy.(ret) : ret
+    dret = if EnzymeRules.needs_shadow(config) && ((TA == Nothing && TB == Nothing) || isa(arg, Const))
+        make_zero.(ret)
+    elseif EnzymeRules.needs_shadow(config)
+        arg.dval
+    else
+        nothing
+    end
+    primal = EnzymeRules.needs_primal(config) ? ret : nothing
+    return EnzymeRules.AugmentedReturn(primal, dret, (cache_arg, dret))
+end
+function EnzymeRules.reverse(
+        config::EnzymeRules.RevConfigWidth{1},
+        func::Const{typeof(eigh_full!)},
+        ::Type{RT},
+        cache,
+        A::Annotation,
+        arg::Annotation{Tuple{TA, TB}},
+        alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+        kwargs...
+    ) where {RT, TA, TB}
+    cache_arg, darg = cache
+    # A is not used in the pullback; since we have destroyed A, we insert Aval = nothing
+    # to trigger an error in case the pushfward is modified to directly use A
+    Aval = nothing
+    A_is_arg1 = !isa(A, Const) && has_equal_storage(A.dval, arg.dval[1])
+    A_is_arg2 = !isa(A, Const) && has_equal_storage(A.dval, arg.dval[2])
+    A_is_arg = A_is_arg1 || A_is_arg2
+    argval = cache_arg
+    if !isa(A, Const)
+        ΔA = A_is_arg ? make_zero(A.dval) : A.dval
+        eigh_pullback!(ΔA, Aval, argval, darg)
+        A_is_arg && (A.dval .= ΔA)
+    end
+    if !isa(arg, Const)
+        A_is_arg1 || make_zero!(arg.dval[1])
+        A_is_arg2 || make_zero!(arg.dval[2])
+    end
+    return (nothing, nothing, nothing)
+end
+function EnzymeRules.forward(
+        config::EnzymeRules.FwdConfigWidth{1},
+        func::Const{typeof(eigh_full!)},
+        ::Type{RT},
+        A::Annotation,
+        arg::Annotation,
+        alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
+        kwargs...
+    ) where {RT}
+    A_is_arg1 = !isa(A, Const) && has_equal_storage(A.val, arg.val[1])
+    A_is_arg2 = !isa(A, Const) && has_equal_storage(A.val, arg.val[2])
+    A_is_arg = A_is_arg1 || A_is_arg2
+    eigh_full!(A.val, arg.val, alg.val)
+    if !isa(A, Const) && !isa(arg, Const)
+        eigh_pushforward!(A.dval, A.val, arg.val, arg.dval)
+    end
+    !A_is_arg && make_zero!(A.dval)
+    if EnzymeRules.needs_primal(config) && EnzymeRules.needs_shadow(config)
+        return arg
+    elseif EnzymeRules.needs_primal(config)
+        return arg.val
+    elseif EnzymeRules.needs_shadow(config)
+        return arg.dval
+    else
+        return nothing
     end
 end
 
@@ -415,10 +498,11 @@ for (f!, f_full!, pb!, pf!) in (
                 ::Type{RT},
                 A::Annotation,
                 D::Annotation{TD},
-                alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm},
+                alg::Annotation{<:MatrixAlgebraKit.AbstractAlgorithm};
+                kwargs...
             ) where {RT, TD}
             # A is overwritten in the primal, but not used in the pullback, so we do not need to cache it.
-            nD, V = $f_full!(A.val, alg.val)
+            nD, V = $f_full!(A.val, alg.val; kwargs...)
             ret = TD == Nothing ? diagview(nD) : copy!(D.val, diagview(nD))
             cache_D = (D.val !== ret) || EnzymeRules.overwritten(config)[3] ? copy(ret) : nothing
             primal = EnzymeRules.needs_primal(config) ? ret : nothing
@@ -435,7 +519,8 @@ for (f!, f_full!, pb!, pf!) in (
                 cache,
                 A::Annotation{TA},
                 D::Annotation,
-                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                kwargs...
             ) where {RT, TA}
             cache_D, dD, V = cache
             Dval = something(cache_D, D.val)
@@ -457,10 +542,11 @@ for (f!, f_full!, pb!, pf!) in (
                 ::Type{RT},
                 A::Annotation{TA},
                 D::Annotation,
-                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm},
+                alg::Const{<:MatrixAlgebraKit.AbstractAlgorithm};
+                kwargs...
             ) where {RT, TA}
             A_is_arg = !isa(A, Const) && has_equal_storage(A.dval, D.dval)
-            DV = $f_full!(A.val, alg.val)
+            DV = $f_full!(A.val, alg.val; kwargs...)
             Dval, V = DV
             if !isa(A, Const) && !isa(D, Const)
                 ΔD = A_is_arg ? make_zero(D.dval) : D.dval
