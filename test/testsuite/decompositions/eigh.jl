@@ -11,11 +11,59 @@ function test_eigh(T::Type, sz; test_trunc = true, kwargs...)
     end
 end
 
+function test_eigh_batched(T::Type, sz, batch_size::Int; kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "eigh batched $summary_str batch_size $batch_size" begin
+        test_eigh_full_batched(T, sz, batch_size; kwargs...)
+    end
+end
+
 function test_eigh_algs(T::Type, sz, algs; test_trunc = true, kwargs...)
     summary_str = testargs_summary(T, sz)
     return @testset "eigh algorithms $summary_str" begin
         test_eigh_full_algs(T, sz, algs; kwargs...)
         test_trunc && test_eigh_trunc_algs(T, sz, algs; kwargs...)
+    end
+end
+
+function test_eigh_batched_algs(T::Type, sz, batch_size::Int, algs; kwargs...)
+    summary_str = testargs_summary(T, sz)
+    return @testset "eigh algorithms $summary_str batch_size $batch_size" begin
+        test_eigh_full_algs_batched(T, sz, algs, batch_size; kwargs...)
+    end
+end
+
+# Whether the driver for `alg` reports support for ragged batches of each EIGH function,
+# and if so, that ragged batches of all distinct sizes are decomposed correctly.
+function test_eigh_algs_batched_ragged_support(
+        T::Type, algs, batch_size::Int;
+        supported::Bool = true,
+        atol::Real = 0, rtol::Real = precision(eltype(T)),
+        kwargs...
+    )
+    summary_str = testargs_summary(T)
+    return @testset "batched eigh ragged support, algorithm $alg $summary_str" for alg in algs
+        driver = MatrixAlgebraKit.default_driver(alg, T)
+        for f! in (eigh_full!, eigh_vals!)
+            @test MatrixAlgebraKit.supports_ragged_batch(f!, alg, driver, T) == supported
+            @test MatrixAlgebraKit.supports_ragged_batch(f!, alg, MatrixAlgebraKit.DefaultDriver(), T) == supported
+        end
+
+        if supported
+            Ar = [project_hermitian!(instantiate_matrix(T, (1 + i, 1 + i))) for i in 1:batch_size]
+            @test allunique(size.(Ar))
+
+            D, V = @testinferred batched_eigh_full(Ar; alg)
+            for (a, d, v) in zip(Ar, D, V)
+                @test a * v ≈ v * d
+                @test isunitary(v)
+            end
+
+            Dv = @testinferred batched_eigh_vals(Ar; alg)
+            for (d, dv) in zip(D, Dv)
+                @test collect(diagview(d)) ≈ collect(dv)
+            end
+        end
     end
 end
 
@@ -42,6 +90,52 @@ function test_eigh_full(
     end
 end
 
+function test_eigh_full_batched(
+        T::Type, sz, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "eigh_full! $summary_str batch_size $batch_size" begin
+        As = [project_hermitian!(instantiate_matrix(T, sz)) for bi in 1:batch_size]
+        Ad = device_batch(As)
+        Ac = deepcopy(Ad)
+        m, n = size(first(As))
+
+        D, V = @testinferred batched_eigh_full(As)
+        @test D isa Vector{<:AbstractMatrix{real(eltype(T))}} && length(D) == batch_size
+        @test length(V) == batch_size
+        for (a, d, v) in zip(As, D, V)
+            @test a * v ≈ v * Diagonal(d)
+            @test isunitary(v)
+            @test all(isreal, d)
+        end
+
+        D, V = @testinferred batched_eigh_full(Ad)
+        @test D isa AbstractMatrix{real(eltype(T))} && size(D) == (n, batch_size)
+        @test size(V) == (n, n, batch_size)
+        for (a, d, v) in zip(As, eachslice(D, dims = 2), eachslice(V, dims = 3))
+            @test a * v ≈ v * Diagonal(d)
+            @test isunitary(v)
+            @test all(isreal, d)
+        end
+
+        D2, V2 = batched_eigh_full!(Ac, (D, V))
+        for (a, d2, v2) in zip(As, eachslice(D2, dims = 2), eachslice(V2, dims = 3))
+            @test a * v2 ≈ v2 * Diagonal(d2)
+        end
+
+        D3 = @testinferred batched_eigh_vals(As)
+        for (d, dd) in zip(eachslice(D, dims = 2), D3)
+            @test d ≈ dd
+        end
+        D3 = @testinferred batched_eigh_vals(Ad)
+        for (d, dd) in zip(eachslice(D, dims = 2), eachslice(D3, dims = 2))
+            @test d ≈ dd
+        end
+    end
+end
+
 function test_eigh_full_algs(
         T::Type, sz, algs;
         atol::Real = 0, rtol::Real = precision(T),
@@ -62,6 +156,76 @@ function test_eigh_full_algs(
 
         D3 = @testinferred eigh_vals(A; alg)
         @test D ≈ Diagonal(D3)
+    end
+end
+
+function test_eigh_full_algs_batched(
+        T::Type, sz, algs, batch_size::Int;
+        atol::Real = 0, rtol::Real = precision(T),
+        kwargs...
+    )
+    summary_str = testargs_summary(T, sz)
+    return @testset "eigh_full! algorithm $alg  $summary_str batch_size $batch_size" for alg in algs
+        As = [project_hermitian!(instantiate_matrix(T, sz)) for bi in 1:batch_size]
+        Ad = device_batch(As)
+        Ac = deepcopy(Ad)
+        m, n = size(first(As))
+
+        D, V = @testinferred batched_eigh_full(Ad; alg)
+        @test D isa AbstractMatrix{real(eltype(T))} && size(D) == (n, batch_size)
+        @test size(V) == (n, n, batch_size)
+        for (a, d, v) in zip(As, eachslice(D, dims = 2), eachslice(V, dims = 3))
+            @test a * v ≈ v * Diagonal(d)
+            @test isunitary(v)
+            @test all(isreal, d)
+        end
+
+        D2, V2 = batched_eigh_full!(Ac, (D, V); alg)
+        for (a, d2, v2) in zip(As, eachslice(D2, dims = 2), eachslice(V2, dims = 3))
+            @test a * v2 ≈ v2 * Diagonal(d2)
+        end
+
+        D3 = @testinferred batched_eigh_vals(Ad; alg)
+        for (d, dd) in zip(eachslice(D, dims = 2), eachslice(D3, dims = 2))
+            @test d ≈ dd
+        end
+
+        # ragged batch: a group of `batch_size` equal sized matrices, small enough for every
+        # driver's batched size limit, and then `nextra` matrices of different sizes that are
+        # decomposed one at a time or batched with equally sized ones
+        MatrixAlgebraKit.supports_ragged_batch(eigh_full!, alg, MatrixAlgebraKit.DefaultDriver(), T) || continue
+        @testset "ragged with $nextra extra sizes" for nextra in (2, 5)
+            k = min(n, 16)
+            Ar = [
+                [project_hermitian!(instantiate_matrix(T, (k, k))) for _ in 1:batch_size];
+                [project_hermitian!(instantiate_matrix(T, (k - i % 3, k - i % 3))) for i in 1:nextra]
+            ]
+            Ds = [Diagonal(similar(a, real(eltype(T)), size(a, 1))) for a in Ar]
+            Vs = [similar(a) for a in Ar]
+            D4, V4 = @testinferred batched_eigh_full!(deepcopy(Ar), (Ds, Vs); alg)
+            @test D4 === Ds
+            @test V4 === Vs
+            for (a, d, v) in zip(Ar, D4, V4)
+                @test a * v ≈ v * d
+                @test isunitary(v)
+            end
+
+            D5, V5 = @testinferred batched_eigh_full(Ar; alg)
+            @test D5 isa AbstractVector{<:Diagonal}
+            for (a, d, v) in zip(Ar, D5, V5)
+                @test a * v ≈ v * d
+            end
+
+            Dv = [similar(a, real(eltype(T)), size(a, 1)) for a in Ar]
+            Dv2 = @testinferred batched_eigh_vals!(deepcopy(Ar), Dv; alg)
+            for (d, dv) in zip(D4, Dv2)
+                @test collect(diagview(d)) ≈ collect(dv)
+            end
+            Dv3 = @testinferred batched_eigh_vals(Ar; alg)
+            for (d, dv) in zip(D4, Dv3)
+                @test collect(diagview(d)) ≈ collect(dv)
+            end
+        end
     end
 end
 

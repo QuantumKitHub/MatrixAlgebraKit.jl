@@ -77,6 +77,13 @@ function gaugefix!(::Union{typeof(svd_compact!), typeof(svd_trunc!)}, U, Vᴴ)
     return (U, Vᴴ)
 end
 
+function gaugefix!(::typeof(batched_eigh_full!), V)
+    for v in eachslice(V, dims = 3)
+        gaugefix!(eigh_full!, v)
+    end
+    return V
+end
+
 function gaugefix!(::typeof(batched_svd_compact!), U, Vᴴ)
     for (u, vᴴ) in zip(eachslice(U, dims = 3), eachslice(Vᴴ, dims = 3))
         gaugefix!(svd_compact!, u, vᴴ)

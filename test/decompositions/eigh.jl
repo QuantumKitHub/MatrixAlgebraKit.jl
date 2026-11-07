@@ -18,6 +18,7 @@ using .TestSuite
 
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
+batch_size = 16
 m = 54
 for T in (BLASFloats..., GenericFloats...)
     TestSuite.seed_rng!(123)
@@ -31,6 +32,12 @@ for T in (BLASFloats..., GenericFloats...)
             TestSuite.test_eigh_algs(CuMatrix{T}, (m, m), CUSOLVER_EIGH_ALGS)
             TestSuite.test_eigh(Diagonal{T, CuVector{T}}, m)
             TestSuite.test_eigh_algs(Diagonal{T, CuVector{T}}, m, (DiagonalAlgorithm(),))
+
+            TestSuite.test_eigh_batched(CuMatrix{T}, (m, m), batch_size)
+            CUSOLVER_BATCHED_EIGH_ALGS = (Jacobi(), QRIteration())
+            TestSuite.test_eigh_batched_algs(CuMatrix{T}, (m, m), batch_size, CUSOLVER_BATCHED_EIGH_ALGS)
+            TestSuite.test_eigh_algs_batched_ragged_support(CuMatrix{T}, (Jacobi(),), batch_size)
+            TestSuite.test_eigh_algs_batched_ragged_support(CuMatrix{T}, (QRIteration(), DivideAndConquer()), batch_size; supported = false)
         end
         if AMDGPU.functional()
             ROCSOLVER_EIGH_ALGS = (
@@ -44,6 +51,10 @@ for T in (BLASFloats..., GenericFloats...)
             TestSuite.test_eigh_algs(ROCMatrix{T}, (m, m), ROCSOLVER_EIGH_ALGS; test_trunc = false)
             TestSuite.test_eigh(Diagonal{T, ROCVector{T}}, m; test_trunc = false)
             TestSuite.test_eigh_algs(Diagonal{T, ROCVector{T}}, m, (DiagonalAlgorithm(),); test_trunc = false)
+
+            TestSuite.test_eigh_batched(ROCMatrix{T}, (m, m), batch_size)
+            TestSuite.test_eigh_batched_algs(ROCMatrix{T}, (m, m), batch_size, ROCSOLVER_EIGH_ALGS)
+            TestSuite.test_eigh_algs_batched_ragged_support(ROCMatrix{T}, ROCSOLVER_EIGH_ALGS, batch_size)
         end
     end
     if !is_buildkite
