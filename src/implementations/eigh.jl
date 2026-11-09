@@ -9,9 +9,7 @@ copy_input(::Union{typeof(eigh_trunc), typeof(eigh_trunc_no_error)}, A) = copy_i
 copy_input(::typeof(eigh_full), A::Diagonal) = copy(A)
 
 check_hermiticity(::AbstractAlgorithm) = true
-for alg_type in (:Diagonal, :RobustRepresentations, :DivideAndConquer, :QRIteration, :Bisection, :Jacobi)
-    @eval check_hermiticity(alg::$alg_type) = get(alg.kwargs, :check_hermiticity, true)
-end
+check_hermiticity(alg::Algorithm) = get(alg.kwargs, :check_hermiticity, true)
 
 check_hermitian(A, ::AbstractAlgorithm) = check_hermitian(A)
 check_hermitian(A, alg::Algorithm) = check_hermitian(A; atol = get(alg.kwargs, :hermitian_tol, default_hermitian_tol(A)))
