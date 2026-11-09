@@ -8,6 +8,11 @@ copy_input(::Union{typeof(eigh_trunc), typeof(eigh_trunc_no_error)}, A) = copy_i
 
 copy_input(::typeof(eigh_full), A::Diagonal) = copy(A)
 
+check_hermiticity(::AbstractAlgorithm) = true
+for alg_type in (:Diagonal, :RobustRepresentations, :DivideAndConquer, :QRIteration, :Bisection, :Jacobi) 
+    @eval check_hermiticity(alg::$alg_type) = get(alg.kwargs, :check_hermiticity, true)
+end
+
 check_hermitian(A, ::AbstractAlgorithm) = check_hermitian(A)
 check_hermitian(A, alg::Algorithm) = check_hermitian(A; atol = get(alg.kwargs, :hermitian_tol, default_hermitian_tol(A)))
 function check_hermitian(A; atol::Real = default_hermitian_tol(A), rtol::Real = 0)
@@ -21,7 +26,7 @@ end
 _driver_kwargs(alg::Algorithm) = Base.structdiff(alg.kwargs, NamedTuple{(:check_hermiticity, :hermitian_tol)})
 
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractAlgorithm)
-    get(alg.kwargs, :check_hermiticity, true) && check_hermitian(A, alg)
+    check_hermiticity(alg) && check_hermitian(A, alg)
     D, V = DV
     m = size(A, 1)
     @assert D isa Diagonal && V isa AbstractMatrix
@@ -32,7 +37,7 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractA
     return nothing
 end
 function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::AbstractAlgorithm)
-    get(alg.kwargs, :check_hermiticity, true) && check_hermitian(A, alg)
+    check_hermiticity(alg) && check_hermitian(A, alg)
     m = size(A, 1)
     @assert D isa AbstractVector
     @check_size(D, (m,))
@@ -41,7 +46,7 @@ function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::AbstractAl
 end
 
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalAlgorithm)
-    get(alg.kwargs, :check_hermiticity, true) && check_hermitian(A, alg)
+    check_hermiticity(alg) && check_hermitian(A, alg)
     @assert isdiag(A)
     m = size(A, 1)
     D, V = DV
@@ -54,7 +59,7 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalA
 end
 
 function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::DiagonalAlgorithm)
-    get(alg.kwargs, :check_hermiticity, true) && check_hermitian(A, alg)
+    check_hermiticity(alg) && check_hermitian(A, alg)
     @assert isdiag(A)
     m = size(A, 1)
     @assert D isa AbstractVector
