@@ -17,8 +17,11 @@ function check_hermitian(A; atol::Real = default_hermitian_tol(A), rtol::Real = 
     return nothing
 end
 
-function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractAlgorithm; check_hermiticity::Bool = true)
-    check_hermiticity && check_hermitian(A, alg)
+# keyword arguments consumed by `check_input` that should not be forwarded to the drivers
+_driver_kwargs(alg::Algorithm) = Base.structdiff(alg.kwargs, NamedTuple{(:check_hermiticity, :hermitian_tol)})
+
+function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractAlgorithm)
+    get(alg.kwargs, :check_hermiticity, true) && check_hermitian(A, alg)
     D, V = DV
     m = size(A, 1)
     @assert D isa Diagonal && V isa AbstractMatrix
@@ -28,8 +31,8 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::AbstractA
     @check_scalar(V, A)
     return nothing
 end
-function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::AbstractAlgorithm; check_hermiticity::Bool = true)
-    check_hermiticity && check_hermitian(A, alg)
+function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::AbstractAlgorithm)
+    get(alg.kwargs, :check_hermiticity, true) && check_hermitian(A, alg)
     m = size(A, 1)
     @assert D isa AbstractVector
     @check_size(D, (m,))
@@ -37,8 +40,8 @@ function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::AbstractAl
     return nothing
 end
 
-function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalAlgorithm; check_hermiticity::Bool = true)
-    check_hermiticity && check_hermitian(A, alg)
+function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalAlgorithm)
+    get(alg.kwargs, :check_hermiticity, true) && check_hermitian(A, alg)
     @assert isdiag(A)
     m = size(A, 1)
     D, V = DV
@@ -50,8 +53,8 @@ function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV, alg::DiagonalA
     return nothing
 end
 
-function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::DiagonalAlgorithm; check_hermiticity::Bool = true)
-    check_hermiticity && check_hermitian(A, alg)
+function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D, alg::DiagonalAlgorithm)
+    get(alg.kwargs, :check_hermiticity, true) && check_hermitian(A, alg)
     @assert isdiag(A)
     m = size(A, 1)
     @assert D isa AbstractVector
@@ -120,14 +123,14 @@ for (f, f_lapack!, Alg) in (
 
     # MatrixAlgebraKit wrappers
     @eval begin
-        function eigh_full!(A::AbstractMatrix, DV, alg::$Alg; check_hermiticity::Bool = true)
-            check_input(eigh_full!, A, DV, alg; check_hermiticity)
-            $eigh_full_f!(A, DV; alg.kwargs...)
+        function eigh_full!(A::AbstractMatrix, DV, alg::$Alg)
+            check_input(eigh_full!, A, DV, alg)
+            $eigh_full_f!(A, DV; _driver_kwargs(alg)...)
             return DV
         end
-        function eigh_vals!(A::AbstractMatrix, D, alg::$Alg; check_hermiticity::Bool = true)
-            check_input(eigh_vals!, A, D, alg; check_hermiticity)
-            $eigh_vals_f!(A, D; alg.kwargs...)
+        function eigh_vals!(A::AbstractMatrix, D, alg::$Alg)
+            check_input(eigh_vals!, A, D, alg)
+            $eigh_vals_f!(A, D; _driver_kwargs(alg)...)
             return D
         end
     end
@@ -162,22 +165,22 @@ for (f, f_lapack!, Alg) in (
     end
 end
 
-function eigh_trunc!(A, DV, alg::TruncatedAlgorithm; check_hermiticity::Bool = true)
-    D, V = eigh_full!(A, DV, alg.alg; check_hermiticity)
+function eigh_trunc!(A, DV, alg::TruncatedAlgorithm)
+    D, V = eigh_full!(A, DV, alg.alg)
     DVtrunc, ind = truncate(eigh_trunc!, (D, V), alg.trunc)
     return DVtrunc..., truncation_error!(diagview(D), ind)
 end
 
-function eigh_trunc_no_error!(A, DV, alg::TruncatedAlgorithm; check_hermiticity::Bool = true)
-    D, V = eigh_full!(A, DV, alg.alg; check_hermiticity)
+function eigh_trunc_no_error!(A, DV, alg::TruncatedAlgorithm)
+    D, V = eigh_full!(A, DV, alg.alg)
     DVtrunc, ind = truncate(eigh_trunc!, (D, V), alg.trunc)
     return DVtrunc
 end
 
 # Diagonal logic
 # --------------
-function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm; check_hermiticity::Bool = true)
-    check_input(eigh_full!, A, DV, alg; check_hermiticity)
+function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm)
+    check_input(eigh_full!, A, DV, alg)
     D, V = DV
     diagA = diagview(A)
     I = sortperm(diagA; by = real)
@@ -193,8 +196,8 @@ function eigh_full!(A::Diagonal, DV, alg::DiagonalAlgorithm; check_hermiticity::
     return D, V
 end
 
-function eigh_vals!(A::Diagonal, D, alg::DiagonalAlgorithm; check_hermiticity::Bool = true)
-    check_input(eigh_vals!, A, D, alg; check_hermiticity)
+function eigh_vals!(A::Diagonal, D, alg::DiagonalAlgorithm)
+    check_input(eigh_vals!, A, D, alg)
     Ad = diagview(A)
     if D === Ad
         sort!(Ad)
