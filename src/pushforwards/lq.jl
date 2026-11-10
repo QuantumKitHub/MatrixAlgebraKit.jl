@@ -13,6 +13,9 @@ remaining rows of `Q` and columns of `L` are set to zero. Similarly, for `lq_ful
 rows of `Q` are only determined up to a unitary rotation, and only their gauge-invariant
 tangent component along the first `r` rows of `Q` is computed.
 
+The tangent `ΔQ` may be the same array as `ΔA` (as happens for an in-place `lq_compact!`
+with `Q === A`), in which case `ΔA` is overwritten.
+
 See also [`qr_pushforward!`](@ref).
 """
 function lq_pushforward!(
@@ -30,34 +33,35 @@ function lq_pushforward!(
     p = lq_rank(L; rank_atol)
     (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of L*Q ($m, $n)"))
 
+    if Base.mightalias(ΔA, ΔL) || (ΔQ !== ΔA && Base.mightalias(ΔA, ΔQ))
+        ΔA = copy(ΔA)
+    end
+
     Q₁ = view(Q, 1:p, :)
     # Julia 1.13 `ldiv!` checks `istriu` on the parent, which
     # falls back to scalar indexing for a view of a GPU array
     L₁₁ = LowerTriangular(L[1:p, 1:p])
     L₂₁ = view(L, (p + 1):m, 1:p)
 
-    ΔA₁ = view(ΔA, 1:p, :)
-    ΔA₂ = view(ΔA, (p + 1):m, :)
+    ΔQ₁ = view(ΔQ, 1:p, :)
+    ΔL₁₁ = view(ΔL, 1:p, 1:p)
+    ΔL₂₁ = view(ΔL, (p + 1):m, 1:p)
 
-    # compute everything from ΔA before writing to ΔL and ΔQ, which may alias it
-    # (e.g. `lq_compact!` of a `Diagonal` returns `Q === A`)
-    # TODO rework this into two versions, one for `Q === A` and one for
-    # `Q !== A`, to minimize allocations
-    ΔQ₁ = L₁₁ \ ΔA₁
+    zero!(ΔL)
+    mul!(ΔL₂₁, view(ΔA, (p + 1):m, :), Q₁')
+
+    ΔQ === ΔA || copyto!(ΔQ₁, view(ΔA, 1:p, :))
+    ldiv!(L₁₁, ΔQ₁)
+
     ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
     M = ΔQ₁Q₁ᴴ + ΔQ₁Q₁ᴴ'
     diagview(M) ./= 2
     view(M, uppertriangularind(M)) .= zero(eltype(M))
-    ΔL₁₁ = L₁₁ * M
-    ΔQ₁ = mul!(ΔQ₁, M, Q₁, -1, 1)
-    ΔL₂₁ = ΔA₂ * Q₁'
-    ΔL₂₁ = mul!(ΔL₂₁, L₂₁, ΔQ₁ * Q₁', -1, 1)
+    mul!(ΔL₁₁, L₁₁, M)
+    mul!(ΔQ₁, M, Q₁, -1, 1)
+    mul!(ΔL₂₁, L₂₁, mul!(ΔQ₁Q₁ᴴ, ΔQ₁, Q₁'), -1, 1)
 
-    zero!(ΔL)
-    zero!(ΔQ)
-    view(ΔQ, 1:p, :) .= ΔQ₁
-    view(ΔL, 1:p, 1:p) .= ΔL₁₁
-    view(ΔL, (p + 1):m, 1:p) .= ΔL₂₁
+    zero!(view(ΔQ, (p + 1):size(ΔQ, 1), :))
     if p == minmn && size(Q, 1) > minmn
         Q₃ = view(Q, (minmn + 1):size(Q, 1), :)
         ΔQ₃ = view(ΔQ, (minmn + 1):size(Q, 1), :)
@@ -65,6 +69,21 @@ function lq_pushforward!(
     end
     return ΔL, ΔQ
 end
+
+function lq_pushforward!(
+        ΔA::Diagonal, A, LQ::Tuple{Diagonal, Diagonal}, ΔLQ::Tuple{Diagonal, Diagonal};
+        rank_atol::Real = default_pullback_rank_atol(LQ[1]), kwargs...
+    )
+    L, Q = LQ
+    isempty(Q) && !isempty(L) &&
+        throw(ArgumentError("LQ differentiation with an omitted Q output is not supported; compute both L and Q."))
+    ΔL, ΔQ = ΔLQ
+    size(ΔA) == size(Q) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of L*Q $(size(Q))"))
+    p = lq_rank(L; rank_atol)
+    _diagonal_qr_lq_pushforward!(diagview(ΔA), diagview(Q), diagview(L), diagview(ΔQ), diagview(ΔL), p)
+    return ΔL, ΔQ
+end
+
 
 """
     lq_null_pushforward!(ΔA, A, Nᴴ, ΔNᴴ; kwargs...)
