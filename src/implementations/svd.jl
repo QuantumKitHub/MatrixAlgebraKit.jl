@@ -319,19 +319,33 @@ end
 
 # GPU logic (randomized SVD - CUSOLVER_Randomized has no CPU analog, kept as-is)
 # ---------------------------------------------------------------------------------
+# A randomized SVD only computes the `k` largest singular triplets, so the outputs only need
+# room for those: `U` is `m × r`, `S` is `r × r` and `Vᴴ` is `r × n` for some `k ≤ r ≤ minmn`
+# (`initialize_output` uses `r = k`). Only the first `k` columns/values/rows are written.
+
+function _randomized_rank(alg::CUSOLVER_Randomized)
+    haskey(alg.kwargs, :k) ||
+        throw(ArgumentError("$alg requires the number of singular values to compute, `k`"))
+    return alg.kwargs.k::Int
+end
 
 function check_input(
         ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, USVᴴ, alg::CUSOLVER_Randomized
     )
     m, n = size(A)
     minmn = min(m, n)
+    k = _randomized_rank(alg)
     U, S, Vᴴ = USVᴴ
     @assert U isa AbstractMatrix && S isa Diagonal && Vᴴ isa AbstractMatrix
-    @check_size(U, (m, m))
+    r = size(S, 1)
+    k ≤ r ≤ minmn ||
+        throw(DimensionMismatch("size of S ($r) must be between k ($k) and min(size(A)...) ($minmn)"))
+    (size(U, 1) == m && k ≤ size(U, 2) ≤ m) ||
+        throw(DimensionMismatch("size of U $(size(U)) must be ($m, r) with r between k ($k) and $m"))
+    (size(Vᴴ, 2) == n && k ≤ size(Vᴴ, 1) ≤ n) ||
+        throw(DimensionMismatch("size of Vᴴ $(size(Vᴴ)) must be (r, $n) with r between k ($k) and $n"))
     @check_scalar(U, A)
-    @check_size(S, (minmn, minmn))
     @check_scalar(S, A, real)
-    @check_size(Vᴴ, (n, n))
     @check_scalar(Vᴴ, A)
     return nothing
 end
@@ -340,10 +354,10 @@ function initialize_output(
         ::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)}, A::AbstractMatrix, alg::TruncatedAlgorithm{<:CUSOLVER_Randomized}
     )
     m, n = size(A)
-    minmn = min(m, n)
-    U = similar(A, (m, m))
-    S = Diagonal(similar(A, real(eltype(A)), (minmn,)))
-    Vᴴ = similar(A, (n, n))
+    k = _randomized_rank(alg.alg)
+    U = similar(A, (m, k))
+    S = Diagonal(similar(A, real(eltype(A)), (k,)))
+    Vᴴ = similar(A, (k, n))
     return (U, S, Vᴴ)
 end
 
@@ -356,13 +370,18 @@ end
 function svd_trunc_no_error!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm{<:GPU_Randomized})
     U, S, Vᴴ = USVᴴ
     check_input(svd_trunc_no_error!, A, (U, S, Vᴴ), alg.alg)
-    _gpu_Xgesvdr!(A, diagview(S), U, Vᴴ; alg.alg.kwargs...)
+    k = _randomized_rank(alg.alg)
+    # only the first `k` values are computed: restrict to those, so that the truncation never
+    # sees the (uninitialized) remainder of larger outputs
+    Uk = size(U, 2) == k ? U : view(U, :, 1:k)
+    Sk = size(S, 1) == k ? S : Diagonal(view(diagview(S), 1:k))
+    Vᴴk = size(Vᴴ, 1) == k ? Vᴴ : view(Vᴴ, 1:k, :)
+    kwargs = Base.structdiff(alg.alg.kwargs, NamedTuple{(:fixgauge,)})
+    _gpu_Xgesvdr!(A, diagview(Sk), Uk, Vᴴk; kwargs...)
 
-    # TODO: make sure that truncation is based on maxrank, otherwise this might be wrong
-    (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (U, S, Vᴴ), alg.trunc)
+    (Utr, Str, Vᴴtr), _ = truncate(svd_trunc!, (Uk, Sk, Vᴴk), alg.trunc)
 
     do_gauge_fix = get(alg.alg.kwargs, :fixgauge, default_fixgauge())::Bool
-    # the output matrices here are the same size as for svd_full!
     do_gauge_fix && gaugefix!(svd_trunc!, Utr, Vᴴtr)
 
     return Utr, Str, Vᴴtr
