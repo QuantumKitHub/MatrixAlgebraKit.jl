@@ -500,10 +500,8 @@ for (bname, fname, elty, relty) in
                 throw(DimensionMismatch("size mismatch between A and S"))
 
             # these MUST be "full" sized
-            # TODO: check if U and Vᴴ already have the correct size to avoid
-            # some allocations
-            Ṽ = similar(Vᴴ, (n, n, batch_size))
-            Ũ = similar(U, (m, m, batch_size))
+            Ṽ = similar(Vᴴ, (n, n, batch_size)) # gesvdj computes V, *not* Vᴴ
+            Ũ = ifelse(size(U) == (m, m, batch_size), U, similar(U, (m, m, batch_size)))
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(Ũ, 2))
             ldv = max(1, stride(Ṽ, 2))
