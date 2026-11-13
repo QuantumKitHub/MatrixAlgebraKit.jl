@@ -52,8 +52,7 @@ function qr_pushforward!(
     rdiv!(ΔQ₁, R₁₁)
 
     Q₁ᴴΔQ₁ = Q₁' * ΔQ₁
-    M = Q₁ᴴΔQ₁ + Q₁ᴴΔQ₁'
-    diagview(M) ./= 2
+    M = project_hermitian!(Q₁ᴴΔQ₁)
     view(M, lowertriangularind(M)) .= zero(eltype(M))
     mul!(ΔR₁₁, M, R₁₁)
     mul!(ΔQ₁, Q₁, M, -1, 1)
