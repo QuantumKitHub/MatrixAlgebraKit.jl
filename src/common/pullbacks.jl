@@ -11,8 +11,15 @@ function iszerotangent end
 iszerotangent(::Any) = false
 iszerotangent(::Nothing) = true
 
-# fallback
-_sylvester(A, B, C) = LinearAlgebra.sylvester(A, B, C)
+# Solve the Sylvester equation `P * X + X * P = C` for a Hermitian positive semidefinite `P`
+# with eigendecomposition `P = U * Diagonal(d) * U'`.
+function _sylvester_psd(U, d, C, tol)
+    Y = U' * C * U
+    dd = d .+ transpose(d)
+    Δ = maximum(abs, (abs.(dd) .< tol) .* Y; init = zero(real(eltype(Y))))
+    Y .*= inv_safe.(dd, tol)
+    return U * Y * U', Δ
+end
 
 """
     select_indices(r::AbstractRange, ind)
