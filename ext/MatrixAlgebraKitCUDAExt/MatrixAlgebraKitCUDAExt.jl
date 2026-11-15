@@ -9,7 +9,7 @@ using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesvdp!, gesvdr!, gesvdj!
 import MatrixAlgebraKit: gesvdj_batched!
 import MatrixAlgebraKit: heevj!, heevd!, geev!
-import MatrixAlgebraKit: _gpu_Xgesvdr!, _sylvester
+import MatrixAlgebraKit: _gpu_Xgesvdr!
 using CUDA, CUDA.cuBLAS
 using CUDA: i32
 using LinearAlgebra
@@ -86,13 +86,6 @@ function MatrixAlgebraKit._mul_herm!(C::StridedCuMatrix{T}, A::StridedCuMatrix{T
     mul!(C, A, A')
     project_hermitian!(C)
     return C
-end
-
-function _sylvester(A::AnyCuMatrix, B::AnyCuMatrix, C::AnyCuMatrix)
-    # https://github.com/JuliaGPU/CUDA.jl/issues/3021
-    # to add native sylvester to CUDA
-    hX = sylvester(collect(A), collect(B), collect(C))
-    return CuArray(hX)
 end
 
 end
