@@ -691,6 +691,17 @@ function test_chainrules_polar(
                     atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
                 )
                 @test isequal(ΔWP, ΔWP_copy)
+
+                Ar = instantiate_rank_deficient_matrix(T, sz)
+                test_rrule(
+                    config, polar_P_wrapper, left_polar ⊢ NoTangent(), Ar, alg ⊢ NoTangent();
+                    atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+                )
+                L, R = rank_deficient_factors(T, sz)
+                test_rrule(
+                    config, left_polar_rank_deficient_wrapper, left_polar ⊢ NoTangent(), L, R, alg ⊢ NoTangent();
+                    atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+                )
             end
         end
         @testset "right_polar" begin
@@ -708,6 +719,17 @@ function test_chainrules_polar(
                     atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
                 )
                 @test isequal(ΔPWᴴ, ΔPWᴴ_copy)
+
+                Ar = instantiate_rank_deficient_matrix(T, sz)
+                test_rrule(
+                    config, polar_P_wrapper, right_polar ⊢ NoTangent(), Ar, alg ⊢ NoTangent();
+                    atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+                )
+                L, R = rank_deficient_factors(T, sz)
+                test_rrule(
+                    config, right_polar_rank_deficient_wrapper, right_polar ⊢ NoTangent(), L, R, alg ⊢ NoTangent();
+                    atol = atol, rtol = rtol, rrule_f = rrule_via_ad, check_inferred = false
+                )
             end
         end
     end

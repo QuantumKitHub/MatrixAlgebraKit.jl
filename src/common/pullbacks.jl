@@ -21,6 +21,16 @@ function _sylvester_psd(U, d, C, tol)
     return U * Y * U', Δ
 end
 
+# Remove from `X` its block within the null space of the Hermitian positive semidefinite
+# `P = U * Diagonal(d) * U'`, i.e. the eigenvectors with eigenvalues smaller than `tol`.
+function _remove_null_block!(X, U, d, tol)
+    isnull = abs.(d) .< tol
+    any(isnull) || return X
+    Y = U' * X * U
+    Y .*= isnull .& transpose(isnull)
+    return mul!(X, U, Y * U', -1, 1)
+end
+
 """
     select_indices(r::AbstractRange, ind)
 

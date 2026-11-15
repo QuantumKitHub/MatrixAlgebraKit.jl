@@ -10,7 +10,8 @@ cotangent `ΔWP` of `left_polar(A)`.
 
 Eigenvalues of `P` smaller than `rank_atol` are treated as zero, in which case `A` is rank
 deficient and `W` is not uniquely determined on the null space of `P`. Components of `ΔW`
-along this null space are discarded.
+along this null space are discarded. The block of `ΔP` within the null space, where `P`
+is not differentiable, is discarded as well.
 """
 function left_polar_pullback!(
         ΔA::AbstractMatrix, A, WP, ΔWP;
@@ -22,11 +23,12 @@ function left_polar_pullback!(
 
     # Extract and check the cotangents
     ΔW, ΔP = ΔWP
-    if !iszerotangent(ΔP)
-        ΔP = project_hermitian(ΔP)
-    end
     D, U = eigh_full(P)
     d = diagview(D)
+    if !iszerotangent(ΔP)
+        ΔP = project_hermitian(ΔP)
+        ΔP = _remove_null_block!(ΔP, U, d, rank_atol)
+    end
     M = zero(P)
     !iszerotangent(ΔW) && mul!(M, W', ΔW, 1, 1)
     !iszerotangent(ΔP) && mul!(M, ΔP, P, -1, 1)
@@ -59,7 +61,8 @@ and cotangent `ΔPWᴴ` of `right_polar(A)`.
 
 Eigenvalues of `P` smaller than `rank_atol` are treated as zero, in which case `A` is rank
 deficient and `Wᴴ` is not uniquely determined on the null space of `P`. Components of `ΔWᴴ`
-along this null space are discarded.
+along this null space are discarded. The block of `ΔP` within the null space, where `P` is
+not differentiable, is discarded as well.
 """
 function right_polar_pullback!(
         ΔA::AbstractMatrix, A, PWᴴ, ΔPWᴴ;
@@ -71,11 +74,12 @@ function right_polar_pullback!(
 
     # Extract and check the cotangents
     ΔP, ΔWᴴ = ΔPWᴴ
-    if !iszerotangent(ΔP)
-        ΔP = project_hermitian(ΔP)
-    end
     D, U = eigh_full(P)
     d = diagview(D)
+    if !iszerotangent(ΔP)
+        ΔP = project_hermitian(ΔP)
+        ΔP = _remove_null_block!(ΔP, U, d, rank_atol)
+    end
     M = zero(P)
     !iszerotangent(ΔWᴴ) && mul!(M, ΔWᴴ, Wᴴ', 1, 1)
     !iszerotangent(ΔP) && mul!(M, P, ΔP, -1, 1)
