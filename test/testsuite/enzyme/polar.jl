@@ -32,6 +32,19 @@ function test_enzyme_left_polar(
             A = instantiate_matrix(T, sz)
             test_forward(left_polar, RT, (A, TA), (alg, Const); atol, rtol)
             test_forward(call_and_zero!, RT, (left_polar!, Const), (A, TA), (alg, Const); atol, rtol)
+
+            A = instantiate_rank_deficient_matrix(T, sz)
+            test_reverse(polar_P_wrapper, RT, (left_polar, Const), (A, TA), (alg, Const); atol, rtol, fdm = rank_deficient_fdm)
+            test_forward(polar_P_wrapper, RT, (left_polar, Const), (A, TA), (alg, Const); atol, rtol, fdm = rank_deficient_fdm)
+            # TODO: Enzyme can't diff through complex BLAS gemm 
+            if eltype(T) <: Real
+                L, R = rank_deficient_factors(T, sz)
+                for wrapper in (left_polar_rank_deficient_wrapper, left_polar!_rank_deficient_wrapper)
+                    f = wrapper === left_polar_rank_deficient_wrapper ? left_polar : left_polar!
+                    test_reverse(wrapper, RT, (f, Const), (L, TA), (R, TA), (alg, Const); atol, rtol)
+                    test_forward(wrapper, RT, (f, Const), (L, TA), (R, TA), (alg, Const); atol, rtol)
+                end
+            end
         end
     end
 end
@@ -57,6 +70,19 @@ function test_enzyme_right_polar(
             A = instantiate_matrix(T, sz)
             test_forward(right_polar, RT, (A, TA), (alg, Const); atol, rtol)
             test_forward(call_and_zero!, RT, (right_polar!, Const), (A, TA), (alg, Const); atol, rtol)
+
+            A = instantiate_rank_deficient_matrix(T, sz)
+            test_reverse(polar_P_wrapper, RT, (right_polar, Const), (A, TA), (alg, Const); atol, rtol, fdm = rank_deficient_fdm)
+            test_forward(polar_P_wrapper, RT, (right_polar, Const), (A, TA), (alg, Const); atol, rtol, fdm = rank_deficient_fdm)
+            # TODO: Enzyme can't diff through complex BLAS gemm 
+            if eltype(T) <: Real
+                L, R = rank_deficient_factors(T, sz)
+                for wrapper in (right_polar_rank_deficient_wrapper, right_polar!_rank_deficient_wrapper)
+                    f = wrapper === right_polar_rank_deficient_wrapper ? right_polar : right_polar!
+                    test_reverse(wrapper, RT, (f, Const), (L, TA), (R, TA), (alg, Const); atol, rtol)
+                    test_forward(wrapper, RT, (f, Const), (L, TA), (R, TA), (alg, Const); atol, rtol)
+                end
+            end
         end
     end
 end

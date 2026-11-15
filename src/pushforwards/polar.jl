@@ -15,6 +15,7 @@ function left_polar_pushforward!(
     mul!(ΔW, W, WᴴdAiP, -1, +1)
     ΔW = mul!(ΔW, W, K̇, +1, +1)
     ΔP = mul!(ΔP, K̇, P, -1, +1)
+    ΔP = _remove_null_block!(ΔP, U, d, rank_atol)
     return (ΔW, ΔP)
 end
 
@@ -35,5 +36,6 @@ function right_polar_pushforward!(
     mul!(ΔWᴴ, iPdAW, Wᴴ, -1, +1)
     ΔWᴴ = mul!(ΔWᴴ, K̇, Wᴴ, +1, +1)
     ΔP = mul!(ΔP, P, K̇, -1, +1)
+    ΔP = _remove_null_block!(ΔP, U, d, rank_atol)
     return (ΔWᴴ, ΔP)
 end

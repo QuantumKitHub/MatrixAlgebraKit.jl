@@ -41,7 +41,7 @@ project_antihermitian_inplace!(A, alg) = project_antihermitian!(A, A, alg)
 
 
 enzyme_fdm(T) = eltype(T) <: Union{Float32, ComplexF32} ? EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-2) : EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1)
-
+const rank_deficient_fdm = EnzymeTestUtils.FiniteDifferences.central_fdm(5, 1, max_range = 1.0e-4)
 
 """
     eigh_wrapper(f, A, alg)
@@ -374,6 +374,54 @@ function ad_right_polar_setup(A)
     PWᴴ = right_polar(A)
     ΔPWᴴ = structured_randn!.(similar.(PWᴴ))
     return PWᴴ, ΔPWᴴ
+end
+
+"""
+    left_polar_rank_deficient_wrapper(f, L, R, alg)
+
+Wrapper that calls `W, P = f(L * R, alg)` for a rank-deficient product `L * R` and returns
+`W * P` and `P`. Parametrizing the input by its factors restricts FD to rank-preserving directions.
+"""
+left_polar_rank_deficient_wrapper(f, L, R, alg) = left_polar_gauge_invariant_part(f(L * R, alg))
+
+"""
+    left_polar!_rank_deficient_wrapper(f!, L, R, alg)
+
+In-place variant of [`left_polar_rank_deficient_wrapper`](@ref).
+"""
+left_polar!_rank_deficient_wrapper(f!, L, R, alg) =
+    left_polar_gauge_invariant_part(call_and_zero!(f!, L * R, alg))
+
+left_polar_gauge_invariant_part((W, P)) = (W * P, P)
+
+"""
+    right_polar_rank_deficient_wrapper(f, L, R, alg)
+
+Wrapper that calls `P, Wᴴ = f(L * R, alg)` for a rank-deficient product `L * R` and returns
+`P` and `P * Wᴴ`. Parametrizing the input by its factors restricts FD to rank-preserving directions.
+"""
+right_polar_rank_deficient_wrapper(f, L, R, alg) = right_polar_gauge_invariant_part(f(L * R, alg))
+
+"""
+    right_polar!_rank_deficient_wrapper(f!, L, R, alg)
+
+In-place variant of [`right_polar_rank_deficient_wrapper`](@ref).
+"""
+right_polar!_rank_deficient_wrapper(f!, L, R, alg) =
+    right_polar_gauge_invariant_part(call_and_zero!(f!, L * R, alg))
+
+right_polar_gauge_invariant_part((P, Wᴴ)) = (P, P * Wᴴ)
+
+"""
+    polar_P_wrapper(f, A, alg)
+
+Wrapper that returns only the positive factor `P` of the polar decomposition `f(A, alg)`.
+"""
+polar_P_wrapper(f, A, alg) = (F = f(A, alg); f === left_polar ? F[2] : F[1])
+
+function rank_deficient_factors(T, (m, n))
+    r = div(min(m, n), 2)
+    return instantiate_matrix(T, (m, r)), instantiate_matrix(T, (r, n))
 end
 
 function ad_left_orth_setup(A)
