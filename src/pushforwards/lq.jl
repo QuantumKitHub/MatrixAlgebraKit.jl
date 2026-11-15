@@ -54,7 +54,7 @@ function lq_pushforward!(
     ldiv!(L₁₁, ΔQ₁)
 
     ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
-    M = ΔQ₁Q₁ᴴ + ΔQ₁Q₁ᴴ'
+    M = rmul!(project_hermitian!(ΔQ₁Q₁ᴴ), 2)
     diagview(M) ./= 2
     view(M, uppertriangularind(M)) .= zero(eltype(M))
     mul!(ΔL₁₁, L₁₁, M)
