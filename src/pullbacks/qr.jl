@@ -37,15 +37,15 @@ function check_and_prepare_qr_cotangents(
             # operating on a view-of-view, which doesn't work
             # for GPU arrays
             I = uppertriangularind(ΔR₂₂)
-            upper_inds = view(LinearIndices(ΔR), (p + 1):minmn, (p + 1):n)[I]
+            upper_inds = view(LinearIndices(axes(ΔR)), (p + 1):minmn, (p + 1):n)[I]
             ΔR₂₂upper = view(ΔR, upper_inds)
             Δgauge_R = maximum(abs, ΔR₂₂upper; init = abs(zero(eltype(ΔR))))
             Δgauge_R = max(Δgauge_R, maximum(abs, view(ΔR₂₂, diagind(ΔR₂₂)); init = zero(Δgauge_R)))
             Δgauge = max(Δgauge, Δgauge_R)
         end
     else
-        ΔR₁₁ = nothing
-        ΔR₁₂ = nothing
+        ΔR₁₁ = similar(R, 0, 0)
+        ΔR₁₂ = similar(R, 0, 0)
     end
     Δgauge ≤ gauge_atol ||
         @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
@@ -184,7 +184,7 @@ function remove_qr_gauge_dependence!(ΔQ, ΔR, A, Q, R; rank_atol = MatrixAlgebr
         # operating on a view-of-view, which doesn't work
         # for GPU arrays
         I = uppertriangularind(ΔR₂₂)
-        upper_inds = view(LinearIndices(ΔR), (r + 1):minmn, (r + 1):n)[I]
+        upper_inds = view(LinearIndices(axes(ΔR)), (r + 1):minmn, (r + 1):n)[I]
         ΔR₂₂upper = view(ΔR, upper_inds)
         zero!(ΔR₂₂upper)
     end

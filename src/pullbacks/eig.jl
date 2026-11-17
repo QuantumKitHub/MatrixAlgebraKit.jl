@@ -1,6 +1,6 @@
 function check_and_prepare_eig_cotangents(
         D, V, ViG, ΔDmat, ΔV, ind = Colon();
-        degeneracy_atol::Real = default_pullback_rank_atol(S),
+        degeneracy_atol::Real = default_pullback_rank_atol(D),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDmat, ΔV)
     )
 

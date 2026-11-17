@@ -134,7 +134,7 @@ function left_polar_newton!(A::AbstractMatrix, W, P = similar(A, (0, 0)); tol = 
         Rc .= R
         Rᴴinv = ldiv!(UpperTriangular(Rc)', one!(Rᴴinv))
     else # m == n
-        R = A
+        Q, R = nothing, A
         Rc = view(W, 1:n, 1:n)
         Rc .= R
         Rᴴinv = ldiv!(lu!(Rc)', one!(Rᴴinv))
@@ -174,7 +174,7 @@ function right_polar_newton!(A::AbstractMatrix, Wᴴ, P = similar(A, (0, 0)); to
         copy!(Lc, L)
         Lᴴinv = ldiv!(LowerTriangular(Lc)', one!(Lᴴinv))
     else # m == n
-        L = A
+        L, Q = A, nothing
         Lc = view(Wᴴ, 1:m, 1:m)
         Lc .= L
         Lᴴinv = ldiv!(lu!(Lc)', one!(Lᴴinv))

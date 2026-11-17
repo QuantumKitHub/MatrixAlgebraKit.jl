@@ -8,6 +8,7 @@ See also [`diagonal`](@ref).
 """ diagview
 
 diagview(D::Diagonal) = D.diag
+diagview(D::AbstractVector) = D
 diagview(D::AbstractMatrix) = view(D, diagind(D))
 
 @doc """

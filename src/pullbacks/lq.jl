@@ -38,15 +38,15 @@ function check_and_prepare_lq_cotangents(
             # operating on a view-of-view, which doesn't work
             # for GPU arrays
             I = lowertriangularind(ΔL₂₂)
-            lower_inds = view(LinearIndices(ΔL), (p + 1):m, (p + 1):minmn)[I]
+            lower_inds = view(LinearIndices(axes(ΔL)), (p + 1):m, (p + 1):minmn)[I]
             ΔL₂₂lower = view(ΔL, lower_inds)
             Δgauge_L = maximum(abs, ΔL₂₂lower; init = abs(zero(eltype(ΔL))))
             Δgauge_L = max(Δgauge_L, maximum(abs, view(ΔL₂₂, diagind(ΔL₂₂)); init = zero(Δgauge_L)))
             Δgauge = max(Δgauge, Δgauge_L)
         end
     else
-        ΔL₁₁ = nothing
-        ΔL₂₁ = nothing
+        ΔL₁₁ = similar(L, 0, 0)
+        ΔL₂₁ = similar(L, 0, 0)
     end
     Δgauge ≤ gauge_atol ||
         @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
@@ -182,7 +182,7 @@ function remove_lq_gauge_dependence!(ΔL, ΔQ, A, L, Q; rank_atol = MatrixAlgebr
         # operating on a view-of-view, which doesn't work
         # for GPU arrays
         I = lowertriangularind(ΔL₂₂)
-        lower_inds = view(LinearIndices(ΔL), (r + 1):m, (r + 1):minmn)[I]
+        lower_inds = view(LinearIndices(axes(ΔL)), (r + 1):m, (r + 1):minmn)[I]
         ΔL₂₂lower = view(ΔL, lower_inds)
         zero!(ΔL₂₂lower)
     end
