@@ -30,10 +30,7 @@ function qr_pushforward!(
     p = qr_rank(R; rank_atol)
     (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of Q*R ($m, $n)"))
 
-    # `ΔQ === ΔA` is handled by ordering the operations so
-    # that every column of ΔA is used before the same column of ΔQ is overwritten;
-    # any other overlap between the tangents forces a copy of ΔA.
-    if Base.mightalias(ΔA, ΔR) || (ΔQ !== ΔA && Base.mightalias(ΔA, ΔQ))
+    if Base.mightalias(ΔA, ΔR)
         ΔA = copy(ΔA)
     end
 

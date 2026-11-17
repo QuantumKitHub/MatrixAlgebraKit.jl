@@ -33,7 +33,7 @@ function lq_pushforward!(
     p = lq_rank(L; rank_atol)
     (m, n) == size(ΔA) || throw(DimensionMismatch("size of ΔA ($(size(ΔA))) does not match size of L*Q ($m, $n)"))
 
-    if Base.mightalias(ΔA, ΔL) || (ΔQ !== ΔA && Base.mightalias(ΔA, ΔQ))
+    if Base.mightalias(ΔA, ΔL)
         ΔA = copy(ΔA)
     end
 
