@@ -139,7 +139,7 @@ of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degenera
 not small compared to `gauge_atol`.
 
 The contribution from outside the kept eigenvectors is summed as a series, until its terms are
-below `complement_rtol` relative to its first.
+below `complement_rtol` relative to its first, column by column.
 """
 function eig_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
@@ -170,7 +170,7 @@ function eig_trunc_pullback!(
     APᴴ = mul!(complex.(A'), ViG, (V * Dmat)', -1, 1)
     X₀ = iszerotangent(ΔV₊) ? APᴴ * Z : mul!(ΔV₊, APᴴ, Z, 1, 1)
     X₀ ./= D'
-    X = accelerative_smith_iteration!(X₀, similar(X₀), APᴴ, inv.(conj.(D)), complement_rtol * maximum(abs, X₀), maxiter)
+    X = accelerative_smith_iteration!(X₀, similar(X₀), APᴴ, inv.(conj.(D)), complement_rtol, maxiter)
     Z .+= X
     if eltype(ΔA) <: Real
         ΔAc = mul!(APᴴ, Z, V') # recycle APᴴ

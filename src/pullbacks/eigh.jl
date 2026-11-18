@@ -141,7 +141,7 @@ of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degenera
 not small compared to `gauge_atol`.
 
 The contribution from outside the kept eigenvectors is summed as a series, until its terms are
-below `complement_rtol` relative to its first.
+below `complement_rtol` relative to its first, column by column.
 """
 function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
@@ -167,7 +167,7 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV₊)
         X₀ = rdiv!(ΔV₊, Diagonal(D))
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
-        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), complement_rtol * maximum(abs, X₀), maxiter)
+        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), complement_rtol, maxiter)
         Z .+= X
         # we cannot directly multiply Z * V' into ΔA, because we have to
         # take the Hermitian part, and cannot apply project_hermitian! to

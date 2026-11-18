@@ -220,7 +220,7 @@ anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and c
 which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 
 The contribution from outside the kept singular vectors is summed as a series, until its terms
-are below `complement_rtol` relative to its first.
+are below `complement_rtol` relative to its first, column by column.
 """
 function svd_trunc_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
@@ -262,7 +262,7 @@ function svd_trunc_pullback!(
         if m ≤ n
             X = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
             X .+= X₀
-            X = accelerative_smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, complement_rtol * maximum(abs, X), maxiter) # recycle X₀
+            X = accelerative_smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, complement_rtol, maxiter) # recycle X₀
             Yᴴ = lmul!(Diagonal(S⁻¹), X' * AP)
             Yᴴ .+= Y₀ᴴ
             ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
@@ -270,7 +270,7 @@ function svd_trunc_pullback!(
         else
             Y = rmul!(AP' * X₀, Diagonal(S⁻¹))
             Y .+= Y₀ᴴ'
-            Y = accelerative_smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, complement_rtol * maximum(abs, Y), maxiter)
+            Y = accelerative_smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, complement_rtol, maxiter)
             X = rmul!(AP * Y, Diagonal(S⁻¹))
             X .+= X₀
             ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
