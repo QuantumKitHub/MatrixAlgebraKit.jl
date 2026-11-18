@@ -45,8 +45,8 @@ function check_and_prepare_lq_cotangents(
             Δgauge = max(Δgauge, Δgauge_L)
         end
     else
-        ΔL₁₁ = similar(L, 0, 0)
-        ΔL₂₁ = similar(L, 0, 0)
+        ΔL₁₁ = L
+        ΔL₂₁ = L
     end
     Δgauge ≤ gauge_atol ||
         @warn "`lq` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"

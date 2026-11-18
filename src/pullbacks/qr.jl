@@ -44,8 +44,8 @@ function check_and_prepare_qr_cotangents(
             Δgauge = max(Δgauge, Δgauge_R)
         end
     else
-        ΔR₁₁ = similar(R, 0, 0)
-        ΔR₁₂ = similar(R, 0, 0)
+        ΔR₁₁ = R
+        ΔR₁₂ = R
     end
     Δgauge ≤ gauge_atol ||
         @warn "`qr` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"

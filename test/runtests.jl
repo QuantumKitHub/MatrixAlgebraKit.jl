@@ -36,7 +36,10 @@ using JET: JET
 const jet_new_generation = isdefined(JET, :JET_AVAILABLE)
 const jet_available = !jet_new_generation || JET.JET_AVAILABLE
 # whole-package analysis is pinned to the JET 0.12 generation, so its reports need not be curated for several JET/Julia combinations
-(jet_new_generation && jet_available) || delete!(testsuite, "common/jet")
+if !(jet_new_generation && jet_available)
+    @info "Full JET functionality is unavailable on Julia $VERSION; skipping JET analysis"
+    delete!(testsuite, "common/jet")
+end
 
 # Enzyme test workers peak at 5-7 GB (qr, lq, orthnull on Julia 1.10), so the default
 # assumption of 2 GiB per worker oversubscribes memory on CI runners and makes them swap
