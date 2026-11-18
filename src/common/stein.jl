@@ -70,7 +70,7 @@ const _CPUMatrix = Union{Matrix, SubArray{<:Any, 2, <:Matrix}}
 _coldots(A::_CPUMatrix, B::_CPUMatrix) = [real(LinearAlgebra.dot(view(A, :, j), view(B, :, j))) for j in axes(A, 2)]
 
 """
-    hermitian_stein_cg!(X, applyG!, formG, w, atol, maxiter; cost_apply, cost_apply_formed, cost_form, cost_square = nothing)
+    hermitian_stein_cg!(X, applyG!, formG, w, rtol, maxiter; cost_apply, cost_apply_formed, cost_form, cost_square = nothing)
 
 Solve `X - G * X * Diagonal(w) = B` for Hermitian `G` by conjugate gradients on all columns at
 once, in at most `maxiter` iterations: O(n² k) per iteration for k columns, against O(n³) per
@@ -83,16 +83,21 @@ once the predicted remaining applications save more than `cost_form`, given the 
 With `cost_square`, for indefinite `G` (eigh), the solver restarts on the residual equation
 multiplied by 1 + wᵢ G, (1 - wᵢ² G²) xᵢ = (1 + wᵢ G) bᵢ, once half the predicted remaining cost
 exceeds `cost_square` (forming G² and the new right-hand side): its spectrum [1 - γᵢ², 1] needs
-about half the iterations. A column stops once its residual is below `atol` times the smallest
-Ritz value of the slowest column, so that its error is below about `atol`.
+about half the iterations. Each column is solved for its right-hand side normalized, and stops once
+its residual is below `rtol` times the smallest Ritz value of the slowest column, so that its error
+is below about `rtol` relative to its right-hand side.
 """
 function hermitian_stein_cg!(
-        X, applyG!, formG, w, atol, maxiter;
+        X, applyG!, formG, w, rtol, maxiter;
         cost_apply, cost_apply_formed = cost_apply, cost_form, cost_square = nothing, nprobe::Int = 5
     )
     RT = real(eltype(X))
     G = iszero(cost_form) ? formG() : nothing
-    tol = RT(atol) # stopping residual 2-norm, refined by the Ritz values
+    # the columns are independent: solve for normalized right-hand sides, so that `rtol` holds per column
+    nb = sqrt.(_coldots(X, X))
+    nb = ifelse.(iszero.(nb), one(RT), nb)
+    X ./= transpose(nb)
+    tol = RT(rtol) # stopping residual 2-norm, refined by the Ritz values
     ρ = _coldots(X, X)
     cols = findall(ρ .> tol^2) # active columns, kept contiguous at the front
     nact = length(cols)
@@ -111,7 +116,7 @@ function hermitian_stein_cg!(
     for numiter in 1:maxiter
         if numiter > 1 && (numiter - 1) % nprobe == 0
             c = argmax(abs.(view(wc, 1:nact))) # the slowest column
-            tol = atol * _cg_ritz_min(αs[c], βs[c])
+            tol = rtol * _cg_ritz_min(αs[c], βs[c])
             nact = _cg_compact!(
                 view(ρ, 1:nact), tol, view(R, :, 1:nact), view(P, :, 1:nact), view(Xc, :, 1:nact), view(wc, 1:nact),
                 view(β, 1:nact), view(ρ₀, 1:nact), view(ρᵢ, 1:nact), view(cols, 1:nact), view(αs, 1:nact), view(βs, 1:nact)
@@ -129,8 +134,8 @@ function hermitian_stein_cg!(
                 R = X .- _stein_op(G, w, X₁)
                 X .= R .+ (G * R) .* transpose(w)
                 G² = G * G
-                hermitian_stein_cg!(X, nothing, () -> G², w .^ 2, atol, maxiter; cost_apply, cost_form = 0, nprobe)
-                return X .+= X₁
+                hermitian_stein_cg!(X, nothing, () -> G², w .^ 2, rtol, maxiter; cost_apply, cost_form = 0, nprobe)
+                return (X .+= X₁) .*= transpose(nb)
             end
             ρ₀ .= ρ
         end
@@ -158,7 +163,7 @@ function hermitian_stein_cg!(
     iszero(nact) || @warn "conjugate gradients did not converge in $maxiter iterations, largest residual norm: $(sqrt(maximum(view(ρ, 1:nact))))"
     fill!(X, zero(eltype(X)))
     X[:, cols] .= Xc
-    return X
+    return X .*= transpose(nb)
 end
 
 # move the columns with `ρ > tol²` to the front of all arrays (in order) and return their number
