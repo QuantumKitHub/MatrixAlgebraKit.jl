@@ -202,7 +202,7 @@ end
         rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
-        cg_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
+        stein_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
     )
 
 Adds the pullback from the truncated SVD of `A` to `ΔA`, given the output `USVᴴ` and the
@@ -220,14 +220,14 @@ anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and c
 which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 
 The contribution from outside the kept singular vectors is solved by conjugate gradients, to
-an error of about `cg_rtol` relative to its right-hand side.
+an error of about `stein_rtol` relative to its right-hand side.
 """
 function svd_trunc_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
-        cg_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
+        stein_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
         maxiter::Int = 10 * minimum(size(ΔA)) # conjugate-gradient iterations
     )
     # Extract the SVD components
@@ -265,7 +265,7 @@ function svd_trunc_pullback!(
             APᴴZ = similar(X, n, p) # for applying AP AP' without forming it
             X = hermitian_stein_cg!(
                 X, (GZ, Z) -> mul!(GZ, AP, mul!(view(APᴴZ, :, axes(Z, 2)), AP', Z)), () -> AP * AP',
-                S⁻¹ .^ 2, cg_rtol * norm(X), maxiter;
+                S⁻¹ .^ 2, stein_rtol * norm(X), maxiter;
                 cost_apply = 2 * m * n, cost_apply_formed = m^2, cost_form = m^2 * n
             )
             Yᴴ = lmul!(Diagonal(S⁻¹), X' * AP)
@@ -278,7 +278,7 @@ function svd_trunc_pullback!(
             APZ = similar(Y, m, p) # for applying AP' AP without forming it
             Y = hermitian_stein_cg!(
                 Y, (GZ, Z) -> mul!(GZ, AP', mul!(view(APZ, :, axes(Z, 2)), AP, Z)), () -> AP' * AP,
-                S⁻¹ .^ 2, cg_rtol * norm(Y), maxiter;
+                S⁻¹ .^ 2, stein_rtol * norm(Y), maxiter;
                 cost_apply = 2 * m * n, cost_apply_formed = n^2, cost_form = n^2 * m
             )
             X = rmul!(AP * Y, Diagonal(S⁻¹))
