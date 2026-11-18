@@ -121,7 +121,8 @@ end
     eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
+        cg_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
     )
 
 Adds the pullback from the truncated Hermitian eigenvalue decomposition of `A` to `ΔA`,
@@ -138,11 +139,15 @@ For this method to work correctly, it is also assumed that the remaining eigenva
 A warning will be printed if the cotangents are not gauge-invariant, i.e. if the restriction
 of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degeneracy_atol`, is
 not small compared to `gauge_atol`.
+
+The contribution from outside the kept eigenvectors is solved by conjugate gradients, to an
+error of about `cg_rtol` relative to its right-hand side.
 """
 function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
+        cg_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
         maxiter::Int = 10 * size(ΔA, 1) # conjugate-gradient iterations
     )
 
@@ -163,7 +168,7 @@ function eigh_trunc_pullback!(
         X₀ = rdiv!(ΔV₊, Diagonal(D))
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
         X = hermitian_stein_cg!(
-            X₀, nothing, () -> AP, inv.(D), degeneracy_atol, maxiter;
+            X₀, nothing, () -> AP, inv.(D), cg_rtol * norm(X₀), maxiter;
             cost_apply = n^2, cost_form = 0, cost_square = n^3 + n^2 * p
         )
         Z .+= X
