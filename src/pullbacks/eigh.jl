@@ -121,7 +121,8 @@ end
     eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
+        stein_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
     )
 
 Adds the pullback from the truncated Hermitian eigenvalue decomposition of `A` to `ΔA`,
@@ -138,11 +139,15 @@ For this method to work correctly, it is also assumed that the remaining eigenva
 A warning will be printed if the cotangents are not gauge-invariant, i.e. if the restriction
 of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degeneracy_atol`, is
 not small compared to `gauge_atol`.
+
+The contribution from outside the kept eigenvectors is summed as a series, until its terms are
+below `stein_rtol` relative to its first.
 """
 function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
+        stein_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
         maxiter::Int = 100 # TODO: better default, depending on expected number of steps using quadratic convergence?
     )
 
@@ -162,7 +167,7 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV₊)
         X₀ = rdiv!(ΔV₊, Diagonal(D))
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
-        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), degeneracy_atol, maxiter)
+        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), stein_rtol * maximum(abs, X₀), maxiter)
         Z .+= X
         # we cannot directly multiply Z * V' into ΔA, because we have to
         # take the Hermitian part, and cannot apply project_hermitian! to
