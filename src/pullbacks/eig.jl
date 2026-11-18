@@ -120,7 +120,7 @@ end
         ΔA::AbstractMatrix, ΔDV, A, DV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
-        stein_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
+        complement_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
     )
 
 Adds the pullback from the truncated eigenvalue decomposition of `A` to `ΔA`, given the
@@ -139,13 +139,13 @@ of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degenera
 not small compared to `gauge_atol`.
 
 The contribution from outside the kept eigenvectors is summed as a series, until its terms are
-below `stein_rtol` relative to its first.
+below `complement_rtol` relative to its first.
 """
 function eig_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
-        stein_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
+        complement_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
         maxiter::Int = 100 # TODO: better default, depending on expected number of steps using quadratic convergence?
     )
 
@@ -170,7 +170,7 @@ function eig_trunc_pullback!(
     APᴴ = mul!(complex.(A'), ViG, (V * Dmat)', -1, 1)
     X₀ = iszerotangent(ΔV₊) ? APᴴ * Z : mul!(ΔV₊, APᴴ, Z, 1, 1)
     X₀ ./= D'
-    X = accelerative_smith_iteration!(X₀, similar(X₀), APᴴ, inv.(conj.(D)), stein_rtol * maximum(abs, X₀), maxiter)
+    X = accelerative_smith_iteration!(X₀, similar(X₀), APᴴ, inv.(conj.(D)), complement_rtol * maximum(abs, X₀), maxiter)
     Z .+= X
     if eltype(ΔA) <: Real
         ΔAc = mul!(APᴴ, Z, V') # recycle APᴴ
