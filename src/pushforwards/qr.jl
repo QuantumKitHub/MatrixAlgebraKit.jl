@@ -34,7 +34,7 @@ function qr_pushforward!(
         ΔA = copy(ΔA)
     end
 
-    ΔA₁ = view(ΔA, 1:p, :)
+    ΔA₁ = view(ΔA, :, 1:p)
     ΔA₂ = view(ΔA, :, (p + 1):n)
     Q₁ = view(Q, :, 1:p)
     R₁₁ = UpperTriangular(view(R, 1:p, 1:p))
@@ -51,8 +51,9 @@ function qr_pushforward!(
     rdiv!(ΔQ₁, R₁₁)
 
     Q₁ᴴΔQ₁ = Q₁' * ΔQ₁
-    M = rmul!(project_hermitian!(Q₁ᴴΔQ₁), 2)
-    diagview(M) ./= 2
+    M = project_hermitian!(Q₁ᴴΔQ₁)
+    _scale(i,j) = ifelse(i == j, 1, ifelse(i < j, 0, 2))
+    M .*= _scale.(1:size(M, 1), transpose(1:size(M, 1)))
     view(M, lowertriangularind(M)) .= zero(eltype(M))
     mul!(ΔR₁₁, M, R₁₁)
     mul!(ΔQ₁, Q₁, M, -1, 1)
