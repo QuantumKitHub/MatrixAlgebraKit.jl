@@ -37,6 +37,8 @@ function lq_pushforward!(
         ΔA = copy(ΔA)
     end
 
+    ΔA₁ = view(ΔA, 1:p, :)
+    ΔA₂ = view(ΔA, (p + 1):m, :)
     Q₁ = view(Q, 1:p, :)
     # Julia 1.13 `ldiv!` checks `istriu` on the parent, which
     # falls back to scalar indexing for a view of a GPU array
@@ -48,9 +50,9 @@ function lq_pushforward!(
     ΔL₂₁ = view(ΔL, (p + 1):m, 1:p)
 
     zero!(ΔL)
-    mul!(ΔL₂₁, view(ΔA, (p + 1):m, :), Q₁')
+    mul!(ΔL₂₁, ΔA₂, Q₁')
 
-    ΔQ === ΔA || copyto!(ΔQ₁, view(ΔA, 1:p, :))
+    ΔQ === ΔA || copyto!(ΔQ₁, ΔA₁)
     ldiv!(L₁₁, ΔQ₁)
 
     ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'

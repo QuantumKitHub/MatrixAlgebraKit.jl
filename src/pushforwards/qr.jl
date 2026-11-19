@@ -34,6 +34,8 @@ function qr_pushforward!(
         ΔA = copy(ΔA)
     end
 
+    ΔA₁ = view(ΔA, 1:p, :)
+    ΔA₂ = view(ΔA, :, (p + 1):n)
     Q₁ = view(Q, :, 1:p)
     R₁₁ = UpperTriangular(view(R, 1:p, 1:p))
     R₁₂ = view(R, 1:p, (p + 1):n)
@@ -43,9 +45,9 @@ function qr_pushforward!(
     ΔR₁₂ = view(ΔR, 1:p, (p + 1):n)
 
     zero!(ΔR)
-    mul!(ΔR₁₂, Q₁', view(ΔA, :, (p + 1):n))
+    mul!(ΔR₁₂, Q₁', ΔA₂)
 
-    ΔQ === ΔA || copyto!(ΔQ₁, view(ΔA, :, 1:p))
+    ΔQ === ΔA || copyto!(ΔQ₁, ΔA₁)
     rdiv!(ΔQ₁, R₁₁)
 
     Q₁ᴴΔQ₁ = Q₁' * ΔQ₁
