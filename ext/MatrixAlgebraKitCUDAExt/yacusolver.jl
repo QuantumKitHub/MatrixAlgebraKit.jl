@@ -396,7 +396,7 @@ for (bname, fname, elty, relty) in
 
             if length(U) == 0 && length(Vᴴ) == 0
                 jobz = 'N'
-                econ = 0
+                econ = 1
             else
                 jobz = 'V'
                 size(U, 1) == m ||
@@ -414,8 +414,9 @@ for (bname, fname, elty, relty) in
             length(S) == minmn ||
                 throw(DimensionMismatch("length mismatch between A and S"))
 
-            Ṽ = (jobz == 'V') ? similar(Vᴴ') : similar(Vᴴ, (n, n))
-            Ũ = (jobz == 'V') ? U : similar(U, (m, m))
+            Ṽ = (jobz == 'V') ? similar(Vᴴ') : similar(Vᴴ, (n, minmn))
+            Ũ = (jobz == 'V') ? U : similar(U, (m, minmn))
+
             lda = max(1, stride(A, 2))
             ldu = max(1, stride(Ũ, 2))
             ldv = max(1, stride(Ṽ, 2))
