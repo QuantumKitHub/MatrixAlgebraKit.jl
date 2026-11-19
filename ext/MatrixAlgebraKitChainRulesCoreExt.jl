@@ -148,7 +148,7 @@ for eig in (:eig, :eigh)
         function $(_make_eig_t_ne_pb)(A, DV, ind)
             function $eig_t_ne_pb(ΔDV)
                 ΔA = zero(A)
-                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, map(unthunk, ΔDV), ind)
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, map(unthunk, ChainRulesCore.backing(unthunk(ΔDV))), ind)
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function $eig_t_ne_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
