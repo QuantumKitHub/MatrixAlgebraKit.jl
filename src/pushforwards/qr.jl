@@ -52,9 +52,8 @@ function qr_pushforward!(
 
     Q₁ᴴΔQ₁ = Q₁' * ΔQ₁
     M = project_hermitian!(Q₁ᴴΔQ₁)
-    _scale(i, j) = ifelse(i == j, 1, ifelse(i < j, 0, 2))
+    _scale(i, j) = ifelse(i == j, 1, ifelse(i > j, 0, 2))
     M .*= _scale.(1:size(M, 1), transpose(1:size(M, 1)))
-    view(M, lowertriangularind(M)) .= zero(eltype(M))
     mul!(ΔR₁₁, M, R₁₁)
     mul!(ΔQ₁, Q₁, M, -1, 1)
     mul!(ΔR₁₂, mul!(Q₁ᴴΔQ₁, Q₁', ΔQ₁), R₁₂, -1, 1)

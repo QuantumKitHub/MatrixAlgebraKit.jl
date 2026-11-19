@@ -59,7 +59,6 @@ function lq_pushforward!(
     M = project_hermitian!(ΔQ₁Q₁ᴴ)
     _scale(i, j) = ifelse(i == j, 1, ifelse(i < j, 0, 2))
     M .*= _scale.(1:size(M, 1), transpose(1:size(M, 1)))
-    view(M, uppertriangularind(M)) .= zero(eltype(M))
     mul!(ΔL₁₁, L₁₁, M)
     mul!(ΔQ₁, M, Q₁, -1, 1)
     mul!(ΔL₂₁, L₂₁, mul!(ΔQ₁Q₁ᴴ, ΔQ₁, Q₁'), -1, 1)
