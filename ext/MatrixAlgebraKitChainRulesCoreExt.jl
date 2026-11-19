@@ -29,9 +29,9 @@ for qr_f in (:qr_compact, :qr_full)
         function ChainRulesCore.rrule(::typeof($qr_f!), A, QR, alg)
             Ac = copy_input($qr_f, A)
             QR = $(qr_f!)(Ac, QR, alg)
-            function qr_pullback(ΔQR)
+            function qr_pullback((ΔQ, ΔR))
                 ΔA = zero(A)
-                MatrixAlgebraKit.qr_pullback!(ΔA, A, QR, map(unthunk, ChainRulesCore.backing(unthunk(ΔQR))))
+                MatrixAlgebraKit.qr_pullback!(ΔA, A, QR, map(unthunk, (ΔQ, ΔR)))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function qr_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -61,9 +61,9 @@ for lq_f in (:lq_compact, :lq_full)
         function ChainRulesCore.rrule(::typeof($lq_f!), A, LQ, alg)
             Ac = copy_input($lq_f, A)
             LQ = $(lq_f!)(Ac, LQ, alg)
-            function lq_pullback(ΔLQ)
+            function lq_pullback((ΔL, ΔQ))
                 ΔA = zero(A)
-                MatrixAlgebraKit.lq_pullback!(ΔA, A, LQ, map(unthunk, ChainRulesCore.backing(unthunk(ΔLQ))))
+                MatrixAlgebraKit.lq_pullback!(ΔA, A, LQ, map(unthunk, (ΔL, ΔQ)))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function lq_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -107,9 +107,9 @@ for eig in (:eig, :eigh)
         function ChainRulesCore.rrule(::typeof($eig_f!), A, DV, alg)
             Ac = copy_input($eig_f, A)
             DV = $(eig_f!)(Ac, DV, alg)
-            function $eig_pb(ΔDV)
+            function $eig_pb((ΔD, ΔV))
                 ΔA = zero(A)
-                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, map(unthunk, ChainRulesCore.backing(unthunk(ΔDV))))
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, map(unthunk, (ΔD, ΔV)))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function $eig_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -125,9 +125,8 @@ for eig in (:eig, :eigh)
             return (DV′..., ϵ), $(_make_eig_t_pb)(A, DV, ind)
         end
         function $(_make_eig_t_pb)(A, DV, ind)
-            function $eig_t_pb(ΔDVϵ)
+            function $eig_t_pb((ΔD, ΔV, Δϵ))
                 ΔA = zero(A)
-                ΔD, ΔV, Δϵ = ΔDVϵ
                 if !MatrixAlgebraKit.iszerotangent(Δϵ) && !iszero(unthunk(Δϵ))
                     throw(ArgumentError("Pullback for eig_trunc! does not yet support non-zero tangent for the truncation error"))
                 end
@@ -146,9 +145,9 @@ for eig in (:eig, :eigh)
             return DV′, $(_make_eig_t_ne_pb)(A, DV, ind)
         end
         function $(_make_eig_t_ne_pb)(A, DV, ind)
-            function $eig_t_ne_pb(ΔDV)
+            function $eig_t_ne_pb((ΔD, ΔV))
                 ΔA = zero(A)
-                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, map(unthunk, ChainRulesCore.backing(unthunk(ΔDV))), ind)
+                MatrixAlgebraKit.$eig_pb!(ΔA, A, DV, map(unthunk, (ΔD, ΔV)), ind)
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function $eig_t_ne_pb(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -177,9 +176,9 @@ for svd_f in (:svd_compact, :svd_full)
         function ChainRulesCore.rrule(::typeof($svd_f!), A, USVᴴ, alg)
             Ac = copy_input($svd_f, A)
             USVᴴ = $(svd_f!)(Ac, USVᴴ, alg)
-            function svd_pullback(ΔUSVᴴ)
+            function svd_pullback((ΔU, ΔS, ΔVᴴ))
                 ΔA = zero(A)
-                MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, map(unthunk, ChainRulesCore.backing(unthunk(ΔUSVᴴ))))
+                MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, map(unthunk, (ΔU, ΔS, ΔVᴴ)))
                 return NoTangent(), ΔA, ZeroTangent(), NoTangent()
             end
             function svd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -198,9 +197,8 @@ function ChainRulesCore.rrule(::typeof(svd_trunc!), A, USVᴴ, alg::TruncatedAlg
     return (USVᴴ′..., ϵ), _make_svd_trunc_pullback(A, USVᴴ, ind)
 end
 function _make_svd_trunc_pullback(A, USVᴴ, ind)
-    function svd_trunc_pullback(ΔUSVᴴϵ)
+    function svd_trunc_pullback((ΔU, ΔS, ΔVᴴ, Δϵ))
         ΔA = zero(A)
-        ΔU, ΔS, ΔVᴴ, Δϵ = ΔUSVᴴϵ
         if !MatrixAlgebraKit.iszerotangent(Δϵ) && !iszero(unthunk(Δϵ))
             throw(ArgumentError("Pullback for svd_trunc! does not yet support non-zero tangent for the truncation error"))
         end
@@ -220,9 +218,9 @@ function ChainRulesCore.rrule(::typeof(svd_trunc_no_error!), A, USVᴴ, alg::Tru
     return USVᴴ′, _make_svd_trunc_no_error_pullback(A, USVᴴ, ind)
 end
 function _make_svd_trunc_no_error_pullback(A, USVᴴ, ind)
-    function svd_trunc_pullback(ΔUSVᴴ)
+    function svd_trunc_pullback((ΔU, ΔS, ΔVᴴ))
         ΔA = zero(A)
-        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, map(unthunk, ChainRulesCore.backing(unthunk(ΔUSVᴴ))), ind)
+        MatrixAlgebraKit.svd_pullback!(ΔA, A, USVᴴ, map(unthunk, (ΔU, ΔS, ΔVᴴ)), ind)
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function svd_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -247,9 +245,9 @@ end
 function ChainRulesCore.rrule(::typeof(left_polar!), A, WP, alg)
     Ac = copy_input(left_polar, A)
     WP = left_polar!(Ac, WP, alg)
-    function left_polar_pullback(ΔWP)
+    function left_polar_pullback((ΔW, ΔP))
         ΔA = zero(A)
-        MatrixAlgebraKit.left_polar_pullback!(ΔA, A, WP, map(unthunk, ChainRulesCore.backing(unthunk(ΔWP))))
+        MatrixAlgebraKit.left_polar_pullback!(ΔA, A, WP, map(unthunk, (ΔW, ΔP)))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function left_polar_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
@@ -261,9 +259,9 @@ end
 function ChainRulesCore.rrule(::typeof(right_polar!), A, PWᴴ, alg)
     Ac = copy_input(left_polar, A)
     PWᴴ = right_polar!(Ac, PWᴴ, alg)
-    function right_polar_pullback(ΔPWᴴ)
+    function right_polar_pullback((ΔP, ΔWᴴ))
         ΔA = zero(A)
-        MatrixAlgebraKit.right_polar_pullback!(ΔA, A, PWᴴ, map(unthunk, ChainRulesCore.backing(unthunk(ΔPWᴴ))))
+        MatrixAlgebraKit.right_polar_pullback!(ΔA, A, PWᴴ, map(unthunk, (ΔP, ΔWᴴ)))
         return NoTangent(), ΔA, ZeroTangent(), NoTangent()
     end
     function right_polar_pullback(::Tuple{ZeroTangent, ZeroTangent}) # is this extra definition useful?
