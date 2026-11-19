@@ -157,7 +157,7 @@ function initialize_output(::typeof(batched_svd_vals!), A::AbstractArray{T, 3}, 
 end
 
 for f! in (:gesdd_batched!, :gesvd_batched!, :gesvdj_batched!, :gesvdx_batched!)
-    @eval $f!(driver::Driver, args...) = throw(ArgumentError("$driver does not provide $($(f!))"))
+    @eval $f!(driver::Driver, args...; kwargs...) = throw(ArgumentError("$driver does not provide $($(f!))"))
 end
 
 """

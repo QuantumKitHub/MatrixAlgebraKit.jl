@@ -59,6 +59,8 @@ function svd_pushforward!(
             end
         end
         if eltype(U) <: Complex && !iszerotangent(ΔU) && !iszerotangent(ΔVᴴ) # fix gauge for `gaugefix!` compatibility
+            ΔU₁ = view(ΔU, :, 1:r)
+            ΔV₁ᴴ = view(ΔVᴴ, 1:r, :)
             _, I = findmax(abs, U₁; dims = 1)
             infinitesimal_phases = imag.(ΔU₁[I] .* inv_safe.(U₁[I]))
             ΔU₁ .-= im .* U₁ .* infinitesimal_phases
