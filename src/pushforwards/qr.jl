@@ -45,7 +45,6 @@ function qr_pushforward!(
     ΔR₁₂ = view(ΔR, 1:p, (p + 1):n)
 
     zero!(ΔR)
-    mul!(ΔR₁₂, Q₁', ΔA₂)
 
     ΔQ === ΔA || copyto!(ΔQ₁, ΔA₁)
     rdiv!(ΔQ₁, R₁₁)
@@ -53,10 +52,10 @@ function qr_pushforward!(
     Q₁ᴴΔQ₁ = Q₁' * ΔQ₁
     M = project_hermitian!(Q₁ᴴΔQ₁)
     _scale(i, j) = ifelse(i == j, 1, ifelse(i > j, 0, 2))
-    M .*= _scale.(1:size(M, 1), transpose(1:size(M, 1)))
+    M .*= _scale.(1:p, transpose(1:p))
     mul!(ΔR₁₁, M, R₁₁)
     mul!(ΔQ₁, Q₁, M, -1, 1)
-    mul!(ΔR₁₂, mul!(Q₁ᴴΔQ₁, Q₁', ΔQ₁), R₁₂, -1, 1)
+    mul!(ΔR₁₂, Q₁', ΔA₂ - ΔQ₁ * R₁₂, 1, 1)
 
     zero!(view(ΔQ, :, (p + 1):size(ΔQ, 2)))
     if p == minmn && size(Q, 2) > minmn

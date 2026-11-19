@@ -50,7 +50,6 @@ function lq_pushforward!(
     ΔL₂₁ = view(ΔL, (p + 1):m, 1:p)
 
     zero!(ΔL)
-    mul!(ΔL₂₁, ΔA₂, Q₁')
 
     ΔQ === ΔA || copyto!(ΔQ₁, ΔA₁)
     ldiv!(L₁₁, ΔQ₁)
@@ -58,10 +57,10 @@ function lq_pushforward!(
     ΔQ₁Q₁ᴴ = ΔQ₁ * Q₁'
     M = project_hermitian!(ΔQ₁Q₁ᴴ)
     _scale(i, j) = ifelse(i == j, 1, ifelse(i < j, 0, 2))
-    M .*= _scale.(1:size(M, 1), transpose(1:size(M, 1)))
+    M .*= _scale.(1:p, transpose(1:p))
     mul!(ΔL₁₁, L₁₁, M)
     mul!(ΔQ₁, M, Q₁, -1, 1)
-    mul!(ΔL₂₁, L₂₁, mul!(ΔQ₁Q₁ᴴ, ΔQ₁, Q₁'), -1, 1)
+    mul!(ΔL₂₁, ΔA₂ - L₂₁ * ΔQ₁, Q₁', 1, 1)
 
     zero!(view(ΔQ, (p + 1):size(ΔQ, 1), :))
     if p == minmn && size(Q, 1) > minmn
