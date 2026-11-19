@@ -121,7 +121,8 @@ end
     eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
+        complement_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
     )
 
 Adds the pullback from the truncated Hermitian eigenvalue decomposition of `A` to `ΔA`,
@@ -138,12 +139,16 @@ For this method to work correctly, it is also assumed that the remaining eigenva
 A warning will be printed if the cotangents are not gauge-invariant, i.e. if the restriction
 of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degeneracy_atol`, is
 not small compared to `gauge_atol`.
+
+The contribution from outside the kept eigenvectors is solved by conjugate gradients, each
+column to an error of about `complement_rtol` relative to its right-hand side.
 """
 function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
-        maxiter::Int = 100 # TODO: better default, depending on expected number of steps using quadratic convergence?
+        complement_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
+        maxiter::Int = 10 * size(ΔA, 1) # conjugate-gradient iterations
     )
 
     # Basic size checks and determination
@@ -162,13 +167,16 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV₊)
         X₀ = rdiv!(ΔV₊, Diagonal(D))
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
-        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), degeneracy_atol, maxiter)
+        X = hermitian_stein_cg!(
+            X₀, nothing, () -> AP, inv.(D), complement_rtol, maxiter;
+            cost_apply = n^2, cost_form = 0, cost_square = n^3 + n^2 * p
+        )
         Z .+= X
         # we cannot directly multiply Z * V' into ΔA, because we have to
         # take the Hermitian part, and cannot apply project_hermitian! to
         # the current contents of ΔA
         # TODO: add an `add_project_hermitian!`
-        # recycle AP's storage, but overwrite it: `accelerative_smith_iteration!` may leave a power of AP in it
+        # recycle AP's storage
         ΔA′ = project_hermitian!(mul!(AP, Z, V'))
         ΔA .+= ΔA′
     else
