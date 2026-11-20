@@ -36,7 +36,7 @@ function test_enzyme_left_polar(
             A = instantiate_rank_deficient_matrix(T, sz)
             test_reverse(polar_P_wrapper, RT, (left_polar, Const), (A, TA), (alg, Const); atol, rtol, fdm = rank_deficient_fdm)
             test_forward(polar_P_wrapper, RT, (left_polar, Const), (A, TA), (alg, Const); atol, rtol, fdm = rank_deficient_fdm)
-            # TODO: Enzyme can't diff through complex BLAS gemm 
+            # TODO: Enzyme can't diff through complex BLAS gemm
             if eltype(T) <: Real
                 L, R = rank_deficient_factors(T, sz)
                 for wrapper in (left_polar_rank_deficient_wrapper, left_polar!_rank_deficient_wrapper)
@@ -74,7 +74,7 @@ function test_enzyme_right_polar(
             A = instantiate_rank_deficient_matrix(T, sz)
             test_reverse(polar_P_wrapper, RT, (right_polar, Const), (A, TA), (alg, Const); atol, rtol, fdm = rank_deficient_fdm)
             test_forward(polar_P_wrapper, RT, (right_polar, Const), (A, TA), (alg, Const); atol, rtol, fdm = rank_deficient_fdm)
-            # TODO: Enzyme can't diff through complex BLAS gemm 
+            # TODO: Enzyme can't diff through complex BLAS gemm
             if eltype(T) <: Real
                 L, R = rank_deficient_factors(T, sz)
                 for wrapper in (right_polar_rank_deficient_wrapper, right_polar!_rank_deficient_wrapper)
