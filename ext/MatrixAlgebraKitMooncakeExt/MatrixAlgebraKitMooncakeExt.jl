@@ -685,7 +685,7 @@ function Mooncake.frule!!(::Dual{typeof(svd_vals)}, A_dA::Dual, alg_dalg::Dual)
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
+function _rrule_svd_trunc!(A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
     alg = Mooncake.primal(alg_dalg)
@@ -714,10 +714,12 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
         zero!(dU′)
         zero!(dS′)
         zero!(dVᴴ′)
-        return NoRData(), NoRData(), NoRData()
+        return NoRData(), NoRData(), NoRData(), NoRData()
     end
     return output_codual, svd_trunc_adjoint
 end
+Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual) = _rrule_svd_trunc!(A_dA, USVᴴ_dUSVᴴ, alg_dalg)
+Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm{<:MatrixAlgebraKit.GPU_Randomized}}) = _rrule_svd_trunc!(A_dA, USVᴴ_dUSVᴴ, alg_dalg)
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
     # unpack variables
     A, dA = arrayify(A_dA)
@@ -759,7 +761,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc!)}, A_dA::CoDual, USVᴴ_dUS
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc), Any, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual)
+function _rrule_svd_trunc(A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
     alg = Mooncake.primal(alg_dalg)
@@ -780,6 +782,8 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
     end
     return output_codual, svd_trunc_adjoint
 end
+Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual) = _rrule_svd_trunc(A_dA, alg_dalg)
+Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm{<:MatrixAlgebraKit.GPU_Randomized}}) = _rrule_svd_trunc(A_dA, alg_dalg)
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
     # unpack variables
     A, dA = arrayify(A_dA)
@@ -806,7 +810,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc)}, A_dA::CoDual, alg_dalg::C
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error!), Any, Any, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
+function _rrule_svd_trunc_no_error!(A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
     alg = Mooncake.primal(alg_dalg)
@@ -836,10 +840,12 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
         zero!(dU′)
         zero!(dS′)
         zero!(dVᴴ′)
-        return NoRData(), NoRData(), NoRData()
+        return NoRData(), NoRData(), NoRData(), NoRData()
     end
     return output_codual, svd_trunc_adjoint
 end
+Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual) = _rrule_svd_trunc_no_error!(A_dA, USVᴴ_dUSVᴴ, alg_dalg)
+Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm{<:MatrixAlgebraKit.GPU_Randomized}}) = _rrule_svd_trunc_no_error!(A_dA, USVᴴ_dUSVᴴ, alg_dalg)
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, USVᴴ_dUSVᴴ::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
     # unpack variables
     A, dA = arrayify(A_dA)
@@ -877,7 +883,7 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error!)}, A_dA::CoDual, U
 end
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc_no_error), Any, MatrixAlgebraKit.AbstractAlgorithm}
-function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual)
+function _rrule_svd_trunc_no_error(A_dA::CoDual, alg_dalg::CoDual)
     # compute primal
     A, dA = arrayify(A_dA)
     alg = Mooncake.primal(alg_dalg)
@@ -897,6 +903,8 @@ function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, al
     end
     return output_codual, svd_trunc_adjoint
 end
+Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual) = _rrule_svd_trunc_no_error(A_dA, alg_dalg)
+Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm{<:MatrixAlgebraKit.GPU_Randomized}}) = _rrule_svd_trunc_no_error(A_dA, alg_dalg)
 function Mooncake.rrule!!(::CoDual{typeof(svd_trunc_no_error)}, A_dA::CoDual, alg_dalg::CoDual{<:TruncatedAlgorithm})
     # unpack variables
     A, dA = arrayify(A_dA)

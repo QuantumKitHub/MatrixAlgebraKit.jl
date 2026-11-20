@@ -26,5 +26,9 @@ for T in (BLASFloats..., GenericFloats...), n in (17, m, 23)
             AT = Diagonal{T, CuVector{T}}
             TestSuite.test_mooncake_svd(AT, m; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
         end
+        k = 5
+        p = min(m, n) - k - 2
+        alg = MatrixAlgebraKit.TruncatedAlgorithm(CUSOLVER_Randomized(; k, p, niters = 20), truncrank(k))
+        TestSuite.test_mooncake_svd_trunc_randomized(CuMatrix{T}, (m, n), alg; atol = m * n * TestSuite.precision(T), rtol = m * n * TestSuite.precision(T))
     end
 end
