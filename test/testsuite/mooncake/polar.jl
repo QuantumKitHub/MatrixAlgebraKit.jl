@@ -37,6 +37,21 @@ function test_mooncake_left_polar(
             rng, call_and_zero!, left_polar!, A, alg;
             output_tangent, atol, rtol, is_primitive = false
         )
+
+        A = instantiate_rank_deficient_matrix(T, (m, n))
+        Mooncake.TestUtils.test_rule(
+            rng, polar_P_wrapper, left_polar, A, alg;
+            atol, rtol, is_primitive = false
+        )
+        L, R = rank_deficient_factors(T, (m, n))
+        Mooncake.TestUtils.test_rule(
+            rng, left_polar_rank_deficient_wrapper, left_polar, L, R, alg;
+            atol, rtol, is_primitive = false
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, left_polar!_rank_deficient_wrapper, left_polar!, L, R, alg;
+            atol, rtol, is_primitive = false
+        )
     end
 end
 
@@ -65,6 +80,21 @@ function test_mooncake_right_polar(
         Mooncake.TestUtils.test_rule(
             rng, call_and_zero!, right_polar!, A, alg;
             output_tangent, atol, rtol, is_primitive = false
+        )
+
+        A = instantiate_rank_deficient_matrix(T, (m, n))
+        Mooncake.TestUtils.test_rule(
+            rng, polar_P_wrapper, right_polar, A, alg;
+            atol, rtol, is_primitive = false
+        )
+        L, R = rank_deficient_factors(T, (m, n))
+        Mooncake.TestUtils.test_rule(
+            rng, right_polar_rank_deficient_wrapper, right_polar, L, R, alg;
+            atol, rtol, is_primitive = false
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, right_polar!_rank_deficient_wrapper, right_polar!, L, R, alg;
+            atol, rtol, is_primitive = false
         )
     end
 end

@@ -9,7 +9,7 @@ using MatrixAlgebraKit: default_qr_algorithm, default_lq_algorithm, default_svd_
 import MatrixAlgebraKit: geqrf!, ungqr!, unmqr!, gesvd!, gesdd!, gesvdx!, gesvdj!
 import MatrixAlgebraKit: gesvdj_batched!, gesdd_batched!, gesvd_batched!, gesvdx_batched!
 import MatrixAlgebraKit: heevj!, heevd!, heev!, heevx!
-import MatrixAlgebraKit: _sylvester, svd_rank, svd_pullback!
+import MatrixAlgebraKit: svd_rank, svd_pullback!
 using AMDGPU
 using LinearAlgebra
 using LinearAlgebra: BlasFloat
@@ -163,11 +163,6 @@ function MatrixAlgebraKit._mul_herm!(C::StridedROCMatrix{T}, A::StridedROCMatrix
     mul!(C, A, A')
     project_hermitian!(C)
     return C
-end
-
-function _sylvester(A::AnyROCMatrix, B::AnyROCMatrix, C::AnyROCMatrix)
-    hX = sylvester(collect(A), collect(B), collect(C))
-    return ROCArray(hX)
 end
 
 end
