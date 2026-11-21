@@ -173,3 +173,44 @@ function test_mooncake_svd_trunc(
         end
     end
 end
+
+"""
+    test_mooncake_svd_trunc_randomized(T, sz, alg; rng, atol, rtol)
+
+Test the Mooncake reverse-mode AD rules for `svd_trunc`, `svd_trunc_no_error`, and their
+in-place variants, using a randomized truncated SVD algorithm `alg`, which only computes the
+leading `k` singular triplets. The randomized algorithm should be configured with enough
+power iterations to compute these accurately.
+"""
+function test_mooncake_svd_trunc_randomized(
+        T, sz, alg::TruncatedAlgorithm;
+        rng = TestSuite.rng, atol::Real = 0, rtol::Real = precision(T)
+    )
+    return @testset "svd_trunc randomized $(alg.alg)" begin
+        A = instantiate_matrix(T, sz)
+        _, USVᴴtrunc, _, ΔUSVᴴtrunc_arrays = ad_svd_trunc_setup(A, alg)
+        ΔUSVᴴtrunc = Mooncake.primal_to_tangent!!(Mooncake.zero_tangent(USVᴴtrunc), ΔUSVᴴtrunc_arrays)
+
+        Mooncake.TestUtils.test_rule(
+            rng, svd_trunc_no_error, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴtrunc, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, call_and_zero!, svd_trunc_no_error!, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴtrunc, atol, rtol, is_primitive = false
+        )
+
+        USVᴴϵ = svd_trunc(A, alg)
+        Δϵ = Mooncake.zero_tangent(USVᴴϵ[end])
+        ΔUSVᴴϵtrunc = (ΔUSVᴴtrunc..., Δϵ)
+
+        Mooncake.TestUtils.test_rule(
+            rng, svd_trunc, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴϵtrunc, atol, rtol
+        )
+        Mooncake.TestUtils.test_rule(
+            rng, call_and_zero!, svd_trunc!, A, alg;
+            mode = Mooncake.ReverseMode, output_tangent = ΔUSVᴴϵtrunc, atol, rtol, is_primitive = false
+        )
+    end
+end
