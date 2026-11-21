@@ -43,12 +43,12 @@ is_leading_index(ind::AbstractRange, p::Int) = ind == 1:p
 is_leading_index(ind::AbstractVector, p::Int) = length(ind) == p && all(ind .== 1:p)
 
 """
-    accelerative_smith_iteration!(X, Xₙ, G, w, atol, maxiter)
+    accelerative_smith_iteration!(X, Xₙ, G, w, rtol, maxiter)
 
 Solve `X = B + G * X * Diagonal(w)` by summing the Neumann series
 `X = Σₖ Gᵏ * B * Diagonal(w)ᵏ` by doubling (Smith's method), i.e. by repeatedly adding
-`G^(2ʲ) * X * Diagonal(w)^(2ʲ)` to `X` until the norm of that increment drops below `atol`,
-for at most `maxiter` steps.
+`G^(2ʲ) * X * Diagonal(w)^(2ʲ)` to `X` until that increment drops below `rtol` relative to `B`,
+column by column (largest entries), for at most `maxiter` steps.
 
 On entry, `X` contains `B`, and it is overwritten with the result. `Xₙ` is used as a buffer,
 and `G` and `w` are overwritten. `w` is normalized such that `maximum(abs, w) == 1`, so that
@@ -56,14 +56,18 @@ squaring it can only shrink it; `G` is scaled by the inverse factor to compensat
 
 Reference: https://doi.org/10.1016/j.aml.2009.01.012.
 """
-function accelerative_smith_iteration!(X, Xₙ, G, w, atol, maxiter)
+function accelerative_smith_iteration!(X, Xₙ, G, w, rtol, maxiter)
+    # the columns are independent: sum the series for normalized right-hand sides, so that `rtol` holds per column
+    nb = maximum(abs, X; dims = 1)
+    nb = ifelse.(iszero.(nb), one(eltype(nb)), nb)
+    X ./= nb
     Gₙ = similar(G)
     wmax = maximum(abs, w)
     w ./= wmax
     G .*= wmax
     for k in 1:maxiter
         Xₙ = rmul!(mul!(Xₙ, G, X), Diagonal(w))
-        if maximum(abs, Xₙ) < atol
+        if maximum(abs, Xₙ) < rtol
             break
         end
         X .+= Xₙ
@@ -75,7 +79,7 @@ function accelerative_smith_iteration!(X, Xₙ, G, w, atol, maxiter)
         Gₙ = mul!(Gₙ, G, G)
         G, Gₙ = Gₙ, G
     end
-    return X
+    return X .*= nb
 end
 
 """
