@@ -41,7 +41,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Changed
 
 - CUSOLVER QR library calls are wrapped directly in the CUDA extension ([#320](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/320)).
-- JET code-quality tests are restored, and `diagview(::AbstractVector)` now throws ([#327](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/327), [#332](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/332)).
+- JET code-quality tests are restored ([#327](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/327), [#332](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/332)).
 
 ### Deprecated
 
