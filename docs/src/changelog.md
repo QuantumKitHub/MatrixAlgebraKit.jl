@@ -18,7 +18,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.14...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.15...HEAD)
 
 ### Added
 
@@ -31,6 +31,31 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 ### Performance
+
+## [0.6.15](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.14...v0.6.15) - 2026-11-24
+
+### Added
+
+- `eigh` functions accept a `check_hermiticity = false` algorithm keyword to skip the Hermiticity check on the input ([#321](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/321)).
+
+### Changed
+
+- CUSOLVER QR library calls are wrapped directly in the CUDA extension ([#320](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/320)).
+- JET code-quality tests are restored ([#327](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/327), [#332](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/332)).
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- ChainRules pullbacks for QR, LQ, and eigendecompositions preserve tuple cotangent types ([#329](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/329)).
+- Batched CUDA SVD allocates `V` correctly ([#325](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/325)).
+- CUDA Jacobi `svd_vals` uses economy mode and allocates smaller workspace ([#330](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/330)).
+
+### Performance
+
+- Fewer allocations in LQ and QR pushforwards ([#326](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/pull/326)).
 
 ## [0.6.14](https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/compare/v0.6.13...v0.6.14) - 2026-10-31
 
