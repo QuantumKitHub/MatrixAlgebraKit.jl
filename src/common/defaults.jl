@@ -41,8 +41,8 @@ default_pullback_rank_atol(A::Diagonal) = default_pullback_rank_atol(diagview(A)
     default_pullback_complement_atol(S, ΔU, ΔS, ΔVᴴ)
 
 Default tolerance for the series that sums the contribution from outside the kept vectors in
-the truncated pullbacks. The terms of that series have the units of `ΔA`, so the tolerance is
-set by the cotangents in those units: `ΔD` and `ΔV ./ transpose(D)`, or `ΔS`, `ΔU ./ transpose(S)`
+the truncated pullbacks. The terms of that series scale like `ΔA`, so the tolerance is set by
+the cotangents that scale like `ΔA`: `ΔD` and `ΔV ./ transpose(D)`, or `ΔS`, `ΔU ./ transpose(S)`
 and `ΔVᴴ ./ S`.
 """
 function default_pullback_complement_atol(D, ΔD, ΔV)
