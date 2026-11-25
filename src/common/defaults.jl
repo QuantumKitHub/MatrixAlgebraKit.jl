@@ -37,6 +37,31 @@ default_pullback_rank_atol(A) = eps(norm(A, Inf))^(3 / 4)
 default_pullback_rank_atol(A::Diagonal) = default_pullback_rank_atol(diagview(A))
 
 """
+    default_pullback_complement_atol(D, ΔD, ΔV)
+    default_pullback_complement_atol(S, ΔU, ΔS, ΔVᴴ)
+
+Default tolerance for the series that sums the contribution from outside the kept vectors in
+the truncated pullbacks. The terms of that series have the units of `ΔA`, so the tolerance is
+set by the cotangents in those units: `ΔD` and `ΔV ./ transpose(D)`, or `ΔS`, `ΔU ./ transpose(S)`
+and `ΔVᴴ ./ S`.
+"""
+function default_pullback_complement_atol(D, ΔD, ΔV)
+    d = diagview(D)
+    x = zero(real(float(eltype(d))))
+    iszerotangent(ΔD) || (x = max(x, norm(ΔD, Inf)))
+    iszerotangent(ΔV) || (x = max(x, norm(ΔV ./ transpose(d), Inf)))
+    return eps(typeof(x))^(3 / 4) * x
+end
+function default_pullback_complement_atol(S, ΔU, ΔS, ΔVᴴ)
+    s = diagview(S)
+    x = zero(real(float(eltype(s))))
+    iszerotangent(ΔS) || (x = max(x, norm(ΔS, Inf)))
+    iszerotangent(ΔU) || (x = max(x, norm(ΔU ./ transpose(s), Inf)))
+    iszerotangent(ΔVᴴ) || (x = max(x, norm(ΔVᴴ ./ s, Inf)))
+    return eps(typeof(x))^(3 / 4) * x
+end
+
+"""
     default_hermitian_tol(A)
 
 Default tolerance for deciding to warn if the provided `A` is not hermitian.

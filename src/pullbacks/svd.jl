@@ -202,7 +202,7 @@ end
         rank_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
-        complement_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
+        complement_atol::Real = default_pullback_complement_atol(USVᴴ[2], ΔUSVᴴ...)
     )
 
 Adds the pullback from the truncated SVD of `A` to `ΔA`, given the output `USVᴴ` and the
@@ -220,14 +220,14 @@ anti-hermitian part of `U' * ΔU + Vᴴ * ΔVᴴ'`, restricted to rows `i` and c
 which `abs(S[i] - S[j]) < degeneracy_atol`, is not small compared to `gauge_atol`.
 
 The contribution from outside the kept singular vectors is summed as a series, until its terms
-are below `complement_rtol` relative to its first, column by column.
+are below `complement_atol`.
 """
 function svd_trunc_pullback!(
         ΔA::AbstractMatrix, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ...),
-        complement_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
+        complement_atol::Real = default_pullback_complement_atol(USVᴴ[2], ΔUSVᴴ...),
         maxiter::Int = 100 # TODO: better default, depending on expected number of steps using quadratic convergence?
     )
     # Extract the SVD components
@@ -262,7 +262,7 @@ function svd_trunc_pullback!(
         if m ≤ n
             X = rmul!(AP * Y₀ᴴ', Diagonal(S⁻¹))
             X .+= X₀
-            X = accelerative_smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, complement_rtol, maxiter) # recycle X₀
+            X = accelerative_smith_iteration!(X, X₀, AP * AP', S⁻¹ .^ 2, complement_atol, maxiter) # recycle X₀
             Yᴴ = lmul!(Diagonal(S⁻¹), X' * AP)
             Yᴴ .+= Y₀ᴴ
             ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
@@ -270,7 +270,7 @@ function svd_trunc_pullback!(
         else
             Y = rmul!(AP' * X₀, Diagonal(S⁻¹))
             Y .+= Y₀ᴴ'
-            Y = accelerative_smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, complement_rtol, maxiter)
+            Y = accelerative_smith_iteration!(Y, similar(Y), AP' * AP, S⁻¹ .^ 2, complement_atol, maxiter)
             X = rmul!(AP * Y, Diagonal(S⁻¹))
             X .+= X₀
             ΔA = mul!(ΔA, X, Vᴴ, 1, 1)
@@ -284,10 +284,11 @@ function svd_trunc_pullback!(
         ΔA::Diagonal, A, USVᴴ, ΔUSVᴴ;
         rank_atol::Real = 0,
         degeneracy_atol::Real = default_pullback_rank_atol(USVᴴ[2]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔUSVᴴ[1], ΔUSVᴴ[3]),
+        complement_atol::Real = default_pullback_complement_atol(USVᴴ[2], ΔUSVᴴ...)
     )
     ΔA_full = zero!(similar(ΔA, size(ΔA)))
-    ΔA_full = svd_trunc_pullback!(ΔA_full, A, USVᴴ, ΔUSVᴴ; rank_atol, degeneracy_atol, gauge_atol)
+    ΔA_full = svd_trunc_pullback!(ΔA_full, A, USVᴴ, ΔUSVᴴ; rank_atol, degeneracy_atol, gauge_atol, complement_atol)
     diagview(ΔA) .+= diagview(ΔA_full)
     return ΔA
 end

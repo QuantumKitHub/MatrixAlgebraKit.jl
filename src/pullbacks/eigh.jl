@@ -122,7 +122,7 @@ end
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
-        complement_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4)
+        complement_atol::Real = default_pullback_complement_atol(DV[1], ΔDV...)
     )
 
 Adds the pullback from the truncated Hermitian eigenvalue decomposition of `A` to `ΔA`,
@@ -141,13 +141,13 @@ of `V' * ΔV` to rows `i` and columns `j` for which `abs(D[i] - D[j]) < degenera
 not small compared to `gauge_atol`.
 
 The contribution from outside the kept eigenvectors is summed as a series, until its terms are
-below `complement_rtol` relative to its first, column by column.
+below `complement_atol`.
 """
 function eigh_trunc_pullback!(
         ΔA::AbstractMatrix, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
         gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
-        complement_rtol::Real = eps(real(eltype(ΔA)))^(3 / 4),
+        complement_atol::Real = default_pullback_complement_atol(DV[1], ΔDV...),
         maxiter::Int = 100 # TODO: better default, depending on expected number of steps using quadratic convergence?
     )
 
@@ -167,7 +167,7 @@ function eigh_trunc_pullback!(
     if !iszerotangent(ΔV₊)
         X₀ = rdiv!(ΔV₊, Diagonal(D))
         AP = mul!(copy(A), V * Dmat, V', -1, 1)
-        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), complement_rtol, maxiter)
+        X = accelerative_smith_iteration!(X₀, similar(X₀), AP, inv.(D), complement_atol, maxiter)
         Z .+= X
         # we cannot directly multiply Z * V' into ΔA, because we have to
         # take the Hermitian part, and cannot apply project_hermitian! to
@@ -185,10 +185,11 @@ end
 function eigh_trunc_pullback!(
         ΔA::Diagonal, A, DV, ΔDV;
         degeneracy_atol::Real = default_pullback_rank_atol(DV[1]),
-        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2])
+        gauge_atol::Real = default_pullback_gauge_atol(ΔDV[2]),
+        complement_atol::Real = default_pullback_complement_atol(DV[1], ΔDV...)
     )
     ΔA_full = zero!(similar(ΔA, size(ΔA)))
-    ΔA_full = eigh_trunc_pullback!(ΔA_full, A, DV, ΔDV; degeneracy_atol, gauge_atol)
+    ΔA_full = eigh_trunc_pullback!(ΔA_full, A, DV, ΔDV; degeneracy_atol, gauge_atol, complement_atol)
     diagview(ΔA) .+= diagview(ΔA_full)
     return ΔA
 end
