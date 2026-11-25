@@ -9,7 +9,7 @@ using MatrixAlgebraKit: qr_null_pullback!, lq_null_pullback!
 using MatrixAlgebraKit: qr_null_pushforward!, lq_null_pushforward!
 using MatrixAlgebraKit: eig_pullback!, eigh_pullback!, eig_vals_pullback!, eigh_vals_pullback!
 using MatrixAlgebraKit: eig_pushforward!, eigh_pushforward!, eig_vals_pushforward!, eigh_vals_pushforward!
-using MatrixAlgebraKit: svd_pullback!, svd_vals_pullback!
+using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!, svd_vals_pullback!
 using MatrixAlgebraKit: svd_pushforward!, svd_vals_pushforward!
 using MatrixAlgebraKit: left_polar_pullback!, right_polar_pullback!
 using MatrixAlgebraKit: left_polar_pushforward!, right_polar_pushforward!
@@ -347,6 +347,40 @@ function EnzymeRules.reverse(
     USVᴴval = something(cache_USVᴴ, USVᴴ.val)
     if !isa(A, Const)
         svd_pullback!(A.dval, Aval, USVᴴval, dUSVᴴ, ind)
+    end
+    !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
+    return (nothing, nothing, nothing)
+end
+
+
+function EnzymeRules.augmented_primal(
+        config::EnzymeRules.RevConfigWidth{1},
+        func::Const{typeof(svd_trunc_no_error!)},
+        ::Type{RT},
+        A::Annotation,
+        USVᴴ::Annotation{Tuple{TU, TS, TVᴴ}},
+        alg::Const{<:MatrixAlgebraKit.TruncatedAlgorithm{<:MatrixAlgebraKit.GPU_Randomized}},
+    ) where {RT, TU, TS, TVᴴ}
+    Ac = isa(A, Const) ? nothing : copy(A.val)
+    USVᴴ′ = svd_trunc_no_error!(A.val, USVᴴ.val, alg.val)
+    cache_USVᴴ′ = copy.(USVᴴ′)
+    primal = EnzymeRules.needs_primal(config) ? USVᴴ′ : nothing
+    dret = EnzymeRules.needs_shadow(config) ? make_zero(USVᴴ′) : nothing
+    return EnzymeRules.AugmentedReturn(primal, dret, (Ac, cache_USVᴴ′, dret))
+end
+
+function EnzymeRules.reverse(
+        config::EnzymeRules.RevConfigWidth{1},
+        func::Const{typeof(svd_trunc_no_error!)},
+        ::Type{RT},
+        cache,
+        A::Annotation,
+        USVᴴ::Annotation,
+        alg::Const{<:MatrixAlgebraKit.TruncatedAlgorithm{<:MatrixAlgebraKit.GPU_Randomized}},
+    ) where {RT}
+    Ac, USVᴴ′, dUSVᴴ′ = cache
+    if !isa(A, Const) && !isnothing(dUSVᴴ′)
+        svd_trunc_pullback!(A.dval, Ac, USVᴴ′, dUSVᴴ′)
     end
     !isa(USVᴴ, Const) && make_zero!(USVᴴ.dval)
     return (nothing, nothing, nothing)
