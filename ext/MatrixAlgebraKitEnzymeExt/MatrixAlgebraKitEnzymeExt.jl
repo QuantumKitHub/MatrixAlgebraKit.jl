@@ -30,6 +30,7 @@ using LinearAlgebra
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_gauge_atol), ::Any, ::Any...) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_degeneracy_atol), ::Any) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_rank_atol), ::Any) = true
+@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_complement_atol), ::Any...) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_hermitian_tol), ::AbstractMatrix) = true
 
 #----------- NOTE about derivatives ---------
