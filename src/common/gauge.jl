@@ -4,14 +4,30 @@
 
 Fix the residual gauge degrees of freedom in the eigen or singular vectors, that are
 obtained from the decomposition performed by `f_eig` or `f_svd`.
-This is achieved by ensuring that the entry with the largest magnitude in `V` or `U`
-is real and positive.
+This is achieved by ensuring that, in every column of `V` or `U`, the first entry whose
+magnitude is within a relative tolerance of the largest magnitude is real and positive
+(see [`gauge_index`](@ref)).
 """ gaugefix!
 
 # Helper functions
 _argmaxabs(x) = reduce(_largest, x; init = zero(eltype(x)))
 _largest(x::Real, y::Real) = abs(x) < abs(y) ? y : x
 _largest(x::Complex, y::Complex) = abs2(x) < abs2(y) ? y : x
+
+default_gauge_rtol(V) = sqrt(eps(real(float(eltype(V)))))
+
+"""
+    gauge_index(V; dims = 1, rtol = sqrt(eps(real(eltype(V)))))
+
+Indices of the entries of `V` used to fix the gauge along dimension `dims`: for every slice, the
+first entry whose magnitude is at least `(1 - rtol)` times the largest magnitude in that slice.
+"""
+function gauge_index(V::AbstractArray; dims::Int = 1, rtol::Real = default_gauge_rtol(V))
+    absV = abs.(V)
+    thr = maximum(absV; dims) .* (1 - rtol)
+    # `findmax` returns the first index among equal maxima (also for GPU arrays)
+    return last(findmax(absV .>= thr; dims))
+end
 
 function gaugefix!(::typeof(qr_householder!), Q, R, Rd)
     ax = Base.OneTo(length(Rd))
@@ -40,8 +56,8 @@ function gaugefix!(::typeof(lq_householder!), L, Q, Ld)
 end
 
 function gaugefix!(::Union{typeof(eig_full!), typeof(eigh_full!), typeof(gen_eig_full!)}, V::AbstractMatrix)
-    signs = reduce(_largest, V; dims = 1, init = zero(eltype(V)))
-    @. signs = sign(signs)
+    isempty(V) && return V
+    signs = sign.(V[gauge_index(V; dims = 1)])
     @. V = V * conj(signs)
     return V
 end
@@ -52,16 +68,15 @@ end
 function gaugefix!(::typeof(svd_full!), U, Vᴴ)
     m, n = size(U, 2), size(Vᴴ, 1)
     k = min(m, n)
-    signs = reduce(_largest, U; dims = 1, init = zero(eltype(U)))
-    @. signs = sign(signs)
+    isempty(U) && return (U, Vᴴ)
+    signs = sign.(U[gauge_index(U; dims = 1)])
     @. U = U * conj(signs)
     Vᴴk = view(Vᴴ, axes(Vᴴ, 1)[1:k], :)
     signs_t = transpose(view(signs, :, axes(signs, 2)[1:k]))
     @. Vᴴk = signs_t * Vᴴk
     if n > m
         Vᴴr = view(Vᴴ, axes(Vᴴ, 1)[(k + 1):n], :)
-        signs_r = reduce(_largest, Vᴴr; dims = 2, init = zero(eltype(Vᴴ)))
-        @. signs_r = sign(signs_r)
+        signs_r = sign.(Vᴴr[gauge_index(Vᴴr; dims = 2)])
         @. Vᴴr = conj(signs_r) * Vᴴr
     end
     return (U, Vᴴ)
@@ -69,8 +84,8 @@ end
 
 function gaugefix!(::Union{typeof(svd_compact!), typeof(svd_trunc!)}, U, Vᴴ)
     @assert axes(U, 2) == axes(Vᴴ, 1)
-    signs = reduce(_largest, U; dims = 1, init = zero(eltype(U)))
-    @. signs = sign(signs)
+    isempty(U) && return (U, Vᴴ)
+    signs = sign.(U[gauge_index(U; dims = 1)])
     signs_t = transpose(signs)
     @. U = U * conj(signs)
     @. Vᴴ = signs_t * Vᴴ
