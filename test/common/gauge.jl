@@ -6,7 +6,7 @@ using StableRNGs
 @testset "gauge_index tie-breaking ($T)" for T in (Float64, ComplexF64)
     rng = StableRNG(123)
     # the first two entries of every column have (nearly) equal, largest magnitude
-    V = T[1 -2 3 -4; -1 2 -3 4; 0 0 0 0; 0 0 0 0] .+ randn(rng, T, 4, 4) .* [0, 0, 1e-1, 1e-1]
+    V = T[1 -2 3 -4; -1 2 -3 4; 0 0 0 0; 0 0 0 0] .+ randn(rng, T, 4, 4) .* [0, 0, 1.0e-1, 1.0e-1]
     V[2, :] .*= 1 + 1.0e-14
     I = gauge_index(V; dims = 1)
     @test vec(I) == [CartesianIndex(1, j) for j in 1:4]
