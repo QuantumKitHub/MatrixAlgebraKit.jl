@@ -9,16 +9,19 @@ quantity needs to be computed.
 """
 defaulttol(x::Any) = eps(real(float(one(eltype(x)))))^(2 / 3)
 
+# tolerance proportional to the scale `x`
+_default_atol(x::Real) = eps(typeof(x))^(3 / 4) * x
+
 """
     default_pullback_gauge_atol(ΔA...)
 
 Default tolerance for deciding to warn if incoming adjoints of a pullback rule
 has components that are not gauge-invariant.
 """
-default_pullback_gauge_atol(A) = iszerotangent(A) ? 0 : eps(norm(A, Inf))^(3 / 4)
+default_pullback_gauge_atol(A) = iszerotangent(A) ? 0 : _default_atol(norm(A, Inf))
 function default_pullback_gauge_atol(A, As...)
     As′ = filter(!iszerotangent, (A, As...))
-    return isempty(As′) ? 0 : eps(norm(As′, Inf))^(3 / 4)
+    return isempty(As′) ? 0 : _default_atol(maximum(y -> norm(y, Inf), As′))
 end
 
 """
@@ -26,15 +29,40 @@ end
 
 Default tolerance for deciding when values should be considered as degenerate.
 """
-default_pullback_degeneracy_atol(A) = eps(norm(A, Inf))^(3 / 4)
+default_pullback_degeneracy_atol(A) = _default_atol(norm(A, Inf))
 
 """
     default_pullback_rank_atol(A)
 
 Default tolerance for deciding what values should be considered equal to 0.
 """
-default_pullback_rank_atol(A) = eps(norm(A, Inf))^(3 / 4)
+default_pullback_rank_atol(A) = _default_atol(norm(A, Inf))
 default_pullback_rank_atol(A::Diagonal) = default_pullback_rank_atol(diagview(A))
+
+"""
+    default_pullback_complement_atol(D, ΔD, ΔV)
+    default_pullback_complement_atol(S, ΔU, ΔS, ΔVᴴ)
+
+Default tolerance for the series that sums the contribution from outside the kept vectors in
+the truncated pullbacks. The terms of that series scale like `ΔA`, so the tolerance is set by
+the cotangents that scale like `ΔA`: `ΔD` and `ΔV ./ transpose(D)`, or `ΔS`, `ΔU ./ transpose(S)`
+and `ΔVᴴ ./ S`.
+"""
+function default_pullback_complement_atol(D, ΔD, ΔV)
+    d = diagview(D)
+    x = zero(real(float(eltype(d))))
+    iszerotangent(ΔD) || (x = max(x, norm(ΔD, Inf)))
+    iszerotangent(ΔV) || (x = max(x, norm(ΔV ./ transpose(d), Inf)))
+    return _default_atol(x)
+end
+function default_pullback_complement_atol(S, ΔU, ΔS, ΔVᴴ)
+    s = diagview(S)
+    x = zero(real(float(eltype(s))))
+    iszerotangent(ΔS) || (x = max(x, norm(ΔS, Inf)))
+    iszerotangent(ΔU) || (x = max(x, norm(ΔU ./ transpose(s), Inf)))
+    iszerotangent(ΔVᴴ) || (x = max(x, norm(ΔVᴴ ./ s, Inf)))
+    return _default_atol(x)
+end
 
 """
     default_hermitian_tol(A)

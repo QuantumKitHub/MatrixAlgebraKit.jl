@@ -30,6 +30,7 @@ using LinearAlgebra
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_gauge_atol), ::Any, ::Any...) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_degeneracy_atol), ::Any) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_rank_atol), ::Any) = true
+@inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_pullback_complement_atol), ::Any...) = true
 @inline EnzymeRules.inactive(::typeof(MatrixAlgebraKit.default_hermitian_tol), ::AbstractMatrix) = true
 
 #----------- NOTE about derivatives ---------
@@ -366,7 +367,9 @@ for (f, trunc_f, full_f, pb) in (
         ) where {RT, TA, TB}
         # A is overwritten in the primal, but not used in the pullback, so we do not need to cache it.
         ret = $full_f(A.val, DV.val, alg.val.alg)
-        cache_DV = (DV.val !== ret) || EnzymeRules.overwritten(config)[3] ? copy.(ret) : nothing
+        # but the output may share storage with A (e.g. D for complex Diagonal input), so then we cache it
+        A_is_DV = !isa(A, Const) && (has_equal_storage(A.val, DV.val[1]) || has_equal_storage(A.val, DV.val[2]))
+        cache_DV = (DV.val !== ret) || A_is_DV || EnzymeRules.overwritten(config)[3] ? copy.(ret) : nothing
         DV′, ind = truncate($trunc_f, ret, alg.val.trunc)
         primal = EnzymeRules.needs_primal(config) ? DV′ : nothing
         dret = if EnzymeRules.needs_shadow(config)
