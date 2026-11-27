@@ -23,10 +23,9 @@ Indices of the entries of `V` used to fix the gauge along dimension `dims`: for 
 first entry whose magnitude is at least `(1 - rtol)` times the largest magnitude in that slice.
 """
 function gauge_index(V::AbstractArray; dims::Int = 1, rtol::Real = default_gauge_rtol(V))
-    absV = abs.(V)
-    thr = maximum(absV; dims) .* (1 - rtol)
+    thr = maximum(abs, V; dims) .* (1 - rtol)
     # `findmax` returns the first index among equal maxima (also for GPU arrays)
-    return last(findmax(absV .>= thr; dims))
+    return last(findmax(abs.(V) .>= thr; dims))
 end
 
 function gaugefix!(::typeof(qr_householder!), Q, R, Rd)
