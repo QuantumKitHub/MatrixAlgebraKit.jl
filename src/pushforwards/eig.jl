@@ -15,7 +15,7 @@ function eig_pushforward!(
         if eltype(V) <: Real # fix norm conservation
             ΔV .-= V .* real.(sum(conj.(V) .* ΔV; dims = 1))
         else # also fix gauge for `gaugefix!` compatibility
-            _, I = findmax(abs, V; dims = 1)
+            I = gauge_index(V; dims = 1)
             ΔV .-= V .* (real.(sum(conj.(V) .* ΔV; dims = 1)) .+ im .* imag.(ΔV[I] ./ V[I]))
         end
     end
